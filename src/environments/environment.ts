@@ -2,8 +2,18 @@
 // `ng build --prod` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 
+const keycloakConfig: any = {
+    realm: 'ubirch-certificator',
+    url: 'https://id.dev.ubirch.com/auth/',
+    clientId: 'admin-access-local',
+};
+
 export const environment = {
-  production: false
+    production: false,
+    keycloak: keycloakConfig,
+    anchoringAPIUrl: 'https://api.certify.dev.ubirch.com',
+    // verificationPageDefaultUrl: 'https://verification.dev.ubirch.com/v/gd-vcc',
+    verificationPageDefaultUrl: 'https://verification.dev.ubirch.com/v',
 };
 
 /*
