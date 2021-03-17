@@ -1,0 +1,7 @@
+{
+  "name": "ubirch-certify-managment-app",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
