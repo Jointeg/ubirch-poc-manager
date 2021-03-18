@@ -4,12 +4,17 @@ import {
     RouterStateSnapshot,
     Router,
 } from '@angular/router';
-import { KeycloakAuthGuard, KeycloakService } from 'keycloak-angular';
+import { KeycloakService } from 'keycloak-angular';
+import { AuthGuard } from './auth.guard';
+import { SUPER_ADMIN } from '../core/models/roles';
+
+
+export const NOT_AUTHORIZED_URL = 'not-authorized';
 
 @Injectable({
     providedIn: 'root',
 })
-export class SuperAdminGuard extends KeycloakAuthGuard {
+export class SuperAdminGuard extends AuthGuard {
     constructor(
         protected readonly router: Router,
         protected readonly keycloak: KeycloakService
@@ -21,24 +26,13 @@ export class SuperAdminGuard extends KeycloakAuthGuard {
         route: ActivatedRouteSnapshot,
         state: RouterStateSnapshot
     ) {
-        // Force the user to log in if currently unauthenticated.
-        if (!this.authenticated) {
-            await this.keycloak.login({
-                redirectUri: window.location.origin + state.url,
-            });
-        }
-        return true;
+        const authenticated = await super.isAccessAllowed(route, state);
 
-        // // Get the roles required from the route.
-        // const requiredRoles = route.data.roles;
+        if(!this.roles.includes(SUPER_ADMIN)) {
+            this.router.navigate([NOT_AUTHORIZED_URL]);
+            return false;
+        };
 
-        // // Allow the user to to proceed if no additional roles are required to access the route.
-        // if (!(requiredRoles instanceof Array) || requiredRoles.length === 0) {
-        //     return true;
-        // }
-
-        // // Allow the user to proceed if all the required roles are present.
-        // return requiredRoles.every((role) => this.roles.includes(role));
-        return false;
+        return authenticated;
     }
 }
