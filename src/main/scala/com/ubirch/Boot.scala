@@ -9,8 +9,8 @@ import scala.reflect._
 import scala.util.Try
 
 /**
- * Helper to manage Guice Injection.
- */
+  * Helper to manage Guice Injection.
+  */
 abstract class InjectorHelper(val modules: List[Module]) extends LazyLogging {
 
   import InjectorHelper._
@@ -45,21 +45,21 @@ abstract class InjectorHelper(val modules: List[Module]) extends LazyLogging {
 
 object InjectorHelper {
   /**
-   * Represents an Exception for when injecting a component
-   * @param message Represents the error message
-   */
+    * Represents an Exception for when injecting a component
+    * @param message Represents the error message
+    */
   case class InjectionException(message: String) extends Exception(message)
 
   /**
-   * Represents an Exception for when creating an injector a component
-   * @param message Represents the error message
-   */
+    * Represents an Exception for when creating an injector a component
+    * @param message Represents the error message
+    */
   case class InjectorCreationException(message: String) extends Exception(message)
 }
 
 /**
- * Util that integrates an elegant way to add shut down hooks to the JVM.
- */
+  * Util that integrates an elegant way to add shut down hooks to the JVM.
+  */
 trait WithJVMHooks {
 
   _: InjectorHelper =>
@@ -71,8 +71,8 @@ trait WithJVMHooks {
 }
 
 /**
- * Util that integrates an elegant way to add shut down hooks to the JVM.
- */
+  * Util that integrates an elegant way to add shut down hooks to the JVM.
+  */
 trait WithPrometheusMetrics {
 
   _: InjectorHelper =>
@@ -82,9 +82,9 @@ trait WithPrometheusMetrics {
 }
 
 /**
- * Represents an assembly for the boot process
- * @param modules It is the modules of the system
- */
+  * Represents an assembly for the boot process
+  * @param modules It is the modules of the system
+  */
 abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with WithJVMHooks with WithPrometheusMetrics {
   def *[T](block: => T): Unit =
     try { val _ = block } catch {

@@ -6,18 +6,15 @@ import com.ubirch.util.ServiceMetrics
 import monix.eval.Task
 import monix.execution.{CancelableFuture, Scheduler}
 import org.apache.commons.compress.utils.IOUtils
-import org.json4s.JsonAST.JValue
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
 
-import java.io.{ByteArrayInputStream, FileOutputStream}
-import java.util.Date
+import java.io.ByteArrayInputStream
 import javax.servlet.http.{HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse}
 import javax.servlet.{ReadListener, ServletInputStream}
 import scala.concurrent.Future
 import scala.util.Try
-import scala.util.control.NoStackTrace
 
 /**
   * Represents a customized ServletInputStream that allows to cache the body of a request.

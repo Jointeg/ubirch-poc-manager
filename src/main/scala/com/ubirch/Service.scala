@@ -10,8 +10,8 @@ import java.util.concurrent.CountDownLatch
 import javax.inject.{ Inject, Singleton }
 
 /**
- * Represents a bootable service object that starts the system
- */
+  * Represents a bootable service object that starts the system
+  */
 @Singleton
 class Service @Inject() (restService: RestService, publicKeyPoolService: PublicKeyPoolService)(implicit scheduler: Scheduler) extends LazyLogging {
 

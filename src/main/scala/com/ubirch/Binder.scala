@@ -1,13 +1,13 @@
 package com.ubirch
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.google.inject.{AbstractModule, Module}
+import com.google.inject.{ AbstractModule, Module }
 import com.typesafe.config.Config
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
-import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
+import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.jwt._
-import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
+import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.rest.SwaggerProvider
 import monix.execution.Scheduler
 import org.json4s.Formats

@@ -1,7 +1,7 @@
 package com.ubirch.controllers
 
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.{Awaits, ExecutionContextsTests, FakeTokenCreator, InjectorHelperImpl}
+import com.ubirch.{ Awaits, ExecutionContextsTests, FakeTokenCreator, InjectorHelperImpl }
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.BeforeAndAfterEach
 import org.scalatra.test.scalatest.ScalatraWordSpec

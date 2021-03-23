@@ -3,15 +3,15 @@ package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
-import com.ubirch.crypto.{GeneratorKeyFactory, PrivKey}
-import com.ubirch.services.jwt.{DefaultPublicKeyPoolService, PublicKeyDiscoveryService, PublicKeyPoolService, TokenCreationService}
+import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
+import com.ubirch.services.jwt.{ DefaultPublicKeyPoolService, PublicKeyDiscoveryService, PublicKeyPoolService, TokenCreationService }
 import monix.eval.Task
 
 import java.security.Key
-import javax.inject.{Inject, Provider, Singleton}
+import javax.inject.{ Inject, Provider, Singleton }
 
 @Singleton
-class FakeDefaultPublicKeyPoolService @Inject()(privKey: PrivKey, config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
+class FakeDefaultPublicKeyPoolService @Inject() (privKey: PrivKey, config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
   extends DefaultPublicKeyPoolService(config, publicKeyDiscoveryService) {
 
   override def getKeyFromDiscoveryService(kid: String): Task[Option[Key]] = Task {
@@ -234,7 +234,7 @@ object FakeToken {
 }
 
 @Singleton
-class FakeTokenCreator @Inject()(privKey: PrivKey, tokenCreationService: TokenCreationService) {
+class FakeTokenCreator @Inject() (privKey: PrivKey, tokenCreationService: TokenCreationService) {
 
   def fakeToken(header: String, token: String): FakeToken = {
     FakeToken(

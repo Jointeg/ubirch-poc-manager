@@ -24,7 +24,6 @@ object ConfPaths {
     final val KID = "system.tokenVerification.kid"
   }
 
-
   object GenericConfPaths extends GenericConfPaths
   object HttpServerConfPaths extends HttpServerConfPaths
   object TokenVerificationPaths extends TokenVerificationPaths

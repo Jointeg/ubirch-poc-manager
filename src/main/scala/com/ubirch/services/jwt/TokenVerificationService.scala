@@ -4,17 +4,17 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.InvalidClaimsException
 import com.ubirch.services.formats.JsonConverterService
 import org.json4s.JValue
-import pdi.jwt.{Jwt, JwtAlgorithm}
+import pdi.jwt.{ Jwt, JwtAlgorithm }
 
 import java.security.PublicKey
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 trait TokenVerificationService {
   def decodeAndVerify(jwt: String, publicKey: PublicKey): Option[JValue]
 }
 
 @Singleton
-class DefaultTokenVerificationService @Inject()(jsonConverterService: JsonConverterService) extends TokenVerificationService with LazyLogging {
+class DefaultTokenVerificationService @Inject() (jsonConverterService: JsonConverterService) extends TokenVerificationService with LazyLogging {
 
   final val ISSUER = "iss"
   final val SUBJECT = "sub"
