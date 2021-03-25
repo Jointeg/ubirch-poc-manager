@@ -1,9 +1,9 @@
 package com.ubirch.data
 
-import com.ubirch.models.generic.user.{Email, FirstName, LastName}
 import com.ubirch.models.keycloak.group.{CreateKeycloakGroup, GroupName}
 import com.ubirch.models.keycloak.roles.{CreateKeycloakRole, RoleName}
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
+import com.ubirch.models.user.{Email, FirstName, LastName}
 
 import scala.util.Random
 

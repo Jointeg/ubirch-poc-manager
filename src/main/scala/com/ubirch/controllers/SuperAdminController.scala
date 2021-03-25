@@ -5,8 +5,8 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
 import com.ubirch.models.NOK
-import com.ubirch.models.generic.user.{Email, FirstName, LastName}
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
+import com.ubirch.models.user.{Email, FirstName, LastName}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.keycloak.KeycloakConnector
 import com.ubirch.services.keycloak.users.KeycloakUserServiceImpl

@@ -1,3 +1,3 @@
-package com.ubirch.models.generic.user
+package com.ubirch.models.user
 
 final case class Email(value: String) extends AnyVal
