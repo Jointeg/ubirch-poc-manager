@@ -1,6 +1,7 @@
 package com.ubirch.data
 
 import com.ubirch.models.generic.user.{Email, FirstName, LastName}
+import com.ubirch.models.keycloak.group.{CreateKeycloakGroup, GroupName}
 import com.ubirch.models.keycloak.roles.{CreateKeycloakRole, RoleName}
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
 
@@ -20,5 +21,8 @@ object KeycloakTestData {
 
   def createNewKeycloakRole(): CreateKeycloakRole =
     CreateKeycloakRole(RoleName(Random.alphanumeric.take(10).mkString("")))
+
+  def createNewKeycloakGroup(): CreateKeycloakGroup =
+    CreateKeycloakGroup(GroupName(Random.alphanumeric.take(10).mkString("")))
 
 }

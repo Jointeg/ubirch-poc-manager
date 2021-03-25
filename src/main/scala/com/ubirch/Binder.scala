@@ -7,6 +7,7 @@ import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
 import com.ubirch.services.jwt._
+import com.ubirch.services.keycloak.groups.{DefaultKeycloakGroupService, KeycloakGroupService}
 import com.ubirch.services.keycloak.roles.{DefaultKeycloakRolesService, KeycloakRolesService}
 import com.ubirch.services.keycloak.users.{KeycloakUserService, KeycloakUserServiceImpl}
 import com.ubirch.services.keycloak.{KeycloakConfigConnector, KeycloakConnector}
@@ -43,6 +44,8 @@ class Binder extends AbstractModule {
     bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
   def KeycloakRolesService: ScopedBindingBuilder =
     bind(classOf[KeycloakRolesService]).to(classOf[DefaultKeycloakRolesService])
+  def KeycloakGroupService: ScopedBindingBuilder =
+    bind(classOf[KeycloakGroupService]).to(classOf[DefaultKeycloakGroupService])
 
   override def configure(): Unit = {
     Config
@@ -60,6 +63,7 @@ class Binder extends AbstractModule {
     KeycloakConnector
     KeycloakUserService
     KeycloakRolesService
+    KeycloakGroupService
     ()
   }
 }
