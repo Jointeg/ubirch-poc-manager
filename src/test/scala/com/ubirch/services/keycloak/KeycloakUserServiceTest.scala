@@ -2,9 +2,10 @@ package com.ubirch.services.keycloak
 
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
 import com.ubirch.data.KeycloakTestData
+import com.ubirch.models.keycloak.user.{UserAlreadyExists, UserName}
 import com.ubirch.{Awaits, ExecutionContextsTests, KeycloakContainer, TestKeycloakInjectorHelperImpl}
 import org.scalactic.StringNormalizations._
-import org.scalatest.{Assertion, OptionValues}
+import org.scalatest.{Assertion, EitherValues, OptionValues}
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.concurrent.duration.DurationInt
@@ -14,20 +15,21 @@ class KeycloakUserServiceTest
   with TestContainerForAll
   with ExecutionContextsTests
   with Awaits
-  with OptionValues {
+  with OptionValues
+  with EitherValues {
   override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
 
   "KeycloakUserService" should {
-    "be able to create an user, retrieve info about him and delete him" in {
+    "Be able to create an user, retrieve info about him and delete him" in {
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
 
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
           _ <- keycloakUserService.createUser(newKeycloakUser)
-          user <- keycloakUserService.getUser(newKeycloakUser.email.value)
-          _ <- keycloakUserService.deleteUser(newKeycloakUser.email.value)
-          userAfterDeletion <- keycloakUserService.getUser(newKeycloakUser.email.value)
+          user <- keycloakUserService.getUser(newKeycloakUser.userName)
+          _ <- keycloakUserService.deleteUser(newKeycloakUser.userName)
+          userAfterDeletion <- keycloakUserService.getUser(newKeycloakUser.userName)
         } yield (user, userAfterDeletion)
 
         val (user, userAfterDeletion) = await(result, 5.seconds)
@@ -43,14 +45,32 @@ class KeycloakUserServiceTest
       }
     }
 
-    "not be able to retrieve info about unknown user" in {
+    "Not be able to create a user with name that already exists in system" in {
+      withInjector { injector =>
+        val keycloakUserService = injector.get[KeycloakUserService]
+
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+        val result = for {
+          firstCreationResult <- keycloakUserService.createUser(newKeycloakUser)
+          secondCreationResult <- keycloakUserService.createUser(newKeycloakUser)
+        } yield (firstCreationResult, secondCreationResult)
+
+        val (firstCreationResult, secondCreationResult) = await(result, 5.seconds)
+
+        firstCreationResult.right.value shouldBe ()
+        secondCreationResult.left.value shouldBe UserAlreadyExists(newKeycloakUser.userName)
+
+      }
+    }
+
+    "Not be able to retrieve info about unknown user" in {
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
 
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
           _ <- keycloakUserService.createUser(newKeycloakUser)
-          maybeUser <- keycloakUserService.getUser("unknownUser@notanemail.com")
+          maybeUser <- keycloakUserService.getUser(UserName("unknownUser@notanemail.com"))
         } yield maybeUser
 
         val maybeUser = await(result, 5.seconds)
@@ -58,15 +78,15 @@ class KeycloakUserServiceTest
       }
     }
 
-    "do nothing when tries to delete unknown user" in {
+    "Do nothing when tries to delete unknown user" in {
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
 
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
           _ <- keycloakUserService.createUser(newKeycloakUser)
-          _ <- keycloakUserService.deleteUser("unknownUser@notanemail.com")
-          maybeUser <- keycloakUserService.getUser(newKeycloakUser.email.value)
+          _ <- keycloakUserService.deleteUser(UserName("unknownUser@notanemail.com"))
+          maybeUser <- keycloakUserService.getUser(newKeycloakUser.userName)
         } yield maybeUser
 
         val maybeUser = await(result, 5.seconds)

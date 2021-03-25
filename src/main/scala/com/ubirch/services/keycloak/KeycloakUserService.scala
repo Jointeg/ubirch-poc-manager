@@ -3,47 +3,53 @@ package com.ubirch.services.keycloak
 import cats.data.OptionT
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists, UserName}
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 trait KeycloakUserService {
-  def createUser(createKeycloakUser: CreateKeycloakUser): Task[Unit]
-  def deleteUser(username: String): Task[Unit]
-  def getUser(username: String): Task[Option[UserRepresentation]]
+  def createUser(createKeycloakUser: CreateKeycloakUser): Task[Either[UserAlreadyExists, Unit]]
+  def deleteUser(username: UserName): Task[Unit]
+  def getUser(username: UserName): Task[Option[UserRepresentation]]
 }
 
 @Singleton
 class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector)
   extends KeycloakUserService
   with LazyLogging {
-  override def createUser(createKeycloakUser: CreateKeycloakUser): Task[Unit] = {
+  override def createUser(createKeycloakUser: CreateKeycloakUser): Task[Either[UserAlreadyExists, Unit]] = {
     val keycloakUser = createKeycloakUser.toKeycloakRepresentation
     keycloakUser.setEnabled(true)
     logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
     Task {
-      keycloakConnector.keycloak
+      val resp = keycloakConnector.keycloak
         .realm("test-realm")
         .users()
         .create(keycloakUser)
+      if (resp.getStatus == 409) {
+        logger.error(s"Tried to create user with ${keycloakUser.getUsername} but it already exists")
+        Left(UserAlreadyExists(UserName(keycloakUser.getUsername)))
+      } else {
+        Right(())
+      }
     }
   }
 
-  override def getUser(username: String): Task[Option[UserRepresentation]] = {
+  override def getUser(username: UserName): Task[Option[UserRepresentation]] = {
     logger.debug(s"Retrieving keycloak user $username")
     Task(
       keycloakConnector.keycloak
         .realm("test-realm")
         .users()
-        .search(username)
+        .search(username.value)
         .asScala
         .headOption
     )
   }
 
-  override def deleteUser(username: String): Task[Unit] = {
+  override def deleteUser(username: UserName): Task[Unit] = {
     (for {
       user <- OptionT(getUser(username))
       _ <- OptionT.liftF(Task(keycloakConnector.keycloak.realm("test-realm").users().delete(user.getId)))

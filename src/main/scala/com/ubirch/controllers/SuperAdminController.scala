@@ -6,7 +6,7 @@ import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
 import com.ubirch.models.NOK
 import com.ubirch.models.generic.user.{Email, FirstName, LastName}
-import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.keycloak.{KeycloakConnector, KeycloakUserServiceImpl}
 import io.prometheus.client.Counter
@@ -71,7 +71,7 @@ class SuperAdminController @Inject() (
     asyncResult("simpleTest") { _ => _ =>
       new KeycloakUserServiceImpl(keycloakConnector)
         .createUser(
-          CreateKeycloakUser(FirstName("test"), LastName("last-test"), Email("notanEmail@smdoaka.dnc"))
+          CreateKeycloakUser(FirstName("test"), LastName("last-test"), UserName("notanEmail@smdoaka.dnc"), Email("notanEmail@smdoaka.dnc"))
         )
         .map(_ => Ok("created"))
     }
