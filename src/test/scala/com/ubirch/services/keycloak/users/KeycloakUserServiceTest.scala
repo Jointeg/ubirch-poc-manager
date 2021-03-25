@@ -1,23 +1,13 @@
 package com.ubirch.services.keycloak.users
 
-import com.dimafeng.testcontainers.scalatest.TestContainerForAll
+import com.ubirch.KeycloakBasedTest
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.models.keycloak.user.{UserAlreadyExists, UserName}
-import com.ubirch.{Awaits, ExecutionContextsTests, KeycloakContainer, TestKeycloakInjectorHelperImpl}
 import org.scalactic.StringNormalizations._
-import org.scalatest.{Assertion, EitherValues, OptionValues}
-import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.concurrent.duration.DurationInt
 
-class KeycloakUserServiceTest
-  extends ScalatraWordSpec
-  with TestContainerForAll
-  with ExecutionContextsTests
-  with Awaits
-  with OptionValues
-  with EitherValues {
-  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
+class KeycloakUserServiceTest extends KeycloakBasedTest {
 
   "KeycloakUserService" should {
     "Be able to create an user, retrieve info about him and delete him" in {
@@ -92,12 +82,6 @@ class KeycloakUserServiceTest
         val maybeUser = await(result, 5.seconds)
         maybeUser shouldBe defined
       }
-    }
-  }
-
-  private def withInjector(testCode: TestKeycloakInjectorHelperImpl => Assertion) = {
-    withContainers { keycloakContainer =>
-      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
     }
   }
 }

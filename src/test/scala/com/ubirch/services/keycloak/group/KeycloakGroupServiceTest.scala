@@ -1,24 +1,13 @@
 package com.ubirch.services.keycloak.group
 
-import com.dimafeng.testcontainers.scalatest.TestContainerForAll
+import com.ubirch.KeycloakBasedTest
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
 import com.ubirch.models.keycloak.group.{GroupAlreadyExists, GroupName, GroupNotFound}
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
-import com.ubirch.{Awaits, ExecutionContextsTests, KeycloakContainer, TestKeycloakInjectorHelperImpl}
-import org.scalatest.{Assertion, EitherValues, OptionValues}
-import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.concurrent.duration.DurationInt
 
-class KeycloakGroupServiceTest
-  extends ScalatraWordSpec
-  with TestContainerForAll
-  with ExecutionContextsTests
-  with Awaits
-  with OptionValues
-  with EitherValues {
-
-  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
+class KeycloakGroupServiceTest extends KeycloakBasedTest {
 
   "KeycloakGroupService" should {
     "Create new group, find it and then delete" in {
@@ -80,12 +69,6 @@ class KeycloakGroupServiceTest
         val maybeFoundGroup = await(res, 2.seconds)
         maybeFoundGroup.right.value.groupName shouldBe newGroup.groupName
       }
-    }
-  }
-
-  private def withInjector(testCode: TestKeycloakInjectorHelperImpl => Assertion) = {
-    withContainers { keycloakContainer =>
-      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
     }
   }
 

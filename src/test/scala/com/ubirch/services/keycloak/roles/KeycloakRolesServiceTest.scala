@@ -1,23 +1,12 @@
 package com.ubirch.services.keycloak.roles
 
-import com.dimafeng.testcontainers.scalatest.TestContainerForAll
+import com.ubirch.KeycloakBasedTest
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.models.keycloak.roles.{RoleAlreadyExists, RoleName}
-import com.ubirch.{Awaits, ExecutionContextsTests, KeycloakContainer, TestKeycloakInjectorHelperImpl}
-import org.scalatest.{Assertion, EitherValues, OptionValues}
-import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.concurrent.duration.DurationInt
 
-class KeycloakRolesServiceTest
-  extends ScalatraWordSpec
-  with TestContainerForAll
-  with ExecutionContextsTests
-  with Awaits
-  with OptionValues
-  with EitherValues {
-
-  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
+class KeycloakRolesServiceTest extends KeycloakBasedTest {
 
   "KeycloakRolesService" should {
     "Be able to create, find and in the end delete role" in {
@@ -80,12 +69,6 @@ class KeycloakRolesServiceTest
 
         maybeFoundRole.value.roleName shouldBe newRole.roleName
       }
-    }
-  }
-
-  private def withInjector(testCode: TestKeycloakInjectorHelperImpl => Assertion) = {
-    withContainers { keycloakContainer =>
-      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
     }
   }
 }
