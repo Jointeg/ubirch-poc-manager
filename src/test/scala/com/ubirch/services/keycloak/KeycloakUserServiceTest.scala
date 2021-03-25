@@ -1,7 +1,7 @@
 package com.ubirch.services.keycloak
 
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
-import com.ubirch.data.KeycloakUserTestData
+import com.ubirch.data.KeycloakTestData
 import com.ubirch.{Awaits, ExecutionContextsTests, KeycloakContainer, TestKeycloakInjectorHelperImpl}
 import org.scalactic.StringNormalizations._
 import org.scalatest.{Assertion, OptionValues}
@@ -22,7 +22,7 @@ class KeycloakUserServiceTest
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
 
-        val newKeycloakUser = KeycloakUserTestData.createNewKeycloakUser()
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
           _ <- keycloakUserService.createUser(newKeycloakUser)
           user <- keycloakUserService.getUser(newKeycloakUser.email.value)
@@ -47,7 +47,7 @@ class KeycloakUserServiceTest
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
 
-        val newKeycloakUser = KeycloakUserTestData.createNewKeycloakUser()
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
           _ <- keycloakUserService.createUser(newKeycloakUser)
           maybeUser <- keycloakUserService.getUser("unknownUser@notanemail.com")
@@ -62,7 +62,7 @@ class KeycloakUserServiceTest
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
 
-        val newKeycloakUser = KeycloakUserTestData.createNewKeycloakUser()
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
           _ <- keycloakUserService.createUser(newKeycloakUser)
           _ <- keycloakUserService.deleteUser("unknownUser@notanemail.com")
