@@ -1,4 +1,4 @@
-package com.ubirch.services.keycloak
+package com.ubirch.services.keycloak.users
 
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
 import com.ubirch.data.KeycloakTestData

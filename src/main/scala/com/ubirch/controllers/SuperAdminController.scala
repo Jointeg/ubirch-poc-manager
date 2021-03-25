@@ -8,7 +8,8 @@ import com.ubirch.models.NOK
 import com.ubirch.models.generic.user.{Email, FirstName, LastName}
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
-import com.ubirch.services.keycloak.{KeycloakConnector, KeycloakUserServiceImpl}
+import com.ubirch.services.keycloak.KeycloakConnector
+import com.ubirch.services.keycloak.users.KeycloakUserServiceImpl
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler

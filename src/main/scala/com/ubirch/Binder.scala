@@ -8,12 +8,8 @@ import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak.roles.{DefaultKeycloakRolesService, KeycloakRolesService}
-import com.ubirch.services.keycloak.{
-  KeycloakConfigConnector,
-  KeycloakConnector,
-  KeycloakUserService,
-  KeycloakUserServiceImpl
-}
+import com.ubirch.services.keycloak.users.{KeycloakUserService, KeycloakUserServiceImpl}
+import com.ubirch.services.keycloak.{KeycloakConfigConnector, KeycloakConnector}
 import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
 import com.ubirch.services.rest.SwaggerProvider
 import monix.execution.Scheduler
