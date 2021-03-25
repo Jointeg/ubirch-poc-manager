@@ -69,6 +69,9 @@
         <bcpkix-jdk15on.version>1.61</bcpkix-jdk15on.version>
         <bcprov-jdk15on.version>1.61</bcprov-jdk15on.version>
 
+        <keycloack.version>11.0.2</keycloack.version>
+        <testcontainers.version>1.15.2</testcontainers.version>
+
         <jwt-core.version>4.2.0</jwt-core.version>
 
         <io.prometheus.simpleclient.version>0.6.0</io.prometheus.simpleclient.version>
@@ -160,6 +163,50 @@
             <version>${guice.version}</version>
         </dependency>
 
+        <!-- keycloack -->
+
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-authz-client</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-core -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-core</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-admin-client -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-services -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-services</artifactId>
+            <version>${keycloack.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-adapter-core -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-adapter-core</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-model-jpa -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-model-jpa</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
         <!-- Scala -->
         <dependency>
             <groupId>org.scala-lang</groupId>
@@ -167,8 +214,21 @@
             <version>${scala.version}</version>
         </dependency>
 
-        <!-- Prometheus -->
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-scalatest_2.12</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
 
+        <!-- Prometheus -->
         <dependency>
             <groupId>io.prometheus</groupId>
             <artifactId>simpleclient</artifactId>
@@ -358,37 +418,6 @@
     <build>
 
         <plugins>
-
-            <!-- code formatting -->
-            <plugin>
-                <groupId>com.github.tashoyan</groupId>
-                <artifactId>scalariform-maven-plugin</artifactId>
-                <version>${scalariform.version}</version>
-                <executions>
-                    <execution>
-                        <phase>process-sources</phase>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                        <configuration>
-                            <firstArgumentOnNewline>Force</firstArgumentOnNewline>
-                            <firstParameterOnNewline>Force</firstParameterOnNewline>
-                            <allowParamGroupsOnNewlines>true</allowParamGroupsOnNewlines>
-                            <danglingCloseParenthesis>Force</danglingCloseParenthesis>
-                            <doubleIndentConstructorArguments>true</doubleIndentConstructorArguments>
-                            <doubleIndentMethodDeclaration>true</doubleIndentMethodDeclaration>
-                            <newlineAtEndOfFile>true</newlineAtEndOfFile>
-                            <placeScaladocAsterisksBeneathSecondAsterisk>true
-                            </placeScaladocAsterisksBeneathSecondAsterisk>
-                            <singleCasePatternOnNewline>false</singleCasePatternOnNewline>
-                            <spacesAroundMultiImports>true</spacesAroundMultiImports>
-                            <rewriteArrowSymbols>false</rewriteArrowSymbols>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- code formatting -->
-
             <plugin>
                 <!-- see http://davidb.github.com/scala-maven-plugin -->
                 <groupId>net.alchim31.maven</groupId>
