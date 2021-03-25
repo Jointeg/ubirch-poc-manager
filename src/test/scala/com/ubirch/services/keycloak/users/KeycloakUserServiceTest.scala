@@ -24,7 +24,6 @@ class KeycloakUserServiceTest extends KeycloakBasedTest {
 
         val (user, userAfterDeletion) = await(result, 5.seconds)
 
-        user shouldBe defined
         user.value.getEmail should equal(newKeycloakUser.email.value)(after.being(lowerCased))
         user.value.getUsername should equal(newKeycloakUser.email.value)(after.being(lowerCased))
         user.value.getLastName should equal(newKeycloakUser.lastName.value)(after.being(lowerCased))
@@ -47,7 +46,7 @@ class KeycloakUserServiceTest extends KeycloakBasedTest {
 
         val (firstCreationResult, secondCreationResult) = await(result, 5.seconds)
 
-        firstCreationResult.right.value shouldBe ()
+        firstCreationResult.right.value
         secondCreationResult.left.value shouldBe UserAlreadyExists(newKeycloakUser.userName)
 
       }

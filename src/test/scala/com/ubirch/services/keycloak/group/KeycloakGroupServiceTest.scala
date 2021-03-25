@@ -39,7 +39,7 @@ class KeycloakGroupServiceTest extends KeycloakBasedTest {
         } yield (firstGroup, secondGroup)
 
         val (maybeFirstGroup, maybeSecondGroup) = await(res, 2.seconds)
-        maybeFirstGroup.right.value shouldBe ()
+        maybeFirstGroup.right.value
         maybeSecondGroup.left.value shouldBe GroupAlreadyExists(newGroup.groupName)
       }
     }

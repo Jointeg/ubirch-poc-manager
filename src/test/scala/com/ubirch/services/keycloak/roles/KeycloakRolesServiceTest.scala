@@ -34,12 +34,11 @@ class KeycloakRolesServiceTest extends KeycloakBasedTest {
 
         val response = for {
           firstCreationResult <- keycloakRolesService.createNewRole(newRole)
-          _ = println(firstCreationResult)
           secondCreationResult <- keycloakRolesService.createNewRole(newRole)
         } yield (firstCreationResult, secondCreationResult)
 
         val (firstCreationResult, secondCreationResult) = await(response, 2.seconds)
-        firstCreationResult.right.value shouldBe ()
+        firstCreationResult.right.value
         secondCreationResult.left.value shouldBe RoleAlreadyExists(newRole.roleName)
       }
     }
