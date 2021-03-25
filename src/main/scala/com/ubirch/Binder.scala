@@ -1,13 +1,19 @@
 package com.ubirch
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.google.inject.{ AbstractModule, Module }
+import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
-import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
+import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
 import com.ubirch.services.jwt._
-import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
+import com.ubirch.services.keycloak.{
+  KeycloakConfigConnector,
+  KeycloakConnector,
+  KeycloakUserService,
+  KeycloakUserServiceImpl
+}
+import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
 import com.ubirch.services.rest.SwaggerProvider
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -24,11 +30,20 @@ class Binder extends AbstractModule {
   def Formats: ScopedBindingBuilder = bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
   def Lifecycle: ScopedBindingBuilder = bind(classOf[Lifecycle]).to(classOf[DefaultLifecycle])
   def JVMHook: ScopedBindingBuilder = bind(classOf[JVMHook]).to(classOf[DefaultJVMHook])
-  def JsonConverterService: ScopedBindingBuilder = bind(classOf[JsonConverterService]).to(classOf[DefaultJsonConverterService])
-  def TokenCreationService: ScopedBindingBuilder = bind(classOf[TokenCreationService]).to(classOf[DefaultTokenCreationService])
-  def TokenVerificationService: ScopedBindingBuilder = bind(classOf[TokenVerificationService]).to(classOf[DefaultTokenVerificationService])
-  def PublicKeyDiscoveryService: ScopedBindingBuilder = bind(classOf[PublicKeyDiscoveryService]).to(classOf[DefaultPublicKeyDiscoveryService])
-  def PublicKeyPoolService: ScopedBindingBuilder = bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
+  def JsonConverterService: ScopedBindingBuilder =
+    bind(classOf[JsonConverterService]).to(classOf[DefaultJsonConverterService])
+  def TokenCreationService: ScopedBindingBuilder =
+    bind(classOf[TokenCreationService]).to(classOf[DefaultTokenCreationService])
+  def TokenVerificationService: ScopedBindingBuilder =
+    bind(classOf[TokenVerificationService]).to(classOf[DefaultTokenVerificationService])
+  def PublicKeyDiscoveryService: ScopedBindingBuilder =
+    bind(classOf[PublicKeyDiscoveryService]).to(classOf[DefaultPublicKeyDiscoveryService])
+  def PublicKeyPoolService: ScopedBindingBuilder =
+    bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
+  def KeycloakConnector: ScopedBindingBuilder =
+    bind(classOf[KeycloakConnector]).to(classOf[KeycloakConfigConnector])
+  def KeycloakUserService: ScopedBindingBuilder =
+    bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
 
   override def configure(): Unit = {
     Config
@@ -43,6 +58,8 @@ class Binder extends AbstractModule {
     TokenVerificationService
     PublicKeyDiscoveryService
     PublicKeyPoolService
+    KeycloakConnector
+    KeycloakUserService
     ()
   }
 }
