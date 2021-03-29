@@ -8,8 +8,7 @@ import com.ubirch.models.NOK
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
 import com.ubirch.models.user.{Email, FirstName, LastName}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
-import com.ubirch.services.keycloak.KeycloakConnector
-import com.ubirch.services.keycloak.users.KeycloakUserServiceImpl
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -27,7 +26,7 @@ class SuperAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
-  keycloakConnector: KeycloakConnector)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  keycloakUserService: KeycloakUserService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
   override protected val applicationDescription: String = "Super Admin controller"
@@ -70,9 +69,13 @@ class SuperAdminController @Inject() (
 
   get("/simpleTest") {
     asyncResult("simpleTest") { _ => _ =>
-      new KeycloakUserServiceImpl(keycloakConnector)
+      keycloakUserService
         .createUser(
-          CreateKeycloakUser(FirstName("test"), LastName("last-test"), UserName("notanEmail@smdoaka.dnc"), Email("notanEmail@smdoaka.dnc"))
+          CreateKeycloakUser(
+            FirstName("test"),
+            LastName("last-test"),
+            UserName("notanEmail@smdoaka.dnc"),
+            Email("notanEmail@smdoaka.dnc"))
         )
         .map(_ => Ok("created"))
     }

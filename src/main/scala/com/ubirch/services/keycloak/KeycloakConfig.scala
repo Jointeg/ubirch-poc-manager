@@ -12,5 +12,6 @@ class KeycloakConfig @Inject() (val conf: Config) {
   val username: String = conf.getString(ConfPaths.KeycloakPaths.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CLIENT_ID)
+  val usersRealm: String = conf.getString(ConfPaths.KeycloakPaths.USERS_REALM)
 
 }

@@ -3,7 +3,7 @@ package com.ubirch.services.keycloak.groups
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.group._
-import com.ubirch.services.keycloak.KeycloakConnector
+import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
 import monix.eval.Task
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
@@ -16,13 +16,13 @@ trait KeycloakGroupService {
 
 }
 
-class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnector)
+class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnector, keycloakConfig: KeycloakConfig)
   extends KeycloakGroupService
   with LazyLogging {
   override def createGroup(createKeycloakGroup: CreateKeycloakGroup): Task[Either[GroupAlreadyExists, Unit]] =
     Task {
       val response = keycloakConnector.keycloak
-        .realm("test-realm")
+        .realm(keycloakConfig.usersRealm)
         .groups()
         .add(createKeycloakGroup.toKeycloakRepresentation)
 
@@ -39,7 +39,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
       case Some(groupId) =>
         Task {
           val groupResource = keycloakConnector.keycloak
-            .realm("test-realm")
+            .realm(keycloakConfig.usersRealm)
             .groups()
             .group(groupId.value)
             .toRepresentation
@@ -57,7 +57,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
       case Some(groupId: GroupId) =>
         Task {
           keycloakConnector.keycloak
-            .realm("test-realm")
+            .realm(keycloakConfig.usersRealm)
             .groups()
             .group(groupId.value)
             .remove()
@@ -70,7 +70,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
   private def getGroupIdByName(groupName: GroupName): Task[Option[GroupId]] =
     Task {
       keycloakConnector.keycloak
-        .realm("test-realm")
+        .realm(keycloakConfig.usersRealm)
         .groups()
         .groups()
         .asScala

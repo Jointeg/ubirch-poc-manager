@@ -4,7 +4,7 @@ import cats.data.OptionT
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists, UserName}
-import com.ubirch.services.keycloak.KeycloakConnector
+import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
@@ -17,7 +17,7 @@ trait KeycloakUserService {
 }
 
 @Singleton
-class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector)
+class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector, keycloakConfig: KeycloakConfig)
   extends KeycloakUserService
   with LazyLogging {
   override def createUser(createKeycloakUser: CreateKeycloakUser): Task[Either[UserAlreadyExists, Unit]] = {
@@ -26,7 +26,7 @@ class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector)
     logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
     Task {
       val resp = keycloakConnector.keycloak
-        .realm("test-realm")
+        .realm(keycloakConfig.usersRealm)
         .users()
         .create(keycloakUser)
       if (resp.getStatus == 409) {
@@ -42,7 +42,7 @@ class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector)
     logger.debug(s"Retrieving keycloak user $username")
     Task(
       keycloakConnector.keycloak
-        .realm("test-realm")
+        .realm(keycloakConfig.usersRealm)
         .users()
         .search(username.value)
         .asScala
@@ -53,7 +53,7 @@ class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector)
   override def deleteUser(username: UserName): Task[Unit] = {
     (for {
       user <- OptionT(getUser(username))
-      _ <- OptionT.liftF(Task(keycloakConnector.keycloak.realm("test-realm").users().delete(user.getId)))
+      _ <- OptionT.liftF(Task(keycloakConnector.keycloak.realm(keycloakConfig.usersRealm).users().delete(user.getId)))
       _ = logger.debug(s"Successfully deleted $username user")
     } yield ()).value.void
   }

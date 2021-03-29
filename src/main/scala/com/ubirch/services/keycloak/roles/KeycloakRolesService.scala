@@ -3,7 +3,7 @@ package com.ubirch.services.keycloak.roles
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.roles._
-import com.ubirch.services.keycloak.KeycloakConnector
+import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
 import monix.eval.Task
 
 import javax.ws.rs.{ClientErrorException, NotFoundException}
@@ -15,7 +15,7 @@ trait KeycloakRolesService {
 }
 
 @Singleton
-class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnector)
+class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnector, keycloakConfig: KeycloakConfig)
   extends KeycloakRolesService
   with LazyLogging {
 
@@ -25,7 +25,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
     Task(
       Right(
         keycloakConnector.keycloak
-          .realm("test-realm")
+          .realm(keycloakConfig.usersRealm)
           .roles()
           .create(roleRepresentation)
       )
@@ -39,7 +39,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
   override def deleteRole(roleName: RoleName): Task[Unit] = {
     Task(
       keycloakConnector.keycloak
-        .realm("test-realm")
+        .realm(keycloakConfig.usersRealm)
         .roles()
         .deleteRole(roleName.value)
     ).onErrorRecover {
@@ -52,7 +52,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
   override def findRole(roleName: RoleName): Task[Option[KeycloakRole]] = {
     Task {
       val keycloakRoleRepresentation = keycloakConnector.keycloak
-        .realm("test-realm")
+        .realm(keycloakConfig.usersRealm)
         .roles()
         .get(roleName.value)
         .toRepresentation
