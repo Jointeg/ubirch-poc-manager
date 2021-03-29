@@ -24,8 +24,17 @@ object ConfPaths {
     final val KID = "system.tokenVerification.kid"
   }
 
+  trait KeycloakPaths {
+    final val SERVER_URL = "keycloak.server.url"
+    final val SERVER_REALM = "keycloak.server.realm"
+    final val USERNAME = "keycloak.server.username"
+    final val PASSWORD = "keycloak.server.password"
+    final val CLIENT_ID = "keycloak.server.clientId"
+    final val USERS_REALM = "keycloak.users.realm"
+  }
+
   object GenericConfPaths extends GenericConfPaths
   object HttpServerConfPaths extends HttpServerConfPaths
   object TokenVerificationPaths extends TokenVerificationPaths
-
+  object KeycloakPaths extends KeycloakPaths
 }
