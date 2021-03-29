@@ -15,6 +15,7 @@ class KeycloakConfigConnector @Inject() (keycloakConfig: KeycloakConfig) extends
       keycloakConfig.serverRealm,
       keycloakConfig.username,
       keycloakConfig.password,
-      keycloakConfig.clientId)
+      keycloakConfig.clientId
+    )
   }
 }
