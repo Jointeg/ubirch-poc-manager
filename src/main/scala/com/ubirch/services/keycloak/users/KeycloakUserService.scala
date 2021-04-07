@@ -8,7 +8,7 @@ import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
 
 trait KeycloakUserService {
   def createUser(createKeycloakUser: CreateKeycloakUser): Task[Either[UserAlreadyExists, Unit]]
@@ -20,9 +20,11 @@ trait KeycloakUserService {
 class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector, keycloakConfig: KeycloakConfig)
   extends KeycloakUserService
   with LazyLogging {
+
   override def createUser(createKeycloakUser: CreateKeycloakUser): Task[Either[UserAlreadyExists, Unit]] = {
     val keycloakUser = createKeycloakUser.toKeycloakRepresentation
     keycloakUser.setEnabled(true)
+    keycloakUser.setAttributes(Map("confirmation_mail_sent" -> List("false").asJava).asJava)
     logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
     Task {
       val resp = keycloakConnector.keycloak
@@ -30,7 +32,7 @@ class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector, k
         .users()
         .create(keycloakUser)
       if (resp.getStatus == 409) {
-        logger.error(s"Tried to create user with ${keycloakUser.getUsername} but it already exists")
+        logger.error(s"Tried to create user with ${keycloakUser.getUsername} username but it already exists")
         Left(UserAlreadyExists(UserName(keycloakUser.getUsername)))
       } else {
         Right(())

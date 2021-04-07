@@ -34,13 +34,15 @@ What things you need to run the REST api and how to install them.
           command `docker run -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=admin -e KEYCLOAK_IMPORT=/tmp/realm-export.json -e JAVA_OPTS="-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled" -v ~/IdeaProjects/ubirch-poc-manager/realms:/tmp -p 8080:8080 quay.io/keycloak/keycloak:11.0.3`
         * You can access Keycloak instance via http://localhost:8080, username: admin, password: admin. Test-realm
           mentioned in `standalone-installation` are already performed and imported during the startup.
-        * To find out kid access click [here](http://localhost:8080/auth/realms/test-realm/protocol/openid-connect/certs)
+        * To find out kid access
+          click [here](http://localhost:8080/auth/realms/test-realm/protocol/openid-connect/certs)
 * **PostMan** (optional). Provide an easy way to send REST requests to the server and obtaining access token delivered
   by KeyCloak. Installation instructions can be found on the project [webpage](https://www.getpostman.com/downloads/).
 
 ### Starting the project
 
-This project can be started by executing the main function in the com.ubirch.Service.
+As the first step, run the `docker-compose up` command to set up all dependant services. After that, project can be
+started by executing the main function in the com.ubirch.Service.
 
 ## Running the tests
 

@@ -2,18 +2,24 @@ package com.ubirch
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.services.jwt.PublicKeyPoolService
+import com.ubirch.services.keycloak.users.KeycloakUserPollingService
 import com.ubirch.services.rest.RestService
 import monix.eval.Task
 import monix.execution.Scheduler
+import monix.reactive.Observable
 
 import java.util.concurrent.CountDownLatch
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 /**
   * Represents a bootable service object that starts the system
   */
 @Singleton
-class Service @Inject() (restService: RestService, publicKeyPoolService: PublicKeyPoolService)(implicit scheduler: Scheduler) extends LazyLogging {
+class Service @Inject() (
+  restService: RestService,
+  publicKeyPoolService: PublicKeyPoolService,
+  keycloakUserPollingService: KeycloakUserPollingService)(implicit scheduler: Scheduler)
+  extends LazyLogging {
 
   def start(): Unit = {
 
@@ -26,6 +32,8 @@ class Service @Inject() (restService: RestService, publicKeyPoolService: PublicK
         }
     }.runToFuture
 
+    keycloakUserPollingService.subscribe(resp => Observable(resp))
+
     val cd = new CountDownLatch(1)
     cd.await()
   }
@@ -33,7 +41,8 @@ class Service @Inject() (restService: RestService, publicKeyPoolService: PublicK
 }
 
 object Service extends Boot(List(new Binder)) {
-  def main(args: Array[String]): Unit = * {
-    get[Service].start()
-  }
+  def main(args: Array[String]): Unit =
+    * {
+      get[Service].start()
+    }
 }

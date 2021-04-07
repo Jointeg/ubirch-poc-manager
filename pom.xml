@@ -405,6 +405,27 @@
             <version>0.7.2</version>
         </dependency>
 
+        <!-- HTTP client -->
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>core_2.12</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>json4s_2.12</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/async-http-client-backend-future -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>async-http-client-backend-future_2.12</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
         <!-- test dependencies -->
         <dependency>
             <groupId>org.scalatest</groupId>

@@ -31,6 +31,8 @@ object ConfPaths {
     final val PASSWORD = "keycloak.server.password"
     final val CLIENT_ID = "keycloak.server.clientId"
     final val USERS_REALM = "keycloak.users.realm"
+    final val JSON_STRING = "keycloak.jsonString"
+    final val USER_POLLING_INTERVAL = "keycloak.polling.interval"
   }
 
   object GenericConfPaths extends GenericConfPaths

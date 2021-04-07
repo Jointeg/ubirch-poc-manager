@@ -3,7 +3,12 @@ package com.ubirch.controllers
 import com.google.inject.Singleton
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
+import com.ubirch.controllers.concerns.{
+  ControllerBase,
+  KeycloakBearerAuthStrategy,
+  KeycloakBearerAuthenticationSupport,
+  Token
+}
 import com.ubirch.models.NOK
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
 import com.ubirch.models.user.{Email, FirstName, LastName}
@@ -18,6 +23,7 @@ import org.scalatra.{NotFound, Ok, ScalatraBase}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.util.Random
 
 @Singleton
 class SuperAdminController @Inject() (
@@ -72,12 +78,12 @@ class SuperAdminController @Inject() (
       keycloakUserService
         .createUser(
           CreateKeycloakUser(
-            FirstName("test"),
-            LastName("last-test"),
-            UserName("notanEmail@smdoaka.dnc"),
-            Email("notanEmail@smdoaka.dnc"))
-        )
-        .map(_ => Ok("created"))
+            FirstName(Random.alphanumeric.take(10).mkString("")),
+            LastName(Random.alphanumeric.take(10).mkString("")),
+            UserName(s"${Random.alphanumeric.take(10).mkString("")}@test.com"),
+            Email(s"${Random.alphanumeric.take(10).mkString("")}@test.com")
+          )
+        ).map(_ => Ok("Created"))
     }
   }
 

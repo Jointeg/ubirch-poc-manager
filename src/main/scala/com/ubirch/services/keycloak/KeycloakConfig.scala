@@ -13,5 +13,7 @@ class KeycloakConfig @Inject() (val conf: Config) {
   val password: String = conf.getString(ConfPaths.KeycloakPaths.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CLIENT_ID)
   val usersRealm: String = conf.getString(ConfPaths.KeycloakPaths.USERS_REALM)
+  val jsonString: String = conf.getString(ConfPaths.KeycloakPaths.JSON_STRING)
+  val userPollingInterval: Int = conf.getInt(ConfPaths.KeycloakPaths.USER_POLLING_INTERVAL)
 
 }
