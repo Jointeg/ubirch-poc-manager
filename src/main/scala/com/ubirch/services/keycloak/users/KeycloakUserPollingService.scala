@@ -20,10 +20,15 @@ import sttp.client.json4s._
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
+trait UserPollingService {
+  def subscribe[T](operation: Either[Exception, List[KeycloakUser]] => Observable[T]): Cancelable
+}
+
 @Singleton
 class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConfig: KeycloakConfig)(implicit
   formats: Formats)
-  extends LazyLogging {
+  extends UserPollingService
+  with LazyLogging {
 
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
@@ -35,9 +40,15 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
         Observable
           .fromTask(Task(authClient.client.obtainAccessToken(keycloakConfig.username, keycloakConfig.password)))
           .doOnError(logObtainAccessTokenError)
-      users <- Observable.fromTask(getUsersWithoutConfirmationMail(token)).doOnError(logObtainUsersError)
-      _ <- Observable.fromTask(
-        Task(logger.info(s"Retrieved ${users.body.map(_.size).getOrElse(0)} users without confirmation mail sent")))
+      users <-
+        Observable
+          .fromTask(getUsersWithoutConfirmationMail(token))
+          .doOnError(logObtainUsersError)
+      _ <-
+        Observable
+          .fromTask(
+            Task(logger.info(s"Retrieved ${users.body.map(_.size).getOrElse(0)} users without confirmation mail sent"))
+          )
     } yield users.body
   }
 

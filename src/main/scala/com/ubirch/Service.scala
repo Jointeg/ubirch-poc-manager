@@ -2,7 +2,7 @@ package com.ubirch
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.keycloak.users.KeycloakUserPollingService
+import com.ubirch.services.keycloak.users.UserPollingService
 import com.ubirch.services.rest.RestService
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -18,7 +18,7 @@ import javax.inject.{Inject, Singleton}
 class Service @Inject() (
   restService: RestService,
   publicKeyPoolService: PublicKeyPoolService,
-  keycloakUserPollingService: KeycloakUserPollingService)(implicit scheduler: Scheduler)
+  keycloakUserPollingService: UserPollingService)(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
