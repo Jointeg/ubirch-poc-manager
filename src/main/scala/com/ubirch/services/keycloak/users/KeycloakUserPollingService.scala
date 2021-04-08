@@ -38,17 +38,15 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
       _ <- Observable.intervalWithFixedDelay(keycloakConfig.userPollingInterval.seconds)
       token <-
         Observable
-          .fromTask(Task(authClient.client.obtainAccessToken(keycloakConfig.username, keycloakConfig.password)))
+          .fromTask(
+            Task(authClient.client
+              .obtainAccessToken(keycloakConfig.clientAdminUsername, keycloakConfig.clientAdminPassword)))
           .doOnError(logObtainAccessTokenError)
       users <-
         Observable
           .fromTask(getUsersWithoutConfirmationMail(token))
           .doOnError(logObtainUsersError)
-      _ <-
-        Observable
-          .fromTask(
-            Task(logger.info(s"Retrieved ${users.body.map(_.size).getOrElse(0)} users without confirmation mail sent"))
-          )
+      _ <- Observable.fromTask(logUsersResponse(users))
     } yield users.body
   }
 
@@ -68,6 +66,15 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
         .response(asJson[List[KeycloakUser]])
         .send()
     )
+  }
+
+  private def logUsersResponse(usersResponse: Response[Either[ResponseError[Exception], List[KeycloakUser]]]) = {
+    usersResponse.body match {
+      case Left(exception) =>
+        Task(
+          logger.error(s"Could not retrieve users from Keycloak because error has occurred: ${exception.getMessage}"))
+      case Right(users) => Task(logger.info(s"Retrieved ${users.size} users without confirmation mail sent"))
+    }
   }
 
   private def logObtainAccessTokenError(exception: Throwable) = {

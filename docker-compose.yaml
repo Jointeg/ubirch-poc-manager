@@ -20,7 +20,8 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - './realms:/tmp'
+      - './keycloak/realms:/tmp'
+      - './keycloak/extensions:/opt/jboss/keycloak/standalone/deployments'
     networks:
       - dev_network
 networks:

@@ -44,6 +44,12 @@ What things you need to run the REST api and how to install them.
 As the first step, run the `docker-compose up` command to set up all dependant services. After that, project can be
 started by executing the main function in the com.ubirch.Service.
 
+In order to make the polling service work correctly, You have to manually create a user in Keycloak and assign him
+an `admin` role. The username and password has to be same as set in `application.conf` (`keycloak.client.adminUsername`
+, `keycloak.client.adminPassword`). Last step is to refresh the client secret and paste the correct one
+into `keycloak.client.config`. After that, You should see logs indicating how many users were confirmed, but the mail to
+POC manager was not sent yet.
+
 ### Creating a POC user
 
 Each user that will be created in a Keycloak via POC-service will have assigned  `confirmation-mail-sent` attribute set
