@@ -7,10 +7,14 @@ import org.keycloak.authorization.client.AuthzClient
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 
-@Singleton
-class AuthClient @Inject() (keycloakConfig: KeycloakConfig) {
+trait AuthClient {
+  def client: AuthzClient
+}
 
-  val client = createAuthorisationClient(keycloakConfig.jsonString)
+@Singleton
+class KeycloakAuthzClient @Inject() (keycloakConfig: KeycloakConfig) extends AuthClient {
+
+  val client: AuthzClient = createAuthorisationClient(keycloakConfig.clientConfig)
 
   private def createAuthorisationClient(keyCloakJson: String): AuthzClient = {
     val jsonKeycloakStream = new ByteArrayInputStream(keyCloakJson.getBytes(StandardCharsets.UTF_8))
