@@ -409,20 +409,20 @@
         <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core -->
         <dependency>
             <groupId>com.softwaremill.sttp.client</groupId>
-            <artifactId>core_2.12</artifactId>
+            <artifactId>core_${scala.compat.version}</artifactId>
             <version>2.2.9</version>
         </dependency>
 
         <dependency>
             <groupId>com.softwaremill.sttp.client</groupId>
-            <artifactId>json4s_2.12</artifactId>
+            <artifactId>json4s_${scala.compat.version}</artifactId>
             <version>2.2.9</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/async-http-client-backend-future -->
         <dependency>
             <groupId>com.softwaremill.sttp.client</groupId>
-            <artifactId>async-http-client-backend-future_2.12</artifactId>
+            <artifactId>async-http-client-backend-future_${scala.compat.version}</artifactId>
             <version>2.2.9</version>
         </dependency>
 
