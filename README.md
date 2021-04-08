@@ -44,6 +44,13 @@ What things you need to run the REST api and how to install them.
 As the first step, run the `docker-compose up` command to set up all dependant services. After that, project can be
 started by executing the main function in the com.ubirch.Service.
 
+### Creating a POC user
+
+Each user that will be created in a Keycloak via POC-service will have assigned  `confirmation-mail-sent` attribute set
+to `false`. This flag will be used by polling mechanism, that will retrieve all users who had completed the
+registration, but mail to POC-manager was not sent yet. Once the mail will be sent, we will change the state of this
+attribute to `true`.
+
 ## Running the tests
 
 Tests can be run with
