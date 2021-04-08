@@ -32,7 +32,12 @@ class Service @Inject() (
         }
     }.runToFuture
 
-    keycloakUserPollingService.subscribe(resp => Observable(resp))
+    val pollingService = keycloakUserPollingService.subscribe(resp => Observable(resp))
+
+    sys.addShutdownHook {
+      logger.info("Shutdown of polling service")
+      pollingService.cancel()
+    }
 
     val cd = new CountDownLatch(1)
     cd.await()
