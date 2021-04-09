@@ -16,7 +16,7 @@ import com.ubirch.services.keycloak.users.{
   KeycloakUserServiceImpl,
   UserPollingService
 }
-import com.ubirch.services.keycloak.{KeycloakConfigConnector, KeycloakConnector}
+import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConfigConnector, KeycloakConnector, RealKeycloakConfig}
 import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
 import com.ubirch.services.rest.SwaggerProvider
 import monix.execution.Scheduler
@@ -28,6 +28,7 @@ import scala.concurrent.ExecutionContext
 class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
+  def KeycloakConfig: ScopedBindingBuilder = bind(classOf[KeycloakConfig]).to(classOf[RealKeycloakConfig])
   def ExecutionContext: ScopedBindingBuilder = bind(classOf[ExecutionContext]).toProvider(classOf[ExecutionProvider])
   def Scheduler: ScopedBindingBuilder = bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
   def Swagger: ScopedBindingBuilder = bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
@@ -59,6 +60,7 @@ class Binder extends AbstractModule {
 
   override def configure(): Unit = {
     Config
+    KeycloakConfig
     ExecutionContext
     Scheduler
     Swagger

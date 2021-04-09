@@ -4,8 +4,21 @@ import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths
 
+trait KeycloakConfig {
+  def serverUrl: String
+  def serverRealm: String
+  def username: String
+  def password: String
+  def clientId: String
+  def usersRealm: String
+  def clientConfig: String
+  def clientAdminUsername: String
+  def clientAdminPassword: String
+  def userPollingInterval: Int
+}
+
 @Singleton
-class KeycloakConfig @Inject() (val conf: Config) {
+class RealKeycloakConfig @Inject() (val conf: Config) extends KeycloakConfig {
 
   val serverUrl: String = conf.getString(ConfPaths.KeycloakPaths.SERVER_URL)
   val serverRealm: String = conf.getString(ConfPaths.KeycloakPaths.SERVER_REALM)

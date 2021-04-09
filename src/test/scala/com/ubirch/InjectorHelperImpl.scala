@@ -10,10 +10,14 @@ import com.ubirch.services.jwt.{
   PublicKeyPoolService,
   TokenCreationService
 }
-import com.ubirch.services.keycloak.KeycloakConnector
+import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
+import com.ubirch.services.keycloak.auth.AuthClient
 import monix.eval.Task
 import org.keycloak.admin.client.Keycloak
+import org.keycloak.authorization.client.AuthzClient
 
+import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 import java.security.Key
 import javax.inject.{Inject, Provider, Singleton}
 
@@ -275,6 +279,37 @@ class KeycloakDynamicPortConnector @Inject() (keycloakRuntimeConfig: KeycloakRun
   )
 }
 
+@Singleton
+class KeycloakDynamicAuthzClient @Inject() (keycloakRuntimeConfig: KeycloakRuntimeConfig) extends AuthClient {
+
+  val client: AuthzClient = createAuthorisationClient()
+
+  private def createAuthorisationClient(): AuthzClient = {
+    val keycloakJson =
+      s"""{ "realm": "test-realm", "auth-server-url": "http://${keycloakRuntimeConfig.server}:${keycloakRuntimeConfig.port}/auth", "ssl-required": "external", "resource": "ubirch-2.0-user-access-local", "credentials": { "secret": "ca942e9b-8336-43a3-bd22-adcaf7e5222f" }, "confidential-port": 0 }"""
+    val jsonKeycloakStream = new ByteArrayInputStream(keycloakJson.getBytes(StandardCharsets.UTF_8))
+    AuthzClient.create(jsonKeycloakStream)
+  }
+
+}
+
+@Singleton
+class TestKeycloakConfig @Inject() (val conf: Config, keycloakRuntimeConfig: KeycloakRuntimeConfig)
+  extends KeycloakConfig {
+
+  val serverUrl: String = s"http://${keycloakRuntimeConfig.server}:${keycloakRuntimeConfig.port}/auth"
+  val serverRealm: String = conf.getString(ConfPaths.KeycloakPaths.SERVER_REALM)
+  val username: String = conf.getString(ConfPaths.KeycloakPaths.USERNAME)
+  val password: String = conf.getString(ConfPaths.KeycloakPaths.PASSWORD)
+  val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CLIENT_ID)
+  val usersRealm: String = conf.getString(ConfPaths.KeycloakPaths.USERS_REALM)
+  val clientConfig: String = conf.getString(ConfPaths.KeycloakPaths.CLIENT_CONFIG)
+  val clientAdminUsername: String = conf.getString(ConfPaths.KeycloakPaths.CLIENT_ADMIN_USER)
+  val clientAdminPassword: String = conf.getString(ConfPaths.KeycloakPaths.CLIENT_ADMIN_PASSWORD)
+  val userPollingInterval: Int = conf.getInt(ConfPaths.KeycloakPaths.USER_POLLING_INTERVAL)
+
+}
+
 class InjectorHelperImpl()
   extends InjectorHelper(List(new Binder {
     override def PublicKeyPoolService: ScopedBindingBuilder = {
@@ -287,7 +322,7 @@ class InjectorHelperImpl()
     }
   }))
 
-class TestKeycloakInjectorHelperImpl(keycloakContainer: KeycloakContainer)
+class TestKeycloakInjectorHelperImpl(val keycloakContainer: KeycloakContainer)
   extends InjectorHelper(List(new Binder {
 
     override def PublicKeyPoolService: ScopedBindingBuilder = {
@@ -297,6 +332,18 @@ class TestKeycloakInjectorHelperImpl(keycloakContainer: KeycloakContainer)
     override def KeycloakConnector: ScopedBindingBuilder = {
       bind(classOf[KeycloakConnector]).toConstructor(
         classOf[KeycloakDynamicPortConnector].getConstructor(classOf[KeycloakRuntimeConfig]))
+    }
+
+    override def AuthClient: ScopedBindingBuilder = {
+      bind(classOf[AuthClient]).toConstructor(
+        classOf[KeycloakDynamicAuthzClient].getConstructor(classOf[KeycloakRuntimeConfig])
+      )
+    }
+
+    override def KeycloakConfig: ScopedBindingBuilder = {
+      bind(classOf[KeycloakConfig]).toConstructor(
+        classOf[TestKeycloakConfig].getConstructor(classOf[Config], classOf[KeycloakRuntimeConfig])
+      )
     }
 
     override def configure(): Unit = {
