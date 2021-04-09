@@ -6,7 +6,6 @@ import com.ubirch.models.keycloak.user.KeycloakUser
 import com.ubirch.services.keycloak.KeycloakConfig
 import com.ubirch.services.keycloak.auth.AuthClient
 import monix.eval.Task
-import monix.execution.Cancelable
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.json4s.Formats
@@ -21,7 +20,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 trait UserPollingService {
-  def subscribe[T](operation: Either[Exception, List[KeycloakUser]] => Observable[T]): Cancelable
+  def via[T](operation: Either[Exception, List[KeycloakUser]] => Observable[T]): Observable[T]
 }
 
 @Singleton
@@ -85,7 +84,7 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
     Task(logger.error(s"Could not retrieve users without confirmation mail sent because ${exception.getMessage}"))
   }
 
-  def subscribe[T](operation: Either[Exception, List[KeycloakUser]] => Observable[T]): Cancelable =
-    retryWithDelay(newlyRegisteredUsers.flatMap(operation)).subscribe()
+  def via[T](operation: Either[Exception, List[KeycloakUser]] => Observable[T]): Observable[T] =
+    retryWithDelay(newlyRegisteredUsers.flatMap(operation))
 
 }
