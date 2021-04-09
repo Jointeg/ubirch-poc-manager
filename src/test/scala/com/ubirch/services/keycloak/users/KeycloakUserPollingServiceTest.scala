@@ -1,19 +1,18 @@
 package com.ubirch.services.keycloak.users;
 
-import com.ubirch.KeycloakBasedTestForEach
+import com.ubirch.KeycloakBasedTestForAll
 import com.ubirch.data.KeycloakTestData
-import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
+import com.ubirch.models.keycloak.user.CreateKeycloakUser
 import com.ubirch.models.user.{Email, FirstName, LastName}
 import com.ubirch.services.keycloak.KeycloakConnector
 import monix.eval.Task
 import monix.reactive.Observable
-import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import sttp.client.HttpError
 import sttp.model.StatusCode
 
 import scala.concurrent.duration.DurationInt;
 
-class KeycloakUserPollingServiceTest extends KeycloakBasedTestForEach with Eventually with IntegrationPatience {
+class KeycloakUserPollingServiceTest extends KeycloakBasedTestForAll {
 
   "Keycloak User Polling Service" should {
     "Poll only users that have verified email and confirmation_mail_sent attribute set to false" in {
@@ -22,12 +21,13 @@ class KeycloakUserPollingServiceTest extends KeycloakBasedTestForEach with Event
         val userService = injector.get[KeycloakUserService]
         val keycloakConnector = injector.get[KeycloakConnector]
 
-        createKeycloakAdminUser("client-admin", "client-admin")(keycloakConnector)
         val keycloakUser1 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser2 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser3 = KeycloakTestData.createNewKeycloakUser()
 
         val pollingResult = for {
+          _ <- cleanAllUsers(keycloakConnector)
+          _ <- createKeycloakAdminUser(injector.clientAdmin)(keycloakConnector)
           pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(3.seconds).lastL.start
           _ <- userService.createUser(keycloakUser1)
           _ <- userService.createUser(keycloakUser2)
@@ -52,12 +52,14 @@ class KeycloakUserPollingServiceTest extends KeycloakBasedTestForEach with Event
         val userService = injector.get[KeycloakUserService]
         val keycloakConnector = injector.get[KeycloakConnector]
 
-        createKeycloakAdminUser("client-admin", "client-admin")(keycloakConnector)
+        createKeycloakAdminUser(injector.clientAdmin)(keycloakConnector)
         val keycloakUser1 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser2 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser3 = KeycloakTestData.createNewKeycloakUser()
 
         val pollingResult = for {
+          _ <- cleanAllUsers(keycloakConnector)
+          _ <- createKeycloakAdminUser(injector.clientAdmin)(keycloakConnector)
           pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(8.seconds).toListL.start
           _ <- userService.createUser(keycloakUser1)
           _ <- userService.createUser(keycloakUser2)
@@ -90,13 +92,16 @@ class KeycloakUserPollingServiceTest extends KeycloakBasedTestForEach with Event
         val keycloakConnector = injector.get[KeycloakConnector]
 
         val pollingResult = for {
+          _ <- cleanAllUsers(keycloakConnector)
           _ <- userService.createUser(
             CreateKeycloakUser(
-              FirstName("client-admin"),
-              LastName("client-admin"),
-              UserName("client-admin"),
+              FirstName(injector.clientAdmin.userName.value),
+              LastName(injector.clientAdmin.userName.value),
+              injector.clientAdmin.userName,
               Email("test@email.com")))
-          _ <- assignCredentialsToUser("client-admin", "client-admin")(userService, keycloakConnector)
+          _ <- assignCredentialsToUser(injector.clientAdmin.userName.value, injector.clientAdmin.password)(
+            userService,
+            keycloakConnector)
           pollingResult <- userPollingService.via(Observable(_)).takeByTimespan(3.seconds).toListL
         } yield pollingResult
 

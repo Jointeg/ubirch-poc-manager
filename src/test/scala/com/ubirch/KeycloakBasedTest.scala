@@ -1,6 +1,6 @@
 package com.ubirch
 
-import com.dimafeng.testcontainers.scalatest.{TestContainerForAll, TestContainerForEach}
+import com.dimafeng.testcontainers.scalatest.TestContainerForAll
 import com.ubirch.models.keycloak.user.UserName
 import com.ubirch.services.keycloak.KeycloakConnector
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -8,8 +8,9 @@ import monix.eval.Task
 import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatra.test.scalatest.ScalatraWordSpec
+import cats.implicits._
 
-import scala.collection.JavaConverters.{mapAsJavaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
 import scala.util.Random
 
 trait KeycloakBasedTest
@@ -20,6 +21,13 @@ trait KeycloakBasedTest
   with EitherValues {
 
   val TEST_REALM = "test-realm"
+
+  def cleanAllUsers(keycloakConnector: KeycloakConnector): Task[Unit] = {
+    for {
+      allUsers <- Task(keycloakConnector.keycloak.realm(TEST_REALM).users().list().asScala.toList)
+      _ <- allUsers.traverse_(user => Task(keycloakConnector.keycloak.realm(TEST_REALM).users().delete(user.getId)))
+    } yield ()
+  }
 
   def assignCredentialsToUser(username: String, password: String)(
     userService: KeycloakUserService,
@@ -37,30 +45,31 @@ trait KeycloakBasedTest
     } yield ()
   }
 
-  def createKeycloakAdminUser(username: String, password: String)(keycloakConnector: KeycloakConnector): Unit = {
-    val userRepresentation = new UserRepresentation()
-    userRepresentation.setUsername(username)
-    userRepresentation.setFirstName(username)
-    userRepresentation.setLastName(username)
-    userRepresentation.setEmail(s"${Random.alphanumeric.take(10).mkString("")}@email.com")
-    val credentialRepresentation = new CredentialRepresentation()
-    credentialRepresentation.setType(CredentialRepresentation.PASSWORD)
-    credentialRepresentation.setValue(password)
-    credentialRepresentation.setTemporary(false)
-    userRepresentation.setCredentials(List(credentialRepresentation).asJava)
-    userRepresentation.setEnabled(true)
-    keycloakConnector.keycloak.realm(TEST_REALM).users().create(userRepresentation)
+  def createKeycloakAdminUser(clientAdmin: ClientAdmin)(keycloakConnector: KeycloakConnector): Task[Unit] =
+    Task {
+      val userRepresentation = new UserRepresentation()
+      userRepresentation.setUsername(clientAdmin.userName.value)
+      userRepresentation.setFirstName(clientAdmin.userName.value)
+      userRepresentation.setLastName(clientAdmin.userName.value)
+      userRepresentation.setEmail(s"${Random.alphanumeric.take(10).mkString("")}@email.com")
+      val credentialRepresentation = new CredentialRepresentation()
+      credentialRepresentation.setType(CredentialRepresentation.PASSWORD)
+      credentialRepresentation.setValue(clientAdmin.password)
+      credentialRepresentation.setTemporary(false)
+      userRepresentation.setCredentials(List(credentialRepresentation).asJava)
+      userRepresentation.setEnabled(true)
+      keycloakConnector.keycloak.realm(TEST_REALM).users().create(userRepresentation)
 
-    val clientAdmin = keycloakConnector.keycloak.realm(TEST_REALM).users().search(username).get(0)
-    val adminRole = keycloakConnector.keycloak.realm(TEST_REALM).roles().get("admin")
-    keycloakConnector.keycloak
-      .realm(TEST_REALM)
-      .users()
-      .get(clientAdmin.getId)
-      .roles()
-      .realmLevel()
-      .add(List(adminRole.toRepresentation).asJava)
-  }
+      val admin = keycloakConnector.keycloak.realm(TEST_REALM).users().search(clientAdmin.userName.value).get(0)
+      val adminRole = keycloakConnector.keycloak.realm(TEST_REALM).roles().get("admin")
+      keycloakConnector.keycloak
+        .realm(TEST_REALM)
+        .users()
+        .get(admin.getId)
+        .roles()
+        .realmLevel()
+        .add(List(adminRole.toRepresentation).asJava)
+    }
 
   def setConfirmationMailSentAttribute(value: Boolean, username: UserName)(
     userService: KeycloakUserService,
@@ -84,15 +93,7 @@ trait KeycloakBasedTest
   }
 }
 
-trait KeycloakBasedTestForEach extends KeycloakBasedTest with TestContainerForEach {
-  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
-
-  def withInjector[A](testCode: TestKeycloakInjectorHelperImpl => A): A = {
-    withContainers { keycloakContainer =>
-      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
-    }
-  }
-}
+case class ClientAdmin(userName: UserName, password: String)
 
 trait KeycloakBasedTestForAll extends KeycloakBasedTest with TestContainerForAll {
 
@@ -100,7 +101,9 @@ trait KeycloakBasedTestForAll extends KeycloakBasedTest with TestContainerForAll
 
   def withInjector[A](testCode: TestKeycloakInjectorHelperImpl => A): A = {
     withContainers { keycloakContainer =>
-      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
+      val clientAdmin: ClientAdmin =
+        ClientAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
+      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer, clientAdmin))
     }
   }
 }
