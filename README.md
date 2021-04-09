@@ -46,8 +46,7 @@ started by executing the main function in the com.ubirch.Service.
 
 In order to make the polling service work correctly, You have to manually create a user in Keycloak and assign him
 an `admin` role. The username and password has to be same as set in `application.conf` (`keycloak.client.adminUsername`
-, `keycloak.client.adminPassword`). Last step is to refresh the client secret and paste the correct one
-into `keycloak.client.config`. After that, You should see logs indicating how many users were confirmed, but the mail to
+, `keycloak.client.adminPassword`). After that, You should see logs indicating how many users were confirmed, but the mail to
 POC manager was not sent yet.
 
 ### Creating a POC user
