@@ -1,6 +1,6 @@
 package com.ubirch
 
-import com.dimafeng.testcontainers.scalatest.TestContainerForAll
+import com.dimafeng.testcontainers.scalatest.{TestContainerForAll, TestContainerForEach}
 import com.ubirch.models.keycloak.user.UserName
 import com.ubirch.services.keycloak.KeycloakConnector
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -14,7 +14,6 @@ import scala.util.Random
 
 trait KeycloakBasedTest
   extends ScalatraWordSpec
-  with TestContainerForAll
   with ExecutionContextsTests
   with Awaits
   with OptionValues
@@ -22,12 +21,20 @@ trait KeycloakBasedTest
 
   val TEST_REALM = "test-realm"
 
-  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
+  def assignCredentialsToUser(username: String, password: String)(
+    userService: KeycloakUserService,
+    keycloakConnector: KeycloakConnector): Task[Unit] = {
+    val credentialRepresentation = new CredentialRepresentation()
+    credentialRepresentation.setType(CredentialRepresentation.PASSWORD)
+    credentialRepresentation.setValue(password)
+    credentialRepresentation.setTemporary(false)
 
-  def withInjector[A](testCode: TestKeycloakInjectorHelperImpl => A): A = {
-    withContainers { keycloakContainer =>
-      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
-    }
+    for {
+      maybeUser <- userService.getUser(UserName(username))
+      user = maybeUser.getOrElse(fail(s"Expected to get user with username $username"))
+      _ = user.setCredentials(List(credentialRepresentation).asJava)
+      _ <- Task(keycloakConnector.keycloak.realm(TEST_REALM).users().get(user.getId).update(user))
+    } yield ()
   }
 
   def createKeycloakAdminUser(username: String, password: String)(keycloakConnector: KeycloakConnector): Unit = {
@@ -74,5 +81,26 @@ trait KeycloakBasedTest
       _ = user.setEmailVerified(true)
       _ <- Task(keycloakConnector.keycloak.realm(TEST_REALM).users().get(user.getId).update(user))
     } yield ()
+  }
+}
+
+trait KeycloakBasedTestForEach extends KeycloakBasedTest with TestContainerForEach {
+  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
+
+  def withInjector[A](testCode: TestKeycloakInjectorHelperImpl => A): A = {
+    withContainers { keycloakContainer =>
+      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
+    }
+  }
+}
+
+trait KeycloakBasedTestForAll extends KeycloakBasedTest with TestContainerForAll {
+
+  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
+
+  def withInjector[A](testCode: TestKeycloakInjectorHelperImpl => A): A = {
+    withContainers { keycloakContainer =>
+      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer))
+    }
   }
 }

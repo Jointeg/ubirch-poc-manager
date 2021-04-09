@@ -1,15 +1,19 @@
 package com.ubirch.services.keycloak.users;
 
-import com.ubirch.KeycloakBasedTest
+import com.ubirch.KeycloakBasedTestForEach
 import com.ubirch.data.KeycloakTestData
+import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
+import com.ubirch.models.user.{Email, FirstName, LastName}
 import com.ubirch.services.keycloak.KeycloakConnector
 import monix.eval.Task
 import monix.reactive.Observable
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import sttp.client.HttpError
+import sttp.model.StatusCode
 
 import scala.concurrent.duration.DurationInt;
 
-class KeycloakUserPollingServiceTest extends KeycloakBasedTest with Eventually with IntegrationPatience {
+class KeycloakUserPollingServiceTest extends KeycloakBasedTestForEach with Eventually with IntegrationPatience {
 
   "Keycloak User Polling Service" should {
     "Poll only users that have verified email and confirmation_mail_sent attribute set to false" in {
@@ -24,7 +28,7 @@ class KeycloakUserPollingServiceTest extends KeycloakBasedTest with Eventually w
         val keycloakUser3 = KeycloakTestData.createNewKeycloakUser()
 
         val pollingResult = for {
-          pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(2.seconds).lastL.start
+          pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(3.seconds).lastL.start
           _ <- userService.createUser(keycloakUser1)
           _ <- userService.createUser(keycloakUser2)
           _ <- userService.createUser(keycloakUser3)
@@ -54,7 +58,7 @@ class KeycloakUserPollingServiceTest extends KeycloakBasedTest with Eventually w
         val keycloakUser3 = KeycloakTestData.createNewKeycloakUser()
 
         val pollingResult = for {
-          pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(4.seconds).toListL.start
+          pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(8.seconds).toListL.start
           _ <- userService.createUser(keycloakUser1)
           _ <- userService.createUser(keycloakUser2)
           _ <- userService.createUser(keycloakUser3)
@@ -76,6 +80,35 @@ class KeycloakUserPollingServiceTest extends KeycloakBasedTest with Eventually w
         listOfPolledUsers.find(_.size == 3) shouldBe defined
         // After "sending" mail to two users, polling service should poll only one user that is still awaiting
         listOfPolledUsers.last.size shouldBe 1
+      }
+    }
+
+    "Deny access from user that does not have an admin role" in {
+      withInjector { injector =>
+        val userPollingService = injector.get[UserPollingService]
+        val userService = injector.get[KeycloakUserService]
+        val keycloakConnector = injector.get[KeycloakConnector]
+
+        val pollingResult = for {
+          _ <- userService.createUser(
+            CreateKeycloakUser(
+              FirstName("client-admin"),
+              LastName("client-admin"),
+              UserName("client-admin"),
+              Email("test@email.com")))
+          _ <- assignCredentialsToUser("client-admin", "client-admin")(userService, keycloakConnector)
+          pollingResult <- userPollingService.via(Observable(_)).takeByTimespan(3.seconds).toListL
+        } yield pollingResult
+
+        val result = await(pollingResult, 5.seconds)
+        result.foreach {
+          case Left(exception) =>
+            exception match {
+              case httpError: HttpError if httpError.statusCode == StatusCode.Forbidden => ()
+              case exception => fail(s"Expected to get HttpError indicating Unauthorized but instead got $exception")
+            }
+          case Right(value) => fail(s"Expected to retrieve error response from keycloak but instead got $value")
+        }
       }
     }
   }
