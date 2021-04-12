@@ -1,0 +1,28 @@
+services:
+  mailhog-keycloak:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - 1025:1025 # smtp server
+      - 8025:8025 # web ui
+    networks:
+      - dev_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:11.0.3
+    container_name: keycloak
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      KEYCLOAK_IMPORT: '/tmp/realm-export.json'
+      KEYCLOAK_LOGLEVEL: 'DEBUG'
+      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
+    ports:
+      - 8080:8080
+    volumes:
+      - './keycloak/realms:/tmp'
+      - './keycloak/extensions:/opt/jboss/keycloak/standalone/deployments'
+    networks:
+      - dev_network
+networks:
+  dev_network:

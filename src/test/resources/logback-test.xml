@@ -23,18 +23,11 @@
         </encoder>
     </appender>
 
-    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
-        <target>System.err</target>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%20.20logger{20}] %msg%n</pattern>
-        </encoder>
-    </appender>
-
     <logger name="io.netty" level="ERROR"/>
     <logger name="com.ubirch" level="ERROR"/>
 
-    <root level="ERROR">
-        <appender-ref ref="STDERR"/>
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
     </root>
 
 </configuration>

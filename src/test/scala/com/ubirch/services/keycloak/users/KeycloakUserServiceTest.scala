@@ -1,13 +1,13 @@
 package com.ubirch.services.keycloak.users
 
-import com.ubirch.KeycloakBasedTest
+import com.ubirch.KeycloakBasedTestForAll
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.models.keycloak.user.{UserAlreadyExists, UserName}
 import org.scalactic.StringNormalizations._
 
 import scala.concurrent.duration.DurationInt
 
-class KeycloakUserServiceTest extends KeycloakBasedTest {
+class KeycloakUserServiceTest extends KeycloakBasedTestForAll {
 
   "KeycloakUserService" should {
     "Be able to create an user, retrieve info about him and delete him" in {
