@@ -24,5 +24,18 @@ services:
       - './keycloak/extensions:/opt/jboss/keycloak/standalone/deployments'
     networks:
       - dev_network
+
+  postgres:
+    image: postgres:13.2
+    restart: always
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./sql/initial_tables.sql:/docker-entrypoint-initdb.d/initial_tables.sql
+
 networks:
   dev_network:
