@@ -7,6 +7,7 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 
 class SuperAdminControllerSpec extends ScalatraWordSpec
   with BeforeAndAfterEach
