@@ -223,7 +223,13 @@
         </dependency>
         <dependency>
             <groupId>com.dimafeng</groupId>
-            <artifactId>testcontainers-scala-scalatest_2.12</artifactId>
+            <artifactId>testcontainers-scala-scalatest_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-postgresql_${scala.compat.version}</artifactId>
             <version>0.39.3</version>
             <scope>test</scope>
         </dependency>
@@ -417,6 +423,18 @@
             <groupId>com.softwaremill.sttp.client</groupId>
             <artifactId>json4s_${scala.compat.version}</artifactId>
             <version>2.2.9</version>
+        </dependency>
+
+        <!-- Quill -->
+        <dependency>
+            <groupId>io.getquill</groupId>
+            <artifactId>quill-jdbc_${scala.compat.version}</artifactId>
+            <version>3.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.2.19</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/async-http-client-backend-future -->

@@ -1,9 +1,11 @@
 package com.ubirch
 
+import com.dimafeng.testcontainers.PostgreSQLContainer
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{GeneratorKeyFactory, PrivKey}
+import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
@@ -11,6 +13,7 @@ import com.ubirch.services.jwt.{
   TokenCreationService
 }
 import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
+import io.getquill.{PostgresJdbcContext, SnakeCase}
 import monix.eval.Task
 import org.keycloak.admin.client.Keycloak
 
@@ -263,6 +266,7 @@ class FakeTokenCreator @Inject() (privKey: PrivKey, tokenCreationService: TokenC
 }
 
 case class KeycloakRuntimeConfig(server: String, port: Int, clientAdmin: ClientAdmin)
+case class PostgresRuntimeConfig(server: String, port: Int)
 
 @Singleton
 class KeycloakDynamicPortConnector @Inject() (keycloakRuntimeConfig: KeycloakRuntimeConfig) extends KeycloakConnector {
@@ -302,6 +306,42 @@ class InjectorHelperImpl()
     override def configure(): Unit = {
       super.configure()
       bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
+    }
+  }))
+
+@Singleton
+class TestPostgresQuillJdbcContext @Inject() (val postgresRuntimeConfig: PostgresRuntimeConfig)
+  extends QuillJdbcContext {
+  override val ctx: PostgresJdbcContext[SnakeCase] = new PostgresJdbcContext(
+    SnakeCase,
+    ConfigFactory.parseString(s"""
+      |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
+      |    dataSource.user = postgres
+      |    dataSource.password = postgres
+      |    dataSource.databaseName = postgres
+      |    dataSource.portNumber = ${postgresRuntimeConfig.port}
+      |    dataSource.serverName = ${postgresRuntimeConfig.server}
+      |    connectionTimeout = 30000
+      |""".stripMargin))
+}
+
+class PostgresInjectorHelperImpl(val postgreContainer: PostgresContainer)
+  extends InjectorHelper(List(new Binder {
+    override def PublicKeyPoolService: ScopedBindingBuilder = {
+      bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
+    }
+
+    override def QuillJdbcContext: ScopedBindingBuilder =
+      bind(classOf[QuillJdbcContext]).toConstructor(
+        classOf[TestPostgresQuillJdbcContext].getConstructor(classOf[PostgresRuntimeConfig]))
+
+    override def configure(): Unit = {
+      bind(classOf[PostgresRuntimeConfig]).toInstance(
+        PostgresRuntimeConfig(
+          postgreContainer.container.getContainerIpAddress,
+          postgreContainer.container.getFirstMappedPort))
+      bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
+      super.configure()
     }
   }))
 

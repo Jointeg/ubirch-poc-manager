@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS product
+CREATE TABLE IF NOT EXISTS example_data
 (
-    product_id INT          NOT NULL,
+    id INT          NOT NULL,
     name       varchar(250) NOT NULL,
-    PRIMARY KEY (product_id)
+    PRIMARY KEY (id)
 );
