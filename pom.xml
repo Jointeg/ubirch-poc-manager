@@ -71,6 +71,7 @@
 
         <keycloack.version>11.0.2</keycloack.version>
         <testcontainers.version>1.15.2</testcontainers.version>
+        <flyway.version>7.8.1</flyway.version>
 
         <jwt-core.version>4.2.0</jwt-core.version>
 
@@ -454,7 +455,7 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
-            <version>7.8.1</version>
+            <version>${flyway.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -466,7 +467,7 @@
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
-                <version>7.8.1</version>
+                <version>${flyway.version}</version>
             </plugin>
             <plugin>
                 <!-- see http://davidb.github.com/scala-maven-plugin -->

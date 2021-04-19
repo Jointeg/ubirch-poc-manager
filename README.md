@@ -26,10 +26,6 @@ schema.
 If You ran service locally, then invoking `docker compose up` set up clean DB and performs migration automatically. So
 each time You ran it, You will be working on latest possible DB version.
 
-If You want to perform migration manually, then You have to invoke
-command `mvn clean flyway:migrate -Dflyway.configFiles=flyway.conf`, where `flyway.conf` is a configuration file with
-User/Password/DB URL information.
-
 ## POC user confirmation-mail-sent attribute
 
 Each user that will be created in a Keycloak via POC-service will have assigned  `confirmation-mail-sent` attribute set
@@ -69,7 +65,13 @@ only those, that might be unclear:
   to authenticate and obtain data from Keycloak.
 * `database.dataSourceClassName` - Represents class name of DataSource that will be used by POC-Service. We are using
   PostgreSQL so it will be `org.postgresql.ds.PGSimpleDataSource`.
-* `database.dataSource.serverName` - Hostname of DB.   
+* `database.dataSource.serverName` - Hostname of DB.
+
+### Performing DB migration
+
+If You want to perform migration, then You have to invoke
+command `mvn clean flyway:migrate -Dflyway.configFiles=flyway.conf`, where `flyway.conf` is a configuration file with
+User/Password/DB URL information. It will run migration basing on scripts located in `resources/db/migration` location.
 
 ## Built With
 
