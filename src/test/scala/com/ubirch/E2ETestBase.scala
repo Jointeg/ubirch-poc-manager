@@ -37,13 +37,9 @@ trait E2ETestBase
           .schemas("poc_manager")
           .load()
           .migrate()
-        if (migrationResult.warnings.isEmpty) {
-          val clientAdmin: ClientAdmin =
-            ClientAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
-          testCode(new E2EInjectorHelperImpl(postgresContainer, keycloakContainer, clientAdmin))
-        } else {
-          fail("Could not start test code because error has happened during ")
-        }
+        val clientAdmin: ClientAdmin =
+          ClientAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
+        testCode(new E2EInjectorHelperImpl(postgresContainer, keycloakContainer, clientAdmin))
     }
   }
 
