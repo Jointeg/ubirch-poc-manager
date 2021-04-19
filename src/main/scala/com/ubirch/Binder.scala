@@ -61,7 +61,7 @@ class Binder extends AbstractModule {
     bind(classOf[UserPollingService]).to(classOf[KeycloakUserPollingService])
   def QuillJdbcContext: ScopedBindingBuilder =
     bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
-  def ExampleDataRepository: ScopedBindingBuilder =
+  def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
 
   override def configure(): Unit = {
@@ -85,7 +85,7 @@ class Binder extends AbstractModule {
     AuthClient
     UserPollingService
     QuillJdbcContext
-    ExampleDataRepository
+    UserRepository
     ()
   }
 }
