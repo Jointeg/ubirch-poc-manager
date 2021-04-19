@@ -1,7 +1,7 @@
 package com.ubirch.db
 
 import com.ubirch.E2ETestBase
-import com.ubirch.db.models.User
+import com.ubirch.db.models.{User, WaitingForRequiredActions}
 import com.ubirch.db.tables.UserRepository
 import com.ubirch.models.user.Email
 
@@ -13,7 +13,6 @@ class DBIntegrationTest extends E2ETestBase {
   "System" should {
     "should be able to store and retrieve data in DB" in {
       withInjector { injector =>
-        println(injector.postgreContainer.logs)
         val repo = injector.get[UserRepository]
         val userId = UUID.randomUUID()
         val userEmail = Email("testmail@example.com")
@@ -22,7 +21,7 @@ class DBIntegrationTest extends E2ETestBase {
           data <- repo.getUser(userId)
         } yield data
 
-        await(res, 5.seconds) shouldBe User(userId, userEmail)
+        await(res, 5.seconds) shouldBe User(userId, userEmail, WaitingForRequiredActions)
       }
     }
   }

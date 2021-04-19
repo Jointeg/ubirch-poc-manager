@@ -18,22 +18,22 @@ class UserTable @Inject() (quillJdbcContext: QuillJdbcContext) extends UserRepos
 
   private def createExampleDataQuery(exampleData: User) =
     quote {
-      querySchema[User]("users").insert(lift(exampleData))
+      querySchema[User]("poc_manager.users").insert(lift(exampleData))
     }
 
   private def updateExampleDataQuery(exampleData: User) =
     quote {
-      querySchema[User]("users").filter(_.id == lift(exampleData.id)).update(lift(exampleData))
+      querySchema[User]("poc_manager.users").filter(_.id == lift(exampleData.id)).update(lift(exampleData))
     }
 
   private def removeExampleDataQuery(id: UUID) =
     quote {
-      querySchema[User]("users").filter(_.id == lift(id)).delete
+      querySchema[User]("poc_manager.users").filter(_.id == lift(id)).delete
     }
 
   private def getExampleDataQuery(id: UUID) =
     quote {
-      querySchema[User]("users").filter(_.id == lift(id))
+      querySchema[User]("poc_manager.users").filter(_.id == lift(id))
     }
 
   override def createUser(exampleData: User): Task[Unit] = Task(run(createExampleDataQuery(exampleData)))

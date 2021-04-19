@@ -1,6 +1,5 @@
 package com.ubirch
 
-import com.dimafeng.testcontainers.PostgreSQLContainer
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch.crypto.utils.Curve
