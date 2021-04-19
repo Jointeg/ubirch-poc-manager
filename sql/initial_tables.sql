@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS example_data
+CREATE TABLE IF NOT EXISTS users
 (
-    id INT          NOT NULL,
-    name       varchar(250) NOT NULL,
+    id    UUID   NOT NULL,
+    email varchar(254) NOT NULL,
     PRIMARY KEY (id)
 );

@@ -4,7 +4,7 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
-import com.ubirch.db.tables.{ExampleDataRepository, ExampleDataTable}
+import com.ubirch.db.tables.{UserRepository, UserTable}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
@@ -62,7 +62,7 @@ class Binder extends AbstractModule {
   def QuillJdbcContext: ScopedBindingBuilder =
     bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
   def ExampleDataRepository: ScopedBindingBuilder =
-    bind(classOf[ExampleDataRepository]).to(classOf[ExampleDataTable])
+    bind(classOf[UserRepository]).to(classOf[UserTable])
 
   override def configure(): Unit = {
     Config

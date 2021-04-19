@@ -1,12 +1,12 @@
 package com.ubirch.services.keycloak.roles
 
-import com.ubirch.KeycloakBasedTestForAll
+import com.ubirch.E2ETestBase
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.models.keycloak.roles.{RoleAlreadyExists, RoleName}
 
 import scala.concurrent.duration.DurationInt
 
-class KeycloakRolesServiceTest extends KeycloakBasedTestForAll {
+class KeycloakRolesServiceTest extends E2ETestBase {
 
   "KeycloakRolesService" should {
     "Be able to create, find and in the end delete role" in {

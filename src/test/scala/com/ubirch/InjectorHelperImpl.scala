@@ -325,6 +325,47 @@ class TestPostgresQuillJdbcContext @Inject() (val postgresRuntimeConfig: Postgre
       |""".stripMargin))
 }
 
+class E2EInjectorHelperImpl(
+  val postgreContainer: PostgresContainer,
+  val keycloakContainer: KeycloakContainer,
+  val clientAdmin: ClientAdmin)
+  extends InjectorHelper(List(new Binder {
+
+    override def PublicKeyPoolService: ScopedBindingBuilder = {
+      bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
+    }
+
+    override def QuillJdbcContext: ScopedBindingBuilder =
+      bind(classOf[QuillJdbcContext]).toConstructor(
+        classOf[TestPostgresQuillJdbcContext].getConstructor(classOf[PostgresRuntimeConfig]))
+
+    override def KeycloakConnector: ScopedBindingBuilder = {
+      bind(classOf[KeycloakConnector]).toConstructor(
+        classOf[KeycloakDynamicPortConnector].getConstructor(classOf[KeycloakRuntimeConfig]))
+    }
+
+    override def KeycloakConfig: ScopedBindingBuilder = {
+      bind(classOf[KeycloakConfig]).toConstructor(
+        classOf[TestKeycloakConfig].getConstructor(classOf[Config], classOf[KeycloakRuntimeConfig])
+      )
+    }
+
+    override def configure(): Unit = {
+      bind(classOf[PostgresRuntimeConfig]).toInstance(
+        PostgresRuntimeConfig(
+          postgreContainer.container.getContainerIpAddress,
+          postgreContainer.container.getFirstMappedPort))
+      bind(classOf[KeycloakRuntimeConfig]).toInstance(
+        KeycloakRuntimeConfig(
+          keycloakContainer.container.getContainerIpAddress,
+          keycloakContainer.container.getFirstMappedPort,
+          clientAdmin))
+      bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
+      super.configure()
+    }
+
+  }))
+
 class PostgresInjectorHelperImpl(val postgreContainer: PostgresContainer)
   extends InjectorHelper(List(new Binder {
     override def PublicKeyPoolService: ScopedBindingBuilder = {

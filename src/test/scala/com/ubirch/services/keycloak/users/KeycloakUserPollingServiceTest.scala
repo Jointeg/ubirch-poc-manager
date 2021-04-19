@@ -1,6 +1,6 @@
 package com.ubirch.services.keycloak.users;
 
-import com.ubirch.KeycloakBasedTestForAll
+import com.ubirch.{E2ETestBase, KeycloakOperations}
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.models.keycloak.user.CreateKeycloakUser
 import com.ubirch.models.user.{Email, FirstName, LastName}
@@ -12,7 +12,7 @@ import sttp.model.StatusCode
 
 import scala.concurrent.duration.DurationInt;
 
-class KeycloakUserPollingServiceTest extends KeycloakBasedTestForAll {
+class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations {
 
   "Keycloak User Polling Service" should {
     "Poll only users that have verified email and confirmation_mail_sent attribute set to false" in {
