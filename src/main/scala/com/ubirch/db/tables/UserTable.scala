@@ -8,7 +8,7 @@ trait UserRepository {
   def createUser(user: User): Task[Unit]
   def updateUser(user: User): Task[Unit]
   def deleteUser(id: UserId): Task[Unit]
-  def getUser(id: UserId): Task[User]
+  def getUser(id: UserId): Task[Option[User]]
 }
 
 class UserTable @Inject() (quillJdbcContext: QuillJdbcContext) extends UserRepository {
@@ -37,5 +37,5 @@ class UserTable @Inject() (quillJdbcContext: QuillJdbcContext) extends UserRepos
   override def createUser(user: User): Task[Unit] = Task(run(createExampleDataQuery(user)))
   override def updateUser(user: User): Task[Unit] = Task(run(updateExampleDataQuery(user)))
   override def deleteUser(id: UserId): Task[Unit] = Task(run(removeExampleDataQuery(id)))
-  override def getUser(id: UserId): Task[User] = Task(run(getExampleDataQuery(id))).map(_.head)
+  override def getUser(id: UserId): Task[Option[User]] = Task(run(getExampleDataQuery(id))).map(_.headOption)
 }

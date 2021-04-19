@@ -1,9 +1,10 @@
-package com.ubirch
+package com.ubirch.e2e
 
 import cats.implicits._
 import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.KeycloakConnector
 import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.{Awaits, ExecutionContextsTests}
 import monix.eval.Task
 import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 import org.scalatest.Matchers.fail

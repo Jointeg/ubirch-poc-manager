@@ -42,8 +42,9 @@ fresh Keycloak and Postgres instance. Keycloak will be initialized with realm da
 in `keycloak/realms/realm-export.json`. Postgres will be created as empty DB and the `flyway`
 migration will be performed to run tests in newest possible DB version.
 
-TODO: Create `UnitTestBase` that will work in memory (without containers or any other external communication). Those
-tests should be the core of the service and unlike the `E2E`, they will run fast
+Each test that extends `UnitTestBase` will be run against in-memory implementations of DB/Keycloak. They will run fast,
+focus and should focus on testing the correctness of the modelled flow, rather than the integrations. Due to the nature
+of such tests, some functionalities might not fully work (for example UserPolling). 
 
 ## Deployment
 

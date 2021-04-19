@@ -1,21 +1,26 @@
 package com.ubirch
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{GeneratorKeyFactory, PrivKey}
-import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.e2e.{KeycloakContainer, PostgresContainer}
+import com.ubirch.db.tables.{UserRepository, UserTestTable}
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
   PublicKeyPoolService,
   TokenCreationService
 }
-import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
-import io.getquill.{PostgresJdbcContext, SnakeCase}
+import com.ubirch.services.keycloak.auth.{AuthClient, TestAuthClient}
+import com.ubirch.services.keycloak.groups.{KeycloakGroupService, TestKeycloakGroupsService}
+import com.ubirch.services.keycloak.roles.{KeycloakRolesService, TestKeycloakRolesService}
+import com.ubirch.services.keycloak.users.{
+  KeycloakUserService,
+  TestKeycloakUserService,
+  TestUserPollingService,
+  UserPollingService
+}
 import monix.eval.Task
-import org.keycloak.admin.client.Keycloak
 
 import java.security.Key
 import javax.inject.{Inject, Provider, Singleton}
@@ -264,3 +269,33 @@ class FakeTokenCreator @Inject() (privKey: PrivKey, tokenCreationService: TokenC
   val admin: FakeToken = fakeToken(FakeToken.header, FakeToken.admin)
 
 }
+
+class UnitTestInjectorHelper()
+  extends InjectorHelper(List(new Binder {
+    override def PublicKeyPoolService: ScopedBindingBuilder = {
+      bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
+    }
+
+    override def UserRepository: ScopedBindingBuilder =
+      bind(classOf[UserRepository]).to(classOf[UserTestTable])
+
+    override def UserPollingService: ScopedBindingBuilder =
+      bind(classOf[UserPollingService]).to(classOf[TestUserPollingService])
+
+    override def AuthClient: ScopedBindingBuilder =
+      bind(classOf[AuthClient]).to(classOf[TestAuthClient])
+
+    override def KeycloakGroupService: ScopedBindingBuilder =
+      bind(classOf[KeycloakGroupService]).to(classOf[TestKeycloakGroupsService])
+
+    override def KeycloakRolesService: ScopedBindingBuilder =
+      bind(classOf[KeycloakRolesService]).to(classOf[TestKeycloakRolesService])
+
+    override def KeycloakUserService: ScopedBindingBuilder =
+      bind(classOf[KeycloakUserService]).to(classOf[TestKeycloakUserService])
+
+    override def configure(): Unit = {
+      bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
+      super.configure()
+    }
+  }))

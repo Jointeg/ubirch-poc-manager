@@ -19,7 +19,7 @@ class DBIntegrationTest extends E2ETestBase {
           data <- repo.getUser(userId)
         } yield data
 
-        await(res, 5.seconds) shouldBe User(userId, userEmail, WaitingForRequiredActions)
+        await(res, 5.seconds) shouldBe Some(User(userId, userEmail, WaitingForRequiredActions))
       }
     }
   }
