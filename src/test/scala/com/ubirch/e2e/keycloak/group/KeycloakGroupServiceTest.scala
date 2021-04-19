@@ -1,7 +1,6 @@
-package com.ubirch.services.keycloak.group
-
-import com.ubirch.E2ETestBase
+package com.ubirch.e2e.keycloak.group
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
+import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.keycloak.group.{GroupAlreadyExists, GroupName, GroupNotFound}
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 

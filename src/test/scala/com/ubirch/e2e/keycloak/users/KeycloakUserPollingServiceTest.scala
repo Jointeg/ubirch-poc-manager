@@ -1,10 +1,12 @@
-package com.ubirch.services.keycloak.users;
+package com.ubirch.e2e.keycloak.users;
 
-import com.ubirch.{E2ETestBase, KeycloakOperations}
+import com.ubirch.KeycloakOperations
 import com.ubirch.data.KeycloakTestData
+import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.keycloak.user.CreateKeycloakUser
 import com.ubirch.models.user.{Email, FirstName, LastName}
 import com.ubirch.services.keycloak.KeycloakConnector
+import com.ubirch.services.keycloak.users.{KeycloakUserService, UserPollingService}
 import monix.eval.Task
 import monix.reactive.Observable
 import sttp.client.HttpError

@@ -1,4 +1,4 @@
-package com.ubirch
+package com.ubirch.e2e
 
 import com.dimafeng.testcontainers.{ContainerDef, JdbcDatabaseContainer, SingleContainer}
 import org.testcontainers.containers.{PostgreSQLContainer => JavaPostgreSQLContainer}

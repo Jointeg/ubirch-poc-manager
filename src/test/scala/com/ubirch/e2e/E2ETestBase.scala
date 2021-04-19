@@ -1,7 +1,9 @@
-package com.ubirch
+package com.ubirch.e2e
+
 import com.dimafeng.testcontainers.lifecycle.and
 import com.dimafeng.testcontainers.scalatest.TestContainersForAll
 import com.ubirch.models.user.UserName
+import com.ubirch._
 import org.flywaydb.core.Flyway
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatra.test.scalatest.ScalatraWordSpec
@@ -27,7 +29,7 @@ trait E2ETestBase
   def withInjector[A](testCode: E2EInjectorHelperImpl => A): A = {
     withContainers {
       case postgresContainer and keycloakContainer =>
-        val migrationResult = Flyway
+        Flyway
           .configure()
           .dataSource(
             s"jdbc:postgresql://${postgresContainer.container.getContainerIpAddress}:${postgresContainer.container.getFirstMappedPort}/postgres",

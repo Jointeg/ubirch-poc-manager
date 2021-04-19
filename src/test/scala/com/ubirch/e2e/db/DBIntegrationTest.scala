@@ -1,7 +1,6 @@
-package com.ubirch.db
-
-import com.ubirch.E2ETestBase
+package com.ubirch.e2e.db
 import com.ubirch.db.tables.UserRepository
+import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.user.{Email, User, UserId, WaitingForRequiredActions}
 
 import java.util.UUID
