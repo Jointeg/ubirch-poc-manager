@@ -1,6 +1,6 @@
-# Ubirch POC Manager
+# Ubirch POC Service
 
-REST API for the UBIRCH POC Manager
+REST API for the UBIRCH POC Service
 
 ## Getting started
 
@@ -12,8 +12,9 @@ purposes.
 Run the `docker compose up` command to set up all dependant services. After that, project can be started by executing
 the main function in the com.ubirch.Service.
 
-In order to make the polling service work correctly, You have to manually create a user in Keycloak `test-realm` realm and assign him
-an `admin` role. The username and password has to be same as set in `application.conf` (`keycloak.client.adminUsername`
+In order to make the polling service work correctly, You have to manually create a user in Keycloak `test-realm` realm
+and assign him an `admin` role. The username and password has to be same as set
+in `application.conf` (`keycloak.client.adminUsername`
 , `keycloak.client.adminPassword`). After that, You should see logs indicating how many users were confirmed, but the
 mail to POC manager was not sent yet.
 
@@ -47,6 +48,28 @@ migration will be performed to run tests in newest possible DB version.
 
 TODO: Create `UnitTestBase` that will work in memory (without containers or any other external communication). Those
 tests should be the core of the service and unlike the `E2E`, they will run fast
+
+## Deployment
+
+All the required attributes that needs to be set up are listed in `application-docker.conf`. Following list will contain
+only those, that might be unclear:
+
+* `keycloak.users.realm` - Realm where the users created by POC-Service will be stored.
+* `keycloak.polling.interval` - Interval (in seconds) that indicates how often POC-Service will poll Keycloak for newly
+  registered users (look at `confirmation-mail-sent` attribute).
+* `keycloak.client.config` - Config of a client that will be used for polling purposes. It should be in format similar
+  to:
+  ` """{ "realm": "test-realm", "auth-server-url": "http://localhost:8080/auth", "ssl-required": "external", "resource": "ubirch-2.0-user-access-local", "credentials": { "secret": "ca942e9b-8336-43a3-bd22-adcaf7e5222f" }, "confidential-port": 0 }""" `
+  with replaced data where it is needed. Similar configuration is already used by `web-ui-rest` application. It is used
+  by a polling service in order to obtain an entry point for Keycloak Authorization Services (for example for
+  obtaining `Access Token` for polling admin user which is defined below)
+* `keycloak.client.adminUsername` - Username of a user with `admin` role assigned. It will be used by a polling service
+  to authenticate and obtain data from Keycloak.
+* `keycloak.client.adminPassword` - Password of a user with `admin` role assigned. It will be used by a polling service
+  to authenticate and obtain data from Keycloak.
+* `database.dataSourceClassName` - Represents class name of DataSource that will be used by POC-Service. We are using
+  PostgreSQL so it will be `org.postgresql.ds.PGSimpleDataSource`.
+* `database.dataSource.serverName` - Hostname of DB.   
 
 ## Built With
 

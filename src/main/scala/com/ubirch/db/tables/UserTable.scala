@@ -1,16 +1,14 @@
 package com.ubirch.db.tables
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.db.models.User
+import com.ubirch.models.user.{User, UserId}
 import monix.eval.Task
 
-import java.util.UUID
-
 trait UserRepository {
-  def createUser(exampleData: User): Task[Unit]
-  def updateUser(exampleData: User): Task[Unit]
-  def deleteUser(id: UUID): Task[Unit]
-  def getUser(id: UUID): Task[User]
+  def createUser(user: User): Task[Unit]
+  def updateUser(user: User): Task[Unit]
+  def deleteUser(id: UserId): Task[Unit]
+  def getUser(id: UserId): Task[User]
 }
 
 class UserTable @Inject() (quillJdbcContext: QuillJdbcContext) extends UserRepository {
@@ -26,18 +24,18 @@ class UserTable @Inject() (quillJdbcContext: QuillJdbcContext) extends UserRepos
       querySchema[User]("poc_manager.users").filter(_.id == lift(exampleData.id)).update(lift(exampleData))
     }
 
-  private def removeExampleDataQuery(id: UUID) =
+  private def removeExampleDataQuery(id: UserId) =
     quote {
       querySchema[User]("poc_manager.users").filter(_.id == lift(id)).delete
     }
 
-  private def getExampleDataQuery(id: UUID) =
+  private def getExampleDataQuery(id: UserId) =
     quote {
       querySchema[User]("poc_manager.users").filter(_.id == lift(id))
     }
 
-  override def createUser(exampleData: User): Task[Unit] = Task(run(createExampleDataQuery(exampleData)))
-  override def updateUser(exampleData: User): Task[Unit] = Task(run(updateExampleDataQuery(exampleData)))
-  override def deleteUser(id: UUID): Task[Unit] = Task(run(removeExampleDataQuery(id)))
-  override def getUser(id: UUID): Task[User] = Task(run(getExampleDataQuery(id))).map(_.head)
+  override def createUser(user: User): Task[Unit] = Task(run(createExampleDataQuery(user)))
+  override def updateUser(user: User): Task[Unit] = Task(run(updateExampleDataQuery(user)))
+  override def deleteUser(id: UserId): Task[Unit] = Task(run(removeExampleDataQuery(id)))
+  override def getUser(id: UserId): Task[User] = Task(run(getExampleDataQuery(id))).map(_.head)
 }

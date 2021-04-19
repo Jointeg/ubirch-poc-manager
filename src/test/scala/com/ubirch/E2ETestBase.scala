@@ -1,7 +1,7 @@
 package com.ubirch
 import com.dimafeng.testcontainers.lifecycle.and
 import com.dimafeng.testcontainers.scalatest.TestContainersForAll
-import com.ubirch.models.keycloak.user.UserName
+import com.ubirch.models.user.UserName
 import org.flywaydb.core.Flyway
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatra.test.scalatest.ScalatraWordSpec

@@ -2,7 +2,8 @@ package com.ubirch.services.keycloak.users
 
 import com.ubirch.E2ETestBase
 import com.ubirch.data.KeycloakTestData
-import com.ubirch.models.keycloak.user.{UserAlreadyExists, UserName}
+import com.ubirch.models.keycloak.user.UserAlreadyExists
+import com.ubirch.models.user.UserName
 import org.scalactic.StringNormalizations._
 
 import scala.concurrent.duration.DurationInt

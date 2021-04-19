@@ -1,7 +1,7 @@
 package com.ubirch
 
 import cats.implicits._
-import com.ubirch.models.keycloak.user.UserName
+import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.KeycloakConnector
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import monix.eval.Task

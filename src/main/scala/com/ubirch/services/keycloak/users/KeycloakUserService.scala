@@ -3,7 +3,8 @@ package com.ubirch.services.keycloak.users
 import cats.data.OptionT
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists, UserName}
+import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists}
+import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation

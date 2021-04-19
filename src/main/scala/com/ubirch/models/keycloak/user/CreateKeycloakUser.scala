@@ -1,13 +1,13 @@
 package com.ubirch.models.keycloak.user
 
-import com.ubirch.models.user.{Email, FirstName, LastName}
+import com.ubirch.models.user.{Email, FirstName, LastName, UserName}
 import org.keycloak.representations.idm.UserRepresentation
 
 case class CreateKeycloakUser(
-                               firstName: FirstName,
-                               lastName: LastName,
-                               userName: UserName,
-                               email: Email
+  firstName: FirstName,
+  lastName: LastName,
+  userName: UserName,
+  email: Email
 ) {
   def toKeycloakRepresentation: UserRepresentation = {
     val userRepresentation = new UserRepresentation()

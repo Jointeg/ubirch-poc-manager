@@ -1,4 +1,5 @@
-package com.ubirch.db.models
+package com.ubirch.models.user
+
 import io.getquill.MappedEncoding
 
 sealed trait UserStatus
