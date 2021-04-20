@@ -49,12 +49,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTreeModule } from '@angular/material/tree';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { RouterModule } from '@angular/router';
+import { PocListComponent } from './components/poc-list/poc-list.component';
 
 
 @NgModule({
   declarations: [
     HeaderComponent,
     FooterComponent,
+    PocListComponent,
   ],
   imports: [
     CommonModule,
@@ -108,6 +110,8 @@ import { RouterModule } from '@angular/router';
   exports: [
     HeaderComponent,
     FooterComponent,
+    PocListComponent,
+
     MatListModule,
   ]
 })

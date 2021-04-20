@@ -15,6 +15,18 @@ const routes: Routes = [
             import('./views/dashboard/dashboard.module').then((m) => m.DashboardModule),
         canActivate: [AuthGuard],
     },
+    {
+        path: 'tenant-pocs',
+        loadChildren: () =>
+            import('./views/tenant-pocs/tenant-pocs.module').then((m) => m.TenantPocsModule),
+        canActivate: [TenantAdminGuard],
+    },
+    {
+        path: 'import',
+        loadChildren: () =>
+            import('./views/import/import.module').then((m) => m.ImportModule),
+        canActivate: [TenantAdminGuard],
+    },
 ];
 
 @NgModule({
