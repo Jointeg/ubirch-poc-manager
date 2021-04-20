@@ -1,10 +1,9 @@
-package com.ubirch
+package com.ubirch.e2e
 
 import com.dimafeng.testcontainers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.MountableFile
 
-import java.io.File
 import java.time.Duration
 
 class KeycloakContainer(underlying: GenericContainer) extends GenericContainer(underlying) {

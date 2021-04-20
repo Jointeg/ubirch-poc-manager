@@ -10,8 +10,8 @@ import com.ubirch.controllers.concerns.{
   Token
 }
 import com.ubirch.models.NOK
-import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserName}
-import com.ubirch.models.user.{Email, FirstName, LastName}
+import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.user.{Email, FirstName, LastName, UserName}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import io.prometheus.client.Counter
@@ -83,7 +83,8 @@ class SuperAdminController @Inject() (
             UserName(s"${Random.alphanumeric.take(10).mkString("")}@test.com"),
             Email(s"${Random.alphanumeric.take(10).mkString("")}@test.com")
           )
-        ).map(_ => Ok("Created"))
+        )
+        .map(_ => Ok("Created"))
     }
   }
 

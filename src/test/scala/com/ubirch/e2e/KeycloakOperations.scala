@@ -1,24 +1,19 @@
-package com.ubirch
+package com.ubirch.e2e
 
-import com.dimafeng.testcontainers.scalatest.TestContainerForAll
-import com.ubirch.models.keycloak.user.UserName
+import cats.implicits._
+import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.KeycloakConnector
 import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.{Awaits, ExecutionContextsTests}
 import monix.eval.Task
 import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
+import org.scalatest.Matchers.fail
 import org.scalatest.{EitherValues, OptionValues}
-import org.scalatra.test.scalatest.ScalatraWordSpec
-import cats.implicits._
 
 import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
 import scala.util.Random
 
-trait KeycloakBasedTest
-  extends ScalatraWordSpec
-  with ExecutionContextsTests
-  with Awaits
-  with OptionValues
-  with EitherValues {
+trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionValues with EitherValues {
 
   val TEST_REALM = "test-realm"
 
@@ -94,16 +89,3 @@ trait KeycloakBasedTest
 }
 
 case class ClientAdmin(userName: UserName, password: String)
-
-trait KeycloakBasedTestForAll extends KeycloakBasedTest with TestContainerForAll {
-
-  override val containerDef: KeycloakContainer.Def = KeycloakContainer.Def()
-
-  def withInjector[A](testCode: TestKeycloakInjectorHelperImpl => A): A = {
-    withContainers { keycloakContainer =>
-      val clientAdmin: ClientAdmin =
-        ClientAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
-      testCode(new TestKeycloakInjectorHelperImpl(keycloakContainer, clientAdmin))
-    }
-  }
-}

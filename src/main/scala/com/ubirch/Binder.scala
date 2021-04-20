@@ -3,6 +3,8 @@ package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
 import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
+import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
+import com.ubirch.db.tables.{UserRepository, UserTable}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
@@ -57,6 +59,10 @@ class Binder extends AbstractModule {
     bind(classOf[AuthClient]).to(classOf[KeycloakAuthzClient])
   def UserPollingService: ScopedBindingBuilder =
     bind(classOf[UserPollingService]).to(classOf[KeycloakUserPollingService])
+  def QuillJdbcContext: ScopedBindingBuilder =
+    bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
+  def UserRepository: ScopedBindingBuilder =
+    bind(classOf[UserRepository]).to(classOf[UserTable])
 
   override def configure(): Unit = {
     Config
@@ -78,6 +84,8 @@ class Binder extends AbstractModule {
     KeycloakGroupService
     AuthClient
     UserPollingService
+    QuillJdbcContext
+    UserRepository
     ()
   }
 }
