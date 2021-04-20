@@ -485,6 +485,7 @@
                                 <arg>-deprecation</arg>
                                 <arg>-dependencyfile</arg>
                                 <arg>-Ypartial-unification</arg>
+                                <arg>-feature</arg>
                             </args>
                         </configuration>
                     </execution>
