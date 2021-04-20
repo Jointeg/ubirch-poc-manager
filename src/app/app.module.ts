@@ -6,8 +6,10 @@ import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
-import { initializer } from './utils/app-init';
-import { KeycloakAngularModule, KeycloakService } from 'keycloak-angular';
+import { initializer } from './core/utils/app-init';
+import { CoreModule, KeycloakAngularModule, KeycloakService } from 'keycloak-angular';
+import { SharedModule } from './shared/shared.module';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 @NgModule({
     declarations: [AppComponent],
@@ -15,8 +17,11 @@ import { KeycloakAngularModule, KeycloakService } from 'keycloak-angular';
     imports: [
         BrowserModule,
         IonicModule.forRoot(),
+        CoreModule,
+        SharedModule,
         AppRoutingModule,
         KeycloakAngularModule,
+        BrowserAnimationsModule,
     ],
     providers: [
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
@@ -29,4 +34,4 @@ import { KeycloakAngularModule, KeycloakService } from 'keycloak-angular';
     ],
     bootstrap: [AppComponent],
 })
-export class AppModule {}
+export class AppModule { }

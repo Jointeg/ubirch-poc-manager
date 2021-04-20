@@ -1,4 +1,4 @@
-export const SUPER_ADMIN = 'super-admin';
+export const TENANT_ADMIN = 'tenant-admin';
 
-export type ROLE = typeof SUPER_ADMIN;
+export type ROLE = typeof TENANT_ADMIN;
 

@@ -1,75 +1,8 @@
 <ion-app>
-  <ion-split-pane contentId="main-content">
-
-    <ion-menu type="overlay" contentId="main-content">
-      <ion-header no-border>
-        <ion-item class="small-header">
-          <!-- <ion-icon
-            [src]="clientLogoPath"
-            class="ion-float-start ubirch-brand"
-          ></ion-icon> -->
-          <ion-label class="ion-float-left">
-            <!-- <h4 *ngIf="addClientNameToLogo">{{ clientName }}</h4> -->
-          </ion-label>
-        </ion-item>
-        <ion-grid class="big-header">
-          <ion-row class="ion-justify-content-center ion-margin-top">
-            <ion-col size="10">
-              <div>
-                <!-- <img [src]="clientLogoPath" class="logo" /> -->
-              </div>
-            </ion-col>
-          </ion-row>
-          <!-- <ion-row
-            class="ion-justify-content-center"
-            *ngIf="addClientNameToLogo"
-          >
-            <ion-col>
-              <div class="ion-text-center">
-                <h4>{{ clientName }}</h4>
-              </div>
-            </ion-col>
-          </ion-row> -->
-        </ion-grid>
-      </ion-header>
-      <ion-content>
-        <ion-list>
-          <ion-menu-toggle
-            auto-hide="false"
-            *ngFor="let p of appPages"
-          >
-            <ion-item
-              [routerDirection]="'root'"
-              [routerLink]="[p.url]"
-              routerLinkActive="active-menu-item"
-              lines="none"
-            >
-              <ion-icon
-                src="{{ 'assets/app-icons/' + p.icon }}"
-                class="ion-float-start"
-              ></ion-icon>
-              <ion-label class="ion-float-left">
-                <!-- {{ p.titleKey }} -->
-              </ion-label>
-            </ion-item>
-          </ion-menu-toggle>
-        </ion-list>
-      </ion-content>
-      <ion-footer>
-        <ion-item>
-          <ion-icon
-            src="assets/app-images/UBIRCH_Wort_Bildmarke_white.svg"
-            class="ion-float-start ubirch-brand"
-          ></ion-icon>
-          <ion-label class="ion-float-left">
-            powered by<br />
-            ubirch GmbH
-          </ion-label>
-        </ion-item>
-      </ion-footer>
-    </ion-menu>
-
-    <ion-router-outlet id="main-content"></ion-router-outlet>
-
-  </ion-split-pane>
+  <app-header></app-header>
+  <ion-content>
+    <ion-router-outlet></ion-router-outlet>
+  </ion-content>
+  <app-footer></app-footer>
 </ion-app>
+

@@ -1,7 +1,7 @@
 const keycloakConfig: any = {
-    realm: 'ubirch-certificator',
-    url: 'https://id.dev.ubirch.com/auth/',
-    clientId: 'admin-access-local',
+    url: 'https://id.dev.ubirch.com/auth',
+    realm: 'ubirch-default-realm',
+    clientId: 'poc-manager-user-access-local'
 };
 
 export const environment = {

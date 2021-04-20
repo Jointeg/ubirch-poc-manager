@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12">
+    <defs>
+        <style>.cls-1{}</style>
+    </defs>
+    <g id="Ebene_2">
+        <g id="_12x12" >
+            <g id="Fehler_Abfrage">
+                <path d="M6,0A6,6,0,0,0,6,12a5.22,5.22,0,0,0,1.57-.21A6.1,6.1,0,0,0,12,6,6,6,0,0,0,6,0Z"></path>
+                <text style="font-size:4px;fill:#fff;font-family:MyriadPro-Bold, Myriad Pro;font-weight:700;" transform="translate(3.72 7.33)">99</text>
+            </g>
+        </g>
+    </g>
+</svg>
