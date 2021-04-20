@@ -1,7 +1,9 @@
-package com.ubirch.controllers
+package com.ubirch.e2e.controllers
 
+import com.ubirch.controllers.SuperAdminController
+import com.ubirch.e2e.InjectorHelperImpl
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.{ Awaits, ExecutionContextsTests, FakeTokenCreator, InjectorHelperImpl }
+import com.ubirch.{Awaits, ExecutionContextsTests, FakeTokenCreator}
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.BeforeAndAfterEach
 import org.scalatra.test.scalatest.ScalatraWordSpec
@@ -9,7 +11,8 @@ import org.scalatra.test.scalatest.ScalatraWordSpec
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
-class SuperAdminControllerSpec extends ScalatraWordSpec
+class SuperAdminControllerSpec
+  extends ScalatraWordSpec
   with BeforeAndAfterEach
   with ExecutionContextsTests
   with Awaits {
@@ -20,7 +23,8 @@ class SuperAdminControllerSpec extends ScalatraWordSpec
     "fail when token is not provided" in {
       get("/initialTest") {
         status should equal(401)
-        assert(body == """{"version":"1.0","ok":false,"errorType":"AuthenticationError","errorMessage":"Unauthenticated"}""")
+        assert(
+          body == """{"version":"1.0","ok":false,"errorType":"AuthenticationError","errorMessage":"Unauthenticated"}""")
       }
     }
 
@@ -37,11 +41,11 @@ class SuperAdminControllerSpec extends ScalatraWordSpec
     CollectorRegistry.defaultRegistry.clear()
   }
 
-  protected override def afterAll(): Unit = {
+  override protected def afterAll(): Unit = {
     super.afterAll()
   }
 
-  protected override def beforeAll(): Unit = {
+  override protected def beforeAll(): Unit = {
 
     CollectorRegistry.defaultRegistry.clear()
 

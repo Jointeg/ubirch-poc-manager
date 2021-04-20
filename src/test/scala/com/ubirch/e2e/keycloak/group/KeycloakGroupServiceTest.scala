@@ -1,13 +1,12 @@
-package com.ubirch.services.keycloak.group
-
-import com.ubirch.KeycloakBasedTestForAll
+package com.ubirch.e2e.keycloak.group
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
+import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.keycloak.group.{GroupAlreadyExists, GroupName, GroupNotFound}
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 
 import scala.concurrent.duration.DurationInt
 
-class KeycloakGroupServiceTest extends KeycloakBasedTestForAll {
+class KeycloakGroupServiceTest extends E2ETestBase {
 
   "KeycloakGroupService" should {
     "Create new group, find it and then delete" in {

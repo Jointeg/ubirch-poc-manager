@@ -1,3 +1,3 @@
-package com.ubirch.models.keycloak.user
+package com.ubirch.models.user
 
 case class UserName(value: String) extends AnyVal

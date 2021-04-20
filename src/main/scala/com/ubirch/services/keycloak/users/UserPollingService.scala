@@ -10,7 +10,6 @@ import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.json4s.Formats
 import org.json4s.native.Serialization
-import org.keycloak.representations.AccessTokenResponse
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
@@ -38,8 +37,8 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
       token <-
         Observable
           .fromTask(
-            Task(authClient.client
-              .obtainAccessToken(keycloakConfig.clientAdminUsername, keycloakConfig.clientAdminPassword)))
+            authClient
+              .obtainAccessToken(keycloakConfig.clientAdminUsername, keycloakConfig.clientAdminPassword))
           .doOnError(logObtainAccessTokenError)
       users <-
         Observable
@@ -55,13 +54,13 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
     }
   }
 
-  private def getUsersWithoutConfirmationMail(token: AccessTokenResponse) = {
+  private def getUsersWithoutConfirmationMail(token: String) = {
     Task.fromFuture(
       basicRequest
         .get(
           uri"${keycloakConfig.serverUrl}/realms/${keycloakConfig.usersRealm}/user-search/users-without-confirmation-mail")
         .auth
-        .bearer(token.getToken)
+        .bearer(token)
         .response(asJson[List[KeycloakUser]])
         .send()
     )

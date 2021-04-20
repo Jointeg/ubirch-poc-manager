@@ -71,6 +71,7 @@
 
         <keycloack.version>11.0.2</keycloack.version>
         <testcontainers.version>1.15.2</testcontainers.version>
+        <flyway.version>7.8.1</flyway.version>
 
         <jwt-core.version>4.2.0</jwt-core.version>
 
@@ -223,7 +224,13 @@
         </dependency>
         <dependency>
             <groupId>com.dimafeng</groupId>
-            <artifactId>testcontainers-scala-scalatest_2.12</artifactId>
+            <artifactId>testcontainers-scala-scalatest_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-postgresql_${scala.compat.version}</artifactId>
             <version>0.39.3</version>
             <scope>test</scope>
         </dependency>
@@ -419,6 +426,18 @@
             <version>2.2.9</version>
         </dependency>
 
+        <!-- Quill -->
+        <dependency>
+            <groupId>io.getquill</groupId>
+            <artifactId>quill-jdbc_${scala.compat.version}</artifactId>
+            <version>3.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.2.19</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/async-http-client-backend-future -->
         <dependency>
             <groupId>com.softwaremill.sttp.client</groupId>
@@ -433,12 +452,23 @@
             <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>${flyway.version}</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
     <build>
 
         <plugins>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>${flyway.version}</version>
+            </plugin>
             <plugin>
                 <!-- see http://davidb.github.com/scala-maven-plugin -->
                 <groupId>net.alchim31.maven</groupId>
