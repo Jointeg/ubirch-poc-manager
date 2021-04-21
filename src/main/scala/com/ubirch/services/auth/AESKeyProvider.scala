@@ -16,7 +16,7 @@ class StaticKeyProvider extends AESKeyProvider with LazyLogging {
 
   override def getAESKey: Task[SecretKey] =
     Task {
-      logger.warn("WARNING! Key is provided by StaticKeyProvider which must not be used on production.")
+      logger.warn("WARNING! Key is provided by StaticKeyProvider which can't be used on production.")
       new SecretKeySpec(key, "AES")
     }
 }
