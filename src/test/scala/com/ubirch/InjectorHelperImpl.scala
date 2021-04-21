@@ -4,7 +4,7 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{GeneratorKeyFactory, PrivKey}
-import com.ubirch.db.tables.{UserRepository, UserTestTable}
+import com.ubirch.db.tables.{TenantRepository, TenantTestTable, UserRepository, UserTestTable}
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
@@ -278,6 +278,9 @@ class UnitTestInjectorHelper()
 
     override def UserRepository: ScopedBindingBuilder =
       bind(classOf[UserRepository]).to(classOf[UserTestTable])
+
+    override def TenantRepository: ScopedBindingBuilder =
+      bind(classOf[TenantRepository]).to(classOf[TenantTestTable])
 
     override def UserPollingService: ScopedBindingBuilder =
       bind(classOf[UserPollingService]).to(classOf[TestUserPollingService])

@@ -12,7 +12,7 @@ class AESEncryptionTest extends UnitTestBase {
         val aesEncryption = injector.get[AESEncryption]
         val data = "dataToBeEncrypted"
 
-        await(aesEncryption.encrypt(data), 2.seconds) shouldNot be("dataToBeEncrypted")
+        await(aesEncryption.encrypt(data)(identity), 2.seconds) shouldNot be("dataToBeEncrypted")
       }
     }
 
@@ -21,8 +21,8 @@ class AESEncryptionTest extends UnitTestBase {
         val aesEncryption = injector.get[AESEncryption]
         val data = "dataToBeEncrypted"
         val result = for {
-          encryptedData <- aesEncryption.encrypt(data)
-          decryptedData <- aesEncryption.decrypt(encryptedData)
+          encryptedData <- aesEncryption.encrypt(data)(identity)
+          decryptedData <- aesEncryption.decrypt(encryptedData)(identity)
         } yield decryptedData
 
         await(result, 2.seconds) shouldBe DecryptedData("dataToBeEncrypted")
@@ -34,16 +34,16 @@ class AESEncryptionTest extends UnitTestBase {
         val aesEncryption = injector.get[AESEncryption]
         val data = "dataToBeEncrypted"
         val encryptionResult = for {
-          encryptedData1 <- aesEncryption.encrypt(data)
-          encryptedData2 <- aesEncryption.encrypt(data)
+          encryptedData1 <- aesEncryption.encrypt(data)(identity)
+          encryptedData2 <- aesEncryption.encrypt(data)(identity)
         } yield (encryptedData1, encryptedData2)
 
         val (encryptedData1, encryptedData2) = await(encryptionResult, 2.seconds)
         encryptedData1 shouldNot be(encryptedData2)
 
         val decryptionResult = for {
-          decryptedData1 <- aesEncryption.decrypt(encryptedData1)
-          decryptedData2 <- aesEncryption.decrypt(encryptedData2)
+          decryptedData1 <- aesEncryption.decrypt(encryptedData1)(identity)
+          decryptedData2 <- aesEncryption.decrypt(encryptedData2)(identity)
         } yield (decryptedData1, decryptedData2)
 
         val (decryptedData1, decryptedData2) = await(decryptionResult, 2.seconds)

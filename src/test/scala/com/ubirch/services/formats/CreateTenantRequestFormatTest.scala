@@ -26,8 +26,8 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
           APIUsage,
-          DeviceCreationToken("1234567890"),
-          CertificationCreationToken("987654321"),
+          PlainDeviceCreationToken("1234567890"),
+          PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
           TenantGroupId("random-group"),
           TenantOrganisationalUnitGroupId("organisational-group-id")

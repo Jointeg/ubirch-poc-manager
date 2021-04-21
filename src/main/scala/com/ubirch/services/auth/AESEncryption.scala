@@ -10,8 +10,8 @@ import javax.crypto.{Cipher, SecretKey}
 import javax.inject.Inject
 
 trait AESEncryption {
-  def encrypt(dataToBeEncrypted: String): Task[EncryptedData]
-  def decrypt(encryptedData: EncryptedData): Task[DecryptedData]
+  def encrypt[Result](dataToBeEncrypted: String)(mapper: EncryptedData => Result): Task[Result]
+  def decrypt[Result](encryptedData: EncryptedData)(mapper: DecryptedData => Result): Task[Result]
 }
 
 class AESEncryptionCBCMode @Inject() (aesKeyProvider: AESKeyProvider) extends AESEncryption {
@@ -21,22 +21,22 @@ class AESEncryptionCBCMode @Inject() (aesKeyProvider: AESKeyProvider) extends AE
   private type InitializationVector = Array[Byte]
   private type EncryptedDataBytes = Array[Byte]
 
-  override def encrypt(dataToBeEncrypted: String): Task[EncryptedData] = {
+  override def encrypt[Result](dataToBeEncrypted: String)(mapper: EncryptedData => Result): Task[Result] = {
     for {
       secretKey <- aesKeyProvider.getAESKey
       iv <- generateIV()
       cipher <- initCipher(Cipher.ENCRYPT_MODE, secretKey, iv)
       cipherText <- cipherData(cipher, dataToBeEncrypted.getBytes(StandardCharsets.UTF_8))
-    } yield EncryptedData.fromIVAndDataBytes(iv.getIV, cipherText)
+    } yield mapper(EncryptedData.fromIVAndDataBytes(iv.getIV, cipherText))
   }
-  override def decrypt(encryptedData: EncryptedData): Task[DecryptedData] = {
+  override def decrypt[Result](encryptedData: EncryptedData)(mapper: DecryptedData => Result): Task[Result] = {
     for {
       secretKey <- aesKeyProvider.getAESKey
       ivWithData <- splitEncryptedDataByIV(encryptedData)
       (iv, encData) = ivWithData
       cipher <- initCipher(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(iv))
       decryptedData <- cipherData(cipher, encData)
-    } yield DecryptedData.fromByteArray(decryptedData)
+    } yield mapper(DecryptedData.fromByteArray(decryptedData))
   }
 
   private def generateIV(): Task[IvParameterSpec] =

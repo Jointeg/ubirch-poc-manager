@@ -1,4 +1,5 @@
 package com.ubirch.models.tenant
+import io.getquill.MappedEncoding
 
 sealed trait POCUsageBase extends Product with Serializable
 case object APIUsage extends POCUsageBase
@@ -23,4 +24,15 @@ object POCUsageBase {
       case UIUsage => UIUsageString
       case AllChannelsUsage => AllChannelsUsageString
     }
+
+  implicit val encodePOCUsageBase: MappedEncoding[POCUsageBase, String] = MappedEncoding[POCUsageBase, String] {
+    case APIUsage => APIUsageString
+    case UIUsage => UIUsageString
+    case AllChannelsUsage => AllChannelsUsageString
+  }
+  implicit val decodePOCUsageBase: MappedEncoding[String, POCUsageBase] = MappedEncoding[String, POCUsageBase] {
+    case APIUsageString => APIUsage
+    case UIUsageString => UIUsage
+    case AllChannelsUsageString => AllChannelsUsage
+  }
 }

@@ -4,7 +4,7 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
-import com.ubirch.db.tables.{UserRepository, UserTable}
+import com.ubirch.db.tables.{TenantRepository, TenantTable, UserRepository, UserTable}
 import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, StaticKeyProvider}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
@@ -64,6 +64,8 @@ class Binder extends AbstractModule {
     bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
   def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
+  def TenantRepository: ScopedBindingBuilder =
+    bind(classOf[TenantRepository]).to(classOf[TenantTable])
   def AESKeyProvider: ScopedBindingBuilder =
     bind(classOf[AESKeyProvider]).to(classOf[StaticKeyProvider])
   def AESEncryption: ScopedBindingBuilder =
@@ -91,6 +93,7 @@ class Binder extends AbstractModule {
     UserPollingService
     QuillJdbcContext
     UserRepository
+    TenantRepository
     AESKeyProvider
     AESEncryption
     ()
