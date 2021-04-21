@@ -53,6 +53,7 @@ import { PocListComponent } from './components/poc-list/poc-list.component';
 import { TranslateModule } from '@ngx-translate/core';
 import { HttpClientModule } from '@angular/common/http';
 import { LanguageSelectComponent } from './components/language-select/language-select.component';
+import { ReactiveFormsModule } from '@angular/forms';
 
 
 @NgModule({
@@ -66,6 +67,7 @@ import { LanguageSelectComponent } from './components/language-select/language-s
     CommonModule,
     RouterModule,
     HttpClientModule,
+    ReactiveFormsModule,
     TranslateModule,
 
     // A11yModule,
@@ -116,6 +118,7 @@ import { LanguageSelectComponent } from './components/language-select/language-s
   exports: [
     CommonModule,
     HttpClientModule,
+    ReactiveFormsModule,
 
     MatIconModule,
     MatInputModule,

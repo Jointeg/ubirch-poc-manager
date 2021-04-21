@@ -2,15 +2,19 @@ import { CollectionViewer, DataSource } from '@angular/cdk/collections';
 import { SortDirection } from '@angular/material/sort';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
+import { ListResult } from '../../models/interfaces/poc-list-result';
 import { Poc } from '../../models/interfaces/poc.interface';
+import { PocFilters } from '../../models/poc-filters';
 import { PocsService } from '../pocs.service';
 
 export class PocDataSource implements DataSource<Poc> {
 
     private pocSubject = new BehaviorSubject<Poc[]>([]);
     private loadingSubject = new BehaviorSubject<boolean>(false);
+    private totalItemsSubject = new BehaviorSubject<number>(0);
 
     public loading$ = this.loadingSubject.asObservable();
+    public totalItems$ = this.totalItemsSubject.asObservable();
 
     constructor(private service: PocsService) { }
 
@@ -23,13 +27,16 @@ export class PocDataSource implements DataSource<Poc> {
         this.loadingSubject.complete();
     }
 
-    loadPocs(sortColumn: string, sortDirection: SortDirection = 'asc', pageNo: number = 0, perPage: number = 5,) {
+    loadPocs(filters: PocFilters) {
         this.loadingSubject.next(true);
 
-        this.service.loadPocs(sortColumn, sortDirection, pageNo, perPage).pipe(
-            catchError(() => of([])),
+        this.service.loadPocs(filters).pipe(
+            catchError(() => of({} as ListResult<Poc>)),
             finalize(() => this.loadingSubject.next(false))
-        ).subscribe(pocs => this.pocSubject.next(pocs));
+        ).subscribe(pocResult => {
+            this.pocSubject.next(pocResult.pocs ?? []);
+            this.totalItemsSubject.next(pocResult.total ?? 0);
+        });
 
     }
 }

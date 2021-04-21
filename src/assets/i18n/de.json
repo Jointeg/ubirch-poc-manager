@@ -7,5 +7,11 @@
 		"createdAt": "Created",
 		"updatedAt": "Updated",
 		"status": "Status"
+	},
+	"pocList": {
+		"filters": {
+			"search": "Search",
+			"searchPlaceholder": "min 3 characters"
+		}
 	}
 }

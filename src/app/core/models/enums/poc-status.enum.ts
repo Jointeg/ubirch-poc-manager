@@ -1,5 +1,5 @@
 export enum PocStatus {
-    waiting = 'waiting',
+    pending = 'pending',
     processing = 'processing',
     ready = 'ready'
 }

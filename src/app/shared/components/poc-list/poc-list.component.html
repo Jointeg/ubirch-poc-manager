@@ -1,3 +1,12 @@
+<!-- New part: this is the search box -->
+
+<form action="" [formGroup]="filters">
+    <mat-form-field class="example-full-width">
+        <mat-label>{{ 'pocList.filters.search' | translate }}</mat-label>
+        <input matInput placeholder="{{ 'pocList.filters.searchPlaceholder' | translate}}" #input formControlName="search">
+    </mat-form-field>
+</form>
+
 <mat-table class="pocs-table mat-elevation-z8" [dataSource]="dataSource"
     matSort matSortActive="pocId" matSortDirection="asc" matSortDisableClear>
 
@@ -40,5 +49,5 @@
     <mat-spinner></mat-spinner>
 </div>
 
-<mat-paginator [length]="10" [pageSize]="defaultPageSize"
+<mat-paginator [length]="dataSource.totalItems$ | async" [pageSize]="defaultPageSize"
 [pageSizeOptions]="pageSizes"></mat-paginator>

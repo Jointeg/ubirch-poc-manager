@@ -30,7 +30,6 @@ export class TenantAdminGuard extends AuthGuard {
 
         if (!this.roles.includes(TENANT_ADMIN)) {
             this.router.navigate([NOT_AUTHORIZED_URL]);
-            console.log('failed');
             return false;
         }
 
