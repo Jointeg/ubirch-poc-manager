@@ -111,10 +111,9 @@ class SuperAdminController @Inject() (
   }
 
   post("/tenants/create", operation(createTenant)) {
-    authenticated(_.hasRole(Token.SUPER_ADMIN)) { token =>
+    authenticated(_.hasRole(Token.SUPER_ADMIN)) { _ =>
       asyncResult("CreateTenant") { _ => _ =>
-        val createTenantRequest = parsedBody.extract[CreateTenantRequest]
-        tenantService.createTenant(createTenantRequest).map(_ => Ok())
+        tenantService.createTenant(parsedBody.extract[CreateTenantRequest]).map(_ => Ok())
       }
     }
   }
