@@ -1,3 +1,44 @@
-<p>
-  poc-list works!
-</p>
+<mat-table class="pocs-table mat-elevation-z8" [dataSource]="dataSource"
+    matSort matSortActive="pocId" matSortDirection="asc" matSortDisableClear>
+
+    <ng-container matColumnDef="pocId">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.pocId' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.pocId}}</mat-cell>
+    </ng-container>
+    <ng-container matColumnDef="name">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.name' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.name}}</mat-cell>
+    </ng-container>
+    <ng-container matColumnDef="deviceId">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.deviceId' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.deviceId}}</mat-cell>
+    </ng-container>
+    <ng-container matColumnDef="folderIdentifier">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.folderIdentifier' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.folderIdentifier}}</mat-cell>
+    </ng-container>
+    <ng-container matColumnDef="createdAt">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.createdAt' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.createdAt | date:'yyyy-MM-dd hh:mm' }}</mat-cell>
+    </ng-container>
+    <ng-container matColumnDef="updatedAt">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.updatedAt' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.updatedAt | date:'yyyy-MM-dd hh:mm' }}</mat-cell>
+    </ng-container>
+    <ng-container matColumnDef="status">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.status' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.status}}</mat-cell>
+    </ng-container>
+    
+    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+
+    <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+
+</mat-table>
+
+<div class="spinner-container" *ngIf="dataSource.loading$ | async">
+    <mat-spinner></mat-spinner>
+</div>
+
+<mat-paginator [length]="10" [pageSize]="defaultPageSize"
+[pageSizeOptions]="pageSizes"></mat-paginator>

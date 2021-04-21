@@ -50,6 +50,9 @@ import { MatTreeModule } from '@angular/material/tree';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { RouterModule } from '@angular/router';
 import { PocListComponent } from './components/poc-list/poc-list.component';
+import { TranslateModule } from '@ngx-translate/core';
+import { HttpClientModule } from '@angular/common/http';
+import { LanguageSelectComponent } from './components/language-select/language-select.component';
 
 
 @NgModule({
@@ -57,10 +60,13 @@ import { PocListComponent } from './components/poc-list/poc-list.component';
     HeaderComponent,
     FooterComponent,
     PocListComponent,
+    LanguageSelectComponent,
   ],
   imports: [
     CommonModule,
     RouterModule,
+    HttpClientModule,
+    TranslateModule,
 
     // A11yModule,
     // ClipboardModule,
@@ -82,14 +88,14 @@ import { PocListComponent } from './components/poc-list/poc-list.component';
     // MatDividerModule,
     // MatExpansionModule,
     // MatGridListModule,
-    // MatIconModule,
-    // MatInputModule,
+    MatIconModule,
+    MatInputModule,
     MatListModule,
-    // MatMenuModule,
+    MatMenuModule,
     // MatNativeDateModule,
-    // MatPaginatorModule,
+    MatPaginatorModule,
     // MatProgressBarModule,
-    // MatProgressSpinnerModule,
+    MatProgressSpinnerModule,
     // MatRadioModule,
     // MatRippleModule,
     // MatSelectModule,
@@ -97,8 +103,8 @@ import { PocListComponent } from './components/poc-list/poc-list.component';
     // MatSliderModule,
     // MatSlideToggleModule,
     // MatSnackBarModule,
-    // MatSortModule,
-    // MatTableModule,
+    MatSortModule,
+    MatTableModule,
     // MatTabsModule,
     // MatToolbarModule,
     // MatTooltipModule,
@@ -108,11 +114,23 @@ import { PocListComponent } from './components/poc-list/poc-list.component';
     // ScrollingModule,
   ],
   exports: [
+    CommonModule,
+    HttpClientModule,
+
+    MatIconModule,
+    MatInputModule,
+    MatListModule,
+    MatMenuModule,
+    MatPaginatorModule,
+    MatProgressSpinnerModule,
+    MatSortModule,
+    MatTableModule,
+
+    TranslateModule,
+
     HeaderComponent,
     FooterComponent,
     PocListComponent,
-
-    MatListModule,
   ]
 })
 export class SharedModule { }

@@ -1,0 +1,10 @@
+mat-nav-list {
+    display: flex;
+
+    mat-list-item {
+        width: auto;
+    }
+    mat-list-item:last-child {
+        margin-left: auto;
+    }
+}
