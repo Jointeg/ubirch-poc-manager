@@ -25,14 +25,8 @@ object POCUsageBase {
       case AllChannelsUsage => AllChannelsUsageString
     }
 
-  implicit val encodePOCUsageBase: MappedEncoding[POCUsageBase, String] = MappedEncoding[POCUsageBase, String] {
-    case APIUsage => APIUsageString
-    case UIUsage => UIUsageString
-    case AllChannelsUsage => AllChannelsUsageString
-  }
-  implicit val decodePOCUsageBase: MappedEncoding[String, POCUsageBase] = MappedEncoding[String, POCUsageBase] {
-    case APIUsageString => APIUsage
-    case UIUsageString => UIUsage
-    case AllChannelsUsageString => AllChannelsUsage
-  }
+  implicit val encodePOCUsageBase: MappedEncoding[POCUsageBase, String] =
+    MappedEncoding[POCUsageBase, String](toStringFormat)
+  implicit val decodePOCUsageBase: MappedEncoding[String, POCUsageBase] =
+    MappedEncoding[String, POCUsageBase](unsafeFromString)
 }
