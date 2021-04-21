@@ -1,0 +1,9 @@
+<p>
+  <button mat-icon-button color="primary" aria-label="Language select" [matMenuTriggerFor]="menu">
+    <mat-icon>language</mat-icon>
+  </button>
+  <mat-menu #menu="matMenu">
+    <button mat-menu-item (click)="setLanguage('de')" [ngClass]="{'active': language === 'de'}">DE</button>
+    <button mat-menu-item (click)="setLanguage('en')" [ngClass]="{'active': language === 'en'}">EN</button>
+  </mat-menu>
+</p>
