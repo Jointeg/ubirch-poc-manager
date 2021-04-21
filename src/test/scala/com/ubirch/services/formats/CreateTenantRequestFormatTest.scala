@@ -8,7 +8,7 @@ import org.json4s.native.JsonMethods._
 class CreateTenantRequestFormatTest extends UnitTestBase {
 
   "CreateTenantRequest" should {
-    "Parse only if all required fields are provided" in {
+    "Parse if all required fields are provided" in {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
         val createTenantRequestJSON = parse("""
@@ -64,7 +64,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
   }
 
   "POCUsageBase" should {
-    "Parse to only known values" in {
+    "Parse known values" in {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
         JString("APIUsage").extract[POCUsageBase] shouldBe APIUsage
