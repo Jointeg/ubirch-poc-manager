@@ -15,6 +15,7 @@ import com.ubirch.models.tenant.{APIUsage, AllChannelsUsage, CreateTenantRequest
 import com.ubirch.models.user.{Email, FirstName, LastName, UserName}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.superadmin.TenantService
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -33,6 +34,7 @@ class SuperAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
+  tenantService: TenantService,
   keycloakUserService: KeycloakUserService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
@@ -109,12 +111,12 @@ class SuperAdminController @Inject() (
   }
 
   post("/tenants/create", operation(createTenant)) {
-    //authenticated() { token =>
-    asyncResult("CreateTenant") { _ => _ =>
-      val tenant = parsedBody.extract[CreateTenantRequest]
-      ???
+    authenticated(_.hasRole(Token.SUPER_ADMIN)) { token =>
+      asyncResult("CreateTenant") { _ => _ =>
+        val createTenantRequest = parsedBody.extract[CreateTenantRequest]
+        tenantService.createTenant(createTenantRequest).map(_ => Ok())
+      }
     }
-    //}
   }
 
   notFound {

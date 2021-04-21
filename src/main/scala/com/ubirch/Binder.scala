@@ -5,6 +5,7 @@ import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
 import com.ubirch.db.tables.{UserRepository, UserTable}
+import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, StaticKeyProvider}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
@@ -63,6 +64,10 @@ class Binder extends AbstractModule {
     bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
   def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
+  def AESKeyProvider: ScopedBindingBuilder =
+    bind(classOf[AESKeyProvider]).to(classOf[StaticKeyProvider])
+  def AESEncryption: ScopedBindingBuilder =
+    bind(classOf[AESEncryption]).to(classOf[AESEncryptionCBCMode])
 
   override def configure(): Unit = {
     Config
@@ -86,6 +91,8 @@ class Binder extends AbstractModule {
     UserPollingService
     QuillJdbcContext
     UserRepository
+    AESKeyProvider
+    AESEncryption
     ()
   }
 }
