@@ -4,11 +4,14 @@ import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
 import monix.eval.Task
 
+import javax.inject.Inject
+
 trait TenantService {
   def createTenant(createTenantRequest: CreateTenantRequest): Task[Unit]
 }
 
-class TenantServiceImpl(aesEncryption: AESEncryption, tenantRepository: TenantRepository) extends TenantService {
+class DefaultTenantService @Inject() (aesEncryption: AESEncryption, tenantRepository: TenantRepository)
+  extends TenantService {
 
   override def createTenant(createTenantRequest: CreateTenantRequest): Task[Unit] = {
     for {
