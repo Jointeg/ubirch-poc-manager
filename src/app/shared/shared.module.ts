@@ -82,7 +82,7 @@ import { ReactiveFormsModule } from '@angular/forms';
     // MatButtonModule,
     // MatButtonToggleModule,
     // MatCardModule,
-    // MatCheckboxModule,
+    MatCheckboxModule,
     // MatChipsModule,
     // MatStepperModule,
     // MatDatepickerModule,
@@ -128,6 +128,7 @@ import { ReactiveFormsModule } from '@angular/forms';
     MatProgressSpinnerModule,
     MatSortModule,
     MatTableModule,
+    MatCheckboxModule,
 
     TranslateModule,
 

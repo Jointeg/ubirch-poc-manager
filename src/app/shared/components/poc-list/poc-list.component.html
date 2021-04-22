@@ -10,35 +10,67 @@
 <mat-table class="pocs-table mat-elevation-z8" [dataSource]="dataSource"
     matSort matSortActive="pocId" matSortDirection="asc" matSortDisableClear>
 
+    <!-- Checkbox -->
+    <ng-container matColumnDef="select">
+        <mat-header-cell *matHeaderCellDef>
+            <mat-checkbox (change)="$event ? masterToggle() : null"
+                            [checked]="selection.hasValue() && isAllSelected()"
+                            [indeterminate]="selection.hasValue() && !isAllSelected()"
+                            [aria-label]="checkboxLabel()">
+            </mat-checkbox>
+        </mat-header-cell>
+
+        <mat-cell *matCellDef="let row">
+            <mat-checkbox (click)="$event.stopPropagation()"
+                            (change)="$event ? selection.toggle(row) : null"
+                            [checked]="selection.isSelected(row)"
+                            [aria-label]="checkboxLabel(row)">
+            </mat-checkbox>
+        </mat-cell>
+    </ng-container>
+
+    <!-- pocId -->
     <ng-container matColumnDef="pocId">
         <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.pocId' | translate }}</mat-header-cell>
         <mat-cell *matCellDef="let poc">{{poc.pocId}}</mat-cell>
     </ng-container>
-    <ng-container matColumnDef="name">
-        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.name' | translate }}</mat-header-cell>
-        <mat-cell *matCellDef="let poc">{{poc.name}}</mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="deviceId">
-        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.deviceId' | translate }}</mat-header-cell>
-        <mat-cell *matCellDef="let poc">{{poc.deviceId}}</mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="folderIdentifier">
-        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.folderIdentifier' | translate }}</mat-header-cell>
-        <mat-cell *matCellDef="let poc">{{poc.folderIdentifier}}</mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="createdAt">
-        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.createdAt' | translate }}</mat-header-cell>
-        <mat-cell *matCellDef="let poc">{{poc.createdAt | date:'yyyy-MM-dd hh:mm' }}</mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="updatedAt">
-        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.updatedAt' | translate }}</mat-header-cell>
-        <mat-cell *matCellDef="let poc">{{poc.updatedAt | date:'yyyy-MM-dd hh:mm' }}</mat-cell>
-    </ng-container>
+
+    <!-- status -->
     <ng-container matColumnDef="status">
         <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.status' | translate }}</mat-header-cell>
         <mat-cell *matCellDef="let poc">{{poc.status}}</mat-cell>
     </ng-container>
-    
+
+    <!-- name -->
+    <ng-container matColumnDef="name">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.name' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.name}}</mat-cell>
+    </ng-container>
+
+    <!-- deviceId -->
+    <ng-container matColumnDef="deviceId">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.deviceId' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.deviceId}}</mat-cell>
+    </ng-container>
+
+    <!-- folderIdentifier -->
+    <ng-container matColumnDef="folderIdentifier">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.folderIdentifier' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.folderIdentifier}}</mat-cell>
+    </ng-container>
+
+    <!-- createdAt -->
+    <ng-container matColumnDef="createdAt">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.createdAt' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.createdAt | date:'yyyy-MM-dd hh:mm' }}</mat-cell>
+    </ng-container>
+
+    <!-- updatedAt -->
+    <ng-container matColumnDef="updatedAt">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.updatedAt' | translate }}</mat-header-cell>
+        <mat-cell *matCellDef="let poc">{{poc.updatedAt | date:'yyyy-MM-dd hh:mm' }}</mat-cell>
+    </ng-container>
+
     <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
 
     <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>

@@ -16,6 +16,8 @@ export class PocDataSource implements DataSource<Poc> {
     public loading$ = this.loadingSubject.asObservable();
     public totalItems$ = this.totalItemsSubject.asObservable();
 
+    get data() { return this.pocSubject.value; }
+
     constructor(private service: PocsService) { }
 
     connect(collectionViewer: CollectionViewer): Observable<Poc[] | readonly Poc[]> {

@@ -1,9 +1,11 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { SelectionModel } from '@angular/cdk/collections';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
-import { fromEvent, merge, Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, filter, mapTo, takeUntil, tap } from 'rxjs/operators';
+import { merge, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, map, takeUntil, tap } from 'rxjs/operators';
+import { Poc } from 'src/app/core/models/interfaces/poc.interface';
 import { PocFilters } from 'src/app/core/models/poc-filters';
 import { PocDataSource } from 'src/app/core/services/data-sources/poc-data-source';
 import { PocsService } from 'src/app/core/services/pocs.service';
@@ -18,10 +20,10 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
   @ViewChild(MatSort) sort: MatSort;
-  // @ViewChild('input') input: ElementRef;
 
   dataSource: PocDataSource;
   displayedColumns: string[] = [
+    'select',
     'pocId',
     'name',
     'deviceId',
@@ -30,6 +32,7 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
     'updatedAt',
     'status',
   ];
+  selection = new SelectionModel<Poc>(true, []);
   defaultPageSize = DEFAULT_PAGE_SIZE;
   pageSizes = PAGE_SIZES;
 
@@ -54,11 +57,11 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
       filter(() => this.search.valid),
       distinctUntilChanged(),
       debounceTime(1000),
-      mapTo(search => ({ search })),
+      map(search => ({ search })),
     );
 
     const sort$ = this.sort.sortChange.pipe(
-      mapTo(sort => ({
+      map(sort => ({
         pageIndex: 0,
         sortColumn: sort.active,
         sortOrder: sort.direction,
@@ -66,7 +69,7 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     const paginate$ = this.paginator.page.pipe(
-      mapTo(page => ({
+      map(page => ({
         pageIndx: page.pageIndex,
         pageSize: page.pageSize
       }))
@@ -80,6 +83,30 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
       takeUntil(this.unsubscribe$),
     ).subscribe();
   }
+
+  /** Whether the number of selected elements matches the total number of rows. */
+  isAllSelected() {
+    const numSelected = this.selection.selected.length;
+    const numRows = this.paginator?.pageSize ?? this.defaultPageSize;
+    return numSelected === numRows;
+  }
+
+  /** Selects all rows if they are not all selected; otherwise clear selection. */
+  masterToggle() {
+    this.isAllSelected() ?
+      this.selection.clear() :
+      this.dataSource.data.forEach(row => this.selection.select(row));
+  }
+
+  /** The label for the checkbox on the passed row */
+  checkboxLabel(row?: Poc): string {
+    if (!row) {
+      return `${this.isAllSelected() ? 'select' : 'deselect'} all`;
+    }
+    return `${this.selection.isSelected(row) ? 'deselect' : 'select'} row ${row.pocId}`;
+  }
+
+
 
   ngOnDestroy(): void {
     if (this.unsubscribe$) {

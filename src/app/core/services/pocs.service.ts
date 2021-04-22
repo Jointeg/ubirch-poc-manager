@@ -37,7 +37,7 @@ export class PocsService {
     }
 
     if (filters.sortColumn) {
-      data = MOCK_DATA.slice().sort((a: Poc, b: Poc) => {
+      data = data.slice().sort((a: Poc, b: Poc) => {
         if (typeof a[filters.sortColumn] === 'number') { return a[filters.sortColumn] - b[filters.sortColumn]; }
         else { return ('' + a[filters.sortColumn]).localeCompare(b[filters.sortColumn]); }
       });
