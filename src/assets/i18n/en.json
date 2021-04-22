@@ -12,6 +12,21 @@
 		"filters": {
 			"search": "Search",
 			"searchPlaceholder": "min 3 characters"
+		},
+		"actions": {
+			"action": "Action",
+			"apply": "Apply",
+			"delete": "Delete",
+			"activate": "Activate",
+			"deactivate": "Deactivate",
+			"deleteConfirmTitle": "Delete items",
+			"deleteConfirmMessage": "Are you sure you want to delete {{count}} item(s)?"
 		}
+	},
+	"dialog": {
+		"defaultTitle": "Confirmation required",
+		"defaultMessage": "Are you sure you want to proceed?",
+		"yesLabel": "Yes",
+		"noLabel": "No"
 	}
 }

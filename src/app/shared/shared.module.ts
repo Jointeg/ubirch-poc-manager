@@ -54,6 +54,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { HttpClientModule } from '@angular/common/http';
 import { LanguageSelectComponent } from './components/language-select/language-select.component';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 
 
 @NgModule({
@@ -62,6 +63,7 @@ import { ReactiveFormsModule } from '@angular/forms';
     FooterComponent,
     PocListComponent,
     LanguageSelectComponent,
+    ConfirmDialogComponent,
   ],
   imports: [
     CommonModule,
@@ -79,14 +81,14 @@ import { ReactiveFormsModule } from '@angular/forms';
     // MatAutocompleteModule,
     // MatBadgeModule,
     // MatBottomSheetModule,
-    // MatButtonModule,
+    MatButtonModule,
     // MatButtonToggleModule,
     // MatCardModule,
     MatCheckboxModule,
     // MatChipsModule,
     // MatStepperModule,
     // MatDatepickerModule,
-    // MatDialogModule,
+    MatDialogModule,
     // MatDividerModule,
     // MatExpansionModule,
     // MatGridListModule,
@@ -100,7 +102,7 @@ import { ReactiveFormsModule } from '@angular/forms';
     MatProgressSpinnerModule,
     // MatRadioModule,
     // MatRippleModule,
-    // MatSelectModule,
+    MatSelectModule,
     // MatSidenavModule,
     // MatSliderModule,
     // MatSlideToggleModule,
@@ -129,12 +131,16 @@ import { ReactiveFormsModule } from '@angular/forms';
     MatSortModule,
     MatTableModule,
     MatCheckboxModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatDialogModule,
 
     TranslateModule,
 
     HeaderComponent,
     FooterComponent,
     PocListComponent,
+    ConfirmDialogComponent,
   ]
 })
 export class SharedModule { }

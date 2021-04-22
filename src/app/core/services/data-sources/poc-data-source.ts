@@ -1,7 +1,6 @@
 import { CollectionViewer, DataSource } from '@angular/cdk/collections';
-import { SortDirection } from '@angular/material/sort';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+import { catchError, finalize, tap } from 'rxjs/operators';
 import { ListResult } from '../../models/interfaces/poc-list-result';
 import { Poc } from '../../models/interfaces/poc.interface';
 import { PocFilters } from '../../models/poc-filters';
@@ -39,6 +38,13 @@ export class PocDataSource implements DataSource<Poc> {
             this.pocSubject.next(pocResult.pocs ?? []);
             this.totalItemsSubject.next(pocResult.total ?? 0);
         });
-
     }
+
+    deletePocs(pocs: Poc[], filters: PocFilters) {
+        this.loadingSubject.next(true);
+        this.service.deletePocs(pocs).pipe(
+            tap(() => this.loadPocs({ ...filters, pageIndex: 0 }))
+        ).subscribe();
+    }
+
 }

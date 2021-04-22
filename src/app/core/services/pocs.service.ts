@@ -27,10 +27,12 @@ const MOCK_DATA: Poc[] = [
 })
 export class PocsService {
 
+  pocsList = MOCK_DATA;
+
   constructor(private http: HttpClient) { }
 
   loadPocs(filters: PocFilters): Observable<ListResult<Poc>> {
-    let data = MOCK_DATA;
+    let data = this.pocsList;
 
     if (filters.search?.trim()) {
       data = data.filter(r => JSON.stringify(r).includes(filters.search));
@@ -50,6 +52,13 @@ export class PocsService {
     } as ListResult<Poc>).pipe(delay(1000));
 
     // TODO: Implement actual processing of datafetching
+  }
+
+  deletePocs(pocs: Poc[]) {
+    const count = this.pocsList.length;
+    const pocIds = pocs.map(p => p.id);
+    this.pocsList = this.pocsList.filter(p => !pocIds.includes(p.id));
+    return of(count - this.pocsList.length);
   }
 
 }

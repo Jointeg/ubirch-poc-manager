@@ -7,6 +7,18 @@
     </mat-form-field>
 </form>
 
+<div class="actions" [hidden]="!showActions">
+    <label>{{ 'pocList.actions.action' | translate }}</label>
+    <mat-form-field appearance="fill">
+        <mat-select [formControl]="action">
+          <mat-option *ngFor="let action of actions" [value]="action.value" >
+            {{ action.label | translate }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-raised-button color="primary" (click)="applyAction()">{{ 'pocList.actions.apply' | translate }} </button>
+</div>
+
 <mat-table class="pocs-table mat-elevation-z8" [dataSource]="dataSource"
     matSort matSortActive="pocId" matSortDirection="asc" matSortDisableClear>
 
