@@ -99,8 +99,4 @@ class SuperAdminController @Inject() (
   before() {
     contentType = "application/json"
   }
-
-  private def test(token: Token) = {
-    Ok(s"Test successful for ${token.name}")
-  }
 }

@@ -7,21 +7,21 @@ import monix.eval.Task
 import javax.inject.Inject
 
 trait TenantService {
-  def createTenant(createTenantRequest: CreateTenantRequest): Task[Unit]
+  def createTenant(createTenantRequest: CreateTenantRequest): Task[TenantId]
 }
 
 class DefaultTenantService @Inject() (aesEncryption: AESEncryption, tenantRepository: TenantRepository)
   extends TenantService {
 
-  override def createTenant(createTenantRequest: CreateTenantRequest): Task[Unit] = {
+  override def createTenant(createTenantRequest: CreateTenantRequest): Task[TenantId] = {
     for {
       encryptedDeviceCreationToken <-
         aesEncryption.encrypt(createTenantRequest.deviceCreationToken.value)(EncryptedDeviceCreationToken(_))
       encryptedCertificationCreationToken <- aesEncryption.encrypt(
         createTenantRequest.certificationCreationToken.value)(EncryptedCertificationCreationToken(_))
       tenant = convertToTenant(encryptedDeviceCreationToken, encryptedCertificationCreationToken, createTenantRequest)
-      _ <- tenantRepository.createTenant(tenant)
-    } yield ()
+      tenantId <- tenantRepository.createTenant(tenant)
+    } yield tenantId
   }
 
   private def convertToTenant(
