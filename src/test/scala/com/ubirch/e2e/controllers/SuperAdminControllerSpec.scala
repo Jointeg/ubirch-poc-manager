@@ -1,38 +1,42 @@
 package com.ubirch.e2e.controllers
 
+import com.ubirch.FakeTokenCreator
 import com.ubirch.controllers.SuperAdminController
-import com.ubirch.e2e.InjectorHelperImpl
+import com.ubirch.e2e.E2ETestBase
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.{Awaits, ExecutionContextsTests, FakeTokenCreator}
 import io.prometheus.client.CollectorRegistry
-import org.scalatest.BeforeAndAfterEach
-import org.scalatra.test.scalatest.ScalatraWordSpec
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
-class SuperAdminControllerSpec
-  extends ScalatraWordSpec
-  with BeforeAndAfterEach
-  with ExecutionContextsTests
-  with Awaits {
-
-  private lazy val Injector = new InjectorHelperImpl() {}
+class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
 
   "Super Admin Controller" must {
-    "fail when token is not provided" in {
-      get("/initialTest") {
-        status should equal(401)
-        assert(
-          body == """{"version":"1.0","ok":false,"errorType":"AuthenticationError","errorMessage":"Unauthenticated"}""")
-      }
-    }
+    "should be able to successfully create a Tenant" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
 
-    "return test message when token is provided" in {
-      val token = Injector.get[FakeTokenCreator]
-      get("/initialTest", headers = Map("authorization" -> token.user.prepare)) {
-        status should equal(200)
-        assert(body == """Test successful for Carlos Sanchez""")
+        val requestBody =
+          s"""
+            |{
+            |    "tenantName": "someRandomName",
+            |    "pocUsageBase": "APIUsage",
+            |    "deviceCreationToken": "1234567890",
+            |    "certificationCreationToken": "987654321",
+            |    "idGardIdentifier": "gard-identifier",
+            |    "tenantGroupId": "random-group",
+            |    "tenantOrganisationalUnitGroupId": "tenantOrganisationalUnitGroupId"
+            |}
+            |""".stripMargin
+        post(
+          "/tenants/create",
+          body = requestBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(200)
+          assert(body == "")
+        }
       }
     }
   }
@@ -41,22 +45,14 @@ class SuperAdminControllerSpec
     CollectorRegistry.defaultRegistry.clear()
   }
 
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-  }
-
   override protected def beforeAll(): Unit = {
-
-    CollectorRegistry.defaultRegistry.clear()
-
-    lazy val pool = Injector.get[PublicKeyPoolService]
-    await(pool.init, 2 seconds)
-
-    lazy val superAdminController = Injector.get[SuperAdminController]
-
-    addServlet(superAdminController, "/*")
-
     super.beforeAll()
-  }
+    withInjector { injector =>
+      lazy val pool = injector.get[PublicKeyPoolService]
+      await(pool.init, 2 seconds)
 
+      lazy val superAdminController = injector.get[SuperAdminController]
+      addServlet(superAdminController, "/*")
+    }
+  }
 }

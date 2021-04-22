@@ -1,11 +1,10 @@
 package com.ubirch.e2e
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{Config, ConfigFactory}
-import com.ubirch.crypto.PrivKey
+import com.ubirch._
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
-import com.ubirch._
 import io.getquill.{PostgresJdbcContext, SnakeCase}
 import org.keycloak.admin.client.Keycloak
 
@@ -42,18 +41,6 @@ class TestKeycloakConfig @Inject() (val conf: Config, keycloakRuntimeConfig: Key
   val userPollingInterval: Int = conf.getInt(ConfPaths.KeycloakPaths.USER_POLLING_INTERVAL)
 
 }
-
-class InjectorHelperImpl()
-  extends InjectorHelper(List(new Binder {
-    override def PublicKeyPoolService: ScopedBindingBuilder = {
-      bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
-    }
-
-    override def configure(): Unit = {
-      super.configure()
-      bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
-    }
-  }))
 
 @Singleton
 class TestPostgresQuillJdbcContext @Inject() (val postgresRuntimeConfig: PostgresRuntimeConfig)
@@ -97,6 +84,7 @@ class E2EInjectorHelperImpl(
     }
 
     override def configure(): Unit = {
+      super.configure()
       bind(classOf[PostgresRuntimeConfig]).toInstance(
         PostgresRuntimeConfig(
           postgreContainer.container.getContainerIpAddress,
@@ -106,8 +94,6 @@ class E2EInjectorHelperImpl(
           keycloakContainer.container.getContainerIpAddress,
           keycloakContainer.container.getFirstMappedPort,
           clientAdmin))
-      bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
-      super.configure()
     }
 
   }))
