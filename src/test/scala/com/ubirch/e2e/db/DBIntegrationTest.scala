@@ -9,7 +9,7 @@ import scala.concurrent.duration.DurationInt
 class DBIntegrationTest extends E2ETestBase {
 
   "System" should {
-    "should be able to store and retrieve data in DB" in {
+    "be able to store and retrieve data in DB" in {
       withInjector { injector =>
         val repo = injector.get[UserRepository]
         val userId = UserId(UUID.randomUUID())
