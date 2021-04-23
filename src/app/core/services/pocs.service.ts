@@ -10,16 +10,16 @@ import { PocFilters } from '../models/poc-filters';
 
 
 const MOCK_DATA: Poc[] = [
-  { id: 1, pocId: 1, name: 'POC #1', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_1', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
-  { id: 2, pocId: 2, name: 'POC #2', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_2', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
-  { id: 3, pocId: 3, name: 'POC #3', deviceId: 'AAqwe234erw', folderIdentifier: 'poc_folder_3', createdAt: new Date, status: PocStatus.processing },
-  { id: 4, pocId: 4, name: 'POC #4', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_4', createdAt: new Date, status: PocStatus.pending },
-  { id: 5, pocId: 5, name: 'POC #5', deviceId: '55qwe234erw', folderIdentifier: 'poc_folder_5', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
-  { id: 6, pocId: 6, name: 'POC #6', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_6', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
-  { id: 7, pocId: 7, name: 'POC #7', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_7', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
-  { id: 8, pocId: 8, name: 'POC #8', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_8', createdAt: new Date, status: PocStatus.processing },
-  { id: 9, pocId: 9, name: 'POC #9', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_9', createdAt: new Date, status: PocStatus.pending },
-  { id: 10, pocId: 10, name: 'POC #10', deviceId: '33qwe234erw', folderIdentifier: 'poc_folder_10', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
+  { id: 1, pocId: 1, name: 'POC #1', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_1', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
+  { id: 2, pocId: 2, name: 'POC #2', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_2', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
+  { id: 3, pocId: 3, name: 'POC #3', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_3', createdAt: new Date, status: PocStatus.processing },
+  { id: 4, pocId: 4, name: 'POC #4', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_4', createdAt: new Date, status: PocStatus.pending },
+  { id: 5, pocId: 5, name: 'POC #5', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_5', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
+  { id: 6, pocId: 6, name: 'POC #6', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_6', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
+  { id: 7, pocId: 7, name: 'POC #7', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_7', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
+  { id: 8, pocId: 8, name: 'POC #8', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_8', createdAt: new Date, status: PocStatus.processing },
+  { id: 9, pocId: 9, name: 'POC #9', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_9', createdAt: new Date, status: PocStatus.pending },
+  { id: 10, pocId: 10, name: 'POC #10', deviceId: 'd63787b0-9214-4215-9332-724c2ac6ebac', folderIdentifier: 'poc_folder_10', createdAt: new Date, updatedAt: new Date, status: PocStatus.ready },
 ];
 
 @Injectable({

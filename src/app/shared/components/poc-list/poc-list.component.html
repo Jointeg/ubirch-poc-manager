@@ -1,7 +1,7 @@
 <!-- New part: this is the search box -->
 
 <form action="" [formGroup]="filters">
-    <mat-form-field class="example-full-width">
+    <mat-form-field>
         <mat-label>{{ 'pocList.filters.search' | translate }}</mat-label>
         <input matInput placeholder="{{ 'pocList.filters.searchPlaceholder' | translate}}" #input formControlName="search">
     </mat-form-field>
@@ -19,7 +19,7 @@
       <button mat-raised-button color="primary" (click)="applyAction()">{{ 'pocList.actions.apply' | translate }} </button>
 </div>
 
-<mat-table class="pocs-table mat-elevation-z8" [dataSource]="dataSource"
+<mat-table class="pocs-table mat-elevation-z8" [dataSource]="dataSource" multiTemplateDataRows
     matSort matSortActive="pocId" matSortDirection="asc" matSortDisableClear>
 
     <!-- Checkbox -->
@@ -60,10 +60,10 @@
     </ng-container>
 
     <!-- deviceId -->
-    <ng-container matColumnDef="deviceId">
+    <!-- <ng-container matColumnDef="deviceId">
         <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.deviceId' | translate }}</mat-header-cell>
         <mat-cell *matCellDef="let poc">{{poc.deviceId}}</mat-cell>
-    </ng-container>
+    </ng-container> -->
 
     <!-- folderIdentifier -->
     <ng-container matColumnDef="folderIdentifier">
@@ -83,10 +83,27 @@
         <mat-cell *matCellDef="let poc">{{poc.updatedAt | date:'yyyy-MM-dd hh:mm' }}</mat-cell>
     </ng-container>
 
-    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
 
-    <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+    <!-- Expanded Content Column - The detail row is made up of this one column that spans across all columns -->
+    <ng-container matColumnDef="expandedDetail">
+        <mat-cell *matCellDef="let poc">
+            <div class="element-detail"
+                [@detailExpand]="poc == expandedElement ? 'expanded' : 'collapsed'">
+                <div class="detail-cols">
+                    <div><label>{{ 'poc.deviceId' | translate }}:</label> <span>{{ poc.deviceId }}</span></div>
+                </div>
+            </div>
+        </mat-cell>
+    </ng-container>
 
+    <mat-header-row *matHeaderRowDef="displayColumns"></mat-header-row>
+
+    <mat-row *matRowDef="let poc; columns: displayColumns;"
+        class="element-row"
+        [class.expanded-row]="expandedElement === poc"
+        (click)="expandedElement = expandedElement === poc ? null : poc">
+    </mat-row>
+    <mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></mat-row>
 </mat-table>
 
 <div class="spinner-container" *ngIf="dataSource.loading$ | async">

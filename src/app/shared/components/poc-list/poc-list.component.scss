@@ -4,7 +4,7 @@
     .spinner-container { 
         position: absolute; 
         left: 50%;
-        top: 50%;        
+        top: 50%;
         transform: translateX(-50%);
     }
 
@@ -21,4 +21,37 @@
         }
     }
 
+}
+
+.mat-column-select {
+    overflow: initial;
+}
+
+.element-row {
+    cursor: pointer;
+}
+
+.detail-row {
+    min-height: auto;
+}
+
+.element-detail {
+    overflow: hidden;
+    display: flex;
+}
+
+.detail-cols {
+    padding: 1rem 0 1rem 76px;
+    display: flex;
+
+    label {
+        font-weight: bold;
+        padding-right: 0.7rem;
+    }
+}
+
+.mat-column-select { 
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: 100px;
 }

@@ -12,6 +12,7 @@ import { Poc } from 'src/app/core/models/interfaces/poc.interface';
 import { PocFilters } from 'src/app/core/models/poc-filters';
 import { PocDataSource } from 'src/app/core/services/data-sources/poc-data-source';
 import { PocsService } from 'src/app/core/services/pocs.service';
+import { detailExpand } from 'src/app/core/utils/animations';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from 'src/app/core/utils/constants';
 import { ConfirmDialogComponent, ConfirmDialogModel } from '../confirm-dialog/confirm-dialog.component';
 
@@ -19,6 +20,7 @@ import { ConfirmDialogComponent, ConfirmDialogModel } from '../confirm-dialog/co
   selector: 'app-poc-list',
   templateUrl: './poc-list.component.html',
   styleUrls: ['./poc-list.component.scss'],
+  animations: [detailExpand],
 })
 export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -26,11 +28,11 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(MatSort) sort: MatSort;
 
   dataSource: PocDataSource;
-  displayedColumns: string[] = [
+  displayColumns: string[] = [
     'select',
     'pocId',
     'name',
-    'deviceId',
+    // 'deviceId',
     'folderIdentifier',
     'createdAt',
     'updatedAt',
@@ -39,12 +41,13 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
   selection = new SelectionModel<Poc>(true, []);
   defaultPageSize = DEFAULT_PAGE_SIZE;
   pageSizes = PAGE_SIZES;
-  actions = [
-    { value: PocActions.delete, label: `pocList.actions.delete` }
-  ];
+  expandedElement: Poc | null;
 
   filters: FormGroup;
   action: FormControl = new FormControl(PocActions.delete);
+  actions = [
+    { value: PocActions.delete, label: `pocList.actions.delete` }
+  ];
   showActions = false;
 
   get search() { return this.filters.get('search'); }
