@@ -1,22 +1,22 @@
 package com.ubirch.services.auth
 
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.ConfPaths.AESEncryptionPaths
 import monix.eval.Task
 
 import java.nio.charset.StandardCharsets
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
+import javax.inject.Inject
 
 trait AESKeyProvider {
   def getAESKey: Task[SecretKey]
 }
 
-class StaticKeyProvider extends AESKeyProvider with LazyLogging {
-  private val key = "4t7w9z$C&F)J@NcRfUjXn2r5u8x/A%D*".getBytes(StandardCharsets.UTF_8)
+class StaticKeyProvider @Inject() (config: Config) extends AESKeyProvider with LazyLogging {
+  private val key = config.getString(AESEncryptionPaths.SECRET_KEY).getBytes(StandardCharsets.UTF_8)
 
   override def getAESKey: Task[SecretKey] =
-    Task {
-      logger.warn("WARNING! Key is provided by StaticKeyProvider which can't be used on production.")
-      new SecretKeySpec(key, "AES")
-    }
+    Task(new SecretKeySpec(key, "AES"))
 }
