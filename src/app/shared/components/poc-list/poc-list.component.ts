@@ -108,7 +108,7 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Whether the number of selected elements matches the total number of rows. */
   isAllSelected() {
     const numSelected = this.selection.selected.length;
-    const numRows = this.paginator?.pageSize ?? this.defaultPageSize;
+    const numRows = this.dataSource?.data?.length;
     return numSelected === numRows;
   }
 
