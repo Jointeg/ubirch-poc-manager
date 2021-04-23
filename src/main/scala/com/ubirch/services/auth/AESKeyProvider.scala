@@ -14,7 +14,7 @@ trait AESKeyProvider {
   def getAESKey: Task[SecretKey]
 }
 
-class StaticKeyProvider @Inject() (config: Config) extends AESKeyProvider with LazyLogging {
+class ConfigKeyProvider @Inject() (config: Config) extends AESKeyProvider with LazyLogging {
   private val key = config.getString(AESEncryptionPaths.SECRET_KEY).getBytes(StandardCharsets.UTF_8)
 
   override def getAESKey: Task[SecretKey] =
