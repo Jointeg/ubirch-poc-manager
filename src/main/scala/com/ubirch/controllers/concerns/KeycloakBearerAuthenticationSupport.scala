@@ -8,14 +8,16 @@ import java.security.PublicKey
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 class KeycloakBearerAuthStrategy(
-    protected override val app: ScalatraBase,
-    tokenVerificationService: TokenVerificationService,
-    publicKeyPoolService: PublicKeyPoolService
+  override protected val app: ScalatraBase,
+  tokenVerificationService: TokenVerificationService,
+  publicKeyPoolService: PublicKeyPoolService
 ) extends BearerAuthStrategy[Token](app) {
 
   override def name: String = "Keycloak Strategy"
 
-  override protected def validate(token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[Token] = {
+  override protected def validate(token: String)(
+    implicit request: HttpServletRequest,
+    response: HttpServletResponse): Option[Token] = {
     for {
       key <- publicKeyPoolService.getDefaultKey
 
@@ -23,17 +25,17 @@ class KeycloakBearerAuthStrategy(
 
       sub <- claims.findField(_._1 == "sub").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       name <- claims.findField(_._1 == "name").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       email <- claims.findField(_._1 == "email").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       roles <- claims
@@ -45,7 +47,7 @@ class KeycloakBearerAuthStrategy(
           case JsonAST.JArray(arr) =>
             arr.collect {
               case JsonAST.JString(s) => s
-              case _ => ""
+              case _                  => ""
             }
               .filter(_.nonEmpty)
               .map(Symbol(_))
@@ -74,4 +76,3 @@ trait KeycloakBearerAuthenticationSupport extends BearerAuthenticationSupport {
   protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy
 
 }
-

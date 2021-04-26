@@ -1,6 +1,6 @@
 package com.ubirch.models.keycloak.user
 
-import com.ubirch.models.user.{Email, FirstName, LastName, UserId, UserName}
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserId, UserName }
 
 case class KeycloakUser(
   id: UserId,

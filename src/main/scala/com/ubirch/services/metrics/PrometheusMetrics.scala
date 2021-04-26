@@ -12,8 +12,7 @@ import javax.inject._
 import scala.annotation.tailrec
 import scala.concurrent.Future
 
-/**
-  * Represents a component for starting the Prometheus Server
+/** Represents a component for starting the Prometheus Server
   * @param config the configuration object
   * @param lifecycle the life cycle tool
   */

@@ -5,7 +5,7 @@ import com.dimafeng.testcontainers.scalatest.TestContainersForAll
 import com.ubirch.models.user.UserName
 import com.ubirch._
 import org.flywaydb.core.Flyway
-import org.scalatest.{EitherValues, OptionValues}
+import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.util.Random

@@ -1,7 +1,7 @@
 package com.ubirch.e2e.keycloak.roles
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.keycloak.roles.{RoleAlreadyExists, RoleName}
+import com.ubirch.models.keycloak.roles.{ RoleAlreadyExists, RoleName }
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 
 import scala.concurrent.duration.DurationInt

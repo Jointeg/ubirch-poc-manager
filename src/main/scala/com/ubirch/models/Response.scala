@@ -1,7 +1,6 @@
 package com.ubirch.models
 
-/**
-  * Represents a simple Response object. Used for HTTP responses.
+/** Represents a simple Response object. Used for HTTP responses.
   */
 abstract class Response[T] {
   val version: String
@@ -12,8 +11,7 @@ object Response {
   val version = "1.0"
 }
 
-/**
-  *  Represents an Error Response.
+/**  Represents an Error Response.
   * @param version the version of the response
   * @param ok the status of the response. true or false
   * @param errorType the error type
@@ -21,8 +19,7 @@ object Response {
   */
 case class NOK(version: String, ok: Boolean, errorType: Symbol, errorMessage: String) extends Response[Boolean]
 
-/**
-  * Companion object for the NOK response
+/** Companion object for the NOK response
   */
 object NOK {
 
@@ -32,7 +29,8 @@ object NOK {
   final val DELETE_ERROR = 'TokenDeleteError
   final val AUTHENTICATION_ERROR = 'AuthenticationError
 
-  def apply(errorType: Symbol, errorMessage: String): NOK = new NOK(Response.version, ok = false, errorType, errorMessage)
+  def apply(errorType: Symbol, errorMessage: String): NOK =
+    new NOK(Response.version, ok = false, errorType, errorMessage)
 
   def serverError(errorMessage: String): NOK = NOK(SERVER_ERROR, errorMessage)
   def parsingError(errorMessage: String): NOK = NOK(PARSING_ERROR, errorMessage)
@@ -47,4 +45,3 @@ object Return {
   def apply(data: Any): Return = new Return(Response.version, ok = true, data)
   def apply(ok: Boolean, data: Any): Return = new Return(Response.version, ok = ok, data)
 }
-

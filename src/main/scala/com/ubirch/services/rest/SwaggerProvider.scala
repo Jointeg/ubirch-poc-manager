@@ -6,8 +6,7 @@ import org.scalatra.swagger.Swagger
 
 import javax.inject._
 
-/**
-  * Represents the Swagger Provider for the system
+/** Represents the Swagger Provider for the system
   */
 @Singleton
 class SwaggerProvider extends Provider[Swagger] {

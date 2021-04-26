@@ -1,12 +1,12 @@
 package com.ubirch.services.keycloak.roles
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.roles._
-import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
+import com.ubirch.services.keycloak.{ KeycloakConfig, KeycloakConnector }
 import monix.eval.Task
 
-import javax.ws.rs.{ClientErrorException, NotFoundException}
+import javax.ws.rs.{ ClientErrorException, NotFoundException }
 
 trait KeycloakRolesService {
   def createNewRole(createKeycloakRole: CreateKeycloakRole): Task[Either[RoleAlreadyExists, Unit]]

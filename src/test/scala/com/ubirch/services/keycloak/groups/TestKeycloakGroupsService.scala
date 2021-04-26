@@ -33,7 +33,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     Task {
       groupsDatastore.get(groupName) match {
         case Some(keycloakGroup) => Right(keycloakGroup)
-        case None => Left(GroupNotFound(groupName))
+        case None                => Left(GroupNotFound(groupName))
       }
     }
   override def deleteGroup(groupName: GroupName): Task[Unit] =

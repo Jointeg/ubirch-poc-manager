@@ -30,11 +30,13 @@ trait BearerAuthSupport[TokenType <: AnyRef] {
 
   }
 
-  protected def authenticated(p: (TokenType => Boolean)*)(action: TokenType => Any)(implicit request: HttpServletRequest, response: HttpServletResponse): Any = {
+  protected def authenticated(p: (TokenType => Boolean)*)(action: TokenType => Any)(
+    implicit request: HttpServletRequest,
+    response: HttpServletResponse): Any = {
     val predicates: Seq[TokenType => Boolean] = p
     bearerAuth() match {
       case Some(value) if predicates.forall(x => x(value)) => action(value)
-      case _ => halt(403, NOK.authenticationError("Forbidden"))
+      case _                                               => halt(403, NOK.authenticationError("Forbidden"))
     }
   }
 
@@ -44,7 +46,8 @@ object BearerAuthStrategy {
 
   implicit def request2BearerAuthRequest(r: HttpServletRequest): BearerAuthRequest = new BearerAuthRequest(r)
 
-  private val AUTHORIZATION_KEYS = List("Authorization", "HTTP_AUTHORIZATION", "X-HTTP_AUTHORIZATION", "X_HTTP_AUTHORIZATION")
+  private val AUTHORIZATION_KEYS =
+    List("Authorization", "HTTP_AUTHORIZATION", "X-HTTP_AUTHORIZATION", "X_HTTP_AUTHORIZATION")
 
   class BearerAuthRequest(r: HttpServletRequest) {
 
@@ -63,17 +66,22 @@ object BearerAuthStrategy {
 
 }
 
-abstract class BearerAuthStrategy[TokenType <: AnyRef](protected override val app: ScalatraBase) extends ScentryStrategy[TokenType] {
+abstract class BearerAuthStrategy[TokenType <: AnyRef](override protected val app: ScalatraBase)
+  extends ScentryStrategy[TokenType] {
 
   import BearerAuthStrategy.request2BearerAuthRequest
 
   override def isValid(implicit request: HttpServletRequest): Boolean = request.isBearerAuth && request.providesAuth
 
-  override def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[TokenType] = {
+  override def authenticate()(
+    implicit request: HttpServletRequest,
+    response: HttpServletResponse): Option[TokenType] = {
     validate(request.token)
   }
 
-  protected def validate(token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[TokenType]
+  protected def validate(token: String)(
+    implicit request: HttpServletRequest,
+    response: HttpServletResponse): Option[TokenType]
 
 }
 
@@ -111,4 +119,3 @@ trait BearerAuthenticationSupport extends ScentrySupport[Token] with BearerAuthS
   override def realm: String = "Ubirch Certifier Service"
 
 }
-

@@ -3,7 +3,7 @@ package com.ubirch.services.keycloak.groups
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.group._
-import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
+import com.ubirch.services.keycloak.{ KeycloakConfig, KeycloakConnector }
 import monix.eval.Task
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
