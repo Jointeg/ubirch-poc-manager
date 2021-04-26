@@ -76,7 +76,6 @@ class ValidatorTest extends TestBase {
         }
     }
 
-    //Todo: continue
     "validate URL valid, if certifyApp column contains errors " in {
       val str = "www.ubirch.com"
       val validated = Validator.validateURL(logoUrl, str, "CtrueX")
@@ -141,18 +140,23 @@ class ValidatorTest extends TestBase {
       assert(validated.isValid)
     }
 
-    "validate phone number example 3 valid" in {
-      val str = "0187-738786782"
+    "validate phone number 0187-73878989 valid" in {
+      val str = "0187-73878989"
       val validated = Validator.validatePhone(phone, str)
       assert(validated.isValid)
     }
 
-    //Todo: check if the regex really is good
-    //    "validate phone number  example 4 valid" in {
-    //      val str = "030-79862834"
-    //      val validated = Validator.validatePhone(phone, str)
-    //      assert(validated.isValid)
-    //    }
+    "validate phone number +49-301267863 valid" in {
+      val str = "+49-301267863"
+      val validated = Validator.validatePhone(phone, str)
+      assert(validated.isValid)
+    }
+
+    "validate phone number  example 5 valid" in {
+      val str = "030786862834"
+      val validated = Validator.validatePhone(phone, str)
+      assert(validated.isValid)
+    }
 
     "validate phone number example 1 invalid" in {
       val str = "+4932738x7862"

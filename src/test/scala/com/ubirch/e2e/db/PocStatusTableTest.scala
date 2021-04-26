@@ -10,8 +10,8 @@ import scala.concurrent.duration.DurationInt
 
 class PocStatusTableTest extends E2ETestBase {
 
-  private val pocStatus: PocStatus = PocStatus(
-    UUID.fromString("7ff87ef4-3b6a-4ad3-a415-31fa10b6fbea"),
+  private def createPocStatus(id: UUID=UUID.randomUUID() ): PocStatus = PocStatus(
+    id,
     validDataSchemaGroup = true,
     clientCertRequired = false,
     clientCertDownloaded = None,
@@ -25,7 +25,7 @@ class PocStatusTableTest extends E2ETestBase {
     "be able to store and retrieve data in DB" in {
       withInjector { injector =>
         val repo = injector.get[PocStatusRepository]
-
+        val pocStatus = createPocStatus()
         val res1 = for {
           _ <- repo.createPocStatus(pocStatus)
           data <- repo.getPocStatus(pocStatus.pocId)
@@ -33,13 +33,14 @@ class PocStatusTableTest extends E2ETestBase {
           data
         }
         val storedStatus = await(res1, 5.seconds).get
-        storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated, created = storedStatus.created)
+        storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
       }
     }
 
     "fail when same PocStatus is tried to be stored twice, when primary key is the same" in {
       withInjector { injector =>
         val repo = injector.get[PocStatusRepository]
+        val pocStatus = createPocStatus()
         val res = for {
           _ <- repo.createPocStatus(pocStatus)
           _ <- repo.createPocStatus(pocStatus)
@@ -50,6 +51,48 @@ class PocStatusTableTest extends E2ETestBase {
         assertThrows[PSQLException](await(res, 5.seconds))
       }
     }
+
+    "be able to store and update data in DB" in {
+      withInjector { injector =>
+        val repo = injector.get[PocStatusRepository]
+        val pocStatus = createPocStatus()
+        val updatedStatus = pocStatus.copy(userRealmRoleCreated = true)
+
+        val res1 = for {
+          _ <- repo.createPocStatus(pocStatus)
+          _ <- repo.updatePocStatus(updatedStatus)
+          data <- repo.getPocStatus(pocStatus.pocId)
+        } yield {
+          data
+        }
+        val storedStatus = await(res1, 5.seconds).get
+        storedStatus shouldBe updatedStatus.copy(lastUpdated = storedStatus.lastUpdated)
+      }
+    }
+
+    "be able to store and delete data in DB" in {
+      withInjector { injector =>
+        val repo = injector.get[PocStatusRepository]
+        val pocStatus = createPocStatus()
+
+        val res1 = for {
+          _ <- repo.createPocStatus(pocStatus)
+          data <- repo.getPocStatus(pocStatus.pocId)
+        } yield {
+          data
+        }
+        val storedStatus = await(res1, 5.seconds).get
+        storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
+        val res2 = for {
+          _ <- repo.deletePocStatus(pocStatus.pocId)
+          data <- repo.getPocStatus(pocStatus.pocId)
+        } yield {
+          data
+        }
+        await(res2, 5.seconds) shouldBe None
+      }
+    }
+
   }
 
 }

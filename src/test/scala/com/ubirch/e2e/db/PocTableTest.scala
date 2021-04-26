@@ -12,47 +12,51 @@ class PocTableTest extends E2ETestBase {
 
   import org.json4s.native.JsonMethods._
 
-  private val poc: Poc = Poc(
-    UUID.randomUUID(),
-    "externalId",
-    "pocName",
-    Address("", "", None, 67832, "", None, None, "Sweden"),
-    "pocPhone",
-    certifyApp = true,
-    None,
-    clientCertRequired = false,
-    "data-schema-id",
-    Some(JsonConfig(parse("""{"test":"hello"}"""))),
-    PocManager("surname", "", "", "08023-782137")
-  )
+  private def createPoc(id: UUID = UUID.randomUUID(), externalId: String = UUID.randomUUID().toString): Poc =
+    Poc(
+      id,
+      externalId,
+      "pocName",
+      Address("", "", None, 67832, "", None, None, "France"),
+      "pocPhone",
+      certifyApp = true,
+      None,
+      clientCertRequired = false,
+      "data-schema-id",
+      Some(JsonConfig(parse("""{"test":"hello"}"""))),
+      PocManager("surname", "", "", "08023-782137")
+    )
 
-  private val pocStatus: PocStatus = PocStatus(
-    poc.id,
-    validDataSchemaGroup = true,
-    clientCertRequired = false,
-    clientCertDownloaded = None,
-    clientCertProvided = None,
-    logoRequired = false,
-    logoReceived = None,
-    logoStored = None
-  )
+  private def createPocStatus(id: UUID = UUID.randomUUID()): PocStatus =
+    PocStatus(
+      id,
+      validDataSchemaGroup = true,
+      clientCertRequired = false,
+      clientCertDownloaded = None,
+      clientCertProvided = None,
+      logoRequired = false,
+      logoReceived = None,
+      logoStored = None
+    )
 
   "PocTable" should {
     "be able to store and retrieve data in DB" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
+        val poc = createPoc()
         val res = for {
           _ <- repo.createPoc(poc)
           data <- repo.getPoc(poc.id)
         } yield data
         val result = await(res, 5.seconds).get
-        result shouldBe poc.copy(lastUpdated = result.lastUpdated, created = result.created)
+        result shouldBe poc.copy(lastUpdated = result.lastUpdated)
       }
     }
 
     "fail when same Poc is tried to be stored twice, when unique constraint is violated" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
+        val poc = createPoc()
         val res = for {
           _ <- repo.createPoc(poc)
           _ <- repo.createPoc(poc.copy(UUID.randomUUID()))
@@ -67,6 +71,7 @@ class PocTableTest extends E2ETestBase {
     "fail when same Poc is tried to be stored twice, when only primary key is the same" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
+        val poc = createPoc()
         val res = for {
           _ <- repo.createPoc(poc)
           _ <- repo.createPoc(poc.copy(dataSchemaId = "x"))
@@ -78,11 +83,54 @@ class PocTableTest extends E2ETestBase {
       }
     }
 
+    "be able to store and update data in DB" in {
+      withInjector { injector =>
+        val repo = injector.get[PocRepository]
+        val poc = createPoc()
+        val updatedPoc = poc.copy(dataSchemaId = "xxx")
+
+        val res1 = for {
+          _ <- repo.createPoc(poc)
+          _ <- repo.updatePoc(updatedPoc)
+          data <- repo.getPoc(poc.id)
+        } yield {
+          data
+        }
+        val storedPoc = await(res1, 5.seconds).get
+        storedPoc shouldBe updatedPoc.copy(lastUpdated = storedPoc.lastUpdated)
+      }
+    }
+
+    "be able to store and delete data in DB" in {
+      withInjector { injector =>
+        val repo = injector.get[PocRepository]
+        val poc = createPoc()
+        println(poc.id)
+        val res1 = for {
+          _ <- repo.createPoc(poc)
+          data <- repo.getPoc(poc.id)
+        } yield {
+          data
+        }
+        val storedPoc = await(res1, 5.seconds).get
+        storedPoc shouldBe poc.copy(lastUpdated = storedPoc.lastUpdated)
+        val res2 = for {
+          _ <- repo.deletePoc(poc.id)
+          data <- repo.getPoc(poc.id)
+        } yield {
+          data
+        }
+        await(res2, 5.seconds) shouldBe None
+      }
+    }
 
     "store Poc and Status at once" in {
       withInjector { injector =>
         val pocRepo = injector.get[PocRepository]
         val statusRepo = injector.get[PocStatusRepository]
+        val poc = createPoc()
+        val pocStatus = createPocStatus(poc.id)
+
         val poc1 = poc.copy(UUID.randomUUID(), pocName = "new name")
         val pocStatus1 = pocStatus.copy(poc1.id)
         val res = for {
@@ -94,8 +142,8 @@ class PocTableTest extends E2ETestBase {
         }
         await(res, 5.seconds) match {
           case (Some(pocStatusOpt: PocStatus), Some(pocOpt: Poc)) =>
-            pocOpt.copy(lastUpdated = poc1.lastUpdated, created = poc1.created) shouldBe poc1
-            pocStatusOpt.copy(lastUpdated = pocStatus1.lastUpdated, created = pocStatus1.created)
+            pocOpt.copy(lastUpdated = poc1.lastUpdated) shouldBe poc1
+            pocStatusOpt.copy(lastUpdated = pocStatus1.lastUpdated)
         }
       }
     }

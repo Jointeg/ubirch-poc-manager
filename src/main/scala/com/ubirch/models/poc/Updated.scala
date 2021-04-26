@@ -2,15 +2,15 @@ package com.ubirch.models.poc
 
 import io.getquill.MappedEncoding
 import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormatterBuilder
 
 case class Updated(dateTime: DateTime)
 
 object Updated {
-  //  private val dateTimeFormatter = ISODateTimeFormat.dateHourMinuteSecondMillis
-
+  private val formatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSS").toFormatter
   implicit val encodeUpdated: MappedEncoding[Updated, String] =
-    MappedEncoding[Updated, String](_ => DateTime.now().toString())
+    MappedEncoding[Updated, String](_ => DateTime.now().toString(formatter))
 
   implicit val decodeUpdated: MappedEncoding[String, Updated] =
-    MappedEncoding[String, Updated](str => Updated(DateTime.parse(str)))
+    MappedEncoding[String, Updated](str => Updated(DateTime.parse(str, formatter)))
 }
