@@ -1,0 +1,83 @@
+@import '~@angular/material/theming';
+// Plus imports for other components in your app.
+
+// Include the common styles for Angular Material. We include this here so that you only
+// have to load a single css file for Angular Material in your app.
+// Be sure that you only ever include this mixin once!
+@include mat-core();
+
+// Define the palettes for your theme using the Material Design palettes available in palette.scss
+// (imported above). For each palette, you can optionally specify a default, lighter, and darker
+// hue. Available color palettes: https://material.io/design/color/
+
+$md-ubirchaccent: (
+    50 : #ffe0f1,
+    100 : #ffb3dd,
+    200 : #ff80c6,
+    300 : #ff4daf,
+    400 : #ff269d,
+    500 : #ff008c,
+    600 : #ff0084,
+    700 : #ff0079,
+    800 : #ff006f,
+    900 : #ff005c,
+    A100 : #ffffff,
+    A200 : #fff2f6,
+    A400 : #ffbfd2,
+    A700 : #ffa6c0,
+    contrast: (
+        50 : #000000,
+        100 : #000000,
+        200 : #000000,
+        300 : #000000,
+        400 : #ffffff,
+        500 : #ffffff,
+        600 : #ffffff,
+        700 : #ffffff,
+        800 : #ffffff,
+        900 : #ffffff,
+        A100 : #000000,
+        A200 : #000000,
+        A400 : #000000,
+        A700 : #000000,
+    )
+);
+
+$ubirch-app-primary: mat-palette($md-ubirchaccent);
+$ubirch-app-accent:  mat-palette($md-ubirchaccent);
+
+// The warn palette is optional (defaults to red).
+$ubirch-app-warn:    mat-palette($mat-red);
+
+// Create the theme object. A theme consists of configurations for individual
+// theming systems such as `color` or `typography`.
+$ubirch-app-theme: mat-light-theme((
+  color: (
+    primary: $ubirch-app-primary,
+    accent: $ubirch-app-accent,
+    warn: $ubirch-app-warn,  
+
+  )
+));
+
+@include angular-material-theme($ubirch-app-theme);
+
+.dark-theme {
+    $ubirch-app-dark-theme: mat-dark-theme((
+        color: (
+            primary: $ubirch-app-primary,
+            accent: $ubirch-app-accent,
+            warn: $ubirch-app-warn,  
+        )
+    ));
+
+    // Set custom background color
+    // $custom-background-color: map_get($mat-blue-grey, 50);
+
+    // -or- Can set colour by hex value too
+    
+    @include angular-material-theme($ubirch-app-dark-theme);
+
+    &.mat-app-background { background-color: #000; }
+}
+

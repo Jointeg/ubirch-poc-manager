@@ -7,7 +7,8 @@ const routes: Routes = [
   {
     path: '',
     component: DashboardComponent,
-    canActivate: [TenantAdminGuard]
+    canActivate: [TenantAdminGuard],
+    pathMatch: 'full',
   }
 ];
 

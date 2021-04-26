@@ -1,0 +1,22 @@
+:host {
+    padding: 1rem;
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    position: relative;
+
+    #logo  { 
+        height: 38px;
+    }
+
+    h1 {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+    .right { margin-left: auto; }
+    .right button { height: auto; width: auto; }
+}

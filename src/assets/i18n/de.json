@@ -1,4 +1,7 @@
 {
+	"global": {
+		"logout": "Logout"
+	},
 	"poc": {
 		"pocId": "PoC Id",
 		"name": "Name",

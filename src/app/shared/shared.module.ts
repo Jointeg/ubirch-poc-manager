@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { HeaderComponent } from './components/header/header.component';
-import { FooterComponent } from './components/footer/footer.component';
+import { HeaderComponent } from '../views/layout/header/header.component';
+import { FooterComponent } from '../views/layout/footer/footer.component';
 
 // MATERIAL
 import { A11yModule } from '@angular/cdk/a11y';
@@ -55,6 +55,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { LanguageSelectComponent } from './components/language-select/language-select.component';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
+import { FlexLayoutModule } from '@angular/flex-layout';
 
 
 @NgModule({
@@ -116,6 +117,7 @@ import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dial
     // OverlayModule,
     // PortalModule,
     // ScrollingModule,
+    FlexLayoutModule,
   ],
   exports: [
     CommonModule,
@@ -134,6 +136,8 @@ import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dial
     MatSelectModule,
     MatButtonModule,
     MatDialogModule,
+
+    FlexLayoutModule,
 
     TranslateModule,
 

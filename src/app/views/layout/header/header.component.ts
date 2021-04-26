@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostBinding, OnInit } from '@angular/core';
 import { KeycloakService } from 'keycloak-angular';
 
 @Component({
@@ -8,6 +8,7 @@ import { KeycloakService } from 'keycloak-angular';
 })
 export class HeaderComponent implements OnInit {
 
+  @HostBinding('class') class = 'dark-theme mat-app-background';
   constructor(private keycloak: KeycloakService) { }
 
   ngOnInit() { }
