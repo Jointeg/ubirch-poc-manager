@@ -1,22 +1,33 @@
-<!-- New part: this is the search box -->
-
-<form action="" [formGroup]="filters">
+<!-- FILTERS -->
+<form action="" [formGroup]="filters" *ngIf="filters" fxLayout fxLayoutGap="2rem" fxLayoutAlign="start end" class="filters">
+    <label>{{ 'pocList.filters.filters' | translate }}</label>
     <mat-form-field>
         <mat-label>{{ 'pocList.filters.search' | translate }}</mat-label>
         <input matInput placeholder="{{ 'pocList.filters.searchPlaceholder' | translate}}" #input formControlName="search">
     </mat-form-field>
+    <mat-form-field formGroupName="filterColumns">
+        <mat-label>{{ 'pocList.filters.status' | translate }} </mat-label>
+        <mat-select formControlName="status" multiple>
+            <mat-option *ngFor="let status of statuses" [value]="status">{{ 'pocStatuses.' + status | translate }}</mat-option>
+        </mat-select>
+    </mat-form-field>
+    <button mat-raised-button color="primary" [routerLink]="[ '/views', 'import' ]" class="import-btn">
+        <mat-icon aria-hidden="false" aria-label="Import pocs">add</mat-icon>
+        {{ 'pocList.actions.import' | translate }} 
+    </button>
 </form>
 
-<div class="actions" [hidden]="!showActions">
+<!-- ACTIONS -->
+<div class="actions" [hidden]="!showActions" fxLayout fxLayoutAlign="start end" fxLayoutGap="2rem">
     <label>{{ 'pocList.actions.action' | translate }}</label>
-    <mat-form-field appearance="fill">
+    <mat-form-field>
         <mat-select [formControl]="action">
-          <mat-option *ngFor="let action of actions" [value]="action.value" >
+            <mat-option *ngFor="let action of actions" [value]="action.value" >
             {{ action.label | translate }}
-          </mat-option>
+            </mat-option>
         </mat-select>
-      </mat-form-field>
-      <button mat-raised-button color="primary" (click)="applyAction()">{{ 'pocList.actions.apply' | translate }} </button>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="applyAction()">{{ 'pocList.actions.apply' | translate }} </button>
 </div>
 
 <mat-table class="pocs-table mat-elevation-z8" [dataSource]="dataSource" multiTemplateDataRows
@@ -50,7 +61,7 @@
     <!-- status -->
     <ng-container matColumnDef="status">
         <mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'poc.status' | translate }}</mat-header-cell>
-        <mat-cell *matCellDef="let poc">{{poc.status}}</mat-cell>
+        <mat-cell *matCellDef="let poc">{{ 'pocStatuses.' + poc.status | translate }}</mat-cell>
     </ng-container>
 
     <!-- name -->

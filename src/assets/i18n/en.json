@@ -13,11 +13,14 @@
 	},
 	"pocList": {
 		"filters": {
+			"filters": "Filters",
 			"search": "Search",
-			"searchPlaceholder": "min 3 characters"
+			"searchPlaceholder": "min 3 characters",
+			"status": "Status"
 		},
 		"actions": {
 			"action": "Action",
+			"import": "Import",
 			"apply": "Apply",
 			"delete": "Delete",
 			"activate": "Activate",
@@ -25,6 +28,11 @@
 			"deleteConfirmTitle": "Delete items",
 			"deleteConfirmMessage": "Are you sure you want to delete {{count}} item(s)?"
 		}
+	},
+	"pocStatuses": {
+		"ready": "Ready",
+		"pending": "Pending",
+		"processing": "Processing"
 	},
 	"dialog": {
 		"defaultTitle": "Confirmation required",

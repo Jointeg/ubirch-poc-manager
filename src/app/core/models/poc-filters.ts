@@ -7,4 +7,9 @@ export class PocFilters {
     sortOrder: SortDirection = 'asc';
     pageIndex = 0;
     pageSize: number = DEFAULT_PAGE_SIZE;
+    filterColumns: FilterColumn;
+}
+
+export interface FilterColumn {
+    [column: string]: string;
 }

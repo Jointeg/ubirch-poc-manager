@@ -1,6 +1,6 @@
 import { SelectionModel } from '@angular/cdk/collections';
 import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
@@ -8,6 +8,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { merge, Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, map, takeUntil, tap } from 'rxjs/operators';
 import { PocActions } from 'src/app/core/models/enums/poc-actions.enum';
+import { PocStatus } from 'src/app/core/models/enums/poc-status.enum';
 import { Poc } from 'src/app/core/models/interfaces/poc.interface';
 import { PocFilters } from 'src/app/core/models/poc-filters';
 import { PocDataSource } from 'src/app/core/services/data-sources/poc-data-source';
@@ -48,6 +49,7 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
   actions = [
     { value: PocActions.delete, label: `pocList.actions.delete` }
   ];
+  statuses: string[] = [PocStatus.ready, PocStatus.pending, PocStatus.processing];
   showActions = false;
 
   get search() { return this.filters.get('search'); }
@@ -75,6 +77,8 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
       map(search => ({ search })),
     );
 
+    const filters$ = this.filters.get('filterColumns').valueChanges;
+
     const sort$ = this.sort.sortChange.pipe(
       map(sort => ({
         pageIndex: 0,
@@ -90,7 +94,7 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
       }))
     );
 
-    merge(search$, sort$, paginate$).pipe(
+    merge(search$, sort$, paginate$, filters$).pipe(
       tap(filters => {
         this.filters.patchValue(filters);
         this.loadPocPage();
@@ -168,8 +172,11 @@ export class PocListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private generateFilters() {
-    this.filters = this.fb.group(new PocFilters());
+    this.filters = this.fb.group({ ...new PocFilters(), status: undefined });
     this.filters.get('search').setValidators([Validators.minLength(3)]);
-  }
 
+    this.filters.addControl('filterColumns', this.fb.group({
+      status: ['']
+    }));
+  }
 }
