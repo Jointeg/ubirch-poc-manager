@@ -1,15 +1,15 @@
 package com.ubirch.e2e
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch.crypto.PrivKey
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.keycloak.{ KeycloakConfig, KeycloakConnector }
+import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
 import com.ubirch._
-import io.getquill.{ PostgresJdbcContext, SnakeCase }
+import io.getquill.{PostgresJdbcContext, SnakeCase}
 import org.keycloak.admin.client.Keycloak
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 case class KeycloakRuntimeConfig(server: String, port: Int, clientAdmin: ClientAdmin)
 case class PostgresRuntimeConfig(server: String, port: Int)
@@ -61,14 +61,14 @@ class TestPostgresQuillJdbcContext @Inject() (val postgresRuntimeConfig: Postgre
   override val ctx: PostgresJdbcContext[SnakeCase] = new PostgresJdbcContext(
     SnakeCase,
     ConfigFactory.parseString(s"""
-                                 |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
-                                 |    dataSource.user = postgres
-                                 |    dataSource.password = postgres
-                                 |    dataSource.databaseName = postgres
-                                 |    dataSource.portNumber = ${postgresRuntimeConfig.port}
-                                 |    dataSource.serverName = ${postgresRuntimeConfig.server}
-                                 |    connectionTimeout = 30000
-                                 |""".stripMargin))
+      |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
+      |    dataSource.user = postgres
+      |    dataSource.password = postgres
+      |    dataSource.databaseName = postgres
+      |    dataSource.portNumber = ${postgresRuntimeConfig.port}
+      |    dataSource.serverName = ${postgresRuntimeConfig.server}
+      |    connectionTimeout = 30000
+      |""".stripMargin))
 }
 
 class E2EInjectorHelperImpl(

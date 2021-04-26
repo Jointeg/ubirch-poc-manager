@@ -9,9 +9,10 @@ import monix.execution.Scheduler
 import monix.reactive.Observable
 
 import java.util.concurrent.CountDownLatch
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
-/** Represents a bootable service object that starts the system
+/**
+  * Represents a bootable service object that starts the system
   */
 @Singleton
 class Service @Inject() (

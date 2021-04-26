@@ -16,13 +16,11 @@ trait PublicKeyPoolService {
 }
 
 @Singleton
-class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
-  extends PublicKeyPoolService
-  with LazyLogging {
+class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService) extends PublicKeyPoolService with LazyLogging {
 
   final val acceptedKids = List(config.getString(TokenVerificationPaths.KID))
 
-  final private val cache = new TrieMap[String, Key]()
+  private final val cache = new TrieMap[String, Key]()
 
   override def getKey(kid: String): Option[Key] = cache.find(_._1 == kid).map(_._2)
 

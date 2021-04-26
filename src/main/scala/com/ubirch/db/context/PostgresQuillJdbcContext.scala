@@ -1,8 +1,8 @@
 package com.ubirch.db.context
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{Inject, Singleton}
 import com.ubirch.services.lifeCycle.Lifecycle
-import io.getquill.{ PostgresJdbcContext, SnakeCase }
+import io.getquill.{PostgresJdbcContext, SnakeCase}
 
 import scala.concurrent.Future
 

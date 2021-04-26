@@ -13,7 +13,8 @@ import org.scalatra.servlet.ScalatraListener
 import javax.inject._
 import scala.concurrent.Future
 
-/** Represents the basic component for supporting scalatra
+/**
+  * Represents the basic component for supporting scalatra
   * @param config the configuration object
   * @param lifecycle the life cycle object
   */

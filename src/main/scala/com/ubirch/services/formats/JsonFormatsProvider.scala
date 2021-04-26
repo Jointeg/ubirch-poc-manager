@@ -5,7 +5,8 @@ import org.json4s.{ DefaultFormats, Formats }
 
 import javax.inject._
 
-/** Represents a Json Formats Provider
+/**
+  * Represents a Json Formats Provider
   */
 @Singleton
 class JsonFormatsProvider extends Provider[Formats] {

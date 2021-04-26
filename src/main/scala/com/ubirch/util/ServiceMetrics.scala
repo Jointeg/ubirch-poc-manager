@@ -14,8 +14,7 @@ trait ServiceMetrics {
 
   def errorCounter: Counter
 
-  def countWhen[T](method: String)(ft: T => Boolean)(cf: CancelableFuture[T])(implicit
-  ec: ExecutionContext): CancelableFuture[T] = {
+  def countWhen[T](method: String)(ft: T => Boolean)(cf: CancelableFuture[T])(implicit ec: ExecutionContext): CancelableFuture[T] = {
 
     def s(): Unit = successCounter.labels(service, method).inc()
     def f(): Unit = errorCounter.labels(service, method).inc()

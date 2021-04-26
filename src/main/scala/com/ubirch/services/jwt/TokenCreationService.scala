@@ -12,13 +12,13 @@ import scala.util.Try
 
 trait TokenCreationService {
   def create[T <: Any](
-    id: UUID,
-    by: String,
-    to: String,
-    about: String,
-    expiresIn: Option[Long],
-    notBefore: Option[Long],
-    fields: (Symbol, T)*
+      id: UUID,
+      by: String,
+      to: String,
+      about: String,
+      expiresIn: Option[Long],
+      notBefore: Option[Long],
+      fields: (Symbol, T)*
   ): Try[JwtClaim]
   def encode(header: String, jwtClaim: String, privKey: PrivKey): Try[String]
 }
@@ -29,13 +29,13 @@ class DefaultTokenCreationService extends TokenCreationService with TaskHelpers 
   implicit private val clock: Clock = Clock.systemUTC
 
   override def create[T <: Any](
-    id: UUID,
-    by: String,
-    to: String,
-    about: String,
-    expiresIn: Option[Long],
-    notBefore: Option[Long],
-    fields: (Symbol, T)*
+      id: UUID,
+      by: String,
+      to: String,
+      about: String,
+      expiresIn: Option[Long],
+      notBefore: Option[Long],
+      fields: (Symbol, T)*
   ): Try[JwtClaim] = {
 
     for {

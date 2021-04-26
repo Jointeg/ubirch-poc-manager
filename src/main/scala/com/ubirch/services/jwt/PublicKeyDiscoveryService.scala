@@ -21,8 +21,7 @@ trait PublicKeyDiscoveryService {
 }
 
 @Singleton
-class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterService: JsonConverterService)
-  extends PublicKeyDiscoveryService {
+class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterService: JsonConverterService) extends PublicKeyDiscoveryService {
 
   final val configURLString = config.getString(TokenVerificationPaths.CONFIG_URL)
 
@@ -62,26 +61,25 @@ class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterS
         .flatMap {
           _.map(Task.apply(_)).getOrElse(Task.raiseError(new Exception("No jwks_uri found")))
         }
-        .flatMap {
-          case (_, v) =>
-            v match {
-              case JsonAST.JString(s) => Task(s)
-              case _                  => Task.raiseError(new Exception("No jwks_uri found"))
-            }
+        .flatMap { case (_, v) =>
+          v match {
+            case JsonAST.JString(s) => Task(s)
+            case _ => Task.raiseError(new Exception("No jwks_uri found"))
+          }
         }
 
       keysRes <- readUrlAsJValue(keysUrl)
         .map { _ \\ KEYS }
         .map {
           case JArray(keys) => keys
-          case _            => Nil
+          case _ => Nil
         }
 
       maybeJWK <- Task {
         keysRes.find {
           _.findField {
             case (k, JString(v)) => k == KID && v == kid
-            case _               => false
+            case _ => false
           }.isDefined
         }.map {
           jsonConverterService.toString

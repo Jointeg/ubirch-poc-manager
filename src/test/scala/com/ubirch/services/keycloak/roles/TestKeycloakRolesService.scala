@@ -1,5 +1,5 @@
 package com.ubirch.services.keycloak.roles
-import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, KeycloakRole, RoleAlreadyExists, RoleId, RoleName }
+import com.ubirch.models.keycloak.roles.{CreateKeycloakRole, KeycloakRole, RoleAlreadyExists, RoleId, RoleName}
 import monix.eval.Task
 
 import java.util.UUID
@@ -8,7 +8,7 @@ import scala.collection.mutable
 
 @Singleton
 class TestKeycloakRolesService() extends KeycloakRolesService {
-  private val rolesDatastore = mutable.Map[RoleName, KeycloakRole]()
+  val rolesDatastore = mutable.Map[RoleName, KeycloakRole]()
 
   override def createNewRole(createKeycloakRole: CreateKeycloakRole): Task[Either[RoleAlreadyExists, Unit]] =
     Task {
