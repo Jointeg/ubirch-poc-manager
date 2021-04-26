@@ -53,6 +53,8 @@ of such tests, some functionalities might not fully work (for example UserPollin
 All the required attributes that needs to be set up are listed in `application-docker.conf`. Following list will contain
 only those, that might be unclear:
 
+* `system.aesEncryption.secretKey` - 256 bit secret key that will be used for encrypting DeviceCreationToken and
+  CertificationCreationToken before storing them in DB
 * `keycloak.users.realm` - Realm where the users created by POC-Service will be stored.
 * `keycloak.polling.interval` - Interval (in seconds) that indicates how often POC-Service will poll Keycloak for newly
   registered users (look at `confirmation-mail-sent` attribute).
