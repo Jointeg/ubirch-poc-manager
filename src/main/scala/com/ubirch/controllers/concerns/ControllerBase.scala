@@ -4,20 +4,19 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
 import com.ubirch.util.ServiceMetrics
 import monix.eval.Task
-import monix.execution.{CancelableFuture, Scheduler}
+import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.compress.utils.IOUtils
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
 
 import java.io.ByteArrayInputStream
-import javax.servlet.http.{HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse}
-import javax.servlet.{ReadListener, ServletInputStream}
+import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
+import javax.servlet.{ ReadListener, ServletInputStream }
 import scala.concurrent.Future
 import scala.util.Try
 
-/**
-  * Represents a customized ServletInputStream that allows to cache the body of a request.
+/** Represents a customized ServletInputStream that allows to cache the body of a request.
   * This trait is very important to be able to re-consume the body in case of need.
   * @param cachedBody Represents the InputStream as bytes.
   * @param raw Represents the raw ServletInputStream
@@ -36,12 +35,12 @@ class CachedBodyServletInputStream(cachedBody: Array[Byte], raw: ServletInputStr
 
 }
 
-/***
- * Represents a customized HttpServletRequest that allows us to decorate the original object with extra info
- * or extra functionality.
- * Initially, it supports the re-consumption of the body stream
- * @param httpServletRequest Represents the original Request
- */
+/** *
+  * Represents a customized HttpServletRequest that allows us to decorate the original object with extra info
+  * or extra functionality.
+  * Initially, it supports the re-consumption of the body stream
+  * @param httpServletRequest Represents the original Request
+  */
 class ServiceRequest(httpServletRequest: HttpServletRequest) extends HttpServletRequestWrapper(httpServletRequest) {
 
   val cachedBody: Array[Byte] = IOUtils.toByteArray(httpServletRequest.getInputStream)
@@ -51,8 +50,7 @@ class ServiceRequest(httpServletRequest: HttpServletRequest) extends HttpServlet
   }
 }
 
-/**
-  * Represents a Handler that creates the customized request.
+/** Represents a Handler that creates the customized request.
   * It should be mixed it with the corresponding ScalatraServlet.
   */
 trait RequestEnricher extends Handler {
@@ -61,11 +59,11 @@ trait RequestEnricher extends Handler {
   }
 }
 
-/**
-  * Represents the base for a controllers that supports the ServiceRequest
+/** Represents the base for a controllers that supports the ServiceRequest
   * and adds helpers to handle async responses and body parsing and extraction.
   */
-abstract class ControllerBase extends ScalatraServlet
+abstract class ControllerBase
+  extends ScalatraServlet
   with RequestEnricher
   with FutureSupport
   with NativeJsonSupport
@@ -74,7 +72,9 @@ abstract class ControllerBase extends ScalatraServlet
   with ServiceMetrics
   with LazyLogging {
 
-  def actionResult(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit request: HttpServletRequest, response: HttpServletResponse): Task[ActionResult] = {
+  def actionResult(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(
+    implicit request: HttpServletRequest,
+    response: HttpServletResponse): Task[ActionResult] = {
     for {
       _ <- Task.delay(logRequestInfo)
       res <- Task.defer(body(request)(response))
@@ -96,7 +96,10 @@ abstract class ControllerBase extends ScalatraServlet
     new AsyncResult() { override val is: Future[_] = body() }
   }
 
-  def asyncResult(name: String)(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit request: HttpServletRequest, response: HttpServletResponse, scheduler: Scheduler): AsyncResult = {
+  def asyncResult(name: String)(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(
+    implicit request: HttpServletRequest,
+    response: HttpServletResponse,
+    scheduler: Scheduler): AsyncResult = {
     asyncResultCore(() => count(name)(actionResult(body).runToFuture))
   }
 

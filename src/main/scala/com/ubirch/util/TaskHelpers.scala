@@ -4,8 +4,7 @@ import monix.eval.Task
 
 import scala.util.Try
 
-/**
-  * A simple helper for making tasks easier to deal with for when wrting for
+/** A simple helper for making tasks easier to deal with for when wrting for
   * comprehensions
   */
 trait TaskHelpers {

@@ -1,5 +1,5 @@
 package com.ubirch.services.keycloak.users
-import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists}
+import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists }
 import com.ubirch.models.user.UserName
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
