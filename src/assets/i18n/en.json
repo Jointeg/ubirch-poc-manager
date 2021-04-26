@@ -1,6 +1,7 @@
 {
 	"global": {
-		"logout": "Logout"
+		"logout": "Logout",
+		"back": "Back"
 	},
 	"poc": {
 		"pocId": "PoC Id",
@@ -28,6 +29,10 @@
 			"deleteConfirmTitle": "Delete items",
 			"deleteConfirmMessage": "Are you sure you want to delete {{count}} item(s)?"
 		}
+	},
+	"import": {
+		"headline": "Import PoCs",
+		"upload": "Upload"
 	},
 	"pocStatuses": {
 		"ready": "Ready",

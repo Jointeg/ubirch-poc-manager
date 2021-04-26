@@ -1,0 +1,19 @@
+input[type="file"] { width: 200px; }
+
+.notice { 
+    border: 2px solid;
+    padding: 3rem;
+}
+
+.notice.warn { 
+    border-color: tomato;
+    background-color: rgb(255, 99, 71, 0.2);
+}
+
+mat-card {
+    padding: 2rem 3rem;
+}
+
+.import-btn { 
+    padding: 0.5rem 3rem;
+}

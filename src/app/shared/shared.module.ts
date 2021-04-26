@@ -84,7 +84,7 @@ import { FlexLayoutModule } from '@angular/flex-layout';
     // MatBottomSheetModule,
     MatButtonModule,
     // MatButtonToggleModule,
-    // MatCardModule,
+    MatCardModule,
     MatCheckboxModule,
     // MatChipsModule,
     // MatStepperModule,
@@ -136,6 +136,7 @@ import { FlexLayoutModule } from '@angular/flex-layout';
     MatSelectModule,
     MatButtonModule,
     MatDialogModule,
+    MatCardModule,
 
     FlexLayoutModule,
 

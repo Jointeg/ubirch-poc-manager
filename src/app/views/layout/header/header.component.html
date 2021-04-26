@@ -4,11 +4,11 @@
   </div>
   <h1>PoC Manager</h1>
   <div class="right" fxLayout fxLayoutGap="1rem">
-    <div fxLayout fxLayoutAlign="flex-end center">
+    <div fxLayout fxLayoutAlign="flex-end center" *ngIf="userName" class="user-details">
       <mat-icon aria-hidden="false">person</mat-icon>
-      {{ 'Augustyn Zentner' | translate}}
+      <strong>{{ userName }}</strong>
     </div>
-    <button mat-icon-button aria-label="Logout" (click)="logout()">
+    <button mat-raised-button aria-label="Logout" (click)="logout()">
       <mat-icon aria-hidden="false">logout</mat-icon>
       {{ 'global.logout' | translate}}
     </button>
