@@ -6,15 +6,15 @@ services:
       - 1025:1025 # smtp server
       - 8025:8025 # web ui
     networks:
-      - keycloak_network
+      - keycloak_users_network
 
-  keycloak:
+  keycloak-users:
     image: quay.io/keycloak/keycloak:11.0.3
-    container_name: keycloak
+    container_name: keycloak-users
     environment:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: admin
-      KEYCLOAK_IMPORT: '/tmp/realm-export.json'
+      KEYCLOAK_IMPORT: '/tmp/users-export.json'
       KEYCLOAK_LOGLEVEL: 'DEBUG'
       JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
     ports:
@@ -23,7 +23,23 @@ services:
       - './keycloak/realms:/tmp'
       - './keycloak/extensions:/opt/jboss/keycloak/standalone/deployments'
     networks:
-      - keycloak_network
+      - keycloak_users_network
+
+  keycloak-device:
+    image: quay.io/keycloak/keycloak:11.0.3
+    container_name: keycloak-device
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      KEYCLOAK_IMPORT: '/tmp/device-export.json'
+      KEYCLOAK_LOGLEVEL: 'DEBUG'
+      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
+    ports:
+      - 8081:8080
+    volumes:
+      - './keycloak/realms:/tmp'
+    networks:
+      - keycloak_device_network
 
   postgres:
     image: postgres:13.2
@@ -53,4 +69,5 @@ services:
 
 networks:
   db_network:
-  keycloak_network:
+  keycloak_users_network:
+  keycloak_device_network:
