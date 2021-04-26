@@ -3,7 +3,7 @@ package com.ubirch.e2e.controllers
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.e2e.InjectorHelperImpl
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.{ Awaits, ExecutionContextsTests, FakeTokenCreator }
+import com.ubirch.{Awaits, ExecutionContextsTests, FakeTokenCreator}
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.BeforeAndAfterEach
 import org.scalatra.test.scalatest.ScalatraWordSpec

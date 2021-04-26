@@ -3,17 +3,17 @@ package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
-import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{ UserRepository, UserTestTable }
+import com.ubirch.crypto.{GeneratorKeyFactory, PrivKey}
+import com.ubirch.db.tables.{UserRepository, UserTestTable}
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
   PublicKeyPoolService,
   TokenCreationService
 }
-import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
-import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
-import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
+import com.ubirch.services.keycloak.auth.{AuthClient, TestAuthClient}
+import com.ubirch.services.keycloak.groups.{KeycloakGroupService, TestKeycloakGroupsService}
+import com.ubirch.services.keycloak.roles.{KeycloakRolesService, TestKeycloakRolesService}
 import com.ubirch.services.keycloak.users.{
   KeycloakUserService,
   TestKeycloakUserService,
@@ -23,7 +23,7 @@ import com.ubirch.services.keycloak.users.{
 import monix.eval.Task
 
 import java.security.Key
-import javax.inject.{ Inject, Provider, Singleton }
+import javax.inject.{Inject, Provider, Singleton}
 
 @Singleton
 class FakeDefaultPublicKeyPoolService @Inject() (
@@ -36,7 +36,7 @@ class FakeDefaultPublicKeyPoolService @Inject() (
     Task {
       kid match {
         case "6dMHOUfu7v6howP2WH5bkp-j9UgUYdyEQbWJp8cb8IY" => Some(privKey.getPublicKey)
-        case _                                             => throw new Exception("Check my kid!")
+        case _ => throw new Exception("Check my kid!")
       }
     }
 }

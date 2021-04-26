@@ -1,5 +1,5 @@
 package com.ubirch
-import org.scalatest.{ EitherValues, OptionValues }
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 trait UnitTestBase

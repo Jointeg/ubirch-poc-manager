@@ -1,7 +1,7 @@
 package com.ubirch.e2e.db
 import com.ubirch.db.tables.UserRepository
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.user.{ Email, User, UserId, WaitingForRequiredActions }
+import com.ubirch.models.user.{Email, User, UserId, WaitingForRequiredActions}
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt

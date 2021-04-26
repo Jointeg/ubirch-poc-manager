@@ -7,7 +7,8 @@ import org.json4s.{ Formats, JValue, JsonInput }
 
 import javax.inject._
 
-/** Represents an internal service or component for managing Json.
+/**
+  * Represents an internal service or component for managing Json.
   */
 trait JsonConverterService {
   def toString(value: JValue): String
@@ -18,7 +19,8 @@ trait JsonConverterService {
   def fromJsonInput[A](json: JsonInput)(f: JValue => JValue)(implicit formats: Formats, mf: Manifest[A]): A
 }
 
-/** Represents a default internal service or component for managing Json.
+/**
+  * Represents a default internal service or component for managing Json.
   * @param formats Represents the json formats used for parsing.
   */
 @Singleton

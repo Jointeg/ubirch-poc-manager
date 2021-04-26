@@ -10,7 +10,8 @@ import java.util.concurrent.Executors
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
 
-/** Represents base for a convenient test
+/**
+  * Represents base for a convenient test
   */
 trait TestBase
   extends WordSpec
@@ -19,7 +20,9 @@ trait TestBase
   with BeforeAndAfterAll
   with MustMatchers
   with Awaits
-  with ExecutionContextsTests {}
+  with ExecutionContextsTests {
+
+}
 
 trait ExecutionContextsTests {
   implicit lazy val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))

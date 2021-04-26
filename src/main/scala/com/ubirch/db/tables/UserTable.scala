@@ -1,7 +1,7 @@
 package com.ubirch.db.tables
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.user.{ User, UserId }
+import com.ubirch.models.user.{User, UserId}
 import monix.eval.Task
 
 trait UserRepository {
