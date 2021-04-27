@@ -3,7 +3,7 @@ import com.ubirch.data.KeycloakTestData
 import com.ubirch.e2e.{E2ETestBase, KeycloakOperations}
 import com.ubirch.models.keycloak.user.CreateKeycloakUser
 import com.ubirch.models.user.{Email, FirstName, LastName}
-import com.ubirch.services.keycloak.KeycloakConnector
+import com.ubirch.services.keycloak.{DeviceKeycloakConnector, UsersKeycloakConnector}
 import com.ubirch.services.keycloak.users.{KeycloakUserService, UserPollingService}
 import monix.eval.Task
 import monix.reactive.Observable
@@ -19,21 +19,22 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
       withInjector { injector =>
         val userPollingService = injector.get[UserPollingService]
         val userService = injector.get[KeycloakUserService]
-        val keycloakConnector = injector.get[KeycloakConnector]
+        val usersKeycloakConnector = injector.get[UsersKeycloakConnector]
+        val deviceKeycloakConnector = injector.get[DeviceKeycloakConnector]
 
         val keycloakUser1 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser2 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser3 = KeycloakTestData.createNewKeycloakUser()
 
         val pollingResult = for {
-          _ <- cleanAllUsers(keycloakConnector)
-          _ <- createKeycloakAdminUser(injector.clientAdmin)(keycloakConnector)
+          _ <- cleanAllUsers(usersKeycloakConnector, deviceKeycloakConnector)
+          _ <- createKeycloakAdminUser(injector.tenantAdmin)(usersKeycloakConnector)
           pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(3.seconds).lastL.start
           _ <- userService.createUser(keycloakUser1)
           _ <- userService.createUser(keycloakUser2)
           _ <- userService.createUser(keycloakUser3)
-          _ <- setEmailVerified(keycloakUser1.userName)(userService, keycloakConnector)
-          _ <- setEmailVerified(keycloakUser3.userName)(userService, keycloakConnector)
+          _ <- setEmailVerified(keycloakUser1.userName)(userService, usersKeycloakConnector)
+          _ <- setEmailVerified(keycloakUser3.userName)(userService, usersKeycloakConnector)
           pollingResult <- pollingFiber.join
         } yield pollingResult
 
@@ -50,26 +51,27 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
       withInjector { injector =>
         val userPollingService = injector.get[UserPollingService]
         val userService = injector.get[KeycloakUserService]
-        val keycloakConnector = injector.get[KeycloakConnector]
+        val usersKeycloakConnector = injector.get[UsersKeycloakConnector]
+        val deviceKeycloakConnector = injector.get[DeviceKeycloakConnector]
 
-        createKeycloakAdminUser(injector.clientAdmin)(keycloakConnector)
+        createKeycloakAdminUser(injector.tenantAdmin)(usersKeycloakConnector)
         val keycloakUser1 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser2 = KeycloakTestData.createNewKeycloakUser()
         val keycloakUser3 = KeycloakTestData.createNewKeycloakUser()
 
         val pollingResult = for {
-          _ <- cleanAllUsers(keycloakConnector)
-          _ <- createKeycloakAdminUser(injector.clientAdmin)(keycloakConnector)
+          _ <- cleanAllUsers(usersKeycloakConnector, deviceKeycloakConnector)
+          _ <- createKeycloakAdminUser(injector.tenantAdmin)(usersKeycloakConnector)
           pollingFiber <- userPollingService.via(Observable(_)).takeByTimespan(8.seconds).toListL.start
           _ <- userService.createUser(keycloakUser1)
           _ <- userService.createUser(keycloakUser2)
           _ <- userService.createUser(keycloakUser3)
-          _ <- setEmailVerified(keycloakUser1.userName)(userService, keycloakConnector)
-          _ <- setEmailVerified(keycloakUser2.userName)(userService, keycloakConnector)
-          _ <- setEmailVerified(keycloakUser3.userName)(userService, keycloakConnector)
+          _ <- setEmailVerified(keycloakUser1.userName)(userService, usersKeycloakConnector)
+          _ <- setEmailVerified(keycloakUser2.userName)(userService, usersKeycloakConnector)
+          _ <- setEmailVerified(keycloakUser3.userName)(userService, usersKeycloakConnector)
           _ <- Task.sleep(1500.millis)
-          _ <- setConfirmationMailSentAttribute(true, keycloakUser1.userName)(userService, keycloakConnector)
-          _ <- setConfirmationMailSentAttribute(true, keycloakUser3.userName)(userService, keycloakConnector)
+          _ <- setConfirmationMailSentAttribute(true, keycloakUser1.userName)(userService, usersKeycloakConnector)
+          _ <- setConfirmationMailSentAttribute(true, keycloakUser3.userName)(userService, usersKeycloakConnector)
           pollingResult <- pollingFiber.join
         } yield pollingResult
 
@@ -89,19 +91,20 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
       withInjector { injector =>
         val userPollingService = injector.get[UserPollingService]
         val userService = injector.get[KeycloakUserService]
-        val keycloakConnector = injector.get[KeycloakConnector]
+        val usersKeycloakConnector = injector.get[UsersKeycloakConnector]
+        val deviceKeycloakConnector = injector.get[DeviceKeycloakConnector]
 
         val pollingResult = for {
-          _ <- cleanAllUsers(keycloakConnector)
+          _ <- cleanAllUsers(usersKeycloakConnector, deviceKeycloakConnector)
           _ <- userService.createUser(
             CreateKeycloakUser(
-              FirstName(injector.clientAdmin.userName.value),
-              LastName(injector.clientAdmin.userName.value),
-              injector.clientAdmin.userName,
+              FirstName(injector.tenantAdmin.userName.value),
+              LastName(injector.tenantAdmin.userName.value),
+              injector.tenantAdmin.userName,
               Email("test@email.com")))
-          _ <- assignCredentialsToUser(injector.clientAdmin.userName.value, injector.clientAdmin.password)(
+          _ <- assignCredentialsToUser(injector.tenantAdmin.userName.value, injector.tenantAdmin.password)(
             userService,
-            keycloakConnector)
+            usersKeycloakConnector)
           pollingResult <- userPollingService.via(Observable(_)).takeByTimespan(3.seconds).toListL
         } yield pollingResult
 
