@@ -3,7 +3,7 @@ package com.ubirch.services.keycloak.groups
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.group._
-import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
+import com.ubirch.services.keycloak.{KeycloakUsersConfig, UsersKeycloakConnector}
 import monix.eval.Task
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
@@ -16,13 +16,15 @@ trait KeycloakGroupService {
 
 }
 
-class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnector, keycloakConfig: KeycloakConfig)
+class DefaultKeycloakGroupService @Inject() (
+  usersKeycloakConnector: UsersKeycloakConnector,
+  keycloakUsersConfig: KeycloakUsersConfig)
   extends KeycloakGroupService
   with LazyLogging {
   override def createGroup(createKeycloakGroup: CreateKeycloakGroup): Task[Either[GroupAlreadyExists, Unit]] =
     Task {
-      val response = keycloakConnector.keycloak
-        .realm(keycloakConfig.usersRealm)
+      val response = usersKeycloakConnector.keycloak
+        .realm(keycloakUsersConfig.realm)
         .groups()
         .add(createKeycloakGroup.toKeycloakRepresentation)
 
@@ -38,8 +40,8 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     getGroupIdByName(groupName).flatMap {
       case Some(groupId) =>
         Task {
-          val groupResource = keycloakConnector.keycloak
-            .realm(keycloakConfig.usersRealm)
+          val groupResource = usersKeycloakConnector.keycloak
+            .realm(keycloakUsersConfig.realm)
             .groups()
             .group(groupId.value)
             .toRepresentation
@@ -56,8 +58,8 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     getGroupIdByName(groupName).flatMap {
       case Some(groupId: GroupId) =>
         Task {
-          keycloakConnector.keycloak
-            .realm(keycloakConfig.usersRealm)
+          usersKeycloakConnector.keycloak
+            .realm(keycloakUsersConfig.realm)
             .groups()
             .group(groupId.value)
             .remove()
@@ -69,8 +71,8 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
 
   private def getGroupIdByName(groupName: GroupName): Task[Option[GroupId]] =
     Task {
-      keycloakConnector.keycloak
-        .realm(keycloakConfig.usersRealm)
+      usersKeycloakConnector.keycloak
+        .realm(keycloakUsersConfig.realm)
         .groups()
         .groups()
         .asScala

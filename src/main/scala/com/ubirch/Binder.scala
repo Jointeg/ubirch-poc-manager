@@ -18,7 +18,7 @@ import com.ubirch.services.keycloak.users.{
   KeycloakUserServiceImpl,
   UserPollingService
 }
-import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConfigConnector, KeycloakConnector, RealKeycloakConfig}
+import com.ubirch.services.keycloak._
 import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
 import com.ubirch.services.rest.SwaggerProvider
 import monix.execution.Scheduler
@@ -30,7 +30,10 @@ import scala.concurrent.ExecutionContext
 class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
-  def KeycloakConfig: ScopedBindingBuilder = bind(classOf[KeycloakConfig]).to(classOf[RealKeycloakConfig])
+  def KeycloakUsersConfig: ScopedBindingBuilder =
+    bind(classOf[KeycloakUsersConfig]).to(classOf[RealKeycloakUsersConfig])
+  def KeycloakDeviceConfig: ScopedBindingBuilder =
+    bind(classOf[KeycloakDeviceConfig]).to(classOf[RealKeycloakDeviceConfig])
   def ExecutionContext: ScopedBindingBuilder = bind(classOf[ExecutionContext]).toProvider(classOf[ExecutionProvider])
   def Scheduler: ScopedBindingBuilder = bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
   def Swagger: ScopedBindingBuilder = bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
@@ -47,8 +50,10 @@ class Binder extends AbstractModule {
     bind(classOf[PublicKeyDiscoveryService]).to(classOf[DefaultPublicKeyDiscoveryService])
   def PublicKeyPoolService: ScopedBindingBuilder =
     bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
-  def KeycloakConnector: ScopedBindingBuilder =
-    bind(classOf[KeycloakConnector]).to(classOf[KeycloakConfigConnector])
+  def KeycloakUserConnector: ScopedBindingBuilder =
+    bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])
+  def KeycloakDeviceConnector: ScopedBindingBuilder =
+    bind(classOf[DeviceKeycloakConnector]).to(classOf[DeviceKeycloakConfigConnector])
   def KeycloakUserService: ScopedBindingBuilder =
     bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
   def KeycloakRolesService: ScopedBindingBuilder =
@@ -66,7 +71,8 @@ class Binder extends AbstractModule {
 
   override def configure(): Unit = {
     Config
-    KeycloakConfig
+    KeycloakUsersConfig
+    KeycloakDeviceConfig
     ExecutionContext
     Scheduler
     Swagger
@@ -78,7 +84,8 @@ class Binder extends AbstractModule {
     TokenVerificationService
     PublicKeyDiscoveryService
     PublicKeyPoolService
-    KeycloakConnector
+    KeycloakUserConnector
+    KeycloakDeviceConnector
     KeycloakUserService
     KeycloakRolesService
     KeycloakGroupService

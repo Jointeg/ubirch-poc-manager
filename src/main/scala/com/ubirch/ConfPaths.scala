@@ -25,16 +25,30 @@ object ConfPaths {
   }
 
   trait KeycloakPaths {
-    final val SERVER_URL = "keycloak.server.url"
-    final val SERVER_REALM = "keycloak.server.realm"
-    final val USERNAME = "keycloak.server.username"
-    final val PASSWORD = "keycloak.server.password"
-    final val CLIENT_ID = "keycloak.server.clientId"
-    final val USERS_REALM = "keycloak.users.realm"
-    final val CLIENT_CONFIG = "keycloak.client.config"
-    final val CLIENT_ADMIN_USER = "keycloak.client.adminUsername"
-    final val CLIENT_ADMIN_PASSWORD = "keycloak.client.adminPassword"
-    final val USER_POLLING_INTERVAL = "keycloak.polling.interval"
+    object UsersKeycloak {
+      final val SERVER_URL = "keycloak-users.server.url"
+      final val SERVER_REALM = "keycloak-users.server.realm"
+      final val USERNAME = "keycloak-users.server.username"
+      final val PASSWORD = "keycloak-users.server.password"
+      final val CLIENT_ID = "keycloak-users.server.clientId"
+      final val REALM = "keycloak-users.realm"
+      final val CLIENT_CONFIG = "keycloak-users.client.config"
+      final val CLIENT_ADMIN_USER = "keycloak-users.client.adminUsername"
+      final val CLIENT_ADMIN_PASSWORD = "keycloak-users.client.adminPassword"
+      final val USER_POLLING_INTERVAL = "keycloak-users.polling.interval"
+    }
+
+    object DeviceKeycloak {
+      final val SERVER_URL = "keycloak-device.server.url"
+      final val SERVER_REALM = "keycloak-device.server.realm"
+      final val USERNAME = "keycloak-device.server.username"
+      final val PASSWORD = "keycloak-device.server.password"
+      final val CLIENT_ID = "keycloak-device.server.clientId"
+      final val REALM = "keycloak-device.realm"
+      final val CLIENT_CONFIG = "keycloak-device.client.config"
+      final val CLIENT_ADMIN_USER = "keycloak-device.client.adminUsername"
+      final val CLIENT_ADMIN_PASSWORD = "keycloak-device.client.adminPassword"
+    }
   }
 
   object GenericConfPaths extends GenericConfPaths

@@ -3,7 +3,7 @@ package com.ubirch.services.keycloak.roles
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.roles._
-import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
+import com.ubirch.services.keycloak.{KeycloakUsersConfig, UsersKeycloakConnector}
 import monix.eval.Task
 
 import javax.ws.rs.{ClientErrorException, NotFoundException}
@@ -15,7 +15,9 @@ trait KeycloakRolesService {
 }
 
 @Singleton
-class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnector, keycloakConfig: KeycloakConfig)
+class DefaultKeycloakRolesService @Inject() (
+  usersKeycloakConnector: UsersKeycloakConnector,
+  keycloakUsersConfig: KeycloakUsersConfig)
   extends KeycloakRolesService
   with LazyLogging {
 
@@ -24,8 +26,8 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
     Task(
       Right(
-        keycloakConnector.keycloak
-          .realm(keycloakConfig.usersRealm)
+        usersKeycloakConnector.keycloak
+          .realm(keycloakUsersConfig.realm)
           .roles()
           .create(roleRepresentation)
       )
@@ -38,8 +40,8 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def deleteRole(roleName: RoleName): Task[Unit] = {
     Task(
-      keycloakConnector.keycloak
-        .realm(keycloakConfig.usersRealm)
+      usersKeycloakConnector.keycloak
+        .realm(keycloakUsersConfig.realm)
         .roles()
         .deleteRole(roleName.value)
     ).onErrorRecover {
@@ -51,8 +53,8 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findRole(roleName: RoleName): Task[Option[KeycloakRole]] = {
     Task {
-      val keycloakRoleRepresentation = keycloakConnector.keycloak
-        .realm(keycloakConfig.usersRealm)
+      val keycloakRoleRepresentation = usersKeycloakConnector.keycloak
+        .realm(keycloakUsersConfig.realm)
         .roles()
         .get(roleName.value)
         .toRepresentation
