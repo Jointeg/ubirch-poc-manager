@@ -37,8 +37,13 @@ object ConfPaths {
     final val USER_POLLING_INTERVAL = "keycloak.polling.interval"
   }
 
+  trait AESEncryption {
+    final val SECRET_KEY = "system.aesEncryption.secretKey"
+  }
+
   object GenericConfPaths extends GenericConfPaths
   object HttpServerConfPaths extends HttpServerConfPaths
   object TokenVerificationPaths extends TokenVerificationPaths
   object KeycloakPaths extends KeycloakPaths
+  object AESEncryptionPaths extends AESEncryption
 }
