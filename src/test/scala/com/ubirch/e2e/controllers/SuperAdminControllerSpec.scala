@@ -32,8 +32,20 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       |""".stripMargin
   }
 
+  private def missingRequiredFieldsCreateTenantJson(tenantName: String) = {
+    s"""
+      |{
+      |    "tenantName": "$tenantName",
+      |    "deviceCreationToken": "1234567890",
+      |    "idGardIdentifier": "gard-identifier",
+      |    "tenantGroupId": "random-group",
+      |    "tenantOrganisationalUnitGroupId": "organisationalUnitGroupId"
+      |}
+      |""".stripMargin
+  }
+
   "Super Admin Controller" must {
-    "should be able to successfully create a Tenant" in {
+    "be able to successfully create a Tenant" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
 
@@ -59,7 +71,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    "Created tenant should be stored with encrypted DeviceCreationToken and CertificationCreationToken" in {
+    "create tenant encrypted DeviceCreationToken and CertificationCreationToken" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val tenantName = Random.alphanumeric.take(10).mkString
@@ -90,6 +102,22 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         decryptedDeviceCreationToken shouldBe "1234567890"
         decryptedCertificationCreationToken shouldBe "987654321"
 
+      }
+    }
+
+    "respond with 500 status code if some error happens" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val tenantName = Random.alphanumeric.take(10).mkString
+        val createTenantBody = missingRequiredFieldsCreateTenantJson(tenantName)
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(500)
+          assert(body.contains("ServerError"))
+        }
       }
     }
   }
