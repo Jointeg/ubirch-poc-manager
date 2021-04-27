@@ -115,8 +115,8 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
           "/tenants/create",
           body = createTenantBody.getBytes(StandardCharsets.UTF_8),
           headers = Map("authorization" -> token.superAdmin.prepare)) {
-          status should equal(500)
-          assert(body.contains("ServerError"))
+          status should equal(400)
+          assert(body.contains("Invalid request"))
         }
       }
     }
