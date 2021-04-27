@@ -105,7 +105,6 @@ class PocTableTest extends E2ETestBase {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
         val poc = createPoc()
-        println(poc.id)
         val res1 = for {
           _ <- repo.createPoc(poc)
           data <- repo.getPoc(poc.id)

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table (
     id                          UUID            NOT NULL,
     external_id                 varchar(40)     NOT NULL,
     poc_name                    text            NOT NULL,
+-- address
     street                      text            NOT NULL,
     house_number                text            NOT NULL,
     additional_address          text,
@@ -19,16 +20,27 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table (
     county                      text,
     federal_state               text,
     country                     text,
+-- addressEnd
     phone                       text            NOT NULL,
     certify_app                 boolean         NOT NULL,
     logo_url                    text,
     client_cert_required        boolean         NOT NULL,
     data_schema_id              text            NOT NULL,
     extra_config                text,
+-- manager
     manager_surname             text            NOT NULL,
     manager_name                text            NOT NULL,
     manager_email               text            NOT NULL,
     manager_mobile_phone        text            NOT NULL,
+-- managerEnd
+-- addOns
+    user_realm_role_name        text,
+    user_realm_group_id         UUID,
+    device_realm_role_name      text,
+    device_realm_group_id       UUID,
+    device_id                   UUID,
+    client_cert_folder          text,
+-- addOnsEnd
     status                      varchar(10)     NOT NULL,
     last_updated                text            NOT NULL,
     created                     text            NOT NULL,
