@@ -15,7 +15,6 @@ services:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: admin
       KEYCLOAK_IMPORT: '/tmp/users-export.json'
-      KEYCLOAK_LOGLEVEL: 'DEBUG'
       JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
     ports:
       - 8080:8080
@@ -32,7 +31,6 @@ services:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: admin
       KEYCLOAK_IMPORT: '/tmp/device-export.json'
-      KEYCLOAK_LOGLEVEL: 'DEBUG'
       JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
     ports:
       - 8081:8080
