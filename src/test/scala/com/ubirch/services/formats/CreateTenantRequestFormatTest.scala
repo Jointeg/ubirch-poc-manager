@@ -14,7 +14,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         val createTenantRequestJSON = parse("""
           |{
           |    "tenantName": "someRandomName",
-          |    "pocUsageBase": "APIUsage",
+          |    "usageType": "API",
           |    "deviceCreationToken": "1234567890",
           |    "certificationCreationToken": "987654321",
           |    "idGardIdentifier": "gard-identifier",
@@ -25,7 +25,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
 
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
-          APIUsage,
+          API,
           PlainDeviceCreationToken("1234567890"),
           PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
@@ -50,7 +50,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         val createTenantRequestJSON = parse("""
           |{
           |    "tenantName": "someRandomName",
-          |    "pocUsageBase": "APIUsage",
+          |    "usageType": "API",
           |    "deviceCreationToken": "1234567890",
           |    "idGardIdentifier": "gard-identifier",
           |    "tenantGroupId": "random-group",
@@ -63,20 +63,20 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
     }
   }
 
-  "POCUsageBase" should {
+  "UsageType" should {
     "Parse known values" in {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
-        JString("APIUsage").extract[POCUsageBase] shouldBe APIUsage
-        JString("UIUsage").extract[POCUsageBase] shouldBe UIUsage
-        JString("AllChannelsUsage").extract[POCUsageBase] shouldBe AllChannelsUsage
+        JString("API").extract[UsageType] shouldBe API
+        JString("APP").extract[UsageType] shouldBe APP
+        JString("BOTH").extract[UsageType] shouldBe Both
       }
     }
 
     "Fail if provided value is not known" in {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
-        JString("NotAnUsage").extractOpt[POCUsageBase] shouldBe None
+        JString("NotAnUsage").extractOpt[UsageType] shouldBe None
       }
     }
   }

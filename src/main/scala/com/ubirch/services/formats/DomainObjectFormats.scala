@@ -5,7 +5,7 @@ import org.json4s.{CustomSerializer, MappingException}
 
 object DomainObjectFormats {
   val all = List(
-    createStringFormat(POCUsageBase.unsafeFromString)(POCUsageBase.toStringFormat)
+    createStringFormat(UsageType.unsafeFromString)(UsageType.toStringFormat)
   )
 
   private def createStringFormat[A: Manifest](decode: String => A)(encode: A => String) = {

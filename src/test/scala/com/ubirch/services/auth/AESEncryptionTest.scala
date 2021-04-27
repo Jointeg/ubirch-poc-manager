@@ -7,7 +7,7 @@ import scala.concurrent.duration.DurationInt
 class AESEncryptionTest extends UnitTestBase {
 
   "AESEncryption" should {
-    "Do some encryption" in {
+    "do some encryption" in {
       withInjector { injector =>
         val aesEncryption = injector.get[AESEncryption]
         val data = "dataToBeEncrypted"
@@ -29,7 +29,7 @@ class AESEncryptionTest extends UnitTestBase {
       }
     }
 
-    "encrypting same data twice should result in different encrypted representation due to different IV" in {
+    "result in different encrypted representation due to different IV while encrypting same data twice" in {
       withInjector { injector =>
         val aesEncryption = injector.get[AESEncryption]
         val data = "dataToBeEncrypted"

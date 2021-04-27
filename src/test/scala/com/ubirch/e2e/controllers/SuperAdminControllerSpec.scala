@@ -22,7 +22,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     s"""
       |{
       |    "tenantName": "$tenantName",
-      |    "pocUsageBase": "APIUsage",
+      |    "usageType": "API",
       |    "deviceCreationToken": "1234567890",
       |    "certificationCreationToken": "987654321",
       |    "idGardIdentifier": "gard-identifier",
@@ -51,7 +51,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         val tenantRepository = injector.get[TenantRepository]
         val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
         maybeTenant.value.tenantName shouldBe TenantName(tenantName)
-        maybeTenant.value.pocUsageBase shouldBe APIUsage
+        maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
         maybeTenant.value.groupId shouldBe TenantGroupId("random-group")
         maybeTenant.value.organisationalUnitGroupId shouldBe TenantOrganisationalUnitGroupId(

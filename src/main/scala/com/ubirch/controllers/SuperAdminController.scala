@@ -10,7 +10,7 @@ import com.ubirch.controllers.concerns.{
   Token
 }
 import com.ubirch.models.NOK
-import com.ubirch.models.tenant.{APIUsage, AllChannelsUsage, CreateTenantRequest, UIUsage}
+import com.ubirch.models.tenant.{API, APP, Both, CreateTenantRequest}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.superadmin.TenantService
 import io.prometheus.client.Counter
@@ -65,9 +65,9 @@ class SuperAdminController @Inject() (
       .authorizations()
       .parameters(
         bodyParam[String]("tenantName").description("Name of Tenant"),
-        bodyParam[String]("pocUsageBase")
+        bodyParam[String]("usageType")
           .description("Describes channel through which POC will be managed")
-          .allowableValues(List(APIUsage, UIUsage, AllChannelsUsage)),
+          .allowableValues(List(API, APP, Both)),
         bodyParam[String]("deviceCreationToken"),
         bodyParam[String]("certificationCreationToken"),
         bodyParam[String]("idGardIdentifier"),

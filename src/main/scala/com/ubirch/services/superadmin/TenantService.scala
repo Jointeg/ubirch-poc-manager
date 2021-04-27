@@ -31,7 +31,7 @@ class DefaultTenantService @Inject() (aesEncryption: AESEncryption, tenantReposi
     Tenant(
       TenantId.random,
       createTenantRequest.tenantName,
-      createTenantRequest.pocUsageBase,
+      createTenantRequest.usageType,
       encryptedDeviceCreationToken,
       encryptedCertificationCreationToken,
       createTenantRequest.idGardIdentifier,
