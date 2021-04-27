@@ -2,7 +2,6 @@ package com.ubirch.e2e
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch._
-import com.ubirch.crypto.PrivKey
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{KeycloakDeviceConfig, KeycloakUsersConfig}
@@ -47,18 +46,6 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config, keycloakRuntimeConfi
   val clientAdminUsername: String = keycloakRuntimeConfig.superAdmin.userName.value
   val clientAdminPassword: String = keycloakRuntimeConfig.superAdmin.password
 }
-
-class InjectorHelperImpl()
-  extends InjectorHelper(List(new Binder {
-    override def PublicKeyPoolService: ScopedBindingBuilder = {
-      bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
-    }
-
-    override def configure(): Unit = {
-      super.configure()
-      bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
-    }
-  }))
 
 @Singleton
 class TestPostgresQuillJdbcContext @Inject() (val postgresRuntimeConfig: PostgresRuntimeConfig)
@@ -120,7 +107,6 @@ class E2EInjectorHelperImpl(
           keycloakDeviceContainer.container.getContainerIpAddress,
           keycloakDeviceContainer.container.getFirstMappedPort,
           superAdmin))
-      bind(classOf[PrivKey]).toProvider(classOf[KeyPairProvider])
     }
 
   }))

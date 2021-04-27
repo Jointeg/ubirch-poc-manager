@@ -67,6 +67,14 @@
         "clientRole": false,
         "containerId": "users-realm",
         "attributes": {}
+      },
+      {
+        "id": "608ee4a3-03ec-484c-8c03-97b7b108d9dc",
+        "name": "SUPER_ADMIN",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "test-realm",
+        "attributes": {}
       }
     ],
     "client": {
@@ -1428,6 +1436,7 @@
     "port": "1025",
     "host": "mailhog-keycloak",
     "from": "test-user-users@notAnEmail.com",
+    "fromDisplayName": "test-user",
     "ssl": ""
   },
   "eventsEnabled": false,
@@ -1447,14 +1456,14 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "saml-role-list-mapper",
-            "saml-user-property-mapper",
             "saml-user-attribute-mapper",
-            "oidc-usermodel-attribute-mapper",
+            "oidc-address-mapper",
             "oidc-usermodel-property-mapper",
+            "saml-role-list-mapper",
             "oidc-full-name-mapper",
-            "oidc-sha256-pairwise-sub-mapper",
-            "oidc-address-mapper"
+            "oidc-usermodel-attribute-mapper",
+            "saml-user-property-mapper",
+            "oidc-sha256-pairwise-sub-mapper"
           ]
         }
       },
@@ -1481,13 +1490,13 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "oidc-usermodel-attribute-mapper",
-            "oidc-full-name-mapper",
-            "oidc-address-mapper",
-            "oidc-sha256-pairwise-sub-mapper",
             "saml-role-list-mapper",
-            "oidc-usermodel-property-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-address-mapper",
             "saml-user-attribute-mapper",
+            "oidc-usermodel-attribute-mapper",
+            "oidc-usermodel-property-mapper",
+            "oidc-full-name-mapper",
             "saml-user-property-mapper"
           ]
         }

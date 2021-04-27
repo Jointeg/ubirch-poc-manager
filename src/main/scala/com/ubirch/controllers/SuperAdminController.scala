@@ -10,10 +10,9 @@ import com.ubirch.controllers.concerns.{
   Token
 }
 import com.ubirch.models.NOK
-import com.ubirch.models.keycloak.user.CreateKeycloakUser
-import com.ubirch.models.user.{Email, FirstName, LastName, UserName}
+import com.ubirch.models.tenant.{API, APP, Both, CreateTenantRequest}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
-import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.superadmin.TenantService
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -23,7 +22,6 @@ import org.scalatra.{NotFound, Ok, ScalatraBase}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.util.Random
 
 @Singleton
 class SuperAdminController @Inject() (
@@ -32,7 +30,7 @@ class SuperAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
-  keycloakUserService: KeycloakUserService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  tenantService: TenantService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
   override protected val applicationDescription: String = "Super Admin controller"
@@ -59,32 +57,30 @@ class SuperAdminController @Inject() (
     .labelNames("service", "method")
     .register()
 
-  val getSimpleCheck: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("initialTest")
-      .summary("Test")
-      .description("Getting a test message from system")
-      .tags("Test")
-
-  get("/initialTest", operation(getSimpleCheck)) {
-    authenticated() { token =>
-      asyncResult("initialTest") { _ => _ =>
-        Task(test(token))
-      }
-    }
+  private val createTenantOperation: SwaggerSupportSyntax.OperationBuilder = {
+    apiOperation[String]("CreateTenant")
+      .summary("Creates a Tenant")
+      .description("Function that will be used by SuperAdmin users in order to create Tenants")
+      .tags("SuperAdmin")
+      .authorizations()
+      .parameters(
+        bodyParam[String]("tenantName").description("Name of Tenant"),
+        bodyParam[String]("usageType")
+          .description("Describes channel through which POC will be managed")
+          .allowableValues(List(API, APP, Both)),
+        bodyParam[String]("deviceCreationToken"),
+        bodyParam[String]("certificationCreationToken"),
+        bodyParam[String]("idGardIdentifier"),
+        bodyParam[String]("tenantGroupId"),
+        bodyParam[String]("tenantOrganisationalUnitGroupId")
+      )
   }
 
-  get("/simpleTest") {
-    asyncResult("simpleTest") { _ => _ =>
-      keycloakUserService
-        .createUser(
-          CreateKeycloakUser(
-            FirstName(Random.alphanumeric.take(10).mkString("")),
-            LastName(Random.alphanumeric.take(10).mkString("")),
-            UserName(s"${Random.alphanumeric.take(10).mkString("")}@test.com"),
-            Email(s"${Random.alphanumeric.take(10).mkString("")}@test.com")
-          )
-        )
-        .map(_ => Ok("Created"))
+  post("/tenants/create", operation(createTenantOperation)) {
+    authenticated(_.hasRole(Token.SUPER_ADMIN)) { _ =>
+      asyncResult("CreateTenant") { _ => _ =>
+        tenantService.createTenant(parsedBody.extract[CreateTenantRequest]).map(_ => Ok())
+      }
     }
   }
 
@@ -102,9 +98,5 @@ class SuperAdminController @Inject() (
 
   before() {
     contentType = "application/json"
-  }
-
-  private def test(token: Token) = {
-    Ok(s"Test successful for ${token.name}")
   }
 }
