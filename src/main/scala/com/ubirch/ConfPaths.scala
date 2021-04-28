@@ -47,12 +47,21 @@ object ConfPaths {
     }
   }
 
+  trait ServicesConfPaths {
+    final val DATA_SCHEMA_GROUP_IDS = "system.services.dataSchemaGroupIds"
+  }
+
   trait AESEncryption {
     final val SECRET_KEY = "system.aesEncryption.secretKey"
   }
 
   object GenericConfPaths extends GenericConfPaths
+
   object HttpServerConfPaths extends HttpServerConfPaths
+
   object KeycloakPaths extends KeycloakPaths
+
+  object ServicesConfPaths extends ServicesConfPaths
+
   object AESEncryptionPaths extends AESEncryption
 }
