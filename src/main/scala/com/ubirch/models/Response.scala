@@ -31,14 +31,17 @@ object NOK {
   final val NO_ROUTE_FOUND_ERROR = 'NoRouteFound
   final val DELETE_ERROR = 'TokenDeleteError
   final val AUTHENTICATION_ERROR = 'AuthenticationError
+  final val RESOURCE_NOT_FOUND_ERROR = 'ResourceNotFoundError
 
   def apply(errorType: Symbol, errorMessage: String): NOK = new NOK(Response.version, ok = false, errorType, errorMessage)
 
   def serverError(errorMessage: String): NOK = NOK(SERVER_ERROR, errorMessage)
   def parsingError(errorMessage: String): NOK = NOK(PARSING_ERROR, errorMessage)
   def noRouteFound(errorMessage: String): NOK = NOK(NO_ROUTE_FOUND_ERROR, errorMessage)
+
   def authenticationError(errorMessage: String): NOK = NOK(AUTHENTICATION_ERROR, errorMessage)
 
+  def resourceNotFoundError(errorMessage: String): NOK = NOK(RESOURCE_NOT_FOUND_ERROR, errorMessage)
 }
 
 case class Return(version: String, ok: Boolean, data: Any) extends Response[Boolean]
