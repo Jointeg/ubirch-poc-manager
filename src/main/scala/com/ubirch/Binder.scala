@@ -74,7 +74,6 @@ class Binder extends AbstractModule {
     bind(classOf[AESKeyProvider]).to(classOf[ConfigKeyProvider])
   def AESEncryption: ScopedBindingBuilder =
     bind(classOf[AESEncryption]).to(classOf[AESEncryptionCBCMode])
-
   def PocCreatorService: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
