@@ -103,6 +103,28 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         }
       }
     }
+
+    "return resource not found error" in {
+      withInjector { Injector =>
+        val repo = Injector.get[PocStatusRepository]
+        val token = Injector.get[FakeTokenCreator]
+        val pocStatus = createPocStatus()
+        val res1 = for {
+          _ <- repo.createPocStatus(pocStatus)
+          data <- repo.getPocStatus(pocStatus.pocId)
+        } yield {
+          data
+        }
+        val storedStatus = await(res1, 5.seconds).get
+        storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
+        val randomID = UUID.randomUUID()
+
+        get(s"/pocStatus/$randomID", headers = Map("authorization" -> token.user.prepare)) {
+          status should equal(404)
+          assert(body == s"NOK(1.0,false,'ResourceNotFoundError,pocStatus with $randomID couldn't be found)")
+        }
+      }
+    }
   }
 
   override protected def beforeEach(): Unit = {

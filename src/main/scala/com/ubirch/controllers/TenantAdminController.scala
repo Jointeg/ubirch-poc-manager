@@ -63,6 +63,14 @@ class TenantAdminController @Inject()(
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC, Tenant-Admin")
 
+  val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve PoC Status via pocId")
+      .summary("Get PoC Status")
+      .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
+      .tags("Tenant-Admin, PocStatus")
+
+
+
   //Todo: Add authentication regarding Tenant-Admin role and retrieve tenant id to add it to each PoC
   post("/pocs/create", operation(createListOfPocs)) {
     authenticated() { token =>
@@ -79,7 +87,7 @@ class TenantAdminController @Inject()(
     }
   }
 
-  get("/pocStatus/:id", operation(createListOfPocs)) {
+  get("/pocStatus/:id", operation(getPocStatus)) {
     authenticated() { token =>
       asyncResult("Get Poc Status") { _ =>
         _ =>
