@@ -1,5 +1,4 @@
-package com.ubirch
-
+import com.ubirch.Service
 import com.ubirch.controllers.{InfoController, ResourcesController, SuperAdminController, TenantAdminController}
 import org.scalatra.LifeCycle
 
