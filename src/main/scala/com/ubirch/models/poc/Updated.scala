@@ -1,10 +1,10 @@
 package com.ubirch.models.poc
 
-import io.getquill.MappedEncoding
+import io.getquill.{Embedded, MappedEncoding}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormatterBuilder
 
-case class Updated(dateTime: DateTime)
+case class Updated(dateTime: DateTime) extends Embedded
 
 object Updated {
   private val formatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSS").toFormatter

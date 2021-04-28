@@ -5,6 +5,7 @@ import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
 import com.ubirch.db.tables._
+import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, ConfigKeyProvider}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
@@ -17,6 +18,7 @@ import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConfigConnector, Ke
 import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
 import com.ubirch.services.poc.{PocBatchHandlerImpl, PocBatchHandlerTrait}
 import com.ubirch.services.rest.SwaggerProvider
+import com.ubirch.services.superadmin.{DefaultTenantService, TenantService}
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.Swagger
@@ -43,6 +45,8 @@ class Binder extends AbstractModule {
     bind(classOf[PublicKeyDiscoveryService]).to(classOf[DefaultPublicKeyDiscoveryService])
   def PublicKeyPoolService: ScopedBindingBuilder =
     bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
+  def TenantService: ScopedBindingBuilder =
+    bind(classOf[TenantService]).to(classOf[DefaultTenantService])
   def KeycloakConnector: ScopedBindingBuilder =
     bind(classOf[KeycloakConnector]).to(classOf[KeycloakConfigConnector])
   def KeycloakUserService: ScopedBindingBuilder =
@@ -64,6 +68,12 @@ class Binder extends AbstractModule {
 
   def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
+  def TenantRepository: ScopedBindingBuilder =
+    bind(classOf[TenantRepository]).to(classOf[TenantTable])
+  def AESKeyProvider: ScopedBindingBuilder =
+    bind(classOf[AESKeyProvider]).to(classOf[ConfigKeyProvider])
+  def AESEncryption: ScopedBindingBuilder =
+    bind(classOf[AESEncryption]).to(classOf[AESEncryptionCBCMode])
 
   def PocCreatorService: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
@@ -89,6 +99,7 @@ class Binder extends AbstractModule {
     KeycloakUserService
     KeycloakRolesService
     KeycloakGroupService
+    TenantService
     AuthClient
     UserPollingService
     QuillJdbcContext
@@ -96,6 +107,9 @@ class Binder extends AbstractModule {
     PocCreatorService
     PocRepository
     PocStatusRepository
+    TenantRepository
+    AESKeyProvider
+    AESEncryption
     ()
   }
 }

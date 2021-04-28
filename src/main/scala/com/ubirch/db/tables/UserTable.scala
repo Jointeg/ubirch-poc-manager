@@ -14,28 +14,28 @@ trait UserRepository {
 class UserTable @Inject() (quillJdbcContext: QuillJdbcContext) extends UserRepository {
   import quillJdbcContext.ctx._
 
-  private def createExampleDataQuery(exampleData: User) =
+  private def createUserQuery(user: User) =
     quote {
-      querySchema[User]("poc_manager.users").insert(lift(exampleData))
+      querySchema[User]("poc_manager.users").insert(lift(user))
     }
 
-  private def updateExampleDataQuery(exampleData: User) =
+  private def updateUserQuery(user: User) =
     quote {
-      querySchema[User]("poc_manager.users").filter(_.id == lift(exampleData.id)).update(lift(exampleData))
+      querySchema[User]("poc_manager.users").filter(_.id == lift(user.id)).update(lift(user))
     }
 
-  private def removeExampleDataQuery(id: UserId) =
+  private def removeUserQuery(id: UserId) =
     quote {
       querySchema[User]("poc_manager.users").filter(_.id == lift(id)).delete
     }
 
-  private def getExampleDataQuery(id: UserId) =
+  private def getUserQuery(id: UserId) =
     quote {
       querySchema[User]("poc_manager.users").filter(_.id == lift(id))
     }
 
-  override def createUser(user: User): Task[Unit] = Task(run(createExampleDataQuery(user)))
-  override def updateUser(user: User): Task[Unit] = Task(run(updateExampleDataQuery(user)))
-  override def deleteUser(id: UserId): Task[Unit] = Task(run(removeExampleDataQuery(id)))
-  override def getUser(id: UserId): Task[Option[User]] = Task(run(getExampleDataQuery(id))).map(_.headOption)
+  override def createUser(user: User): Task[Unit] = Task(run(createUserQuery(user)))
+  override def updateUser(user: User): Task[Unit] = Task(run(updateUserQuery(user)))
+  override def deleteUser(id: UserId): Task[Unit] = Task(run(removeUserQuery(id)))
+  override def getUser(id: UserId): Task[Option[User]] = Task(run(getUserQuery(id))).map(_.headOption)
 }

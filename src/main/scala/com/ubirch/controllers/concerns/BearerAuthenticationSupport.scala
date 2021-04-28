@@ -4,10 +4,10 @@ import com.ubirch.models.NOK
 import org.json4s.JNothing
 import org.json4s.JsonAST.JValue
 import org.scalatra.ScalatraBase
-import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
+import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}
 
-import java.util.{ Locale, UUID }
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import java.util.{Locale, UUID}
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import scala.language.implicitConversions
 import scala.util.Try
 
@@ -19,7 +19,7 @@ trait BearerAuthSupport[TokenType <: AnyRef] {
   protected def bearerAuth()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[TokenType] = {
     val beReq = new BearerAuthStrategy.BearerAuthRequest(request)
     if (!beReq.providesAuth) {
-      response.setHeader("WWW-Authenticate", "Bearer realm=\"%s\"" format realm)
+      response.setHeader("WWW-Authenticate", "Bearer realm=\"%s\"".format(realm))
       halt(401, NOK.authenticationError("Unauthenticated"))
     }
     if (!beReq.isBearerAuth) {
@@ -30,7 +30,8 @@ trait BearerAuthSupport[TokenType <: AnyRef] {
 
   }
 
-  protected def authenticated(p: (TokenType => Boolean)*)(action: TokenType => Any)(implicit request: HttpServletRequest, response: HttpServletResponse): Any = {
+  protected def authenticated(p: (TokenType => Boolean)*)(
+    action: TokenType => Any)(implicit request: HttpServletRequest, response: HttpServletResponse): Any = {
     val predicates: Seq[TokenType => Boolean] = p
     bearerAuth() match {
       case Some(value) if predicates.forall(x => x(value)) => action(value)
@@ -44,11 +45,12 @@ object BearerAuthStrategy {
 
   implicit def request2BearerAuthRequest(r: HttpServletRequest): BearerAuthRequest = new BearerAuthRequest(r)
 
-  private val AUTHORIZATION_KEYS = List("Authorization", "HTTP_AUTHORIZATION", "X-HTTP_AUTHORIZATION", "X_HTTP_AUTHORIZATION")
+  private val AUTHORIZATION_KEYS =
+    List("Authorization", "HTTP_AUTHORIZATION", "X-HTTP_AUTHORIZATION", "X_HTTP_AUTHORIZATION")
 
   class BearerAuthRequest(r: HttpServletRequest) {
 
-    def parts: Seq[String] = authorizationKey map { r.getHeader(_).split(" ", 2).toList } getOrElse Nil
+    def parts: Seq[String] = authorizationKey.map { r.getHeader(_).split(" ", 2).toList }.getOrElse(Nil)
     def scheme: Option[String] = parts.headOption.map(sch => sch.toLowerCase(Locale.ENGLISH))
     def params: Option[String] = parts.lastOption
 
@@ -63,17 +65,21 @@ object BearerAuthStrategy {
 
 }
 
-abstract class BearerAuthStrategy[TokenType <: AnyRef](protected override val app: ScalatraBase) extends ScentryStrategy[TokenType] {
+abstract class BearerAuthStrategy[TokenType <: AnyRef](override protected val app: ScalatraBase)
+  extends ScentryStrategy[TokenType] {
 
   import BearerAuthStrategy.request2BearerAuthRequest
 
   override def isValid(implicit request: HttpServletRequest): Boolean = request.isBearerAuth && request.providesAuth
 
-  override def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[TokenType] = {
+  override def authenticate()(implicit
+    request: HttpServletRequest,
+    response: HttpServletResponse): Option[TokenType] = {
     validate(request.token)
   }
 
-  protected def validate(token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[TokenType]
+  protected def validate(
+    token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[TokenType]
 
 }
 
@@ -89,6 +95,7 @@ case class Token(value: String, json: JValue, sub: String, name: String, email: 
 object Token {
   final val ADMIN = 'ADMIN
   final val USER = 'USER
+  final val SUPER_ADMIN = 'SUPER_ADMIN
   def apply(value: String): Token = new Token(value, JNothing, sub = "", name = "", email = "", roles = Nil)
 }
 
@@ -111,4 +118,3 @@ trait BearerAuthenticationSupport extends ScentrySupport[Token] with BearerAuthS
   override def realm: String = "Ubirch Certifier Service"
 
 }
-

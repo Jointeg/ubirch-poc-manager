@@ -1,9 +1,9 @@
 package com.ubirch.models.poc
 
-import io.getquill.MappedEncoding
+import io.getquill.{Embedded, MappedEncoding}
 
 
-sealed trait Status
+sealed trait Status extends Embedded
 
 case object Pending extends Status
 

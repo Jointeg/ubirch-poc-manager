@@ -1,19 +1,19 @@
 package com.ubirch.e2e.controllers
 
+import com.ubirch.FakeTokenCreator
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.db.tables.PocRepository
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
-import com.ubirch.{Awaits, FakeTokenCreator}
 import io.prometheus.client.CollectorRegistry
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
-class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with Awaits {
+class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
 
   private val pocId: UUID = UUID.randomUUID()
 
@@ -25,26 +25,18 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
   private val goodCsv =
     s"""$headerLine
-       |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+      |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
-  //Todo: Those tests don't work when eexcuted both at once, each on it's own works. Probably fixed with Wojciechs PR
   "Tenant Admin Controller" must {
 
     "return success without invalid rows" in {
       withInjector { Injector =>
 
-        lazy val tenantAdminController = Injector.get[TenantAdminController]
-        lazy val pool = Injector.get[PublicKeyPoolService]
-        await(pool.init, 2.seconds)
-        try {
-          addServlet(tenantAdminController, "/*")
-        } catch {
-          case _: Throwable =>
-        }
-
         val token = Injector.get[FakeTokenCreator]
 
-        post("/pocs/create", body = goodCsv.getBytes(), headers = Map("authorization" -> token.user.prepare)) {
+        post("/pocs/create",
+          body = goodCsv.getBytes(),
+          headers = Map("authorization" -> token.user.prepare)) {
           status should equal(200)
           assert(body.isEmpty)
         }
@@ -58,25 +50,17 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
     }
 
-//    "return invalid csv rows" in {
-//      withInjector { Injector =>
-//
-//        lazy val tenantAdminController = Injector.get[TenantAdminController]
-//        lazy val pool = Injector.get[PublicKeyPoolService]
-//        await(pool.init, 2.seconds)
-//        try {
-//          addServlet(tenantAdminController, "/*")
-//        } catch {
-//          case _: Throwable =>
-//        }
-//        val token = Injector.get[FakeTokenCreator]
-//
-//        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.user.prepare)) {
-//          status should equal(200)
-//          assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
-//        }
-//      }
-//    }
+    "return invalid csv rows" in {
+      withInjector { Injector =>
+
+        val token = Injector.get[FakeTokenCreator]
+
+        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.user.prepare)) {
+          status should equal(200)
+          assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
+        }
+      }
+    }
 
   }
 
@@ -84,8 +68,15 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     CollectorRegistry.defaultRegistry.clear()
   }
 
-  override protected def afterAll(): Unit = {
-    super.afterAll()
+  override protected def beforeAll: Unit = {
+    super.beforeAll()
+    withInjector { injector =>
+      lazy val pool = injector.get[PublicKeyPoolService]
+      await(pool.init, 2.seconds)
+
+      lazy val tenantAdminController = injector.get[TenantAdminController]
+      addServlet(tenantAdminController, "/*")
+    }
   }
 
 }

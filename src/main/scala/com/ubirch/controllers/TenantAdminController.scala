@@ -55,6 +55,7 @@ class TenantAdminController @Inject()(
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC, Tenant-Admin")
 
+  //Todo: Add authentication regarding Tenant-Admin role and retrieve tenant id to add it to each PoC
   post("/pocs/create", operation(createListOfPocs)) {
     authenticated() { token =>
       asyncResult("Create poc batch") { _ =>

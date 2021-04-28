@@ -6,6 +6,7 @@ import com.ubirch.util.ServiceMetrics
 import monix.eval.Task
 import monix.execution.{CancelableFuture, Scheduler}
 import org.apache.commons.compress.utils.IOUtils
+import org.json4s.MappingException
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
@@ -36,12 +37,12 @@ class CachedBodyServletInputStream(cachedBody: Array[Byte], raw: ServletInputStr
 
 }
 
-/***
- * Represents a customized HttpServletRequest that allows us to decorate the original object with extra info
- * or extra functionality.
- * Initially, it supports the re-consumption of the body stream
- * @param httpServletRequest Represents the original Request
- */
+/** *
+  * Represents a customized HttpServletRequest that allows us to decorate the original object with extra info
+  * or extra functionality.
+  * Initially, it supports the re-consumption of the body stream
+  * @param httpServletRequest Represents the original Request
+  */
 class ServiceRequest(httpServletRequest: HttpServletRequest) extends HttpServletRequestWrapper(httpServletRequest) {
 
   val cachedBody: Array[Byte] = IOUtils.toByteArray(httpServletRequest.getInputStream)
@@ -65,7 +66,8 @@ trait RequestEnricher extends Handler {
   * Represents the base for a controllers that supports the ServiceRequest
   * and adds helpers to handle async responses and body parsing and extraction.
   */
-abstract class ControllerBase extends ScalatraServlet
+abstract class ControllerBase
+  extends ScalatraServlet
   with RequestEnricher
   with FutureSupport
   with NativeJsonSupport
@@ -74,18 +76,26 @@ abstract class ControllerBase extends ScalatraServlet
   with ServiceMetrics
   with LazyLogging {
 
-  def actionResult(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit request: HttpServletRequest, response: HttpServletResponse): Task[ActionResult] = {
+  def actionResult(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit
+    request: HttpServletRequest,
+    response: HttpServletResponse): Task[ActionResult] = {
     for {
       _ <- Task.delay(logRequestInfo)
-      res <- Task.defer(body(request)(response))
-        .onErrorHandle { e =>
-          val name = e.getClass.getCanonicalName
-          val cause = Try(e.getCause.getMessage).getOrElse(e.getMessage)
-          logger.error("Error 0.1 ", e)
-          logger.error("Error 0.1 exception={} message={}", name, cause)
-          InternalServerError(NOK.serverError("Sorry, something happened"))
+      res <-
+        Task
+          .defer(body(request)(response))
+          .onErrorHandle {
+            case ex: MappingException =>
+              logger.error(s"Could not extract a value from JSON because: {}", ex)
+              BadRequest(NOK.parsingError(s"Invalid request"))
+            case e =>
+              val name = e.getClass.getCanonicalName
+              val cause = Try(e.getCause.getMessage).getOrElse(e.getMessage)
+              logger.error("Error 0.1 ", e)
+              logger.error("Error 0.1 exception={} message={}", name, cause)
+              InternalServerError(NOK.serverError("Sorry, something happened"))
 
-        }
+          }
     } yield {
       res
     }
@@ -96,7 +106,10 @@ abstract class ControllerBase extends ScalatraServlet
     new AsyncResult() { override val is: Future[_] = body() }
   }
 
-  def asyncResult(name: String)(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit request: HttpServletRequest, response: HttpServletResponse, scheduler: Scheduler): AsyncResult = {
+  def asyncResult(name: String)(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit
+    request: HttpServletRequest,
+    response: HttpServletResponse,
+    scheduler: Scheduler): AsyncResult = {
     asyncResultCore(() => count(name)(actionResult(body).runToFuture))
   }
 

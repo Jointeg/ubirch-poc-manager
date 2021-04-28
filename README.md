@@ -9,8 +9,10 @@ purposes.
 
 ### Starting the project
 
-Run the `docker compose up` command to set up all dependant services. After that, project can be started by executing
-the main function in the com.ubirch.Service.
+Run the `docker compose up` command to set up all dependant services. Go
+to `    "http://localhost:8080/auth/realms/test-realm/protocol/openid-connect/certs"` and obtain KID of ES256 key.
+Replace the value in `appliocation.base.conf` of `system.tokenVerification.kid` with obtained KID. After that, project
+can be started by executing the main function in the com.ubirch.Service.
 
 In order to make the polling service work correctly, You have to manually create a user in Keycloak `test-realm` realm
 and assign him an `admin` role. The username and password has to be same as set
@@ -44,13 +46,15 @@ migration will be performed to run tests in newest possible DB version.
 
 Each test that extends `UnitTestBase` will be run against in-memory implementations of DB/Keycloak. They will run fast,
 focus and should focus on testing the correctness of the modelled flow, rather than the integrations. Due to the nature
-of such tests, some functionalities might not fully work (for example UserPolling). 
+of such tests, some functionalities might not fully work (for example UserPolling).
 
 ## Deployment
 
 All the required attributes that needs to be set up are listed in `application-docker.conf`. Following list will contain
 only those, that might be unclear:
 
+* `system.aesEncryption.secretKey` - 256 bit secret key that will be used for encrypting DeviceCreationToken and
+  CertificationCreationToken before storing them in DB
 * `keycloak.users.realm` - Realm where the users created by POC-Service will be stored.
 * `keycloak.polling.interval` - Interval (in seconds) that indicates how often POC-Service will poll Keycloak for newly
   registered users (look at `confirmation-mail-sent` attribute).

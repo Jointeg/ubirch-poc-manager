@@ -10,4 +10,5 @@ case class PocAddons(
   deviceRealmRoleName: Option[String] = None,
   deviceRealmGroupId: Option[UUID] = None,
   deviceId: Option[UUID] = None,
-  clientCertFolder: Option[String] = None) extends Embedded
+  clientCertFolder: Option[String] = None
+) extends Embedded
