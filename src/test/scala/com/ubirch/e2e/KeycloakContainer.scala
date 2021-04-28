@@ -38,7 +38,7 @@ object KeycloakContainer {
             "-Dkeycloak.profile.feature.upload_scripts=enabled",
             "-Dkeycloak.profile.feature.scripts=enabled"
           ),
-          waitStrategy = Wait.forHttp("/auth").forPort(8080).withStartupTimeout(Duration.ofSeconds(45))
+          waitStrategy = Wait.forHttp("/auth").forPort(8080).withStartupTimeout(Duration.ofSeconds(90))
         ),
         mountExtension,
         realmExportFile

@@ -6,6 +6,7 @@ import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.auth.{Base64String, EncryptedData}
 import com.ubirch.models.tenant._
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.jwt.PublicKeyPoolService
 import io.prometheus.client.CollectorRegistry
@@ -130,7 +131,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     super.beforeAll()
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init, 2 seconds)
+      await(pool.init(DeviceKeycloak, UsersKeycloak), 2 seconds)
 
       lazy val superAdminController = injector.get[SuperAdminController]
       addServlet(superAdminController, "/*")

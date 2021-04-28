@@ -5,6 +5,7 @@ import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists}
 import com.ubirch.models.user.UserName
+import com.ubirch.services.{KeycloakConnector, KeycloakInstance, UsersKeycloak}
 import com.ubirch.services.keycloak.{KeycloakUsersConfig, UsersKeycloakConnector}
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
@@ -12,26 +13,29 @@ import org.keycloak.representations.idm.UserRepresentation
 import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
 
 trait KeycloakUserService {
-  def createUser(createKeycloakUser: CreateKeycloakUser): Task[Either[UserAlreadyExists, Unit]]
-  def deleteUser(username: UserName): Task[Unit]
-  def getUser(username: UserName): Task[Option[UserRepresentation]]
+  def createUser(
+    createKeycloakUser: CreateKeycloakUser,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserAlreadyExists, Unit]]
+  def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit]
+  def getUser(username: UserName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[UserRepresentation]]
 }
 
 @Singleton
-class KeycloakUserServiceImpl @Inject() (
-  usersKeycloakConnector: UsersKeycloakConnector,
-  keycloakUsersConfig: KeycloakUsersConfig)
+class KeycloakUserServiceImpl @Inject() (keycloakConnector: KeycloakConnector)
   extends KeycloakUserService
   with LazyLogging {
 
-  override def createUser(createKeycloakUser: CreateKeycloakUser): Task[Either[UserAlreadyExists, Unit]] = {
+  override def createUser(
+    createKeycloakUser: CreateKeycloakUser,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserAlreadyExists, Unit]] = {
     val keycloakUser = createKeycloakUser.toKeycloakRepresentation
     keycloakUser.setEnabled(true)
     keycloakUser.setAttributes(Map("confirmation_mail_sent" -> List("false").asJava).asJava)
     logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
     Task {
-      val resp = usersKeycloakConnector.keycloak
-        .realm(keycloakUsersConfig.realm)
+      val resp = keycloakConnector
+        .getKeycloak(keycloakInstance)
+        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
         .users()
         .create(keycloakUser)
       if (resp.getStatus == 409) {
@@ -43,11 +47,14 @@ class KeycloakUserServiceImpl @Inject() (
     }
   }
 
-  override def getUser(username: UserName): Task[Option[UserRepresentation]] = {
+  override def getUser(
+    username: UserName,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[UserRepresentation]] = {
     logger.debug(s"Retrieving keycloak user $username")
     Task(
-      usersKeycloakConnector.keycloak
-        .realm(keycloakUsersConfig.realm)
+      keycloakConnector
+        .getKeycloak(keycloakInstance)
+        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
         .users()
         .search(username.value)
         .asScala
@@ -55,11 +62,16 @@ class KeycloakUserServiceImpl @Inject() (
     )
   }
 
-  override def deleteUser(username: UserName): Task[Unit] = {
+  override def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] = {
     (for {
       user <- OptionT(getUser(username))
-      _ <-
-        OptionT.liftF(Task(usersKeycloakConnector.keycloak.realm(keycloakUsersConfig.realm).users().delete(user.getId)))
+      _ <- OptionT.liftF(
+        Task(
+          keycloakConnector
+            .getKeycloak(keycloakInstance)
+            .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+            .users()
+            .delete(user.getId)))
       _ = logger.debug(s"Successfully deleted $username user")
     } yield ()).value.void
   }

@@ -5,6 +5,7 @@ import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
 import com.ubirch.db.tables.{TenantRepository, TenantTable, UserRepository, UserTable}
+import com.ubirch.services.{DefaultKeycloakConnector, KeycloakConnector}
 import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, ConfigKeyProvider}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
@@ -58,6 +59,8 @@ class Binder extends AbstractModule {
     bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])
   def KeycloakDeviceConnector: ScopedBindingBuilder =
     bind(classOf[DeviceKeycloakConnector]).to(classOf[DeviceKeycloakConfigConnector])
+  def KeycloakConnector: ScopedBindingBuilder =
+    bind(classOf[KeycloakConnector]).to(classOf[DefaultKeycloakConnector])
   def KeycloakUserService: ScopedBindingBuilder =
     bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
   def KeycloakRolesService: ScopedBindingBuilder =
@@ -96,6 +99,7 @@ class Binder extends AbstractModule {
     PublicKeyPoolService
     KeycloakUserConnector
     KeycloakDeviceConnector
+    KeycloakConnector
     KeycloakUserService
     KeycloakRolesService
     KeycloakGroupService

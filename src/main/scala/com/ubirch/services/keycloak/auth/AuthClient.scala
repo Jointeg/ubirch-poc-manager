@@ -20,7 +20,7 @@ class KeycloakAuthzClient @Inject() (keycloakUsersConfig: KeycloakUsersConfig) e
   override def obtainAccessToken(username: String, password: String): Task[String] =
     Task {
       client
-        .obtainAccessToken(keycloakUsersConfig.clientAdminUsername, keycloakUsersConfig.clientAdminPassword)
+        .obtainAccessToken(username, password)
         .getToken
     }
 

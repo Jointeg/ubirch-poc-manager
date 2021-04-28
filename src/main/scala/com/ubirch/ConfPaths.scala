@@ -19,11 +19,6 @@ object ConfPaths {
     final val PORT = "system.metrics.prometheus.port"
   }
 
-  trait TokenVerificationPaths {
-    final val CONFIG_URL = "system.tokenVerification.configURL"
-    final val KID = "system.tokenVerification.kid"
-  }
-
   trait KeycloakPaths {
     object UsersKeycloak {
       final val SERVER_URL = "keycloak-users.server.url"
@@ -36,6 +31,8 @@ object ConfPaths {
       final val CLIENT_ADMIN_USER = "keycloak-users.client.adminUsername"
       final val CLIENT_ADMIN_PASSWORD = "keycloak-users.client.adminPassword"
       final val USER_POLLING_INTERVAL = "keycloak-users.polling.interval"
+      final val CONFIG_URL = "keycloak-users.tokenVerification.configURL"
+      final val KID = "keycloak-users.tokenVerification.kid"
     }
 
     object DeviceKeycloak {
@@ -48,6 +45,8 @@ object ConfPaths {
       final val CLIENT_CONFIG = "keycloak-device.client.config"
       final val CLIENT_ADMIN_USER = "keycloak-device.client.adminUsername"
       final val CLIENT_ADMIN_PASSWORD = "keycloak-device.client.adminPassword"
+      final val CONFIG_URL = "keycloak-device.tokenVerification.configURL"
+      final val KID = "keycloak-device.tokenVerification.kid"
     }
   }
 
@@ -57,7 +56,6 @@ object ConfPaths {
 
   object GenericConfPaths extends GenericConfPaths
   object HttpServerConfPaths extends HttpServerConfPaths
-  object TokenVerificationPaths extends TokenVerificationPaths
   object KeycloakPaths extends KeycloakPaths
   object AESEncryptionPaths extends AESEncryption
 }
