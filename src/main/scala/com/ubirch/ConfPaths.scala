@@ -42,9 +42,6 @@ object ConfPaths {
       final val PASSWORD = "keycloak-device.server.password"
       final val CLIENT_ID = "keycloak-device.server.clientId"
       final val REALM = "keycloak-device.realm"
-      final val CLIENT_CONFIG = "keycloak-device.client.config"
-      final val CLIENT_ADMIN_USER = "keycloak-device.client.adminUsername"
-      final val CLIENT_ADMIN_PASSWORD = "keycloak-device.client.adminPassword"
       final val CONFIG_URL = "keycloak-device.tokenVerification.configURL"
       final val KID = "keycloak-device.tokenVerification.kid"
     }

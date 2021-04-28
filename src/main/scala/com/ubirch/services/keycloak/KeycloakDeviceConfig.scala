@@ -11,9 +11,6 @@ trait KeycloakDeviceConfig {
   def password: String
   def clientId: String
   def realm: String
-  def clientConfig: String
-  def clientAdminUsername: String
-  def clientAdminPassword: String
 }
 
 @Singleton
@@ -25,8 +22,5 @@ class RealKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
   val password: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_ID)
   val realm: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.REALM)
-  val clientConfig: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_CONFIG)
-  val clientAdminUsername: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_ADMIN_USER)
-  val clientAdminPassword: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_ADMIN_PASSWORD)
 
 }
