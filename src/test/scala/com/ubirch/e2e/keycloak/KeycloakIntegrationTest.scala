@@ -7,6 +7,7 @@ import com.ubirch.models.keycloak.group.{GroupAlreadyExists, GroupName, GroupNot
 import com.ubirch.models.keycloak.roles.{RoleAlreadyExists, RoleName}
 import com.ubirch.models.keycloak.user.UserAlreadyExists
 import com.ubirch.models.user.UserName
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -213,6 +214,43 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val maybeUser = await(result, 5.seconds)
         maybeUser shouldBe defined
+      }
+    }
+  }
+
+  "Double Keycloak integration" should {
+    "allow to create same users (Name/Email/Username etc.) in Device and Users Keycloaks" in {
+      withInjector { injector =>
+        val keycloakUserService = injector.get[KeycloakUserService]
+
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+        val result = for {
+          res1 <- keycloakUserService.createUser(newKeycloakUser, UsersKeycloak)
+          res2 <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
+        } yield (res1, res2)
+
+        val (usr1, usr2) = await(result, 5.seconds)
+        usr1 shouldBe Right(())
+        usr2 shouldBe Right(())
+      }
+    }
+
+    "delete user only from Keycloak that was asked for" in {
+      withInjector { injector =>
+        val keycloakUserService = injector.get[KeycloakUserService]
+
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+        val result = for {
+          _ <- keycloakUserService.createUser(newKeycloakUser, UsersKeycloak)
+          _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
+          _ <- keycloakUserService.deleteUser(newKeycloakUser.userName, UsersKeycloak)
+          deletedUser <- keycloakUserService.getUser(newKeycloakUser.userName, UsersKeycloak)
+          existingUser <- keycloakUserService.getUser(newKeycloakUser.userName, DeviceKeycloak)
+        } yield (deletedUser, existingUser)
+
+        val (deletedUser, existingUser) = await(result, 5.seconds)
+        deletedUser shouldBe None
+        existingUser shouldBe defined
       }
     }
   }
