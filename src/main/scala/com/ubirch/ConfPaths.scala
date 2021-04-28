@@ -37,13 +37,23 @@ object ConfPaths {
     final val USER_POLLING_INTERVAL = "keycloak.polling.interval"
   }
 
+  trait ServicesConfPaths {
+    final val DATA_SCHEMA_GROUP_IDS = "system.services.dataSchemaGroupIds"
+  }
+
   trait AESEncryption {
     final val SECRET_KEY = "system.aesEncryption.secretKey"
   }
 
   object GenericConfPaths extends GenericConfPaths
+
   object HttpServerConfPaths extends HttpServerConfPaths
+
   object TokenVerificationPaths extends TokenVerificationPaths
+
   object KeycloakPaths extends KeycloakPaths
+
+  object ServicesConfPaths extends ServicesConfPaths
+
   object AESEncryptionPaths extends AESEncryption
 }

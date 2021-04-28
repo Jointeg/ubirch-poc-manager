@@ -4,7 +4,7 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
-import com.ubirch.db.tables.{TenantRepository, TenantTable, UserRepository, UserTable}
+import com.ubirch.db.tables._
 import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, ConfigKeyProvider}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
@@ -13,14 +13,10 @@ import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak.auth.{AuthClient, KeycloakAuthzClient}
 import com.ubirch.services.keycloak.groups.{DefaultKeycloakGroupService, KeycloakGroupService}
 import com.ubirch.services.keycloak.roles.{DefaultKeycloakRolesService, KeycloakRolesService}
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserPollingService,
-  KeycloakUserService,
-  KeycloakUserServiceImpl,
-  UserPollingService
-}
+import com.ubirch.services.keycloak.users.{KeycloakUserPollingService, KeycloakUserService, KeycloakUserServiceImpl, UserPollingService}
 import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConfigConnector, KeycloakConnector, RealKeycloakConfig}
 import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
+import com.ubirch.services.poc.{PocBatchHandlerImpl, PocBatchHandlerTrait}
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{DefaultTenantService, TenantService}
 import monix.execution.Scheduler
@@ -57,14 +53,19 @@ class Binder extends AbstractModule {
     bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
   def KeycloakRolesService: ScopedBindingBuilder =
     bind(classOf[KeycloakRolesService]).to(classOf[DefaultKeycloakRolesService])
+
   def KeycloakGroupService: ScopedBindingBuilder =
     bind(classOf[KeycloakGroupService]).to(classOf[DefaultKeycloakGroupService])
+
   def AuthClient: ScopedBindingBuilder =
     bind(classOf[AuthClient]).to(classOf[KeycloakAuthzClient])
+
   def UserPollingService: ScopedBindingBuilder =
     bind(classOf[UserPollingService]).to(classOf[KeycloakUserPollingService])
+
   def QuillJdbcContext: ScopedBindingBuilder =
     bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
+
   def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
   def TenantRepository: ScopedBindingBuilder =
@@ -73,6 +74,11 @@ class Binder extends AbstractModule {
     bind(classOf[AESKeyProvider]).to(classOf[ConfigKeyProvider])
   def AESEncryption: ScopedBindingBuilder =
     bind(classOf[AESEncryption]).to(classOf[AESEncryptionCBCMode])
+  def PocCreatorService: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
+
+  def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
+
+  def PocStatusRepository: ScopedBindingBuilder = bind(classOf[PocStatusRepository]).to(classOf[PocStatusTable])
 
   override def configure(): Unit = {
     Config
@@ -97,6 +103,9 @@ class Binder extends AbstractModule {
     UserPollingService
     QuillJdbcContext
     UserRepository
+    PocCreatorService
+    PocRepository
+    PocStatusRepository
     TenantRepository
     AESKeyProvider
     AESEncryption
