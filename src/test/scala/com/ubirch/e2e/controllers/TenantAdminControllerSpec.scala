@@ -29,6 +29,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
   "Tenant Admin Controller" must {
 
+    //Todo: Fix authorization
     "return success without invalid rows" in {
       withInjector { Injector =>
 
