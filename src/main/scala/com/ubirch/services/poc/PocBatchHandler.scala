@@ -21,7 +21,11 @@ class PocBatchHandlerImpl @Inject()(conf: Config, pocTable: PocTable, pocStatusT
   extends PocBatchHandlerTrait {
 
   private val csvHandler = new CsvPocBatchParserImp
-  private val dataSchemaGroupIds = conf.getStringList(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
+  private val dataSchemaGroupIds =
+    conf
+      .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
+      .split(", ")
+      .toList
   implicit val scheduler: Scheduler = monix.execution.Scheduler.global
 
   def createListOfPoCs(csv: String): Task[Either[String, Unit]] = {
@@ -29,7 +33,6 @@ class PocBatchHandlerImpl @Inject()(conf: Config, pocTable: PocTable, pocStatusT
     Try(csvHandler.parsePocCreationList(csv)) match {
 
       case Success(parsingResult) =>
-
         val r = parsingResult.map {
           case Right((poc, csvRow)) =>
             storePocAndStatus(poc, csvRow)
@@ -73,6 +76,7 @@ class PocBatchHandlerImpl @Inject()(conf: Config, pocTable: PocTable, pocStatusT
 
   def createInitialPocCreationState(poc: Poc): PocStatus = {
     //Todo: check if poc.clientCertRequired == false, that tenant already has idgard URL?!
+    println(dataSchemaGroupIds)
     PocStatus(
       pocId = poc.id,
       validDataSchemaGroup = dataSchemaGroupIds.contains(poc.dataSchemaId),
