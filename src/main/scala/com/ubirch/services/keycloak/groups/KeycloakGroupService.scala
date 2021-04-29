@@ -3,26 +3,33 @@ package com.ubirch.services.keycloak.groups
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.group._
-import com.ubirch.services.keycloak.{KeycloakConfig, KeycloakConnector}
+import com.ubirch.services.{KeycloakConnector, KeycloakInstance, UsersKeycloak}
 import monix.eval.Task
 
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
 
 trait KeycloakGroupService {
 
-  def createGroup(createKeycloakGroup: CreateKeycloakGroup): Task[Either[GroupAlreadyExists, Unit]]
-  def findGroup(groupName: GroupName): Task[Either[GroupNotFound, KeycloakGroup]]
-  def deleteGroup(groupName: GroupName): Task[Unit]
+  def createGroup(
+    createKeycloakGroup: CreateKeycloakGroup,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupAlreadyExists, Unit]]
+  def findGroup(
+    groupName: GroupName,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupNotFound, KeycloakGroup]]
+  def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit]
 
 }
 
-class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnector, keycloakConfig: KeycloakConfig)
+class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnector)
   extends KeycloakGroupService
   with LazyLogging {
-  override def createGroup(createKeycloakGroup: CreateKeycloakGroup): Task[Either[GroupAlreadyExists, Unit]] =
+  override def createGroup(
+    createKeycloakGroup: CreateKeycloakGroup,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupAlreadyExists, Unit]] =
     Task {
-      val response = keycloakConnector.keycloak
-        .realm(keycloakConfig.usersRealm)
+      val response = keycloakConnector
+        .getKeycloak(keycloakInstance)
+        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
         .groups()
         .add(createKeycloakGroup.toKeycloakRepresentation)
 
@@ -34,12 +41,15 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
       }
     }
 
-  override def findGroup(groupName: GroupName): Task[Either[GroupNotFound, KeycloakGroup]] = {
-    getGroupIdByName(groupName).flatMap {
+  override def findGroup(
+    groupName: GroupName,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupNotFound, KeycloakGroup]] = {
+    getGroupIdByName(groupName, keycloakInstance).flatMap {
       case Some(groupId) =>
         Task {
-          val groupResource = keycloakConnector.keycloak
-            .realm(keycloakConfig.usersRealm)
+          val groupResource = keycloakConnector
+            .getKeycloak(keycloakInstance)
+            .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
             .groups()
             .group(groupId.value)
             .toRepresentation
@@ -52,12 +62,13 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
 
   }
 
-  override def deleteGroup(groupName: GroupName): Task[Unit] =
-    getGroupIdByName(groupName).flatMap {
+  override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] =
+    getGroupIdByName(groupName, keycloakInstance).flatMap {
       case Some(groupId: GroupId) =>
         Task {
-          keycloakConnector.keycloak
-            .realm(keycloakConfig.usersRealm)
+          keycloakConnector
+            .getKeycloak(keycloakInstance)
+            .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
             .groups()
             .group(groupId.value)
             .remove()
@@ -67,10 +78,11 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         Task.unit
     }
 
-  private def getGroupIdByName(groupName: GroupName): Task[Option[GroupId]] =
+  private def getGroupIdByName(groupName: GroupName, keycloakInstance: KeycloakInstance): Task[Option[GroupId]] =
     Task {
-      keycloakConnector.keycloak
-        .realm(keycloakConfig.usersRealm)
+      keycloakConnector
+        .getKeycloak(keycloakInstance)
+        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
         .groups()
         .groups()
         .asScala

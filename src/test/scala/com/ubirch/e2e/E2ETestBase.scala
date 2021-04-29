@@ -1,13 +1,19 @@
 package com.ubirch.e2e
 
-import com.dimafeng.testcontainers.lifecycle.and
-import com.dimafeng.testcontainers.scalatest.TestContainersForAll
-import com.ubirch.models.user.UserName
+import com.typesafe.scalalogging.StrictLogging
 import com.ubirch._
+import com.ubirch.models.user.UserName
+import com.ubirch.services.keycloak.{
+  DeviceKeycloakConnector,
+  KeycloakDeviceConfig,
+  KeycloakUsersConfig,
+  UsersKeycloakConnector
+}
 import org.flywaydb.core.Flyway
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
+import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
 import scala.util.Random
 
 trait E2ETestBase
@@ -16,33 +22,65 @@ trait E2ETestBase
   with Awaits
   with OptionValues
   with EitherValues
-  with TestContainersForAll {
-
-  override type Containers = PostgresContainer and KeycloakContainer
-
-  override def startContainers(): Containers = {
-    val postgresContainer = PostgresContainer.Def().start()
-    val keycloakContainer = KeycloakContainer.Def().start()
-    postgresContainer.and(keycloakContainer)
-  }
+  with StrictLogging {
 
   def withInjector[A](testCode: E2EInjectorHelperImpl => A): A = {
-    withContainers {
-      case postgresContainer and keycloakContainer =>
-        Flyway
-          .configure()
-          .dataSource(
-            s"jdbc:postgresql://${postgresContainer.container.getContainerIpAddress}:${postgresContainer.container.getFirstMappedPort}/postgres",
-            "postgres",
-            "postgres"
-          )
-          .schemas("poc_manager")
-          .load()
-          .migrate()
-        val clientAdmin: ClientAdmin =
-          ClientAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
-        testCode(new E2EInjectorHelperImpl(postgresContainer, keycloakContainer, clientAdmin))
+    val tenantAdmin: TenantAdmin =
+      TenantAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
+    val superAdmin: SuperAdmin =
+      SuperAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
+    val injector = new E2EInjectorHelperImpl(superAdmin, tenantAdmin)
+    cleanupDB()
+    performFlywayMigration()
+    try {
+      testCode(injector)
+    } finally {
+      performKeycloakCleanup(injector)
     }
   }
 
+  private def cleanupDB() = {
+    PostgresDbContainer.flyway.clean()
+  }
+
+  private def performFlywayMigration() = {
+    PostgresDbContainer.flyway.migrate()
+  }
+
+  private def performKeycloakCleanup(injector: E2EInjectorHelperImpl) = {
+    val keycloakUsers = injector.get[UsersKeycloakConnector]
+    val keycloakUsersConfig = injector.get[KeycloakUsersConfig]
+    val keycloakDevice = injector.get[DeviceKeycloakConnector]
+    val keycloakDeviceConfig = injector.get[KeycloakDeviceConfig]
+
+    val keycloakUsersRealm = keycloakUsers.keycloak.realm(keycloakUsersConfig.realm)
+    val keycloakDeviceRealm = keycloakDevice.keycloak.realm(keycloakDeviceConfig.realm)
+
+    keycloakUsersRealm.users().list().asScala.foreach(user => keycloakUsersRealm.users().delete(user.getId))
+    keycloakDeviceRealm.users().list().asScala.foreach(user => keycloakDeviceRealm.users().delete(user.getId))
+  }
+}
+
+object KeycloakUsersContainer {
+  val container: KeycloakContainer =
+    KeycloakContainer.Def(mountExtension = true, realmExportFile = "users-export.json").start()
+}
+
+object KeycloakDeviceContainer {
+  val container: KeycloakContainer =
+    KeycloakContainer.Def(mountExtension = false, realmExportFile = "device-export.json").start()
+}
+
+object PostgresDbContainer {
+  val container: PostgresContainer = PostgresContainer.Def().start()
+
+  val flyway = Flyway
+    .configure()
+    .dataSource(
+      s"jdbc:postgresql://${container.container.getContainerIpAddress}:${container.container.getFirstMappedPort}/postgres",
+      "postgres",
+      "postgres"
+    )
+    .schemas("poc_manager")
+    .load()
 }

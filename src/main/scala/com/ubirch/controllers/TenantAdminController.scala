@@ -6,6 +6,7 @@ import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrate
 import com.ubirch.db.tables.PocStatusRepository
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.PocStatus
+import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import io.prometheus.client.Counter
@@ -21,16 +22,16 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-class TenantAdminController @Inject()(
-                                       pocBatchHandler: PocBatchHandlerImpl,
-                                       pocStatusTable: PocStatusRepository,
-                                       config: Config,
-                                       val swagger: Swagger,
-                                       jFormats: Formats,
-                                       publicKeyPoolService: PublicKeyPoolService,
-                                       tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+class TenantAdminController @Inject() (
+  pocBatchHandler: PocBatchHandlerImpl,
+  pocStatusTable: PocStatusRepository,
+  config: Config,
+  val swagger: Swagger,
+  jFormats: Formats,
+  publicKeyPoolService: PublicKeyPoolService,
+  tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
-    with KeycloakBearerAuthenticationSupport {
+  with KeycloakBearerAuthenticationSupport {
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -39,7 +40,7 @@ class TenantAdminController @Inject()(
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, tokenVerificationService, publicKeyPoolService)
+    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
 
   override val successCounter: Counter =
     Counter
@@ -69,49 +70,44 @@ class TenantAdminController @Inject()(
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
 
-
-
   //Todo: Add authentication regarding Tenant-Admin role and retrieve tenant id to add it to each PoC
   post("/pocs/create", operation(createListOfPocs)) {
     authenticated() { token =>
-      asyncResult("Create poc batch") { _ =>
-        _ =>
+      asyncResult("Create poc batch") { _ => _ =>
 
-          pocBatchHandler
-            .createListOfPoCs(request.body)
-            .map {
-              case Right(_) => Ok()
-              case Left(csv) => Ok(csv)
-            }
+        pocBatchHandler
+          .createListOfPoCs(request.body)
+          .map {
+            case Right(_) => Ok()
+            case Left(csv) => Ok(csv)
+          }
       }
     }
   }
 
   get("/pocStatus/:id", operation(getPocStatus)) {
     authenticated() { token =>
-      asyncResult("Get Poc Status") { _ =>
-        _ =>
-          val id = params("id")
-          Try(UUID.fromString(id)) match {
-            case Success(uuid) =>
-              pocStatusTable
-                .getPocStatus(uuid)
-                .map {
-                  case Some(pocStatus) => toJson(pocStatus)
-                  case None => NotFound(NOK.resourceNotFoundError(s"pocStatus with $id couldn't be found"))
-                }
-
-            case Failure(ex) =>
-              val errorMsg = s"error on retrieving pocStatus with $id:"
-              logger.error(errorMsg, ex)
-              Task {
-                InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+      asyncResult("Get Poc Status") { _ => _ =>
+        val id = params("id")
+        Try(UUID.fromString(id)) match {
+          case Success(uuid) =>
+            pocStatusTable
+              .getPocStatus(uuid)
+              .map {
+                case Some(pocStatus) => toJson(pocStatus)
+                case None => NotFound(NOK.resourceNotFoundError(s"pocStatus with $id couldn't be found"))
               }
-          }
+
+          case Failure(ex) =>
+            val errorMsg = s"error on retrieving pocStatus with $id:"
+            logger.error(errorMsg, ex)
+            Task {
+              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+            }
+        }
       }
     }
   }
-
 
   private def toJson(pocStatus: PocStatus) = {
     Try(write[PocStatus](pocStatus)) match {

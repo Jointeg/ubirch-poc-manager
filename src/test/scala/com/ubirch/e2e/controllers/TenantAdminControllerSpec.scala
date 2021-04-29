@@ -6,6 +6,7 @@ import com.ubirch.db.tables.{PocRepository, PocStatusRepository}
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc.PocStatus
 import com.ubirch.services.formats.DomainObjectFormats
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
@@ -32,7 +33,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
   private val goodCsv =
     s"""$headerLine
-       |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+      |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   "Endpoint POST pocs/create" must {
 
@@ -42,9 +43,10 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
         val token = Injector.get[FakeTokenCreator]
 
-        post("/pocs/create",
+        post(
+          "/pocs/create",
           body = goodCsv.getBytes(),
-          headers = Map("authorization" -> token.user.prepare)) {
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body.isEmpty)
         }
@@ -63,7 +65,10 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
         val token = Injector.get[FakeTokenCreator]
 
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.user.prepare)) {
+        post(
+          "/pocs/create",
+          body = badCsv.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
         }
@@ -71,16 +76,17 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     }
   }
 
-  private def createPocStatus(id: UUID = UUID.randomUUID()): PocStatus = PocStatus(
-    id,
-    validDataSchemaGroup = true,
-    clientCertRequired = false,
-    clientCertDownloaded = None,
-    clientCertProvided = None,
-    logoRequired = false,
-    logoReceived = None,
-    logoStored = None
-  )
+  private def createPocStatus(id: UUID = UUID.randomUUID()): PocStatus =
+    PocStatus(
+      id,
+      validDataSchemaGroup = true,
+      clientCertRequired = false,
+      clientCertDownloaded = None,
+      clientCertProvided = None,
+      logoRequired = false,
+      logoReceived = None,
+      logoStored = None
+    )
 
   "Endpoint GET pocStatus" must {
     "return valid pocStatus" in {
@@ -135,7 +141,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     super.beforeAll()
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init, 2.seconds)
+      await(pool.init(UsersKeycloak, DeviceKeycloak), 2.seconds)
 
       lazy val tenantAdminController = injector.get[TenantAdminController]
       addServlet(tenantAdminController, "/*")

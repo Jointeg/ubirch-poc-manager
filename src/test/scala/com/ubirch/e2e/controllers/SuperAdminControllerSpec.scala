@@ -6,6 +6,7 @@ import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.auth.{Base64String, EncryptedData}
 import com.ubirch.models.tenant._
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.jwt.PublicKeyPoolService
 import io.prometheus.client.CollectorRegistry
@@ -120,6 +121,30 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         }
       }
     }
+
+    "authenticated users related to devices keycloak only" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val tenantName = Random.alphanumeric.take(10).mkString
+        val createTenantBody = createTenantJson(tenantName)
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdminOnUsersKeycloak.prepare)) {
+          status should equal(403)
+          assert(body.contains("AuthenticationError"))
+        }
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(200)
+          assert(body == "")
+        }
+      }
+    }
   }
 
   override protected def beforeEach(): Unit = {
@@ -130,7 +155,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     super.beforeAll()
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init, 2 seconds)
+      await(pool.init(DeviceKeycloak, UsersKeycloak), 2 seconds)
 
       lazy val superAdminController = injector.get[SuperAdminController]
       addServlet(superAdminController, "/*")
