@@ -10,10 +10,10 @@ import java.util.UUID
 case class PocStatus(
                       pocId: UUID,
                       validDataSchemaGroup: Boolean,
-                      userRealmRoleCreated: Boolean = false,
-                      userRealmGroupCreated: Boolean = false,
                       deviceRealmRoleCreated: Boolean = false,
                       deviceRealmGroupCreated: Boolean = false,
+                      userRealmRoleCreated: Boolean = false,
+                      userRealmGroupCreated: Boolean = false,
                       deviceCreated: Boolean = false,
                       clientCertRequired: Boolean,
                       clientCertDownloaded: Option[Boolean],

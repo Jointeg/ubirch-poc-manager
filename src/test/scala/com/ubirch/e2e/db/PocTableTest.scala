@@ -1,5 +1,6 @@
 package com.ubirch.e2e.db
 
+import com.ubirch.ModelCreationHelper.{createPoc, createPocStatus}
 import com.ubirch.db.tables.{PocRepository, PocStatusRepository}
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc._
@@ -9,35 +10,6 @@ import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
 class PocTableTest extends E2ETestBase {
-
-  import org.json4s.native.JsonMethods._
-
-  private def createPoc(id: UUID = UUID.randomUUID(), externalId: String = UUID.randomUUID().toString): Poc =
-    Poc(
-      id,
-      externalId,
-      "pocName",
-      Address("", "", None, 67832, "", None, None, "France"),
-      "pocPhone",
-      certifyApp = true,
-      None,
-      clientCertRequired = false,
-      "data-schema-id",
-      Some(JsonConfig(parse("""{"test":"hello"}"""))),
-      PocManager("surname", "", "", "08023-782137")
-    )
-
-  private def createPocStatus(id: UUID = UUID.randomUUID()): PocStatus =
-    PocStatus(
-      id,
-      validDataSchemaGroup = true,
-      clientCertRequired = false,
-      clientCertDownloaded = None,
-      clientCertProvided = None,
-      logoRequired = false,
-      logoReceived = None,
-      logoStored = None
-    )
 
   "PocTable" should {
     "be able to store and retrieve data in DB" in {
@@ -142,7 +114,8 @@ class PocTableTest extends E2ETestBase {
         await(res, 5.seconds) match {
           case (Some(pocStatusOpt: PocStatus), Some(pocOpt: Poc)) =>
             pocOpt.copy(lastUpdated = poc1.lastUpdated) shouldBe poc1
-            pocStatusOpt.copy(lastUpdated = pocStatus1.lastUpdated)
+            pocStatusOpt.copy(lastUpdated = pocStatus1.lastUpdated) shouldBe pocStatus1
+          case _ => assert(condition = false)
         }
       }
     }

@@ -1,9 +1,11 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
+import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.db.tables.PocRepository
+import com.ubirch.db.tables.{PocRepository, TenantTable}
 import com.ubirch.e2e.E2ETestBase
+import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
@@ -16,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
 
   private val pocId: UUID = UUID.randomUUID()
-
+  private val tenantId: UUID = UUID.randomUUID()
   private val badCsv =
     "poc_id*;poc_name*;poc_street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
       "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}\n" +
@@ -29,36 +31,49 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
   "Tenant Admin Controller" must {
 
-    //Todo: Fix authorization
     "return success without invalid rows" in {
       withInjector { Injector =>
-
         val token = Injector.get[FakeTokenCreator]
-
-        post("/pocs/create",
-          body = goodCsv.getBytes(),
-          headers = Map("authorization" -> token.user.prepare)) {
+        post("/pocs/create", body = goodCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
           status should equal(200)
           assert(body.isEmpty)
         }
         val repo = Injector.get[PocRepository]
-        val res = for {
-          data <- repo.getAllPocs()
-        } yield data
-        val result = await(res, 5.seconds)
-        result.map(_.externalId shouldBe pocId.toString)
+        val pocs = await(repo.getAllPocsByTenantId(tenantId), 5.seconds)
+        pocs.map(_.externalId shouldBe pocId.toString)
       }
-
     }
 
     "return invalid csv rows" in {
       withInjector { Injector =>
-
         val token = Injector.get[FakeTokenCreator]
-
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.user.prepare)) {
+        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
+        }
+      }
+    }
+
+    "return Forbidden when user is not a tenant-admin" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(403)
+          assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
+        }
+      }
+    }
+
+    "return Bad Request when tenant doesn't exist" in {
+      withInjector { Injector =>
+
+        val token = Injector.get[FakeTokenCreator]
+        val tenantTable = Injector.get[TenantTable]
+        await(tenantTable.deleteTenantById(TenantId(tenantId)), 5.seconds)
+
+        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
+          status should equal(400)
+          assert(body == "NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for T_tenantName)")
         }
       }
     }
@@ -74,7 +89,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
       await(pool.init, 2.seconds)
-
+      val tenantTable = injector.get[TenantTable]
+      val tenant = createTenant(tenantId)
+      await(tenantTable.createTenant(tenant), 5.seconds)
       lazy val tenantAdminController = injector.get[TenantAdminController]
       addServlet(tenantAdminController, "/*")
     }

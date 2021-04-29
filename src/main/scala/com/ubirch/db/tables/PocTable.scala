@@ -2,8 +2,8 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.poc.{Poc, PocStatus}
-import io.getquill.Insert
+import com.ubirch.models.poc.{Completed, Poc, PocStatus, Status}
+import io.getquill.{Insert, Update}
 import monix.eval.Task
 
 import java.util.UUID
@@ -13,13 +13,17 @@ trait PocRepository {
 
   def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long]
 
+  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long]
+
   def updatePoc(poc: Poc): Task[Unit]
 
   def deletePoc(pocId: UUID): Task[Unit]
 
   def getPoc(pocId: UUID): Task[Option[Poc]]
 
-  def getAllPocs(): Task[List[Poc]]
+  def getAllPocsByTenantId(tenantId: UUID): Task[List[Poc]]
+
+  def getAllUncompletedPocs(): Task[List[Poc]]
 }
 
 class PocTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocRepository {
@@ -41,6 +45,13 @@ class PocTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocReposito
       querySchema[Poc]("poc_manager.poc_table").filter(_.id == lift(poc.id)).update(lift(poc))
     }
 
+  private def updatePocStatusQuery(pocStatus: PocStatus): Quoted[Update[PocStatus]] =
+    quote {
+      querySchema[PocStatus]("poc_manager.poc_status_table")
+        .filter(_.pocId == lift(pocStatus.pocId))
+        .update(lift(pocStatus))
+    }
+
   private def removePocQuery(pocId: UUID) =
     quote {
       querySchema[Poc]("poc_manager.poc_table").filter(_.id == lift(pocId)).delete
@@ -51,9 +62,14 @@ class PocTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocReposito
       querySchema[Poc]("poc_manager.poc_table").filter(_.id == lift(pocId))
     }
 
-  private def getAllPocsQuery() =
+  private def getAllPocsByTenantIdQuery(tenantId: UUID) =
     quote {
-      querySchema[Poc]("poc_manager.poc_table")
+      querySchema[Poc]("poc_manager.poc_table").filter(_.tenantId == lift(tenantId))
+    }
+
+  private def getAllPocsWithoutStatusQuery(status: Status) =
+    quote {
+      querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
     }
 
   override def createPoc(poc: Poc): Task[Any] = Task(run(createPocQuery(poc)))
@@ -66,11 +82,22 @@ class PocTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocReposito
       }
     }
 
+  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long] =
+    Task {
+      transaction {
+        run(updatePocQuery(poc))
+        run(updatePocStatusQuery(pocStatus))
+      }
+    }
+
   override def updatePoc(poc: Poc): Task[Unit] = Task(run(updatePocQuery(poc)))
 
   override def deletePoc(pocId: UUID): Task[Unit] = Task(run(removePocQuery(pocId)))
 
   override def getPoc(pocId: UUID): Task[Option[Poc]] = Task(run(getPocQuery(pocId))).map(_.headOption)
 
-  override def getAllPocs(): Task[List[Poc]] = Task(run(getAllPocsQuery()))
+  override def getAllPocsByTenantId(tenantId: UUID): Task[List[Poc]] =
+    Task(run(getAllPocsByTenantIdQuery(tenantId: UUID)))
+
+  def getAllUncompletedPocs(): Task[List[Poc]] = Task(run(getAllPocsWithoutStatusQuery(Completed)))
 }

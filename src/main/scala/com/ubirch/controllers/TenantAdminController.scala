@@ -2,14 +2,18 @@ package com.ubirch.controllers
 
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport}
+import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
+import com.ubirch.db.tables.TenantTable
+import com.ubirch.models.NOK
+import com.ubirch.models.tenant.{Tenant, TenantGroupId}
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import io.prometheus.client.Counter
+import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
-import org.scalatra.{Ok, ScalatraBase}
+import org.scalatra.{BadRequest, Ok, ScalatraBase}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -19,6 +23,7 @@ class TenantAdminController @Inject()(
                                        config: Config,
                                        val swagger: Swagger,
                                        jFormats: Formats,
+                                       tenantTable: TenantTable,
                                        publicKeyPoolService: PublicKeyPoolService,
                                        tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
@@ -56,18 +61,38 @@ class TenantAdminController @Inject()(
       .tags("PoC, Tenant-Admin")
 
   //Todo: Add authentication regarding Tenant-Admin role and retrieve tenant id to add it to each PoC
+
   post("/pocs/create", operation(createListOfPocs)) {
-    authenticated() { token =>
+    authenticated(_.hasRole(Symbol("tenant-admin"))) { token: Token =>
       asyncResult("Create poc batch") { _ =>
         _ =>
 
-          pocCreator
-            .createListOfPoCs(request.body)
-            .map {
-              case Right(_) => Ok()
-              case Left(csv) => Ok(csv)
-            }
+          retrieveTenantFromToken(token).flatMap {
+            case Right(tenant: Tenant) =>
+              pocCreator
+                .createListOfPoCs(request.body, tenant)
+                .map {
+                  case Right(_) => Ok()
+                  case Left(csv) => Ok(csv)
+                }
+
+            case Left(errorMsg: String) =>
+              Task(BadRequest(NOK.authenticationError(errorMsg)))
+          }
       }
+    }
+  }
+
+  private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
+    token.roles.find(_ != Symbol("tenant-admin")) match {
+
+      case Some(tenantRole) =>
+        tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
+          case Some(tenant) => Right(tenant)
+          case None => Left(s"couldn't find tenant in db for ${tenantRole.name}")
+        }
+      case None =>
+        Task(Left("the user's token is missing a tenant role"))
     }
   }
 

@@ -39,6 +39,7 @@ object ConfPaths {
 
   trait ServicesConfPaths {
     final val DATA_SCHEMA_GROUP_IDS = "system.services.dataSchemaGroupIds"
+    final val THING_API_URL = "system.services.thingApiURL"
   }
 
   trait AESEncryption {

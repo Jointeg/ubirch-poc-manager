@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.db.tables.{PocStatusTable, PocTable}
 import com.ubirch.models.poc.{Poc, PocStatus}
+import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -13,7 +14,7 @@ import javax.inject.Singleton
 import scala.util.{Failure, Success, Try}
 
 trait PocBatchHandlerTrait {
-  def createListOfPoCs(csv: String): Task[Either[String, Unit]]
+  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]]
 }
 
 @Singleton
@@ -28,9 +29,9 @@ class PocBatchHandlerImpl @Inject()(conf: Config, pocTable: PocTable, pocStatusT
       .toList
   implicit val scheduler: Scheduler = monix.execution.Scheduler.global
 
-  def createListOfPoCs(csv: String): Task[Either[String, Unit]] = {
+  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
 
-    Try(csvHandler.parsePocCreationList(csv)) match {
+    Try(csvHandler.parsePocCreationList(csv, tenant)) match {
 
       case Success(parsingResult) =>
         val r = parsingResult.map {
@@ -76,7 +77,6 @@ class PocBatchHandlerImpl @Inject()(conf: Config, pocTable: PocTable, pocStatusT
 
   def createInitialPocCreationState(poc: Poc): PocStatus = {
     //Todo: check if poc.clientCertRequired == false, that tenant already has idgard URL?!
-    println(dataSchemaGroupIds)
     PocStatus(
       pocId = poc.id,
       validDataSchemaGroup = dataSchemaGroupIds.contains(poc.dataSchemaId),

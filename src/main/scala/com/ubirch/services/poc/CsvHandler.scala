@@ -5,6 +5,7 @@ import cats.implicits.{catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
+import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
@@ -15,7 +16,7 @@ import scala.io.Source
 trait CsvPocBatchParserTrait {
 
   @throws[HeaderCsvException]
-  def parsePocCreationList(csv: String): Seq[Either[String, (Poc, String)]]
+  def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]]
 
 }
 
@@ -26,7 +27,7 @@ case class HeaderCsvException(errorMsg: String) extends CsvException
 class CsvPocBatchParserImp extends CsvPocBatchParserTrait {
 
   @throws[HeaderCsvException]
-  override def parsePocCreationList(csv: String): Seq[Either[String, (Poc, String)]] = {
+  override def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]] = {
 
     val s: Source = Source.fromString(csv)
     val lines = s.getLines()
@@ -37,7 +38,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait {
 
     val pocRows = lines.map { line =>
       val cols = line.split(columnSeparator).map(_.trim)
-      parsePoC(cols, line)
+      parsePoC(cols, line, tenant)
     }.toSeq
 
     s.close
@@ -54,12 +55,12 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait {
     }
   }
 
-  private def parsePoC(cols: Array[String], line: String): Either[String, (Poc, String)] = {
+  private def parsePoC(cols: Array[String], line: String, tenant: Tenant): Either[String, (Poc, String)] = {
 
     val csvPoc = PocRow.fromCsv(cols)
     val pocAddress = validatePocAddress(csvPoc)
     val pocManager = validatePocManager(csvPoc)
-    val poc = validatePoc(csvPoc, pocAddress, pocManager)
+    val poc = validatePoc(csvPoc, pocAddress, pocManager, tenant)
 
     poc match {
       case Valid(poc) =>
@@ -72,7 +73,8 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait {
   private def validatePoc(
                            csvPoc: PocRow,
                            pocAddress: AllErrorsOr[Address],
-                           pocManager: AllErrorsOr[PocManager]): AllErrorsOr[Poc] =
+                           pocManager: AllErrorsOr[PocManager],
+                           tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPoc.externalId),
       validateString(pocName, csvPoc.pocName),
@@ -85,10 +87,13 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait {
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
       ).mapN {
-      (pocId, pocName, address, pocPhone, pocCertifyApp, logoUrl, clientCert, dataSchemaId, extraConfig, manager) =>
+      (externalId, pocName, address, pocPhone, pocCertifyApp, logoUrl, clientCert, dataSchemaId, extraConfig, manager) => {
+        val id = UUID.randomUUID() //Todo: create namespaced UUID?
         poc.Poc(
-          UUID.randomUUID(),
-          pocId,
+          id,
+          tenant.id.value,
+          tenant.groupId.value,
+          externalId,
           pocName,
           address,
           pocPhone,
@@ -99,6 +104,8 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait {
           extraConfig.map(JsonConfig(_)),
           manager
         )
+      }
+
     }
 
   private def validatePocManager(csvPoc: PocRow): AllErrorsOr[PocManager] =
