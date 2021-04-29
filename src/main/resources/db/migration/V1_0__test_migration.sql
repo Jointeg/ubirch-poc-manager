@@ -80,5 +80,6 @@ CREATE TABLE IF NOT EXISTS poc_manager.tenants
     certification_creation_token text         NOT NULL,
     id_gard_identifier           text         NOT NULL,
     group_id                     text         NOT NULL,
-    organisational_unit_group_id text         NOT NULL
+    organisational_unit_group_id text         NOT NULL,
+    PRIMARY KEY(id)
 );
