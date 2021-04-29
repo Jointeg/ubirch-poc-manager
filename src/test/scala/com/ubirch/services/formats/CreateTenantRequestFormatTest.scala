@@ -18,8 +18,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           |    "deviceCreationToken": "1234567890",
           |    "certificationCreationToken": "987654321",
           |    "idGardIdentifier": "gard-identifier",
-          |    "tenantGroupId": "random-group",
-          |    "tenantOrganisationalUnitGroupId": "organisational-group-id"
+          |    "tenantGroupId": "random-group"
           |}
           |""".stripMargin)
 
@@ -29,8 +28,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           PlainDeviceCreationToken("1234567890"),
           PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
-          TenantGroupId("random-group"),
-          TenantOrganisationalUnitGroupId("organisational-group-id")
+          TenantGroupId("random-group")
         )
       }
     }
@@ -53,8 +51,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           |    "usageType": "API",
           |    "deviceCreationToken": "1234567890",
           |    "idGardIdentifier": "gard-identifier",
-          |    "tenantGroupId": "random-group",
-          |    "tenantOrganisationalUnitGroupId": "organisational-group-id"
+          |    "tenantGroupId": "random-group"
           |}
           |""".stripMargin)
 

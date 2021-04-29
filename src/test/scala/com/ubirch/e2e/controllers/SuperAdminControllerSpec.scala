@@ -26,8 +26,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       |    "deviceCreationToken": "1234567890",
       |    "certificationCreationToken": "987654321",
       |    "idGardIdentifier": "gard-identifier",
-      |    "tenantGroupId": "random-group",
-      |    "tenantOrganisationalUnitGroupId": "organisationalUnitGroupId"
+      |    "tenantGroupId": "random-group"
       |}
       |""".stripMargin
   }
@@ -38,8 +37,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       |    "tenantName": "$tenantName",
       |    "deviceCreationToken": "1234567890",
       |    "idGardIdentifier": "gard-identifier",
-      |    "tenantGroupId": "random-group",
-      |    "tenantOrganisationalUnitGroupId": "organisationalUnitGroupId"
+      |    "tenantGroupId": "random-group"
       |}
       |""".stripMargin
   }
@@ -66,8 +64,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
         maybeTenant.value.groupId shouldBe TenantGroupId("random-group")
-        maybeTenant.value.organisationalUnitGroupId shouldBe TenantOrganisationalUnitGroupId(
-          "organisationalUnitGroupId")
       }
     }
 
