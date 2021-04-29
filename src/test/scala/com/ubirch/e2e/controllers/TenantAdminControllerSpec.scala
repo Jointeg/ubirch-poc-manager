@@ -4,6 +4,7 @@ import com.ubirch.FakeTokenCreator
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.db.tables.PocRepository
 import com.ubirch.e2e.E2ETestBase
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
@@ -35,9 +36,10 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
         val token = Injector.get[FakeTokenCreator]
 
-        post("/pocs/create",
+        post(
+          "/pocs/create",
           body = goodCsv.getBytes(),
-          headers = Map("authorization" -> token.user.prepare)) {
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body.isEmpty)
         }
@@ -56,7 +58,10 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
         val token = Injector.get[FakeTokenCreator]
 
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.user.prepare)) {
+        post(
+          "/pocs/create",
+          body = badCsv.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
         }
@@ -73,7 +78,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     super.beforeAll()
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init, 2.seconds)
+      await(pool.init(UsersKeycloak, DeviceKeycloak), 2.seconds)
 
       lazy val tenantAdminController = injector.get[TenantAdminController]
       addServlet(tenantAdminController, "/*")

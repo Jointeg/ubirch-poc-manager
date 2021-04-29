@@ -330,6 +330,7 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
   }
 
   val user: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.user, UsersKeycloak)
+  val userOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.user, DeviceKeycloak)
   val superAdmin: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
   val superAdminOnUsersKeycloak: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.superAdmin, UsersKeycloak)
   val userWithDoubleRoles: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.userWithDoubleRoles, UsersKeycloak)

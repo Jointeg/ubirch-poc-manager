@@ -18,8 +18,8 @@ import javax.inject.{Inject, Singleton}
 @Singleton
 class Service @Inject() (
   restService: RestService,
-  publicKeyPoolService: PublicKeyPoolService,
-  /*keycloakUserPollingService: UserPollingService*/)(implicit scheduler: Scheduler)
+  publicKeyPoolService: PublicKeyPoolService
+  /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
