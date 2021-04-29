@@ -18,7 +18,7 @@ import javax.inject.{Inject, Singleton}
 class Service @Inject() (
   restService: RestService,
   publicKeyPoolService: PublicKeyPoolService,
-  keycloakUserPollingService: UserPollingService)(implicit scheduler: Scheduler)
+  /*keycloakUserPollingService: UserPollingService*/)(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
@@ -32,12 +32,12 @@ class Service @Inject() (
         }
     }.runToFuture
 
-    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
-
-    sys.addShutdownHook {
-      logger.info("Shutdown of polling service")
-      pollingService.cancel()
-    }
+//    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
+//
+//    sys.addShutdownHook {
+//      logger.info("Shutdown of polling service")
+//      pollingService.cancel()
+//    }
 
     val cd = new CountDownLatch(1)
     cd.await()
