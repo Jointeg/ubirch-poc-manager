@@ -42,6 +42,8 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       }.toSeq
       pocRows
     } catch {
+      case ex: HeaderCsvException => throw ex
+
       case ex: Throwable =>
         val errorMsg = "something unexpected went wrong parsing the csv"
         logger.error(errorMsg, ex)
