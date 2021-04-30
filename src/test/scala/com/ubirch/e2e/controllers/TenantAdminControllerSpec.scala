@@ -102,7 +102,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val storedStatus = await(res1, 5.seconds).get
         storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
 
-        get(s"/pocStatus/${pocStatus.pocId}", headers = Map("authorization" -> token.user.prepare)) {
+        get(s"/pocStatus/${pocStatus.pocId}", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body == write[PocStatus](storedStatus))
         }
@@ -124,7 +124,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
         val randomID = UUID.randomUUID()
 
-        get(s"/pocStatus/$randomID", headers = Map("authorization" -> token.user.prepare)) {
+        get(s"/pocStatus/$randomID", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(404)
           assert(body == s"NOK(1.0,false,'ResourceNotFoundError,pocStatus with $randomID couldn't be found)")
         }
