@@ -1,7 +1,7 @@
 package com.ubirch.e2e
 
-import com.dimafeng.testcontainers.{ContainerDef, JdbcDatabaseContainer, SingleContainer}
-import org.testcontainers.containers.{PostgreSQLContainer => JavaPostgreSQLContainer}
+import com.dimafeng.testcontainers.{ ContainerDef, JdbcDatabaseContainer, SingleContainer }
+import org.testcontainers.containers.{ PostgreSQLContainer => JavaPostgreSQLContainer }
 import org.testcontainers.utility.MountableFile
 
 import scala.concurrent.duration.DurationInt

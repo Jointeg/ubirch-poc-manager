@@ -1,24 +1,24 @@
 package com.ubirch.controllers.concerns
 
 import com.ubirch.services.KeycloakInstance
-import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
+import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import org.json4s.JsonAST
 import org.scalatra.ScalatraBase
 
 import java.security.PublicKey
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 class KeycloakBearerAuthStrategy(
-                                  override protected val app: ScalatraBase,
-                                  keycloakInstance: KeycloakInstance,
-                                  tokenVerificationService: TokenVerificationService,
-                                  publicKeyPoolService: PublicKeyPoolService
-                                ) extends BearerAuthStrategy[Token](app) {
+  override protected val app: ScalatraBase,
+  keycloakInstance: KeycloakInstance,
+  tokenVerificationService: TokenVerificationService,
+  publicKeyPoolService: PublicKeyPoolService
+) extends BearerAuthStrategy[Token](app) {
 
   override def name: String = "Keycloak Strategy"
 
   override protected def validate(
-                                   token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[Token] = {
+    token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[Token] = {
     for {
       key <- publicKeyPoolService.getDefaultKey(keycloakInstance)
 
@@ -26,34 +26,36 @@ class KeycloakBearerAuthStrategy(
 
       sub <- claims.findField(_._1 == "sub").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       name <- claims.findField(_._1 == "name").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       email <- claims.findField(_._1 == "email").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
-      roles <- claims
-        .findField(_._1 == "realm_access")
-        .map(_._2)
-        .flatMap(_.findField(_._1 == "roles"))
-        .map(_._2)
-        .collect {
-          case JsonAST.JArray(arr) =>
-            arr.collect {
-              case JsonAST.JString(s) => s
-              case _ => ""
-            }
-              .filter(_.nonEmpty)
-              .map(Symbol(_))
-          case _ => Nil
-        }
+      roles <-
+        claims
+          .findField(_._1 == "realm_access")
+          .map(_._2)
+          .flatMap(_.findField(_._1 == "roles"))
+          .map(_._2)
+          .collect {
+            case JsonAST.JArray(arr) =>
+              arr
+                .collect {
+                  case JsonAST.JString(s) => s
+                  case _                  => ""
+                }
+                .filter(_.nonEmpty)
+                .map(Symbol(_))
+            case _ => Nil
+          }
 
       t = Token(token, claims, sub, name, email, roles)
       //if t.isUser || t.isAdmin //TODO: NEW realm should have a similar mapping!!
@@ -77,4 +79,3 @@ trait KeycloakBearerAuthenticationSupport extends BearerAuthenticationSupport {
   protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy
 
 }
-

@@ -1,17 +1,17 @@
 package com.ubirch.services.keycloak.roles
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.roles._
-import com.ubirch.services.{KeycloakConnector, KeycloakInstance, UsersKeycloak}
+import com.ubirch.services.{ KeycloakConnector, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
 
-import javax.ws.rs.{ClientErrorException, NotFoundException}
+import javax.ws.rs.{ ClientErrorException, NotFoundException }
 
 trait KeycloakRolesService {
   def createNewRole(
-                     createKeycloakRole: CreateKeycloakRole,
-                     keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]]
+    createKeycloakRole: CreateKeycloakRole,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]]
 
   def findRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]]
 
@@ -19,13 +19,13 @@ trait KeycloakRolesService {
 }
 
 @Singleton
-class DefaultKeycloakRolesService @Inject()(keycloakConnector: KeycloakConnector)
+class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnector)
   extends KeycloakRolesService
-    with LazyLogging {
+  with LazyLogging {
 
   override def createNewRole(
-                              createKeycloakRole: CreateKeycloakRole,
-                              keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]] = {
+    createKeycloakRole: CreateKeycloakRole,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]] = {
     val roleRepresentation = createKeycloakRole.toKeycloakRepresentation
 
     Task(
@@ -58,8 +58,8 @@ class DefaultKeycloakRolesService @Inject()(keycloakConnector: KeycloakConnector
   }
 
   override def findRole(
-                         roleName: RoleName,
-                         keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]] = {
+    roleName: RoleName,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]] = {
     Task {
       val keycloakRoleRepresentation = keycloakConnector
         .getKeycloak(keycloakInstance)

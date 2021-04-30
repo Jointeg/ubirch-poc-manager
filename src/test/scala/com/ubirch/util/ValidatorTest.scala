@@ -3,7 +3,7 @@ package com.ubirch.util
 import com.ubirch.TestBase
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.ValidatorConstants.phoneValidationError
-import com.ubirch.services.poc.util.{CsvConstants, ValidatorConstants}
+import com.ubirch.services.poc.util.{ CsvConstants, ValidatorConstants }
 import com.ubirch.services.util.Validator
 
 class ValidatorTest extends TestBase {

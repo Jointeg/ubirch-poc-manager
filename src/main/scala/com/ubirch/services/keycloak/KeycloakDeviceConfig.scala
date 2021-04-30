@@ -1,6 +1,6 @@
 package com.ubirch.services.keycloak
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths
 
@@ -19,7 +19,7 @@ trait KeycloakDeviceConfig {
 }
 
 @Singleton
-class RealKeycloakDeviceConfig @Inject()(val conf: Config) extends KeycloakDeviceConfig {
+class RealKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDeviceConfig {
 
   val serverUrl: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.SERVER_URL)
   val serverRealm: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.SERVER_REALM)

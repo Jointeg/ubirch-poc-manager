@@ -3,7 +3,7 @@ package com.ubirch.services.jwt
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.KeycloakPaths
-import com.ubirch.services.{DeviceKeycloak, KeycloakInstance, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
 
 import java.security.Key
@@ -19,13 +19,13 @@ trait PublicKeyPoolService {
 }
 
 @Singleton
-class DefaultPublicKeyPoolService @Inject()(config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
+class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
   extends PublicKeyPoolService
-    with LazyLogging {
+  with LazyLogging {
 
   private def acceptedKids(keycloakInstance: KeycloakInstance): List[String] =
     keycloakInstance match {
-      case UsersKeycloak => List(config.getString(KeycloakPaths.UsersKeycloak.KID))
+      case UsersKeycloak  => List(config.getString(KeycloakPaths.UsersKeycloak.KID))
       case DeviceKeycloak => List(config.getString(KeycloakPaths.DeviceKeycloak.KID))
     }
 

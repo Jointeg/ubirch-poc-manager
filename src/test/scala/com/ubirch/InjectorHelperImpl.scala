@@ -3,18 +3,50 @@ package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
-import com.ubirch.crypto.{GeneratorKeyFactory, PrivKey}
-import com.ubirch.db.tables.{TenantRepository, TenantTestTable, UserRepository, UserTestTable}
-import com.ubirch.services.jwt.{DefaultPublicKeyPoolService, PublicKeyDiscoveryService, PublicKeyPoolService, TokenCreationService}
-import com.ubirch.services.keycloak.auth.{AuthClient, TestAuthClient}
-import com.ubirch.services.keycloak.groups.{KeycloakGroupService, TestKeycloakGroupsService}
-import com.ubirch.services.keycloak.roles.{KeycloakRolesService, TestKeycloakRolesService}
-import com.ubirch.services.keycloak.users.{KeycloakUserService, TestKeycloakUserService, TestUserPollingService, UserPollingService}
-import com.ubirch.services.{DeviceKeycloak, KeycloakInstance, UsersKeycloak}
+import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
+import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
+import com.ubirch.services.jwt.{
+  DefaultPublicKeyPoolService,
+  PublicKeyDiscoveryService,
+  PublicKeyPoolService,
+  TokenCreationService
+}
+import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
+import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
+import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
+import com.ubirch.services.keycloak.users.{
+  KeycloakUserService,
+  TestKeycloakUserService,
+  TestUserPollingService,
+  UserPollingService
+}
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
 
 import java.security.Key
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
+import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
+import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.jwt.{
+  DefaultPublicKeyPoolService,
+  PublicKeyDiscoveryService,
+  PublicKeyPoolService,
+  TokenCreationService
+}
+import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
+import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
+import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
+import com.ubirch.services.keycloak.users.{
+  KeycloakUserService,
+  TestKeycloakUserService,
+  TestUserPollingService,
+  UserPollingService
+}
+import monix.eval.Task
+
+import java.security.Key
+import javax.inject.{ Inject, Provider, Singleton }
 
 @Singleton
 class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
@@ -26,14 +58,14 @@ class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscov
         Task {
           kid match {
             case "6dMHOUfu7v6howP2WH5bkp-j9UgUYdyEQbWJp8cb8IY" => Some(UsersKeyPairProvider.privKey.getPublicKey)
-            case _ => throw new Exception("Check users keycloak kid!")
+            case _                                             => throw new Exception("Check users keycloak kid!")
           }
         }
       case DeviceKeycloak =>
         Task {
           kid match {
             case "tgxjDoFtQP7tzzO6byck4X8vsFRaM5EVz0N66O9CSTg" => Some(DeviceKeyPairProvider.privKey.getPublicKey)
-            case _ => throw new Exception("Check device keycloak kid!")
+            case _                                             => throw new Exception("Check device keycloak kid!")
           }
         }
     }
@@ -156,7 +188,6 @@ object FakeToken {
       |  "family_name": "Sanchez",
       |  "email": "carlos.sanchez@ubirch.com"
       |}""".stripMargin
-
 
   val superAdmin: String =
     """
@@ -355,7 +386,7 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
 
   def fakeToken(header: String, token: String, keycloakInstance: KeycloakInstance): FakeToken = {
     val privKey = keycloakInstance match {
-      case UsersKeycloak => UsersKeyPairProvider.privKey
+      case UsersKeycloak  => UsersKeyPairProvider.privKey
       case DeviceKeycloak => DeviceKeyPairProvider.privKey
     }
     FakeToken(

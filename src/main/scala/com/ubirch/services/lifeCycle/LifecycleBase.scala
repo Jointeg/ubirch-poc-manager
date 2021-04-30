@@ -28,9 +28,7 @@ trait Lifecycle {
   */
 
 @Singleton
-class DefaultLifecycle @Inject() (implicit ec: ExecutionContext)
-  extends Lifecycle
-  with LazyLogging {
+class DefaultLifecycle @Inject() (implicit ec: ExecutionContext) extends Lifecycle with LazyLogging {
 
   private val hooks = new ConcurrentLinkedDeque[() => Future[_]]()
 
@@ -98,4 +96,3 @@ class DefaultJVMHook @Inject() (lifecycle: Lifecycle)(implicit ec: ExecutionCont
   registerShutdownHooks()
 
 }
-

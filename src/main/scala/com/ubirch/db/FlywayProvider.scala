@@ -12,7 +12,7 @@ trait FlywayProvider {
 }
 
 @Singleton
-case class FlywayProviderImpl @Inject()(conf: Config) extends FlywayProvider {
+case class FlywayProviderImpl @Inject() (conf: Config) extends FlywayProvider {
 
   private val serverName = conf.getString(PostgresPaths.SERVER_NAME)
   private val port = conf.getString(PostgresPaths.PORT)

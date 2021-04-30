@@ -13,15 +13,15 @@ object UsageType {
 
   def unsafeFromString(value: String): UsageType =
     value match {
-      case APIString => API
-      case APPString => APP
+      case APIString  => API
+      case APPString  => APP
       case BothString => Both
     }
 
   def toStringFormat(POCUsageBase: UsageType): String =
     POCUsageBase match {
-      case API => APIString
-      case APP => APPString
+      case API  => APIString
+      case APP  => APPString
       case Both => BothString
     }
 

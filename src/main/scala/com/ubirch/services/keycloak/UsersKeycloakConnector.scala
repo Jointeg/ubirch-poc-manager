@@ -1,6 +1,6 @@
 package com.ubirch.services.keycloak
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import org.keycloak.admin.client.Keycloak
 
 trait UsersKeycloakConnector {
@@ -8,7 +8,7 @@ trait UsersKeycloakConnector {
 }
 
 @Singleton
-class UsersKeycloakConfigConnector @Inject()(keycloakUsersConfig: KeycloakUsersConfig) extends UsersKeycloakConnector {
+class UsersKeycloakConfigConnector @Inject() (keycloakUsersConfig: KeycloakUsersConfig) extends UsersKeycloakConnector {
   val keycloak: Keycloak = {
     Keycloak.getInstance(
       keycloakUsersConfig.serverUrl,

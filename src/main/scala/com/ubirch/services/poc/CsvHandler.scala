@@ -1,7 +1,7 @@
 package com.ubirch.services.poc
 
-import cats.data.Validated.{Invalid, Valid}
-import cats.implicits.{catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal}
+import cats.data.Validated.{ Invalid, Valid }
+import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
@@ -80,10 +80,10 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
   }
 
   private def validatePoc(
-                           csvPoc: PocRow,
-                           pocAddress: AllErrorsOr[Address],
-                           pocManager: AllErrorsOr[PocManager],
-                           tenant: Tenant): AllErrorsOr[Poc] =
+    csvPoc: PocRow,
+    pocAddress: AllErrorsOr[Address],
+    pocManager: AllErrorsOr[PocManager],
+    tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPoc.externalId),
       validateString(pocName, csvPoc.pocName),
@@ -95,25 +95,36 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       validateString(dataSchemaId, csvPoc.dataSchemaId),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
-      ).mapN {
-      (externalId, pocName, address, pocPhone, pocCertifyApp, logoUrl, clientCert, dataSchemaId, extraConfig, manager) => {
-        val id = UUID.randomUUID() //Todo: create namespaced UUID?
-        poc.Poc(
-          id,
-          tenant.id.value,
-          tenant.groupId.value,
-          externalId,
-          pocName,
-          address,
-          pocPhone,
-          pocCertifyApp,
-          logoUrl.map(LogoURL(_)),
-          clientCert,
-          dataSchemaId,
-          extraConfig.map(JsonConfig(_)),
-          manager
-        )
-      }
+    ).mapN {
+      (
+        externalId,
+        pocName,
+        address,
+        pocPhone,
+        pocCertifyApp,
+        logoUrl,
+        clientCert,
+        dataSchemaId,
+        extraConfig,
+        manager) =>
+        {
+          val id = UUID.randomUUID() //Todo: create namespaced UUID?
+          poc.Poc(
+            id,
+            tenant.id.value,
+            tenant.groupId.value,
+            externalId,
+            pocName,
+            address,
+            pocPhone,
+            pocCertifyApp,
+            logoUrl.map(LogoURL(_)),
+            clientCert,
+            dataSchemaId,
+            extraConfig.map(JsonConfig(_)),
+            manager
+          )
+        }
 
     }
 
@@ -123,7 +134,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       validateString(managerName, csvPoc.managerName),
       validateEmail(managerEmail, csvPoc.managerEmail),
       validatePhone(managerMobilePhone, csvPoc.managerMobilePhone)
-      ).mapN { (managerSurname, managerName, managerEmail, managerMobilePhone) =>
+    ).mapN { (managerSurname, managerName, managerEmail, managerMobilePhone) =>
       PocManager(
         managerSurname,
         managerName,
@@ -142,7 +153,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       validateStringOption(csvPoc.pocCounty),
       validateStringOption(csvPoc.pocFederalState),
       validateString(CsvConstants.country, csvPoc.pocCountry)
-      ).mapN { (pocStreet, pocHouseNumber, pocAddAddress, pocZipcode, pocCity, pocCounty, pocFederalState, pocCountry) =>
+    ).mapN { (pocStreet, pocHouseNumber, pocAddAddress, pocZipcode, pocCity, pocCounty, pocFederalState, pocCountry) =>
       Address(
         pocStreet,
         pocHouseNumber,

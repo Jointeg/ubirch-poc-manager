@@ -1,7 +1,7 @@
 package com.ubirch.services.keycloak.users
-import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists}
+import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists }
 import com.ubirch.models.user.UserName
-import com.ubirch.services.{DeviceKeycloak, KeycloakInstance, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
@@ -14,10 +14,10 @@ class TestKeycloakUserService() extends KeycloakUserService {
   private val keycloakDeviceDatastore = mutable.ListBuffer[UserName]()
 
   override def createUser(
-                           createKeycloakUser: CreateKeycloakUser,
-                           keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserAlreadyExists, Unit]] =
+    createKeycloakUser: CreateKeycloakUser,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserAlreadyExists, Unit]] =
     keycloakInstance match {
-      case UsersKeycloak => createIfNotExists(keycloakUserDatastore, createKeycloakUser)
+      case UsersKeycloak  => createIfNotExists(keycloakUserDatastore, createKeycloakUser)
       case DeviceKeycloak => createIfNotExists(keycloakDeviceDatastore, createKeycloakUser)
     }
 
@@ -47,10 +47,10 @@ class TestKeycloakUserService() extends KeycloakUserService {
     }
 
   override def getUser(
-                        username: UserName,
-                        keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[UserRepresentation]] =
+    username: UserName,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[UserRepresentation]] =
     keycloakInstance match {
-      case UsersKeycloak => findInDatastore(keycloakUserDatastore, username)
+      case UsersKeycloak  => findInDatastore(keycloakUserDatastore, username)
       case DeviceKeycloak => findInDatastore(keycloakDeviceDatastore, username)
     }
 

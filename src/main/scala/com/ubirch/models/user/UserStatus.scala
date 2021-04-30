@@ -10,12 +10,12 @@ case object UserVerified extends UserStatus
 object UserStatus {
   implicit val encodeUserStatus: MappedEncoding[UserStatus, String] = MappedEncoding[UserStatus, String] {
     case WaitingForRequiredActions => "WAITING_FOR_REQUIRED_ACTIONS"
-    case WaitingForApproval => "WAITING_FOR_APPROVAL"
-    case UserVerified => "USER_VERIFIED"
+    case WaitingForApproval        => "WAITING_FOR_APPROVAL"
+    case UserVerified              => "USER_VERIFIED"
   }
   implicit val decodeUserStatus: MappedEncoding[String, UserStatus] = MappedEncoding[String, UserStatus] {
     case "WAITING_FOR_REQUIRED_ACTIONS" => WaitingForRequiredActions
-    case "WAITING_FOR_APPROVAL" => WaitingForApproval
-    case "USER_VERIFIED" => UserVerified
+    case "WAITING_FOR_APPROVAL"         => WaitingForApproval
+    case "USER_VERIFIED"                => UserVerified
   }
 }

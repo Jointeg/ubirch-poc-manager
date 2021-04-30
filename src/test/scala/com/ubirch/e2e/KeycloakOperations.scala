@@ -3,14 +3,18 @@ package com.ubirch.e2e
 import cats.implicits._
 import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.keycloak.{DeviceKeycloakConnector, UsersKeycloakConnector}
-import com.ubirch.{Awaits, ExecutionContextsTests}
+import com.ubirch.services.keycloak.{ DeviceKeycloakConnector, UsersKeycloakConnector }
+import com.ubirch.{ Awaits, ExecutionContextsTests }
 import monix.eval.Task
-import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
+import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 import org.scalatest.Matchers.fail
-import org.scalatest.{EitherValues, OptionValues}
+import org.scalatest.{ EitherValues, OptionValues }
 
-import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{
+  iterableAsScalaIterableConverter,
+  mapAsJavaMapConverter,
+  seqAsJavaListConverter
+}
 import scala.util.Random
 
 trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionValues with EitherValues {
@@ -19,8 +23,8 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
   val USERS_REALM = "users-realm"
 
   def cleanAllUsers(
-                     keycloakUsersConnector: UsersKeycloakConnector,
-                     keycloakDeviceConnector: DeviceKeycloakConnector): Task[Unit] = {
+    keycloakUsersConnector: UsersKeycloakConnector,
+    keycloakDeviceConnector: DeviceKeycloakConnector): Task[Unit] = {
     for {
       allUsers <- Task(keycloakUsersConnector.keycloak.realm(USERS_REALM).users().list().asScala.toList)
       _ <-
@@ -85,7 +89,7 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
   }
 
   def setEmailVerified(
-                        username: UserName)(userService: KeycloakUserService, keycloakConnector: UsersKeycloakConnector): Task[Unit] = {
+    username: UserName)(userService: KeycloakUserService, keycloakConnector: UsersKeycloakConnector): Task[Unit] = {
     for {
       maybeUser <- userService.getUser(username)
       user = maybeUser.getOrElse(fail(s"Expected to find user with username $username in Keycloak"))

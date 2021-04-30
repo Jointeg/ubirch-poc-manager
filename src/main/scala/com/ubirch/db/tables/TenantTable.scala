@@ -1,6 +1,7 @@
 package com.ubirch.db.tables
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.tenant.{Tenant, TenantGroupId, TenantId, TenantName}
+import com.ubirch.models.tenant.{ Tenant, TenantGroupId, TenantId, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import monix.eval.Task
 
 import javax.inject.Inject
@@ -46,7 +47,6 @@ class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantR
       querySchema[Tenant]("poc_manager.tenants").filter(_.id == lift(id)).delete
     }
 
-
   override def createTenant(tenant: Tenant): Task[TenantId] = Task(run(createTenantQuery(tenant))).map(_ => tenant.id)
 
   override def getTenant(tenantId: TenantId): Task[Option[Tenant]] =
@@ -55,7 +55,8 @@ class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantR
   override def getTenantByName(tenantName: TenantName): Task[Option[Tenant]] =
     Task(run(getTenantByNameQuery(tenantName))).map(_.headOption)
 
-  def getTenantByGroupId(groupId: TenantGroupId): Task[Option[Tenant]] = Task(run(getTenantByGroupIdQuery(groupId))).map(_.headOption)
+  def getTenantByGroupId(groupId: TenantGroupId): Task[Option[Tenant]] =
+    Task(run(getTenantByGroupIdQuery(groupId))).map(_.headOption)
 
   def deleteTenantById(id: TenantId): Task[Unit] = Task(run(deleteTenantByIdQuery(id)))
 }

@@ -1,7 +1,7 @@
 package com.ubirch.services.formats
 
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.{ DefaultFormats, Formats }
 
 import javax.inject._
 

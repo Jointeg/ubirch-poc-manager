@@ -1,6 +1,6 @@
 package com.ubirch.models.poc
 
-import io.getquill.{Embedded, MappedEncoding}
+import io.getquill.{ Embedded, MappedEncoding }
 
 import java.net.URL
 

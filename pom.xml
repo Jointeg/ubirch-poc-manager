@@ -103,6 +103,7 @@
         <maven-surefire-plugin.version>2.7</maven-surefire-plugin.version>
         <scalatest-maven-plugin.version>2.0.0</scalatest-maven-plugin.version>
         <license-maven-plugin.version>2.0.0</license-maven-plugin.version>
+        <maven-scalafmt.version>1.0.1614576627.86a5663</maven-scalafmt.version>
         <!-- plugins -->
 
     </properties>
@@ -624,6 +625,33 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
+
+            <!-- code formatting -->
+            <plugin>
+                <groupId>org.antipathy</groupId>
+                <!-- The scala binary here doesn't need to match the project version -->
+                <artifactId>mvn-scalafmt_${scala.compat.version}</artifactId>
+                <!-- This represents the desired version of the plugin, whould be in the form:
+                     (major).(minor).(commitepoch).(commithash), which can be found here:
+                     https://github.com/simonjpegg/mvn_scalafmt/releases
+                     e.g. <version>1.0.1589620826.41b214a</version>
+                     Note: The SCALA version is OMITTED from this value
+                -->
+                <version>${maven-scalafmt.version}</version>
+                <configuration>
+                    <configLocation>https://raw.githubusercontent.com/ubirch/ubirch-scalafmt-rules/main/.scalafmt.conf
+                    </configLocation> <!-- path to config -->
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 

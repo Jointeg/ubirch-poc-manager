@@ -85,13 +85,16 @@ trait WithPrometheusMetrics {
   * Represents an assembly for the boot process
   * @param modules It is the modules of the system
   */
-abstract class Boot(modules: List[Module]) extends InjectorHelper(modules) with WithJVMHooks with WithPrometheusMetrics {
+abstract class Boot(modules: List[Module])
+  extends InjectorHelper(modules)
+  with WithJVMHooks
+  with WithPrometheusMetrics {
   def *[T](block: => T): Unit =
-    try { val _ = block } catch {
+    try { val _ = block }
+    catch {
       case e: Exception =>
         logger.error("Exiting after exception found = {}", e.getMessage)
         Thread.sleep(5000)
         sys.exit(1)
     }
 }
-

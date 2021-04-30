@@ -3,9 +3,14 @@ package com.ubirch.e2e
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch._
 import com.ubirch.models.user.UserName
-import com.ubirch.services.keycloak.{DeviceKeycloakConnector, KeycloakDeviceConfig, KeycloakUsersConfig, UsersKeycloakConnector}
+import com.ubirch.services.keycloak.{
+  DeviceKeycloakConnector,
+  KeycloakDeviceConfig,
+  KeycloakUsersConfig,
+  UsersKeycloakConnector
+}
 import org.flywaydb.core.Flyway
-import org.scalatest.{EitherValues, OptionValues}
+import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
@@ -13,11 +18,11 @@ import scala.util.Random
 
 trait E2ETestBase
   extends ScalatraWordSpec
-    with ExecutionContextsTests
-    with Awaits
-    with OptionValues
-    with EitherValues
-    with StrictLogging {
+  with ExecutionContextsTests
+  with Awaits
+  with OptionValues
+  with EitherValues
+  with StrictLogging {
 
   def withInjector[A](testCode: E2EInjectorHelperImpl => A): A = {
     val tenantAdmin: TenantAdmin =

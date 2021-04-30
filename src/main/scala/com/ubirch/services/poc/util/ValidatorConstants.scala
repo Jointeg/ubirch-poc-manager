@@ -32,5 +32,4 @@ object ValidatorConstants {
   def zipCodeDigitError(header: String) =
     s"column $header must have the length of 5 digits"
 
-
 }

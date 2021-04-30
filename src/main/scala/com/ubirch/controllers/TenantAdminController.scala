@@ -2,38 +2,43 @@ package com.ubirch.controllers
 
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
-import com.ubirch.db.tables.{PocStatusRepository, TenantTable}
+import com.ubirch.controllers.concerns.{
+  ControllerBase,
+  KeycloakBearerAuthStrategy,
+  KeycloakBearerAuthenticationSupport,
+  Token
+}
+import com.ubirch.db.tables.{ PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.PocStatus
-import com.ubirch.models.tenant.{Tenant, TenantGroupId}
+import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
 import com.ubirch.services.DeviceKeycloak
-import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
+import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization.write
-import org.scalatra._
-import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
+import org.scalatra.{ InternalServerError, NotFound, Ok, ScalatraBase, _ }
 
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
-class TenantAdminController @Inject()(
-                                       pocBatchHandler: PocBatchHandlerImpl,
-                                       pocStatusTable: PocStatusRepository,
-                                       config: Config,
-                                       val swagger: Swagger,
-                                       jFormats: Formats,
-                                       tenantTable: TenantTable,
-                                       publicKeyPoolService: PublicKeyPoolService,
-                                       tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+class TenantAdminController @Inject() (
+  pocBatchHandler: PocBatchHandlerImpl,
+  pocStatusTable: PocStatusRepository,
+  tenantTable: TenantTable,
+  config: Config,
+  val swagger: Swagger,
+  jFormats: Formats,
+  publicKeyPoolService: PublicKeyPoolService,
+  tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
-    with KeycloakBearerAuthenticationSupport {
+  with KeycloakBearerAuthenticationSupport {
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -74,46 +79,50 @@ class TenantAdminController @Inject()(
 
   post("/pocs/create", operation(createListOfPocs)) {
     authenticated(_.hasRole(Symbol("tenant-admin"))) { token: Token =>
-      asyncResult("Create poc batch") { _ =>
-        _ =>
-          retrieveTenantFromToken(token).flatMap {
-            case Right(tenant: Tenant) =>
-              pocBatchHandler
-                .createListOfPoCs(request.body, tenant)
-                .map {
-                  case Right(_) => Ok()
-                  case Left(csv) => Ok(csv)
-                }
-
-            case Left(errorMsg: String) =>
-              logger.error(errorMsg)
-              Task(BadRequest(NOK.authenticationError(errorMsg)))
-          }
+      asyncResult("Create poc batch") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            pocBatchHandler
+              .createListOfPoCs(request.body, tenant)
+              .map {
+                case Right(_)  => Ok()
+                case Left(csv) => Ok(csv)
+              }
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
       }
     }
   }
 
   get("/pocStatus/:id", operation(getPocStatus)) {
     authenticated(_.hasRole(Symbol("tenant-admin"))) { token =>
-      asyncResult("Get Poc Status") { _ =>
-        _ =>
-          val id = params("id")
-          Try(UUID.fromString(id)) match {
-            case Success(uuid) =>
-              pocStatusTable
-                .getPocStatus(uuid)
-                .map {
-                  case Some(pocStatus) => toJson(pocStatus)
-                  case None => NotFound(NOK.resourceNotFoundError(s"pocStatus with $id couldn't be found"))
-                }
-
-            case Failure(ex) =>
-              val errorMsg = s"error on retrieving pocStatus with $id:"
-              logger.error(errorMsg, ex)
-              Task {
-                InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+      asyncResult("Get Poc Status") { _ => _ =>
+        val id = params("id")
+        Try(UUID.fromString(id)) match {
+          case Success(uuid) =>
+            pocStatusTable
+              .getPocStatus(uuid)
+              .map {
+                case Some(pocStatus) => toJson(pocStatus)
+                case None            => NotFound(NOK.resourceNotFoundError(s"pocStatus with $id couldn't be found"))
               }
-          }
+
+          case Failure(ex) =>
+            val errorMsg = s"error on retrieving pocStatus with $id:"
+            logger.error(errorMsg, ex)
+            Task {
+              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+            }
+
+          case Failure(ex) =>
+            val errorMsg = s"error on retrieving pocStatus with $id:"
+            logger.error(errorMsg, ex)
+            Task {
+              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+            }
+        }
       }
     }
   }
@@ -124,7 +133,7 @@ class TenantAdminController @Inject()(
       case Some(tenantRole) =>
         tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
           case Some(tenant) => Right(tenant)
-          case None => Left(s"couldn't find tenant in db for ${tenantRole.name}")
+          case None         => Left(s"couldn't find tenant in db for ${tenantRole.name}")
         }
       case None => Task(Left("the user's token is missing a tenant role"))
     }

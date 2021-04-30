@@ -1,5 +1,6 @@
 package com.ubirch.db.tables
-import com.ubirch.models.tenant.{Tenant, TenantGroupId, TenantId, TenantName}
+import com.ubirch.models.tenant.{ Tenant, TenantGroupId, TenantId, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import monix.eval.Task
 
 import scala.collection.mutable

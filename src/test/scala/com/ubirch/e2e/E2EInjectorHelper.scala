@@ -1,18 +1,18 @@
 package com.ubirch.e2e
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import com.ubirch._
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.keycloak.{KeycloakDeviceConfig, KeycloakUsersConfig}
-import io.getquill.{PostgresJdbcContext, SnakeCase}
+import com.ubirch.services.keycloak.{ KeycloakDeviceConfig, KeycloakUsersConfig }
+import io.getquill.{ PostgresJdbcContext, SnakeCase }
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 case class KeycloakUsersRuntimeConfig(tenantAdmin: TenantAdmin)
 
 @Singleton
-class TestKeycloakUsersConfig @Inject()(val conf: Config, keycloakRuntimeConfig: KeycloakUsersRuntimeConfig)
+class TestKeycloakUsersConfig @Inject() (val conf: Config, keycloakRuntimeConfig: KeycloakUsersRuntimeConfig)
   extends KeycloakUsersConfig {
 
   private val keycloakServer = KeycloakUsersContainer.container.container.getContainerIpAddress
@@ -33,7 +33,7 @@ class TestKeycloakUsersConfig @Inject()(val conf: Config, keycloakRuntimeConfig:
 }
 
 @Singleton
-class TestKeycloakDeviceConfig @Inject()(val conf: Config) extends KeycloakDeviceConfig {
+class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDeviceConfig {
 
   private val keycloakServer = KeycloakDeviceContainer.container.container.getContainerIpAddress
   private val keycloakPort = KeycloakDeviceContainer.container.container.getFirstMappedPort
@@ -47,23 +47,22 @@ class TestKeycloakDeviceConfig @Inject()(val conf: Config) extends KeycloakDevic
 }
 
 @Singleton
-class TestPostgresQuillJdbcContext @Inject()() extends QuillJdbcContext {
+class TestPostgresQuillJdbcContext @Inject() () extends QuillJdbcContext {
   override val ctx: PostgresJdbcContext[SnakeCase] = StaticTestPostgresJdbcContext.ctx
 }
 
 object StaticTestPostgresJdbcContext {
   val ctx: PostgresJdbcContext[SnakeCase] = new PostgresJdbcContext(
     SnakeCase,
-    ConfigFactory.parseString(
-      s"""
-         |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
-         |    dataSource.user = postgres
-         |    dataSource.password = postgres
-         |    dataSource.databaseName = postgres
-         |    dataSource.portNumber = ${PostgresDbContainer.container.container.getFirstMappedPort}
-         |    dataSource.serverName = ${PostgresDbContainer.container.container.getContainerIpAddress}
-         |    connectionTimeout = 30000
-         |""".stripMargin))
+    ConfigFactory.parseString(s"""
+                                 |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
+                                 |    dataSource.user = postgres
+                                 |    dataSource.password = postgres
+                                 |    dataSource.databaseName = postgres
+                                 |    dataSource.portNumber = ${PostgresDbContainer.container.container.getFirstMappedPort}
+                                 |    dataSource.serverName = ${PostgresDbContainer.container.container.getContainerIpAddress}
+                                 |    connectionTimeout = 30000
+                                 |""".stripMargin))
 }
 
 class E2EInjectorHelperImpl(val superAdmin: SuperAdmin, val tenantAdmin: TenantAdmin)

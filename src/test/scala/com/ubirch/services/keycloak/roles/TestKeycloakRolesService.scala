@@ -1,7 +1,7 @@
 package com.ubirch.services.keycloak.roles
 
 import com.ubirch.models.keycloak.roles._
-import com.ubirch.services.{DeviceKeycloak, KeycloakInstance, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
 
 import java.util.UUID
@@ -14,16 +14,16 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   private val rolesDeviceDatastore = mutable.Map[RoleName, KeycloakRole]()
 
   override def createNewRole(
-                              createKeycloakRole: CreateKeycloakRole,
-                              keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]] =
+    createKeycloakRole: CreateKeycloakRole,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]] =
     keycloakInstance match {
-      case UsersKeycloak => insertIfNotExists(rolesUserDatastore, createKeycloakRole)
+      case UsersKeycloak  => insertIfNotExists(rolesUserDatastore, createKeycloakRole)
       case DeviceKeycloak => insertIfNotExists(rolesDeviceDatastore, createKeycloakRole)
     }
 
   private def insertIfNotExists(
-                                 datastore: mutable.Map[RoleName, KeycloakRole],
-                                 createKeycloakRole: CreateKeycloakRole) = {
+    datastore: mutable.Map[RoleName, KeycloakRole],
+    createKeycloakRole: CreateKeycloakRole) = {
     Task {
       datastore.find(_._1 == createKeycloakRole.roleName) match {
         case Some(_) => Left(RoleAlreadyExists(createKeycloakRole.roleName))
@@ -38,10 +38,10 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   }
 
   override def findRole(
-                         roleName: RoleName,
-                         keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]] =
+    roleName: RoleName,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]] =
     keycloakInstance match {
-      case UsersKeycloak => Task(rolesUserDatastore.get(roleName))
+      case UsersKeycloak  => Task(rolesUserDatastore.get(roleName))
       case DeviceKeycloak => Task(rolesDeviceDatastore.get(roleName))
     }
 

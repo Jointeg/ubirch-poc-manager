@@ -4,13 +4,13 @@ import com.ubirch.FakeTokenCreator
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.auth.{Base64String, EncryptedData}
+import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import io.prometheus.client.CollectorRegistry
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.DurationInt
@@ -21,26 +21,26 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
 
   private def createTenantJson(tenantName: String) = {
     s"""
-      |{
-      |    "tenantName": "$tenantName",
-      |    "usageType": "API",
-      |    "deviceCreationToken": "1234567890",
-      |    "certificationCreationToken": "987654321",
-      |    "idGardIdentifier": "gard-identifier",
-      |    "tenantGroupId": "random-group"
-      |}
-      |""".stripMargin
+       |{
+       |    "tenantName": "$tenantName",
+       |    "usageType": "API",
+       |    "deviceCreationToken": "1234567890",
+       |    "certificationCreationToken": "987654321",
+       |    "idGardIdentifier": "gard-identifier",
+       |    "tenantGroupId": "random-group"
+       |}
+       |""".stripMargin
   }
 
   private def missingRequiredFieldsCreateTenantJson(tenantName: String) = {
     s"""
-      |{
-      |    "tenantName": "$tenantName",
-      |    "deviceCreationToken": "1234567890",
-      |    "idGardIdentifier": "gard-identifier",
-      |    "tenantGroupId": "random-group"
-      |}
-      |""".stripMargin
+       |{
+       |    "tenantName": "$tenantName",
+       |    "deviceCreationToken": "1234567890",
+       |    "idGardIdentifier": "gard-identifier",
+       |    "tenantGroupId": "random-group"
+       |}
+       |""".stripMargin
   }
 
   "Super Admin Controller" must {

@@ -1,6 +1,6 @@
 package com.ubirch.services.keycloak.auth
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.ubirch.services.keycloak.KeycloakUsersConfig
 import monix.eval.Task
 import org.keycloak.authorization.client.AuthzClient
@@ -13,7 +13,7 @@ trait AuthClient {
 }
 
 @Singleton
-class KeycloakAuthzClient @Inject()(keycloakUsersConfig: KeycloakUsersConfig) extends AuthClient {
+class KeycloakAuthzClient @Inject() (keycloakUsersConfig: KeycloakUsersConfig) extends AuthClient {
 
   private val client: AuthzClient = createAuthorisationClient(keycloakUsersConfig.clientConfig)
 

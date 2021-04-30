@@ -2,8 +2,8 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.poc.{Completed, Poc, PocStatus, Status}
-import io.getquill.{Insert, Update}
+import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Status }
+import io.getquill.{ Insert, Update }
 import monix.eval.Task
 
 import java.util.UUID
@@ -26,7 +26,7 @@ trait PocRepository {
   def getAllUncompletedPocs(): Task[List[Poc]]
 }
 
-class PocTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocRepository {
+class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocRepository {
 
   import quillJdbcContext.ctx._
 

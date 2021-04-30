@@ -1,26 +1,31 @@
 package com.ubirch
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.google.inject.{AbstractModule, Module}
+import com.google.inject.{ AbstractModule, Module }
 import com.typesafe.config.Config
-import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
+import com.ubirch.db.context.{ PostgresQuillJdbcContext, QuillJdbcContext }
 import com.ubirch.db.tables._
-import com.ubirch.db.{FlywayProvider, FlywayProviderImpl}
-import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, ConfigKeyProvider}
+import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
+import com.ubirch.services.auth.{ AESEncryption, AESEncryptionCBCMode, AESKeyProvider, ConfigKeyProvider }
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
-import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
+import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
-import com.ubirch.services.keycloak.auth.{AuthClient, KeycloakAuthzClient}
-import com.ubirch.services.keycloak.groups.{DefaultKeycloakGroupService, KeycloakGroupService}
-import com.ubirch.services.keycloak.roles.{DefaultKeycloakRolesService, KeycloakRolesService}
-import com.ubirch.services.keycloak.users.{KeycloakUserPollingService, KeycloakUserService, KeycloakUserServiceImpl, UserPollingService}
-import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
-import com.ubirch.services.poc.{PocBatchHandlerImpl, PocBatchHandlerTrait}
+import com.ubirch.services.keycloak.auth.{ AuthClient, KeycloakAuthzClient }
+import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, KeycloakGroupService }
+import com.ubirch.services.keycloak.roles.{ DefaultKeycloakRolesService, KeycloakRolesService }
+import com.ubirch.services.keycloak.users.{
+  KeycloakUserPollingService,
+  KeycloakUserService,
+  KeycloakUserServiceImpl,
+  UserPollingService
+}
+import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
+import com.ubirch.services.poc.{ PocBatchHandlerImpl, PocBatchHandlerTrait }
 import com.ubirch.services.rest.SwaggerProvider
-import com.ubirch.services.superadmin.{DefaultTenantService, TenantService}
-import com.ubirch.services.{DefaultKeycloakConnector, KeycloakConnector}
+import com.ubirch.services.superadmin.{ DefaultTenantService, TenantService }
+import com.ubirch.services.{ DefaultKeycloakConnector, KeycloakConnector }
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.Swagger
