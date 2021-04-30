@@ -1,13 +1,12 @@
 package com.ubirch
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.db.FlywayProvider
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.keycloak.users.UserPollingService
 import com.ubirch.services.rest.RestService
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import monix.eval.Task
 import monix.execution.Scheduler
-import monix.reactive.Observable
 
 import java.util.concurrent.CountDownLatch
 import javax.inject.{Inject, Singleton}
@@ -16,10 +15,11 @@ import javax.inject.{Inject, Singleton}
   * Represents a bootable service object that starts the system
   */
 @Singleton
-class Service @Inject() (
-  restService: RestService,
-  publicKeyPoolService: PublicKeyPoolService
-  /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
+class Service @Inject()(
+                         restService: RestService,
+                         publicKeyPoolService: PublicKeyPoolService,
+                         flywayProvider: FlywayProvider
+                         /*keycloakUserPollingService: UserPollingService*/)(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
@@ -36,12 +36,14 @@ class Service @Inject() (
       }
       .runToFuture
 
-//    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
-//
-//    sys.addShutdownHook {
-//      logger.info("Shutdown of polling service")
-//      pollingService.cancel()
-//    }
+    flywayProvider.getFlyway.migrate()
+
+    //    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
+    //
+    //    sys.addShutdownHook {
+    //      logger.info("Shutdown of polling service")
+    //      pollingService.cancel()
+    //    }
 
     val cd = new CountDownLatch(1)
     cd.await()
