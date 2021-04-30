@@ -18,11 +18,12 @@ case class FlywayProviderImpl @Inject()(conf: Config) extends FlywayProvider {
   private val port = conf.getString(PostgresPaths.PORT)
   private val user = conf.getString(PostgresPaths.USER)
   private val password = conf.getString(PostgresPaths.PASSWORD)
+  private val databaseName = conf.getString(PostgresPaths.DATABASE_NAME)
 
   val flyway = Flyway
     .configure()
     .dataSource(
-      s"jdbc:postgresql://$serverName:$port/postgres",
+      s"jdbc:postgresql://$serverName:$port/$databaseName",
       user,
       password
     )

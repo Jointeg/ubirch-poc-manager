@@ -10,6 +10,7 @@ import com.ubirch.services.rest.RestService
 import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.flywaydb.core.api.FlywayException
 
 import java.util.concurrent.CountDownLatch
 import javax.inject.{Inject, Singleton}
@@ -42,7 +43,16 @@ class Service @Inject() (
       }
       .runToFuture
 
-    flywayProvider.getFlyway.migrate()
+    try {
+      flywayProvider.getFlyway.migrate()
+    } catch {
+      case ex: FlywayException =>
+        logger.error(s"something went wrong on database migration: ${ex.getMessage}", ex)
+        throw ex
+      case ex: Throwable =>
+        logger.error(s"something went wrong on database migration; unknown exceptionType: ${ex.getMessage}", ex)
+        throw ex
+    }
 
     keyHashVerifierService
       .verifyHash(Base64String(config.getString(ConfPaths.AESEncryptionPaths.SECRET_KEY)))
