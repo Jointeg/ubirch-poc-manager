@@ -60,6 +60,7 @@ object ConfPaths {
     final val USER = "database.dataSource.user"
     final val PASSWORD = "database.dataSource.password"
     final val PORT = "database.dataSource.portNumber"
+    final val DATABASE_NAME = "database.dataSource.databaseName"
   }
 
 
