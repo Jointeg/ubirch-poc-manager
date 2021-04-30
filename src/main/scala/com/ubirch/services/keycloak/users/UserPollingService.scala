@@ -3,7 +3,7 @@ package com.ubirch.services.keycloak.users
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.KeycloakUser
-import com.ubirch.services.keycloak.KeycloakConfig
+import com.ubirch.services.keycloak.KeycloakUsersConfig
 import com.ubirch.services.keycloak.auth.AuthClient
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
@@ -23,7 +23,7 @@ trait UserPollingService {
 }
 
 @Singleton
-class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConfig: KeycloakConfig)(implicit
+class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakUsersConfig: KeycloakUsersConfig)(implicit
   formats: Formats)
   extends UserPollingService
   with LazyLogging {
@@ -33,12 +33,12 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
 
   private val newlyRegisteredUsers: Observable[Either[Exception, List[KeycloakUser]]] = {
     for {
-      _ <- Observable.intervalWithFixedDelay(keycloakConfig.userPollingInterval.seconds)
+      _ <- Observable.intervalWithFixedDelay(keycloakUsersConfig.userPollingInterval.seconds)
       token <-
         Observable
           .fromTask(
             authClient
-              .obtainAccessToken(keycloakConfig.clientAdminUsername, keycloakConfig.clientAdminPassword))
+              .obtainAccessToken(keycloakUsersConfig.clientAdminUsername, keycloakUsersConfig.clientAdminPassword))
           .doOnError(logObtainAccessTokenError)
       users <-
         Observable
@@ -58,7 +58,7 @@ class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakConf
     Task.fromFuture(
       basicRequest
         .get(
-          uri"${keycloakConfig.serverUrl}/realms/${keycloakConfig.usersRealm}/user-search/users-without-confirmation-mail")
+          uri"${keycloakUsersConfig.serverUrl}/realms/${keycloakUsersConfig.realm}/user-search/users-without-confirmation-mail")
         .auth
         .bearer(token)
         .response(asJson[List[KeycloakUser]])

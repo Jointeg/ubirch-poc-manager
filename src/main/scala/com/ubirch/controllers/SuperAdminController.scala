@@ -3,14 +3,10 @@ package com.ubirch.controllers
 import com.google.inject.Singleton
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.concerns.{
-  ControllerBase,
-  KeycloakBearerAuthStrategy,
-  KeycloakBearerAuthenticationSupport,
-  Token
-}
+import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
 import com.ubirch.models.NOK
 import com.ubirch.models.tenant.{API, APP, Both, CreateTenantRequest}
+import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.superadmin.TenantService
 import io.prometheus.client.Counter
@@ -40,7 +36,7 @@ class SuperAdminController @Inject() (
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, tokenVerificationService, publicKeyPoolService)
+    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
 
   override val successCounter: Counter =
     Counter

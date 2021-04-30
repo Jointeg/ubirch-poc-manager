@@ -1,6 +1,7 @@
 package com.ubirch
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.UserPollingService
 import com.ubirch.services.rest.RestService
@@ -17,20 +18,23 @@ import javax.inject.{Inject, Singleton}
 @Singleton
 class Service @Inject() (
   restService: RestService,
-  publicKeyPoolService: PublicKeyPoolService,
-  /*keycloakUserPollingService: UserPollingService*/)(implicit scheduler: Scheduler)
+  publicKeyPoolService: PublicKeyPoolService
+  /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
 
-    publicKeyPoolService.init.doOnFinish {
-      case Some(e) =>
-        Task.delay(logger.error("error_loading_keys", e))
-      case None =>
-        Task.delay {
-          restService.start()
-        }
-    }.runToFuture
+    publicKeyPoolService
+      .init(UsersKeycloak, DeviceKeycloak)
+      .doOnFinish {
+        case Some(e) =>
+          Task.delay(logger.error("error_loading_keys", e))
+        case None =>
+          Task.delay {
+            restService.start()
+          }
+      }
+      .runToFuture
 
 //    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
 //

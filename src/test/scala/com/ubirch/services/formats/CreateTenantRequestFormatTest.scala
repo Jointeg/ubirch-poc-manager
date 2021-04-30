@@ -12,15 +12,15 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
         val createTenantRequestJSON = parse("""
-          |{
-          |    "tenantName": "someRandomName",
-          |    "usageType": "API",
-          |    "deviceCreationToken": "1234567890",
-          |    "certificationCreationToken": "987654321",
-          |    "idGardIdentifier": "gard-identifier",
-          |    "tenantGroupId": "random-group"
-          |}
-          |""".stripMargin)
+                                              |{
+                                              |    "tenantName": "someRandomName",
+                                              |    "usageType": "API",
+                                              |    "deviceCreationToken": "1234567890",
+                                              |    "certificationCreationToken": "987654321",
+                                              |    "idGardIdentifier": "gard-identifier",
+                                              |    "tenantGroupId": "random-group"
+                                              |}
+                                              |""".stripMargin)
 
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
@@ -45,15 +45,16 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
     "Fail to parse JSON if one of required values is not provided" in {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
-        val createTenantRequestJSON = parse("""
-          |{
-          |    "tenantName": "someRandomName",
-          |    "usageType": "API",
-          |    "deviceCreationToken": "1234567890",
-          |    "idGardIdentifier": "gard-identifier",
-          |    "tenantGroupId": "random-group"
-          |}
-          |""".stripMargin)
+        val createTenantRequestJSON = parse(
+          """
+            |{
+            |    "tenantName": "someRandomName",
+            |    "usageType": "API",
+            |    "deviceCreationToken": "1234567890",
+            |    "idGardIdentifier": "gard-identifier",
+            |    "tenantGroupId": "random-group"
+            |}
+            |""".stripMargin)
 
         createTenantRequestJSON.extractOpt[CreateTenantRequest] shouldBe None
       }

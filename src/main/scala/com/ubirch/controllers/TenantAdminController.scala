@@ -6,6 +6,7 @@ import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrate
 import com.ubirch.db.tables.PocStatusRepository
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.PocStatus
+import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import io.prometheus.client.Counter
@@ -30,7 +31,7 @@ class TenantAdminController @Inject()(
                                        publicKeyPoolService: PublicKeyPoolService,
                                        tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
-    with KeycloakBearerAuthenticationSupport {
+  with KeycloakBearerAuthenticationSupport {
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -39,7 +40,7 @@ class TenantAdminController @Inject()(
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, tokenVerificationService, publicKeyPoolService)
+    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
 
   override val successCounter: Counter =
     Counter
@@ -68,8 +69,6 @@ class TenantAdminController @Inject()(
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
-
-
 
   //Todo: Add authentication regarding Tenant-Admin role and retrieve tenant id to add it to each PoC
   post("/pocs/create", operation(createListOfPocs)) {
@@ -111,7 +110,6 @@ class TenantAdminController @Inject()(
       }
     }
   }
-
 
   private def toJson(pocStatus: PocStatus) = {
     Try(write[PocStatus](pocStatus)) match {

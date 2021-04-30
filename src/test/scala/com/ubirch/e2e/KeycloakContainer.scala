@@ -6,19 +6,22 @@ import org.testcontainers.utility.MountableFile
 
 import java.time.Duration
 
-class KeycloakContainer(underlying: GenericContainer) extends GenericContainer(underlying) {
+class KeycloakContainer(underlying: GenericContainer, mountExtension: Boolean, realmExportFile: String)
+  extends GenericContainer(underlying) {
   underlying.container.withCopyFileToContainer(
-    MountableFile.forHostPath("./keycloak/realms/realm-export.json"),
-    "/tmp/realm-export.json")
-  underlying.container.withCopyFileToContainer(
-    MountableFile.forHostPath("./keycloak/extensions/get_users_by_attributes_extension.jar"),
-    "/opt/jboss/keycloak/standalone/deployments/get_users_by_attributes_extension.jar"
-  )
+    MountableFile.forHostPath(s"./keycloak/realms/$realmExportFile"),
+    s"/tmp/$realmExportFile")
+  if (mountExtension) {
+    underlying.container.withCopyFileToContainer(
+      MountableFile.forHostPath("./keycloak/extensions/get_users_by_attributes_extension.jar"),
+      "/opt/jboss/keycloak/standalone/deployments/get_users_by_attributes_extension.jar"
+    )
+  }
 }
 
 object KeycloakContainer {
 
-  case class Def()
+  case class Def(mountExtension: Boolean, realmExportFile: String)
     extends GenericContainer.Def[KeycloakContainer](
       new KeycloakContainer(
         GenericContainer(
@@ -27,7 +30,7 @@ object KeycloakContainer {
           env = Map(
             "KEYCLOAK_USER" -> "admin",
             "KEYCLOAK_PASSWORD" -> "admin",
-            "KEYCLOAK_IMPORT" -> "/tmp/realm-export.json"
+            "KEYCLOAK_IMPORT" -> s"/tmp/$realmExportFile"
           ),
           command = List(
             "-c standalone.xml",
@@ -35,8 +38,10 @@ object KeycloakContainer {
             "-Dkeycloak.profile.feature.upload_scripts=enabled",
             "-Dkeycloak.profile.feature.scripts=enabled"
           ),
-          waitStrategy = Wait.forHttp("/auth").forPort(8080).withStartupTimeout(Duration.ofSeconds(45))
-        )
+          waitStrategy = Wait.forHttp("/auth").forPort(8080).withStartupTimeout(Duration.ofSeconds(90))
+        ),
+        mountExtension,
+        realmExportFile
       )
     )
 
