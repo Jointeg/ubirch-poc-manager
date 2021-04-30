@@ -14,7 +14,9 @@ trait TokenVerificationService {
 }
 
 @Singleton
-class DefaultTokenVerificationService @Inject() (jsonConverterService: JsonConverterService) extends TokenVerificationService with LazyLogging {
+class DefaultTokenVerificationService @Inject() (jsonConverterService: JsonConverterService)
+  extends TokenVerificationService
+  with LazyLogging {
 
   final val ISSUER = "iss"
   final val SUBJECT = "sub"

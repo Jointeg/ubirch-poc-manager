@@ -2,7 +2,7 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.poc.{Poc, PocStatus}
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import io.getquill.Insert
 import monix.eval.Task
 
@@ -22,7 +22,7 @@ trait PocRepository {
   def getAllPocs(): Task[List[Poc]]
 }
 
-class PocTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocRepository {
+class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocRepository {
 
   import quillJdbcContext.ctx._
 

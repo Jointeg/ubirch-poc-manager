@@ -63,7 +63,6 @@ object ConfPaths {
     final val DATABASE_NAME = "database.dataSource.databaseName"
   }
 
-
   object GenericConfPaths extends GenericConfPaths
 
   object HttpServerConfPaths extends HttpServerConfPaths

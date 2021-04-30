@@ -1,6 +1,6 @@
 package com.ubirch.services.keycloak.auth
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.ubirch.services.keycloak.KeycloakUsersConfig
 import monix.eval.Task
 import org.keycloak.authorization.client.AuthzClient

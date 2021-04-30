@@ -3,7 +3,7 @@ package com.ubirch.db.tables
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.models.poc.PocStatus
-import io.getquill.{Delete, EntityQuery, Insert, Update}
+import io.getquill.{ Delete, EntityQuery, Insert, Update }
 import monix.eval.Task
 
 import java.util.UUID
@@ -18,7 +18,7 @@ trait PocStatusRepository {
   def getPocStatus(pocId: UUID): Task[Option[PocStatus]]
 }
 
-class PocStatusTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocStatusRepository {
+class PocStatusTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocStatusRepository {
 
   import quillJdbcContext.ctx._
 
@@ -50,5 +50,6 @@ class PocStatusTable @Inject()(quillJdbcContext: QuillJdbcContext) extends PocSt
 
   override def deletePocStatus(pocId: UUID): Task[Long] = Task(run(removePocStatusQuery(pocId)))
 
-  override def getPocStatus(pocId: UUID): Task[Option[PocStatus]] = Task(run(getPocStatusQuery(pocId))).map(_.headOption)
+  override def getPocStatus(pocId: UUID): Task[Option[PocStatus]] =
+    Task(run(getPocStatusQuery(pocId))).map(_.headOption)
 }

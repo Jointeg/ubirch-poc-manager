@@ -1,5 +1,5 @@
 package com.ubirch.db.tables
-import com.ubirch.models.user.{User, UserId}
+import com.ubirch.models.user.{ User, UserId }
 import monix.eval.Task
 import scala.collection.mutable
 

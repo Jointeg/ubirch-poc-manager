@@ -4,13 +4,13 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.FlywayProvider
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.rest.RestService
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.flywaydb.core.api.FlywayException
 
 import java.util.concurrent.CountDownLatch
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 /**
   * Represents a bootable service object that starts the system

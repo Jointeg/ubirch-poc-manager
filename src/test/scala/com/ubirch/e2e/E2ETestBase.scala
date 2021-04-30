@@ -10,7 +10,7 @@ import com.ubirch.services.keycloak.{
   UsersKeycloakConnector
 }
 import org.flywaydb.core.Flyway
-import org.scalatest.{EitherValues, OptionValues}
+import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
@@ -47,7 +47,7 @@ trait E2ETestBase
     PostgresDbContainer.flyway.migrate()
   }
 
-  private def performKeycloakCleanup(injector: E2EInjectorHelperImpl) = {
+  private def performKeycloakCleanup(injector: E2EInjectorHelperImpl): Unit = {
     val keycloakUsers = injector.get[UsersKeycloakConnector]
     val keycloakUsersConfig = injector.get[KeycloakUsersConfig]
     val keycloakDevice = injector.get[DeviceKeycloakConnector]
@@ -74,7 +74,7 @@ object KeycloakDeviceContainer {
 object PostgresDbContainer {
   val container: PostgresContainer = PostgresContainer.Def().start()
 
-  val flyway = Flyway
+  val flyway: Flyway = Flyway
     .configure()
     .dataSource(
       s"jdbc:postgresql://${container.container.getContainerIpAddress}:${container.container.getFirstMappedPort}/postgres",

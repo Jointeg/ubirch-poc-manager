@@ -1,21 +1,21 @@
 package com.ubirch.services.jwt
 
-import cats.effect.{ExitCode, Resource}
+import cats.effect.{ ExitCode, Resource }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.KeycloakPaths
-import com.ubirch.services.{DeviceKeycloak, KeycloakInstance, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
-import monix.eval.{Task, TaskApp}
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
+import monix.eval.{ Task, TaskApp }
 import monix.reactive.Observable
 import org.jose4j.jwk.PublicJsonWebKey
 import org.json4s.JsonAST.JArray
-import org.json4s.{Formats, JString, JValue, JsonAST}
+import org.json4s.{ Formats, JString, JValue, JsonAST }
 
 import java.net.URL
 import java.security.Key
 import javax.inject._
-import scala.io.{BufferedSource, Source}
+import scala.io.{ BufferedSource, Source }
 
 trait PublicKeyDiscoveryService {
   def getKey(keycloakInstance: KeycloakInstance, kid: String): Task[Option[Key]]
@@ -25,9 +25,9 @@ trait PublicKeyDiscoveryService {
 class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterService: JsonConverterService)
   extends PublicKeyDiscoveryService {
 
-  def getConfigUrlString(keycloakInstance: KeycloakInstance) =
+  def getConfigUrlString(keycloakInstance: KeycloakInstance): String =
     keycloakInstance match {
-      case UsersKeycloak => config.getString(KeycloakPaths.UsersKeycloak.CONFIG_URL)
+      case UsersKeycloak  => config.getString(KeycloakPaths.UsersKeycloak.CONFIG_URL)
       case DeviceKeycloak => config.getString(KeycloakPaths.DeviceKeycloak.CONFIG_URL)
     }
 
@@ -71,7 +71,7 @@ class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterS
           case (_, v) =>
             v match {
               case JsonAST.JString(s) => Task(s)
-              case _ => Task.raiseError(new Exception("No jwks_uri found"))
+              case _                  => Task.raiseError(new Exception("No jwks_uri found"))
             }
         }
 
@@ -79,7 +79,7 @@ class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterS
         .map { _ \\ KEYS }
         .map {
           case JArray(keys) => keys
-          case _ => Nil
+          case _            => Nil
         }
 
       maybeJWK <- Task {
@@ -87,7 +87,7 @@ class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterS
           .find {
             _.findField {
               case (k, JString(v)) => k == KID && v == kid
-              case _ => false
+              case _               => false
             }.isDefined
           }
           .map {

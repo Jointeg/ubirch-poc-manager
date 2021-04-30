@@ -1,12 +1,12 @@
 package com.ubirch.controllers.concerns
 
 import com.ubirch.services.KeycloakInstance
-import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
+import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import org.json4s.JsonAST
 import org.scalatra.ScalatraBase
 
 import java.security.PublicKey
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 class KeycloakBearerAuthStrategy(
   override protected val app: ScalatraBase,
@@ -26,17 +26,17 @@ class KeycloakBearerAuthStrategy(
 
       sub <- claims.findField(_._1 == "sub").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       name <- claims.findField(_._1 == "name").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       email <- claims.findField(_._1 == "email").map(_._2).collect {
         case JsonAST.JString(s) => s
-        case _ => ""
+        case _                  => ""
       }
 
       roles <-
@@ -50,7 +50,7 @@ class KeycloakBearerAuthStrategy(
               arr
                 .collect {
                   case JsonAST.JString(s) => s
-                  case _ => ""
+                  case _                  => ""
                 }
                 .filter(_.nonEmpty)
                 .map(Symbol(_))

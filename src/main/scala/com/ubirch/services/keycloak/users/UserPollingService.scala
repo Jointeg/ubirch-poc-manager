@@ -1,6 +1,6 @@
 package com.ubirch.services.keycloak.users
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.KeycloakUser
 import com.ubirch.services.keycloak.KeycloakUsersConfig
@@ -24,7 +24,7 @@ trait UserPollingService {
 
 @Singleton
 class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakUsersConfig: KeycloakUsersConfig)(implicit
-  formats: Formats)
+formats: Formats)
   extends UserPollingService
   with LazyLogging {
 

@@ -1,8 +1,8 @@
 package com.ubirch.models.poc
 
-import io.getquill.{Embedded, MappedEncoding}
+import io.getquill.{ Embedded, MappedEncoding }
 import org.json4s.JValue
-import org.json4s.native.JsonMethods.{compact, parse, render}
+import org.json4s.native.JsonMethods.{ compact, parse, render }
 
 case class JsonConfig(jvalue: JValue) extends Embedded
 

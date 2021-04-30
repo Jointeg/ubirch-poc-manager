@@ -1,6 +1,6 @@
 package com.ubirch.db.tables
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.tenant.{Tenant, TenantId, TenantName}
+import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import monix.eval.Task
 
 import javax.inject.Inject

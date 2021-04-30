@@ -1,16 +1,16 @@
-package com.ubirch.e2e.keycloak.users;
+package com.ubirch.e2e.keycloak.users
 import com.ubirch.data.KeycloakTestData
-import com.ubirch.e2e.{E2ETestBase, KeycloakOperations}
+import com.ubirch.e2e.{ E2ETestBase, KeycloakOperations }
 import com.ubirch.models.keycloak.user.CreateKeycloakUser
-import com.ubirch.models.user.{Email, FirstName, LastName}
-import com.ubirch.services.keycloak.{DeviceKeycloakConnector, UsersKeycloakConnector}
-import com.ubirch.services.keycloak.users.{KeycloakUserService, UserPollingService}
+import com.ubirch.models.user.{ Email, FirstName, LastName }
+import com.ubirch.services.keycloak.{ DeviceKeycloakConnector, UsersKeycloakConnector }
+import com.ubirch.services.keycloak.users.{ KeycloakUserService, UserPollingService }
 import monix.eval.Task
 import monix.reactive.Observable
 import sttp.client.HttpError
 import sttp.model.StatusCode
 
-import scala.concurrent.duration.DurationInt;
+import scala.concurrent.duration.DurationInt
 
 class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations {
 
@@ -70,13 +70,15 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
           _ <- setEmailVerified(keycloakUser2.userName)(userService, usersKeycloakConnector)
           _ <- setEmailVerified(keycloakUser3.userName)(userService, usersKeycloakConnector)
           _ <- Task.sleep(1500.millis)
-          _ <- setConfirmationMailSentAttribute(true, keycloakUser1.userName)(userService, usersKeycloakConnector)
-          _ <- setConfirmationMailSentAttribute(true, keycloakUser3.userName)(userService, usersKeycloakConnector)
+          _ <-
+            setConfirmationMailSentAttribute(value = true, keycloakUser1.userName)(userService, usersKeycloakConnector)
+          _ <-
+            setConfirmationMailSentAttribute(value = true, keycloakUser3.userName)(userService, usersKeycloakConnector)
           pollingResult <- pollingFiber.join
         } yield pollingResult
 
         val listOfPolledUsers = await(pollingResult, 10.seconds).map {
-          case Left(exception) => fail(s"Did not expect to get exception while polling users: ${exception.getMessage}")
+          case Left(exception)    => fail(s"Did not expect to get exception while polling users: ${exception.getMessage}")
           case Right(polledUsers) => polledUsers
         }
 
@@ -113,7 +115,7 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
           case Left(exception) =>
             exception match {
               case httpError: HttpError if httpError.statusCode == StatusCode.Forbidden => ()
-              case exception => fail(s"Expected to get HttpError indicating Unauthorized but instead got $exception")
+              case exception                                                            => fail(s"Expected to get HttpError indicating Unauthorized but instead got $exception")
             }
           case Right(value) => fail(s"Expected to retrieve error response from keycloak but instead got $value")
         }

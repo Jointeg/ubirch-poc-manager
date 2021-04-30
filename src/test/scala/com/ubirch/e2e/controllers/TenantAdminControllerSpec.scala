@@ -2,19 +2,19 @@ package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.db.tables.{PocRepository, PocStatusRepository}
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc.PocStatus
 import com.ubirch.services.formats.DomainObjectFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization.write
-import org.json4s.{DefaultFormats, Formats}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.json4s.{ DefaultFormats, Formats }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -40,7 +40,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     //Todo: Fix authorization
     "return success without invalid rows" in {
       withInjector { Injector =>
-
         val token = Injector.get[FakeTokenCreator]
 
         post(
@@ -62,7 +61,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
     "return invalid csv rows" in {
       withInjector { Injector =>
-
         val token = Injector.get[FakeTokenCreator]
 
         post(
