@@ -68,17 +68,21 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val token = Injector.get[FakeTokenCreator]
         val tenantTable = Injector.get[TenantTable]
         await(tenantTable.deleteTenantById(TenantId(tenantId)), 5.seconds)
-
         post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
           status should equal(400)
           assert(body == "NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for T_tenantName)")
         }
+
+        //restore required tenant (needed for next test)
+        val tenant = createTenant(tenantId)
+        await(tenantTable.createTenant(tenant), 5.seconds) shouldBe TenantId(tenantId)
       }
     }
 
     "return invalid csv rows" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
+
         post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
           println(body)
           status should equal(200)
@@ -146,11 +150,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
-    withInjector { injector =>
-      val tenantTable = injector.get[TenantTable]
-      val tenant = createTenant(tenantId)
-      await(tenantTable.createTenant(tenant), 5.seconds)
-    }
   }
 
   override protected def beforeAll: Unit = {
@@ -158,6 +157,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
       await(pool.init, 2.seconds)
+      val tenantTable = injector.get[TenantTable]
+      val tenant = createTenant(tenantId)
+      await(tenantTable.createTenant(tenant), 5.seconds)
       lazy val tenantAdminController = injector.get[TenantAdminController]
       addServlet(tenantAdminController, "/*")
     }
