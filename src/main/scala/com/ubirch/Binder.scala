@@ -6,7 +6,14 @@ import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
 import com.ubirch.db.tables._
 import com.ubirch.db.{FlywayProvider, FlywayProviderImpl}
-import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, ConfigKeyProvider}
+import com.ubirch.services.auth.{
+  AESEncryption,
+  AESEncryptionCBCMode,
+  AESKeyProvider,
+  ConfigKeyProvider,
+  DefaultHashingService,
+  HashingService
+}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
@@ -15,7 +22,13 @@ import com.ubirch.services.keycloak._
 import com.ubirch.services.keycloak.auth.{AuthClient, KeycloakAuthzClient}
 import com.ubirch.services.keycloak.groups.{DefaultKeycloakGroupService, KeycloakGroupService}
 import com.ubirch.services.keycloak.roles.{DefaultKeycloakRolesService, KeycloakRolesService}
-import com.ubirch.services.keycloak.users.{KeycloakUserPollingService, KeycloakUserService, KeycloakUserServiceImpl, UserPollingService}
+import com.ubirch.services.keycloak.users.{
+  KeycloakUserPollingService,
+  KeycloakUserService,
+  KeycloakUserServiceImpl,
+  UserPollingService
+}
+import com.ubirch.services.keyhash.{DefaultKeyHashVerifier, KeyHashVerifierService}
 import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
 import com.ubirch.services.poc.{PocBatchHandlerImpl, PocBatchHandlerTrait}
 import com.ubirch.services.rest.SwaggerProvider
@@ -86,6 +99,14 @@ class Binder extends AbstractModule {
   def AESEncryption: ScopedBindingBuilder =
     bind(classOf[AESEncryption]).to(classOf[AESEncryptionCBCMode])
 
+  def HashingService: ScopedBindingBuilder =
+    bind(classOf[HashingService]).to(classOf[DefaultHashingService])
+
+  def HashKeyRepository: ScopedBindingBuilder = bind(classOf[KeyHashRepository]).to(classOf[KeyHashTable])
+
+  def KeyHashVerifier: ScopedBindingBuilder =
+    bind(classOf[KeyHashVerifierService]).to(classOf[DefaultKeyHashVerifier])
+
   def PocCreatorService: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
@@ -127,6 +148,9 @@ class Binder extends AbstractModule {
     AESKeyProvider
     AESEncryption
     FlywayProvider
+    KeyHashVerifier
+    HashingService
+    HashKeyRepository
     ()
   }
 }
