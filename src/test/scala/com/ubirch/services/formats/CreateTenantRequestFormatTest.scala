@@ -12,16 +12,15 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
         val createTenantRequestJSON = parse("""
-          |{
-          |    "tenantName": "someRandomName",
-          |    "usageType": "API",
-          |    "deviceCreationToken": "1234567890",
-          |    "certificationCreationToken": "987654321",
-          |    "idGardIdentifier": "gard-identifier",
-          |    "tenantGroupId": "random-group",
-          |    "tenantOrganisationalUnitGroupId": "organisational-group-id"
-          |}
-          |""".stripMargin)
+                                              |{
+                                              |    "tenantName": "someRandomName",
+                                              |    "usageType": "API",
+                                              |    "deviceCreationToken": "1234567890",
+                                              |    "certificationCreationToken": "987654321",
+                                              |    "idGardIdentifier": "gard-identifier",
+                                              |    "tenantGroupId": "random-group"
+                                              |}
+                                              |""".stripMargin)
 
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
@@ -29,8 +28,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           PlainDeviceCreationToken("1234567890"),
           PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
-          TenantGroupId("random-group"),
-          TenantOrganisationalUnitGroupId("organisational-group-id")
+          TenantGroupId("random-group")
         )
       }
     }
@@ -47,16 +45,16 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
     "Fail to parse JSON if one of required values is not provided" in {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
-        val createTenantRequestJSON = parse("""
-          |{
-          |    "tenantName": "someRandomName",
-          |    "usageType": "API",
-          |    "deviceCreationToken": "1234567890",
-          |    "idGardIdentifier": "gard-identifier",
-          |    "tenantGroupId": "random-group",
-          |    "tenantOrganisationalUnitGroupId": "organisational-group-id"
-          |}
-          |""".stripMargin)
+        val createTenantRequestJSON = parse(
+          """
+            |{
+            |    "tenantName": "someRandomName",
+            |    "usageType": "API",
+            |    "deviceCreationToken": "1234567890",
+            |    "idGardIdentifier": "gard-identifier",
+            |    "tenantGroupId": "random-group"
+            |}
+            |""".stripMargin)
 
         createTenantRequestJSON.extractOpt[CreateTenantRequest] shouldBe None
       }

@@ -21,7 +21,7 @@ case class PostgresQuillJdbcContext @Inject() (lifecycle: Lifecycle) extends Qui
         throw new IllegalStateException(
           "something went wrong on constructing postgres jdbc context; we're hiding the original exception message," +
             " so no password will be shown. You might want to activate the error and change the password afterwards.")
-      case ex => throw ex
+      case ex: Throwable => throw ex
     }
 
   lifecycle.addStopHook(() => Future.successful(ctx.close()))

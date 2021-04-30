@@ -55,6 +55,14 @@ object ConfPaths {
     final val SECRET_KEY = "system.aesEncryption.secretKey"
   }
 
+  trait PostgresPaths {
+    final val SERVER_NAME = "database.dataSource.serverName"
+    final val USER = "database.dataSource.user"
+    final val PASSWORD = "database.dataSource.password"
+    final val PORT = "database.dataSource.portNumber"
+  }
+
+
   object GenericConfPaths extends GenericConfPaths
 
   object HttpServerConfPaths extends HttpServerConfPaths
@@ -64,4 +72,6 @@ object ConfPaths {
   object ServicesConfPaths extends ServicesConfPaths
 
   object AESEncryptionPaths extends AESEncryption
+
+  object PostgresPaths extends PostgresPaths
 }
