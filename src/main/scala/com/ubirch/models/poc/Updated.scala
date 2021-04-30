@@ -1,6 +1,6 @@
 package com.ubirch.models.poc
 
-import io.getquill.{Embedded, MappedEncoding}
+import io.getquill.{ Embedded, MappedEncoding }
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormatterBuilder
 

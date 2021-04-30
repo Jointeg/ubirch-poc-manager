@@ -4,10 +4,10 @@ import com.ubirch.models.NOK
 import org.json4s.JNothing
 import org.json4s.JsonAST.JValue
 import org.scalatra.ScalatraBase
-import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}
+import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
 
-import java.util.{Locale, UUID}
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import java.util.{ Locale, UUID }
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import scala.language.implicitConversions
 import scala.util.Try
 
@@ -35,7 +35,7 @@ trait BearerAuthSupport[TokenType <: AnyRef] {
     val predicates: Seq[TokenType => Boolean] = p
     bearerAuth() match {
       case Some(value) if predicates.forall(x => x(value)) => action(value)
-      case _ => halt(403, NOK.authenticationError("Forbidden"))
+      case _                                               => halt(403, NOK.authenticationError("Forbidden"))
     }
   }
 
@@ -72,8 +72,8 @@ abstract class BearerAuthStrategy[TokenType <: AnyRef](override protected val ap
 
   override def isValid(implicit request: HttpServletRequest): Boolean = request.isBearerAuth && request.providesAuth
 
-  override def authenticate()(implicit
-    request: HttpServletRequest,
+  override def authenticate()(
+    implicit request: HttpServletRequest,
     response: HttpServletResponse): Option[TokenType] = {
     validate(request.token)
   }

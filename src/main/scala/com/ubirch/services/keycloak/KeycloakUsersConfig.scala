@@ -1,6 +1,6 @@
 package com.ubirch.services.keycloak
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths
 

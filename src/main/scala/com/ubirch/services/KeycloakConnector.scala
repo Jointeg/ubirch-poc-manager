@@ -22,12 +22,12 @@ class DefaultKeycloakConnector @Inject() (
   extends KeycloakConnector {
   override def getKeycloak(keycloakInstance: KeycloakInstance): Keycloak =
     keycloakInstance match {
-      case UsersKeycloak => usersKeycloakConnector.keycloak
+      case UsersKeycloak  => usersKeycloakConnector.keycloak
       case DeviceKeycloak => deviceKeycloakConnector.keycloak
     }
   override def getKeycloakRealm(keycloakInstance: KeycloakInstance): String =
     keycloakInstance match {
-      case UsersKeycloak => keycloakUsersConfig.realm
+      case UsersKeycloak  => keycloakUsersConfig.realm
       case DeviceKeycloak => keycloakDeviceConfig.realm
     }
 }

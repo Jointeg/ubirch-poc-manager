@@ -1,5 +1,5 @@
 package com.ubirch.models.tenant
-import com.ubirch.models.auth.{Base64String, EncryptedData}
+import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import io.getquill.MappedEncoding
 
 final case class EncryptedDeviceCreationToken(value: EncryptedData) extends AnyVal

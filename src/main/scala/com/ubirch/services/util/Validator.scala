@@ -8,7 +8,7 @@ import org.json4s.native.JsonMethods._
 
 import java.net.URL
 import javax.mail.internet.InternetAddress
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object Validator {
 
@@ -19,7 +19,7 @@ object Validator {
     else
       Try(parse(str)) match {
         case Success(json) => Some(json).validNel
-        case Failure(_) => jsonError(header).invalidNel
+        case Failure(_)    => jsonError(header).invalidNel
       }
   }
 
@@ -44,7 +44,7 @@ object Validator {
       case Success(boolean) if boolean =>
         Try(new URL(str)) match {
           case Success(url) => Some(url).validNel
-          case Failure(_) => urlError(header).invalidNel
+          case Failure(_)   => urlError(header).invalidNel
         }
       case _ => None.validNel
     }
@@ -56,7 +56,7 @@ object Validator {
   def validateBoolean(header: String, str: String): AllErrorsOr[Boolean] = {
     Try(str.toBoolean) match {
       case Success(boolean) => boolean.validNel
-      case Failure(_) => booleanError(header).invalidNel
+      case Failure(_)       => booleanError(header).invalidNel
     }
   }
 
@@ -69,7 +69,7 @@ object Validator {
       phoneValidationError(header).invalidNel
     str match {
       case phoneRegex(_*) => str.validNel
-      case _ => phoneValidationError(header).invalidNel
+      case _              => phoneValidationError(header).invalidNel
     }
   }
 
@@ -100,7 +100,7 @@ object Validator {
     else
       Try(str.toInt) match {
         case Success(int) => int.validNel
-        case Failure(_) => zipCodeDigitError(header).invalidNel
+        case Failure(_)   => zipCodeDigitError(header).invalidNel
       }
   }
 

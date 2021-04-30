@@ -1,16 +1,20 @@
 package com.ubirch.services.keycloak.users
 
 import cats.data.OptionT
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.keycloak.user.{CreateKeycloakUser, UserAlreadyExists}
+import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists }
 import com.ubirch.models.user.UserName
-import com.ubirch.services.{KeycloakConnector, KeycloakInstance, UsersKeycloak}
-import com.ubirch.services.keycloak.{KeycloakUsersConfig, UsersKeycloakConnector}
+import com.ubirch.services.{ KeycloakConnector, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.keycloak.{ KeycloakUsersConfig, UsersKeycloakConnector }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
-import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{
+  iterableAsScalaIterableConverter,
+  mapAsJavaMapConverter,
+  seqAsJavaListConverter
+}
 
 trait KeycloakUserService {
   def createUser(

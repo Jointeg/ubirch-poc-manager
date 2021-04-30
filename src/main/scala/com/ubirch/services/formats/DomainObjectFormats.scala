@@ -1,7 +1,7 @@
 package com.ubirch.services.formats
 import com.ubirch.models.tenant._
 import org.json4s.JsonAST.JString
-import org.json4s.{CustomSerializer, MappingException}
+import org.json4s.{ CustomSerializer, MappingException }
 
 object DomainObjectFormats {
   val all = List(
@@ -14,7 +14,7 @@ object DomainObjectFormats {
       (
         {
           case JString(value) if value.nonEmpty => decode(value)
-          case JString(_) => throw new MappingException("Can't convert empty string to " + Class)
+          case JString(_)                       => throw new MappingException("Can't convert empty string to " + Class)
         },
         {
           case a: A => JString(encode(a))

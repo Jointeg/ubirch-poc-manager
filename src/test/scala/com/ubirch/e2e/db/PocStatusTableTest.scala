@@ -10,7 +10,7 @@ import scala.concurrent.duration.DurationInt
 
 class PocStatusTableTest extends E2ETestBase {
 
-  private def createPocStatus(id: UUID=UUID.randomUUID() ): PocStatus = PocStatus(
+  private def createPocStatus(id: UUID = UUID.randomUUID()): PocStatus = PocStatus(
     id,
     validDataSchemaGroup = true,
     clientCertRequired = false,

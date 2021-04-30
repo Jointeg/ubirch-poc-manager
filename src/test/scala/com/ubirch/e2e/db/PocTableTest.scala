@@ -1,6 +1,6 @@
 package com.ubirch.e2e.db
 
-import com.ubirch.db.tables.{PocRepository, PocStatusRepository}
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc._
 import org.postgresql.util.PSQLException

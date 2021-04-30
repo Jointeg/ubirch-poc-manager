@@ -3,21 +3,21 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.ServicesConfPaths
-import com.ubirch.db.tables.{PocStatusTable, PocTable}
-import com.ubirch.models.poc.{Poc, PocStatus}
+import com.ubirch.db.tables.{ PocStatusTable, PocTable }
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.services.poc.util.CsvConstants
 import monix.eval.Task
 import monix.execution.Scheduler
 
 import javax.inject.Singleton
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 trait PocBatchHandlerTrait {
   def createListOfPoCs(csv: String): Task[Either[String, Unit]]
 }
 
 @Singleton
-class PocBatchHandlerImpl @Inject()(conf: Config, pocTable: PocTable, pocStatusTable: PocStatusTable)
+class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatusTable: PocStatusTable)
   extends PocBatchHandlerTrait {
 
   private val csvHandler = new CsvPocBatchParserImp

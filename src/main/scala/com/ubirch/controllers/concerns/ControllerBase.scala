@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
 import com.ubirch.util.ServiceMetrics
 import monix.eval.Task
-import monix.execution.{CancelableFuture, Scheduler}
+import monix.execution.{ CancelableFuture, Scheduler }
 import org.apache.commons.compress.utils.IOUtils
 import org.json4s.MappingException
 import org.scalatra._
@@ -12,8 +12,8 @@ import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
 
 import java.io.ByteArrayInputStream
-import javax.servlet.http.{HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse}
-import javax.servlet.{ReadListener, ServletInputStream}
+import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
+import javax.servlet.{ ReadListener, ServletInputStream }
 import scala.concurrent.Future
 import scala.util.Try
 
@@ -37,7 +37,8 @@ class CachedBodyServletInputStream(cachedBody: Array[Byte], raw: ServletInputStr
 
 }
 
-/** *
+/**
+  * *
   * Represents a customized HttpServletRequest that allows us to decorate the original object with extra info
   * or extra functionality.
   * Initially, it supports the re-consumption of the body stream
@@ -76,8 +77,8 @@ abstract class ControllerBase
   with ServiceMetrics
   with LazyLogging {
 
-  def actionResult(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit
-    request: HttpServletRequest,
+  def actionResult(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(
+    implicit request: HttpServletRequest,
     response: HttpServletResponse): Task[ActionResult] = {
     for {
       _ <- Task.delay(logRequestInfo)
@@ -106,8 +107,8 @@ abstract class ControllerBase
     new AsyncResult() { override val is: Future[_] = body() }
   }
 
-  def asyncResult(name: String)(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(implicit
-    request: HttpServletRequest,
+  def asyncResult(name: String)(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(
+    implicit request: HttpServletRequest,
     response: HttpServletResponse,
     scheduler: Scheduler): AsyncResult = {
     asyncResultCore(() => count(name)(actionResult(body).runToFuture))

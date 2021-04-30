@@ -12,11 +12,12 @@ import javax.inject._
 @Singleton
 class ResourcesController @Inject() (val swagger: Swagger) extends ScalatraServlet with NativeSwaggerBase
 
-object RestApiInfo extends ApiInfo(
-  "POC manager",
-  "These are the available endpoints for managing POCs. For more information drop me an email at carlos.sanchez at ubirch.com",
-  "https://ubirch.de",
-  "carlos.sanchez@ubirch.com",
-  "Apache License, Version 2.0",
-  "https://www.apache.org/licenses/LICENSE-2.0"
-)
+object RestApiInfo
+  extends ApiInfo(
+    "POC manager",
+    "These are the available endpoints for managing POCs. For more information drop me an email at carlos.sanchez at ubirch.com",
+    "https://ubirch.de",
+    "carlos.sanchez@ubirch.com",
+    "Apache License, Version 2.0",
+    "https://www.apache.org/licenses/LICENSE-2.0"
+  )

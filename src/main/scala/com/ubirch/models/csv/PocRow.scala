@@ -1,26 +1,26 @@
 package com.ubirch.models.csv
 
 case class PocRow(
-                   externalId: String,
-                   pocName: String,
-                   pocStreet: String,
-                   pocHouseNumber: String,
-                   pocAdditionalAddress: String,
-                   pocZipcode: String,
-                   pocCity: String,
-                   pocCounty: String,
-                   pocFederalState: String,
-                   pocCountry: String,
-                   pocPhone: String,
-                   pocCertifyApp: String,
-                   logoUrl: String,
-                   clientCert: String,
-                   dataSchemaId: String,
-                   managerSurname: String,
-                   managerName: String,
-                   managerEmail: String,
-                   managerMobilePhone: String,
-                   extraConfig: String)
+  externalId: String,
+  pocName: String,
+  pocStreet: String,
+  pocHouseNumber: String,
+  pocAdditionalAddress: String,
+  pocZipcode: String,
+  pocCity: String,
+  pocCounty: String,
+  pocFederalState: String,
+  pocCountry: String,
+  pocPhone: String,
+  pocCertifyApp: String,
+  logoUrl: String,
+  clientCert: String,
+  dataSchemaId: String,
+  managerSurname: String,
+  managerName: String,
+  managerEmail: String,
+  managerMobilePhone: String,
+  extraConfig: String)
 
 object PocRow {
 
