@@ -172,8 +172,9 @@ object FakeToken {
       |  "resource_access": {
       |    "account": {
       |      "roles": [
-      |      "tenant-admin",
-      |      "T_tenantName",
+      |        "manage-account",
+      |        "manage-account-links",
+      |        "view-profile",
       |      ]
       |    }
       |  },
@@ -259,8 +260,6 @@ object FakeToken {
       |      "USER",
       |      "certification-vaccination",
       |      "vaccination-center-altoetting",
-      |      "tenant-admin",
-      |      "T_tenantName"
       |    ]
       |  },
       |  "resource_access": {
@@ -397,7 +396,7 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
   }
 
   val user: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.user, UsersKeycloak)
-  val userOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.user, DeviceKeycloak)
+  val userOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.tenantAdmin, DeviceKeycloak)
   val superAdmin: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
   val superAdminOnUsersKeycloak: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.superAdmin, UsersKeycloak)
   val userWithDoubleRoles: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.userWithDoubleRoles, UsersKeycloak)

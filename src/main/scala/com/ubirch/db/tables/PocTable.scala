@@ -9,7 +9,7 @@ import monix.eval.Task
 import java.util.UUID
 
 trait PocRepository {
-  def createPoc(poc: Poc): Task[Any]
+  def createPoc(poc: Poc): Task[UUID]
 
   def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long]
 
@@ -72,7 +72,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
     }
 
-  override def createPoc(poc: Poc): Task[Any] = Task(run(createPocQuery(poc)))
+  override def createPoc(poc: Poc): Task[UUID] = Task(run(createPocQuery(poc))).map(_ => poc.id)
 
   override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long] =
     Task {

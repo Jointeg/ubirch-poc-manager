@@ -14,8 +14,8 @@ object ModelCreationHelper {
   private val encryptedData = EncryptedData(base64String)
   private val deviceCreationToken = EncryptedDeviceCreationToken(encryptedData)
   private val certCreationToken = EncryptedCertificationCreationToken(encryptedData)
-
-  def createTenant(id: UUID = UUID.randomUUID(), name: String = "tenantName"): Tenant = {
+  private val tenantName = "tenantName"
+  def createTenant(id: UUID = UUID.randomUUID(), name: String = tenantName): Tenant = {
     Tenant(
       TenantId(id),
       TenantName(name),
@@ -30,7 +30,7 @@ object ModelCreationHelper {
   def createPoc(
     id: UUID = UUID.randomUUID(),
     tenantId: UUID = UUID.randomUUID(),
-    tenantGroupName: String = "tenantGroupName",
+    tenantGroupName: String = s"T_$tenantName",
     externalId: String = UUID.randomUUID().toString): Poc =
     Poc(
       id,

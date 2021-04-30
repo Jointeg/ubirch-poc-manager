@@ -1,12 +1,11 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{ createPocStatus, createTenant }
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, PocTable, TenantTable }
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.PocStatus
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.formats.DomainObjectFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
@@ -24,7 +23,8 @@ import scala.concurrent.duration.DurationInt
 
 class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  private val pocId: UUID = UUID.randomUUID()
+  private val poc1id: UUID = UUID.randomUUID()
+  private val poc2id: UUID = UUID.randomUUID()
   private val tenantId: UUID = UUID.randomUUID()
   implicit private val formats: Formats =
     DefaultFormats.lossless ++ DomainObjectFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
@@ -37,10 +37,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
   private val goodCsv =
     s"""$headerLine
-       |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+       |${poc1id.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   "Endpoint POST pocs/create" must {
-
     "return success without invalid rows" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
@@ -54,7 +53,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         }
         val repo = Injector.get[PocRepository]
         val pocs = await(repo.getAllPocsByTenantId(tenantId), 5.seconds)
-        pocs.map(_.externalId shouldBe pocId.toString)
+        pocs.map(_.externalId shouldBe poc1id.toString)
       }
     }
 
@@ -85,7 +84,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     "return invalid csv rows" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-
         addTenantToDB()
         post(
           "/pocs/create",
@@ -126,6 +124,63 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         get(s"/pocStatus/$randomID", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(404)
           assert(body == s"NOK(1.0,false,'ResourceNotFoundError,pocStatus with $randomID couldn't be found)")
+        }
+      }
+    }
+  }
+
+  "Endpoint GET /pocs" must {
+    "return only pocs of the tenant" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        val pocTable = Injector.get[PocRepository]
+        addTenantToDB()
+        val r = for {
+          _ <- pocTable.createPoc(createPoc(poc1id, tenantId))
+          _ <- pocTable.createPoc(createPoc(poc2id, tenantId))
+          _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), UUID.randomUUID()))
+          pocs <- pocTable.getAllPocsByTenantId(tenantId)
+        } yield {
+          pocs
+        }
+        val pocs = await(r, 5.seconds)
+        pocs.size shouldBe 2
+        get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
+          status should equal(200)
+          body shouldBe write[List[Poc]](pocs)
+        }
+      }
+    }
+
+    "return Bad Request when tenant doesn't exist" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
+          println(body)
+          status should equal(400)
+          assert(body == "NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for T_tenantName)")
+        }
+      }
+    }
+
+    "return Success also when list of PoCs is empty" in {
+      withInjector { Injector =>
+        addTenantToDB()
+        val token = Injector.get[FakeTokenCreator]
+        get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
+          status should equal(200)
+          body shouldBe "[]"
+        }
+      }
+    }
+
+    "return Bad Request when user is no tenant admin" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        get(s"/pocs", headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(403)
+          println(body)
+          assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
       }
     }
