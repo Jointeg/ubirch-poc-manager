@@ -1,0 +1,1 @@
+ALTER TABLE poc_manager.tenants DROP COLUMN organisational_unit_group_id;
