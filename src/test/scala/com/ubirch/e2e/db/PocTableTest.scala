@@ -115,7 +115,7 @@ class PocTableTest extends E2ETestBase {
           case (Some(pocStatusOpt: PocStatus), Some(pocOpt: Poc)) =>
             pocOpt.copy(lastUpdated = poc1.lastUpdated) shouldBe poc1
             pocStatusOpt.copy(lastUpdated = pocStatus1.lastUpdated) shouldBe pocStatus1
-          case _ => assert(condition = false)
+          case _ => assert(false)
         }
       }
     }
