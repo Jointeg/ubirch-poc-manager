@@ -7,6 +7,7 @@ import com.ubirch.services.rest.RestService
 import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.flywaydb.core.api.FlywayException
 
 import java.util.concurrent.CountDownLatch
 import javax.inject.{Inject, Singleton}
@@ -15,11 +16,11 @@ import javax.inject.{Inject, Singleton}
   * Represents a bootable service object that starts the system
   */
 @Singleton
-class Service @Inject()(
-                         restService: RestService,
-                         publicKeyPoolService: PublicKeyPoolService,
-                         flywayProvider: FlywayProvider
-                         /*keycloakUserPollingService: UserPollingService*/)(implicit scheduler: Scheduler)
+class Service @Inject() (
+  restService: RestService,
+  publicKeyPoolService: PublicKeyPoolService,
+  flywayProvider: FlywayProvider
+  /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
@@ -36,7 +37,16 @@ class Service @Inject()(
       }
       .runToFuture
 
-    flywayProvider.getFlyway.migrate()
+    try {
+      flywayProvider.getFlyway.migrate()
+    } catch {
+      case ex: FlywayException =>
+        logger.error(s"something went wrong on database migration: ${ex.getMessage}", ex)
+        throw ex
+      case ex: Throwable =>
+        logger.error(s"something went wrong on database migration; unknown exceptionType: ${ex.getMessage}", ex)
+        throw ex
+    }
 
     //    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
     //
