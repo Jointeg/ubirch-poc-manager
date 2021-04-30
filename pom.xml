@@ -193,6 +193,12 @@
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-services</artifactId>
             <version>${keycloack.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
             <scope>provided</scope>
         </dependency>
 
@@ -454,6 +460,12 @@
             <version>2.2.9</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>${flyway.version}</version>
+        </dependency>
+
         <!-- test dependencies -->
         <dependency>
             <groupId>org.scalatest</groupId>
@@ -461,12 +473,7 @@
             <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-            <version>${flyway.version}</version>
-            <scope>test</scope>
-        </dependency>
+
 
     </dependencies>
 

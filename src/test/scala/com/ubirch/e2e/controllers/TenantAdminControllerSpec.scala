@@ -1,7 +1,7 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.createTenant
+import com.ubirch.ModelCreationHelper.{createPocStatus, createTenant}
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.e2e.E2ETestBase
@@ -11,6 +11,7 @@ import com.ubirch.services.formats.DomainObjectFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import io.prometheus.client.CollectorRegistry
 import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
 import org.json4s.native.Serialization.write
@@ -42,7 +43,11 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     "return success without invalid rows" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        post("/pocs/create", body = goodCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
+        addTenantToDB()
+        post(
+          "/pocs/create",
+          body = goodCsv.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body.isEmpty)
         }
@@ -55,7 +60,10 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     "return Forbidden when user is not a tenant-admin" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.superAdmin.prepare)) {
+        addTenantToDB()
+        post("/pocs/create",
+          body = badCsv.getBytes(),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
           status should equal(403)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
@@ -64,18 +72,14 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
     "return Bad Request when tenant doesn't exist" in {
       withInjector { Injector =>
-
         val token = Injector.get[FakeTokenCreator]
-        val tenantTable = Injector.get[TenantTable]
-        await(tenantTable.deleteTenantById(TenantId(tenantId)), 5.seconds)
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
+        post(
+          "/pocs/create",
+          body = badCsv.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(400)
           assert(body == "NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for T_tenantName)")
         }
-
-        //restore required tenant (needed for next test)
-        val tenant = createTenant(tenantId)
-        await(tenantTable.createTenant(tenant), 5.seconds) shouldBe TenantId(tenantId)
       }
     }
 
@@ -83,8 +87,11 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
 
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.tenantAdmin.prepare)) {
-          println(body)
+        addTenantToDB()
+        post(
+          "/pocs/create",
+          body = badCsv.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
         }
@@ -92,17 +99,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     }
   }
 
-  private def createPocStatus(id: UUID = UUID.randomUUID()): PocStatus =
-    PocStatus(
-      id,
-      validDataSchemaGroup = true,
-      clientCertRequired = false,
-      clientCertDownloaded = None,
-      clientCertProvided = None,
-      logoRequired = false,
-      logoReceived = None,
-      logoStored = None
-    )
 
   "Endpoint GET pocStatus" must {
     "return valid pocStatus" in {
@@ -118,7 +114,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         }
         val storedStatus = await(res1, 5.seconds).get
         storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
-        get(s"/pocStatus/${pocStatus.pocId}", headers = Map("authorization" -> token.user.prepare)) {
+        get(s"/pocStatus/${pocStatus.pocId}", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
           assert(body == write[PocStatus](storedStatus))
         }
@@ -127,20 +123,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
     "return resource not found error" in {
       withInjector { Injector =>
-        val repo = Injector.get[PocStatusRepository]
         val token = Injector.get[FakeTokenCreator]
-        val pocStatus = createPocStatus()
-        val res1 = for {
-          _ <- repo.createPocStatus(pocStatus)
-          data <- repo.getPocStatus(pocStatus.pocId)
-        } yield {
-          data
-        }
-        val storedStatus = await(res1, 5.seconds).get
-        storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
         val randomID = UUID.randomUUID()
-
-        get(s"/pocStatus/$randomID", headers = Map("authorization" -> token.user.prepare)) {
+        get(s"/pocStatus/$randomID", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(404)
           assert(body == s"NOK(1.0,false,'ResourceNotFoundError,pocStatus with $randomID couldn't be found)")
         }
@@ -155,13 +140,20 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
   override protected def beforeAll: Unit = {
     super.beforeAll()
     withInjector { injector =>
+
       lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init, 2.seconds)
+      await(pool.init(UsersKeycloak, DeviceKeycloak), 2.seconds)
+
+      lazy val tenantAdminController = injector.get[TenantAdminController]
+      addServlet(tenantAdminController, "/*")
+    }
+  }
+
+  private def addTenantToDB(): TenantId = {
+    withInjector { injector =>
       val tenantTable = injector.get[TenantTable]
       val tenant = createTenant(tenantId)
       await(tenantTable.createTenant(tenant), 5.seconds)
-      lazy val tenantAdminController = injector.get[TenantAdminController]
-      addServlet(tenantAdminController, "/*")
     }
   }
 

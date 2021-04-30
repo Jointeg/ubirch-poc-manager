@@ -1,7 +1,7 @@
 package com.ubirch.services.keycloak.auth
 
 import com.google.inject.{Inject, Singleton}
-import com.ubirch.services.keycloak.KeycloakConfig
+import com.ubirch.services.keycloak.KeycloakUsersConfig
 import monix.eval.Task
 import org.keycloak.authorization.client.AuthzClient
 
@@ -13,14 +13,14 @@ trait AuthClient {
 }
 
 @Singleton
-class KeycloakAuthzClient @Inject() (keycloakConfig: KeycloakConfig) extends AuthClient {
+class KeycloakAuthzClient @Inject()(keycloakUsersConfig: KeycloakUsersConfig) extends AuthClient {
 
-  private val client: AuthzClient = createAuthorisationClient(keycloakConfig.clientConfig)
+  private val client: AuthzClient = createAuthorisationClient(keycloakUsersConfig.clientConfig)
 
   override def obtainAccessToken(username: String, password: String): Task[String] =
     Task {
       client
-        .obtainAccessToken(keycloakConfig.clientAdminUsername, keycloakConfig.clientAdminPassword)
+        .obtainAccessToken(username, password)
         .getToken
     }
 

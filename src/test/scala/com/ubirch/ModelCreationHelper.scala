@@ -23,8 +23,7 @@ object ModelCreationHelper {
       deviceCreationToken,
       certCreationToken,
       IdGardIdentifier("folder-identifier"),
-      TenantGroupId("T_" + name),
-      TenantOrganisationalUnitGroupId("")
+      TenantGroupId("T_" + name)
     )
   }
 

@@ -7,6 +7,7 @@ import com.ubirch.db.tables.{PocStatusRepository, TenantTable}
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.PocStatus
 import com.ubirch.models.tenant.{Tenant, TenantGroupId}
+import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import io.prometheus.client.Counter
@@ -41,7 +42,7 @@ class TenantAdminController @Inject()(
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, tokenVerificationService, publicKeyPoolService)
+    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
 
   override val successCounter: Counter =
     Counter
@@ -71,13 +72,10 @@ class TenantAdminController @Inject()(
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
 
-  //Todo: Add authentication regarding Tenant-Admin role and retrieve tenant id to add it to each PoC
-
   post("/pocs/create", operation(createListOfPocs)) {
     authenticated(_.hasRole(Symbol("tenant-admin"))) { token: Token =>
       asyncResult("Create poc batch") { _ =>
         _ =>
-
           retrieveTenantFromToken(token).flatMap {
             case Right(tenant: Tenant) =>
               pocBatchHandler
@@ -88,27 +86,15 @@ class TenantAdminController @Inject()(
                 }
 
             case Left(errorMsg: String) =>
+              logger.error(errorMsg)
               Task(BadRequest(NOK.authenticationError(errorMsg)))
           }
       }
     }
   }
 
-  private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
-    token.roles.find(_ != Symbol("tenant-admin")) match {
-
-      case Some(tenantRole) =>
-        tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
-          case Some(tenant) => Right(tenant)
-          case None => Left(s"couldn't find tenant in db for ${tenantRole.name}")
-        }
-      case None =>
-        Task(Left("the user's token is missing a tenant role"))
-    }
-  }
-
   get("/pocStatus/:id", operation(getPocStatus)) {
-    authenticated() { token =>
+    authenticated(_.hasRole(Symbol("tenant-admin"))) { token =>
       asyncResult("Get Poc Status") { _ =>
         _ =>
           val id = params("id")
@@ -129,6 +115,18 @@ class TenantAdminController @Inject()(
               }
           }
       }
+    }
+  }
+
+  private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
+    token.roles.find(_.name.startsWith("T_")) match {
+
+      case Some(tenantRole) =>
+        tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
+          case Some(tenant) => Right(tenant)
+          case None => Left(s"couldn't find tenant in db for ${tenantRole.name}")
+        }
+      case None => Task(Left("the user's token is missing a tenant role"))
     }
   }
 

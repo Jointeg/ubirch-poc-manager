@@ -1,23 +1,26 @@
 package com.ubirch.controllers.concerns
 
-import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
+import com.ubirch.services.KeycloakInstance
+import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import org.json4s.JsonAST
 import org.scalatra.ScalatraBase
 
 import java.security.PublicKey
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 class KeycloakBearerAuthStrategy(
-    protected override val app: ScalatraBase,
-    tokenVerificationService: TokenVerificationService,
-    publicKeyPoolService: PublicKeyPoolService
-) extends BearerAuthStrategy[Token](app) {
+                                  override protected val app: ScalatraBase,
+                                  keycloakInstance: KeycloakInstance,
+                                  tokenVerificationService: TokenVerificationService,
+                                  publicKeyPoolService: PublicKeyPoolService
+                                ) extends BearerAuthStrategy[Token](app) {
 
   override def name: String = "Keycloak Strategy"
 
-  override protected def validate(token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[Token] = {
+  override protected def validate(
+                                   token: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[Token] = {
     for {
-      key <- publicKeyPoolService.getDefaultKey
+      key <- publicKeyPoolService.getDefaultKey(keycloakInstance)
 
       claims <- tokenVerificationService.decodeAndVerify(token, key.asInstanceOf[PublicKey])
 

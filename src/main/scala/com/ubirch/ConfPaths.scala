@@ -19,22 +19,32 @@ object ConfPaths {
     final val PORT = "system.metrics.prometheus.port"
   }
 
-  trait TokenVerificationPaths {
-    final val CONFIG_URL = "system.tokenVerification.configURL"
-    final val KID = "system.tokenVerification.kid"
-  }
-
   trait KeycloakPaths {
-    final val SERVER_URL = "keycloak.server.url"
-    final val SERVER_REALM = "keycloak.server.realm"
-    final val USERNAME = "keycloak.server.username"
-    final val PASSWORD = "keycloak.server.password"
-    final val CLIENT_ID = "keycloak.server.clientId"
-    final val USERS_REALM = "keycloak.users.realm"
-    final val CLIENT_CONFIG = "keycloak.client.config"
-    final val CLIENT_ADMIN_USER = "keycloak.client.adminUsername"
-    final val CLIENT_ADMIN_PASSWORD = "keycloak.client.adminPassword"
-    final val USER_POLLING_INTERVAL = "keycloak.polling.interval"
+    object UsersKeycloak {
+      final val SERVER_URL = "keycloak-users.server.url"
+      final val SERVER_REALM = "keycloak-users.server.realm"
+      final val USERNAME = "keycloak-users.server.username"
+      final val PASSWORD = "keycloak-users.server.password"
+      final val CLIENT_ID = "keycloak-users.server.clientId"
+      final val REALM = "keycloak-users.realm"
+      final val CLIENT_CONFIG = "keycloak-users.client.config"
+      final val CLIENT_ADMIN_USER = "keycloak-users.client.adminUsername"
+      final val CLIENT_ADMIN_PASSWORD = "keycloak-users.client.adminPassword"
+      final val USER_POLLING_INTERVAL = "keycloak-users.polling.interval"
+      final val CONFIG_URL = "keycloak-users.tokenVerification.configURL"
+      final val KID = "keycloak-users.tokenVerification.kid"
+    }
+
+    object DeviceKeycloak {
+      final val SERVER_URL = "keycloak-device.server.url"
+      final val SERVER_REALM = "keycloak-device.server.realm"
+      final val USERNAME = "keycloak-device.server.username"
+      final val PASSWORD = "keycloak-device.server.password"
+      final val CLIENT_ID = "keycloak-device.server.clientId"
+      final val REALM = "keycloak-device.realm"
+      final val CONFIG_URL = "keycloak-device.tokenVerification.configURL"
+      final val KID = "keycloak-device.tokenVerification.kid"
+    }
   }
 
   trait ServicesConfPaths {
@@ -46,15 +56,24 @@ object ConfPaths {
     final val SECRET_KEY = "system.aesEncryption.secretKey"
   }
 
+  trait PostgresPaths {
+    final val SERVER_NAME = "database.dataSource.serverName"
+    final val USER = "database.dataSource.user"
+    final val PASSWORD = "database.dataSource.password"
+    final val PORT = "database.dataSource.portNumber"
+    final val DATABASE_NAME = "database.dataSource.databaseName"
+  }
+
+
   object GenericConfPaths extends GenericConfPaths
 
   object HttpServerConfPaths extends HttpServerConfPaths
-
-  object TokenVerificationPaths extends TokenVerificationPaths
 
   object KeycloakPaths extends KeycloakPaths
 
   object ServicesConfPaths extends ServicesConfPaths
 
   object AESEncryptionPaths extends AESEncryption
+
+  object PostgresPaths extends PostgresPaths
 }
