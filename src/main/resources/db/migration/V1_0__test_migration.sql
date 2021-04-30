@@ -7,19 +7,20 @@ CREATE TABLE IF NOT EXISTS poc_manager.users
 );
 
 
-CREATE TABLE IF NOT EXISTS poc_manager.poc_table (
-                                                     id
-                                                     UUID
-                                                     NOT
-                                                     NULL,
-                                                     tenant_id
-                                                     UUID
-                                                     NOT
-                                                     NULL,
-                                                     external_id
-                                                     varchar
+CREATE TABLE IF NOT EXISTS poc_manager.poc_table
 (
-                                                     40
+    id
+    UUID
+    NOT
+    NULL,
+    tenant_id
+    UUID
+    NOT
+    NULL,
+    external_id
+    varchar
+(
+    40
 ) NOT NULL,
     poc_name text NOT NULL,
 -- address
@@ -48,7 +49,6 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table (
     group_path text NOT NULL,
     device_id UUID NOT NULL,
     client_cert_folder text,
--- addOnsEnd
     status varchar
 (
     10
@@ -61,37 +61,76 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table (
 ),
     CONSTRAINT unique_poc UNIQUE
 (
+    tenant_id,
     external_id,
-    poc_name,
-    street,
-    house_number,
-    zipcode,
     data_schema_id
 )
 );
 
 
-CREATE TABLE IF NOT EXISTS poc_manager.poc_status_table (
-    poc_id                       UUID            NOT NULL,
-    valid_data_schema_group      boolean         NOT NULL,
-    user_realm_role_created      boolean         NOT NULL,
-    user_realm_group_created     boolean         NOT NULL,
-    device_realm_role_created    boolean         NOT NULL,
-    device_realm_group_created   boolean         NOT NULL,
-    device_created               boolean         NOT NULL,
-    client_cert_required         boolean         NOT NULL,
-    client_cert_downloaded       boolean,
-    client_cert_provided         boolean,
-    logo_required                boolean         NOT NULL,
-    logo_received                boolean,
-    logo_stored                  boolean,
-    cert_api_provided            boolean         NOT NULL,
-    go_client_provided           boolean         NOT NULL,
-    error_messages               text,
-    last_updated                 text            NOT NULL,
-    created                      text            NOT NULL,
-    PRIMARY KEY (poc_id)
-);
+CREATE TABLE IF NOT EXISTS poc_manager.poc_status_table
+(
+    poc_id
+    UUID
+    NOT
+    NULL,
+    valid_data_schema_group
+    boolean
+    NOT
+    NULL,
+    user_realm_role_created
+    boolean
+    NOT
+    NULL,
+    user_realm_group_created
+    boolean
+    NOT
+    NULL,
+    device_realm_role_created
+    boolean
+    NOT
+    NULL,
+    device_realm_group_created
+    boolean
+    NOT
+    NULL,
+    device_created
+    boolean
+    NOT
+    NULL,
+    client_cert_required
+    boolean
+    NOT
+    NULL,
+    client_cert_downloaded
+    boolean,
+    client_cert_provided
+    boolean,
+    logo_required boolean NOT NULL,
+    logo_received boolean,
+    logo_stored boolean,
+    cert_api_provided boolean NOT NULL,
+    go_client_provided
+    boolean
+    NOT
+    NULL,
+    error_messages
+    text,
+    last_updated
+    text
+    NOT
+    NULL,
+    created
+    text
+    NOT
+    NULL,
+    PRIMARY
+    KEY
+(
+    poc_id
+)
+    );
+
 
 CREATE TABLE IF NOT EXISTS poc_manager.tenants
 (
