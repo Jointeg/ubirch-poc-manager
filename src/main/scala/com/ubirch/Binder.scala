@@ -5,26 +5,22 @@ import com.google.inject.{AbstractModule, Module}
 import com.typesafe.config.Config
 import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
 import com.ubirch.db.tables._
-import com.ubirch.services.{DefaultKeycloakConnector, KeycloakConnector}
+import com.ubirch.db.{FlywayProvider, FlywayProviderImpl}
 import com.ubirch.services.auth.{AESEncryption, AESEncryptionCBCMode, AESKeyProvider, ConfigKeyProvider}
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
 import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
 import com.ubirch.services.jwt._
+import com.ubirch.services.keycloak._
 import com.ubirch.services.keycloak.auth.{AuthClient, KeycloakAuthzClient}
 import com.ubirch.services.keycloak.groups.{DefaultKeycloakGroupService, KeycloakGroupService}
 import com.ubirch.services.keycloak.roles.{DefaultKeycloakRolesService, KeycloakRolesService}
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserPollingService,
-  KeycloakUserService,
-  KeycloakUserServiceImpl,
-  UserPollingService
-}
-import com.ubirch.services.keycloak._
+import com.ubirch.services.keycloak.users.{KeycloakUserPollingService, KeycloakUserService, KeycloakUserServiceImpl, UserPollingService}
 import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
 import com.ubirch.services.poc.{PocBatchHandlerImpl, PocBatchHandlerTrait}
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{DefaultTenantService, TenantService}
+import com.ubirch.services.{DefaultKeycloakConnector, KeycloakConnector}
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.Swagger
@@ -83,15 +79,20 @@ class Binder extends AbstractModule {
     bind(classOf[UserRepository]).to(classOf[UserTable])
   def TenantRepository: ScopedBindingBuilder =
     bind(classOf[TenantRepository]).to(classOf[TenantTable])
+
   def AESKeyProvider: ScopedBindingBuilder =
     bind(classOf[AESKeyProvider]).to(classOf[ConfigKeyProvider])
+
   def AESEncryption: ScopedBindingBuilder =
     bind(classOf[AESEncryption]).to(classOf[AESEncryptionCBCMode])
+
   def PocCreatorService: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
 
   def PocStatusRepository: ScopedBindingBuilder = bind(classOf[PocStatusRepository]).to(classOf[PocStatusTable])
+
+  def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
   override def configure(): Unit = {
     Config
@@ -125,6 +126,7 @@ class Binder extends AbstractModule {
     TenantRepository
     AESKeyProvider
     AESEncryption
+    FlywayProvider
     ()
   }
 }
