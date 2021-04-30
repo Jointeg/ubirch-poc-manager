@@ -3,12 +3,7 @@ package com.ubirch.controllers
 import com.google.inject.Singleton
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.concerns.{
-  ControllerBase,
-  KeycloakBearerAuthStrategy,
-  KeycloakBearerAuthenticationSupport,
-  Token
-}
+import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
 import com.ubirch.models.NOK
 import com.ubirch.models.tenant.{API, APP, Both, CreateTenantRequest}
 import com.ubirch.services.DeviceKeycloak
@@ -72,8 +67,7 @@ class SuperAdminController @Inject() (
         bodyParam[String]("deviceCreationToken"),
         bodyParam[String]("certificationCreationToken"),
         bodyParam[String]("idGardIdentifier"),
-        bodyParam[String]("tenantGroupId"),
-        bodyParam[String]("tenantOrganisationalUnitGroupId")
+        bodyParam[String]("tenantGroupId")
       )
   }
 

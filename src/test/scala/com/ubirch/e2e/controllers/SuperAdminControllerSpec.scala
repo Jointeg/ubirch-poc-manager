@@ -6,9 +6,9 @@ import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.auth.{Base64String, EncryptedData}
 import com.ubirch.models.tenant._
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.jwt.PublicKeyPoolService
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
@@ -27,8 +27,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       |    "deviceCreationToken": "1234567890",
       |    "certificationCreationToken": "987654321",
       |    "idGardIdentifier": "gard-identifier",
-      |    "tenantGroupId": "random-group",
-      |    "tenantOrganisationalUnitGroupId": "organisationalUnitGroupId"
+      |    "tenantGroupId": "random-group"
       |}
       |""".stripMargin
   }
@@ -39,8 +38,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       |    "tenantName": "$tenantName",
       |    "deviceCreationToken": "1234567890",
       |    "idGardIdentifier": "gard-identifier",
-      |    "tenantGroupId": "random-group",
-      |    "tenantOrganisationalUnitGroupId": "organisationalUnitGroupId"
+      |    "tenantGroupId": "random-group"
       |}
       |""".stripMargin
   }
@@ -67,8 +65,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
         maybeTenant.value.groupId shouldBe TenantGroupId("random-group")
-        maybeTenant.value.organisationalUnitGroupId shouldBe TenantOrganisationalUnitGroupId(
-          "organisationalUnitGroupId")
       }
     }
 

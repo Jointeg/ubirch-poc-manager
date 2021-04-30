@@ -2,6 +2,7 @@ package com.ubirch.services.poc
 
 import cats.data.Validated.{Invalid, Valid}
 import cats.implicits.{catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal}
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
@@ -23,25 +24,33 @@ sealed trait CsvException extends Exception
 
 case class HeaderCsvException(errorMsg: String) extends CsvException
 
-class CsvPocBatchParserImp extends CsvPocBatchParserTrait {
+class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
 
   @throws[HeaderCsvException]
   override def parsePocCreationList(csv: String): Seq[Either[String, (Poc, String)]] = {
 
     val s: Source = Source.fromString(csv)
-    val lines = s.getLines()
 
-    if (lines.hasNext) {
-      validateHeaders(lines.next().split(columnSeparator).map(_.trim))
+    try {
+      val lines = s.getLines()
+      if (lines.hasNext) {
+        validateHeaders(lines.next().split(columnSeparator).map(_.trim))
+      }
+      val pocRows = lines.map { line =>
+        val cols = line.split(columnSeparator).map(_.trim)
+        parsePoC(cols, line)
+      }.toSeq
+      pocRows
+    } catch {
+      case ex: HeaderCsvException => throw ex
+
+      case ex: Throwable =>
+        val errorMsg = "something unexpected went wrong parsing the csv"
+        logger.error(errorMsg, ex)
+        Seq(Left(errorMsg))
+    } finally {
+      s.close()
     }
-
-    val pocRows = lines.map { line =>
-      val cols = line.split(columnSeparator).map(_.trim)
-      parsePoC(cols, line)
-    }.toSeq
-
-    s.close
-    pocRows
   }
 
   @throws[HeaderCsvException]
