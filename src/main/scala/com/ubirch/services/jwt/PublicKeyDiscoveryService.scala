@@ -3,6 +3,10 @@ package com.ubirch.services.jwt
 import cats.effect.{ ExitCode, Resource }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.KeycloakPaths
+import com.ubirch.services.config.ConfigProvider
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import monix.eval.{ Task, TaskApp }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
@@ -36,7 +40,9 @@ class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterS
   final val KID = "kid"
 
   private def readURLResource(url: URL): Resource[Task, BufferedSource] = {
-    Resource.make { Task(Source.fromURL(url)) } { in => Task(in.close()) }
+    Resource.make {
+      Task(Source.fromURL(url))
+    } { in => Task(in.close()) }
   }
 
   private def readURL(url: URL): Task[String] = {

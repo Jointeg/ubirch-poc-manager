@@ -12,7 +12,9 @@ import scala.collection.concurrent.TrieMap
 
 trait PublicKeyPoolService {
   def getKey(kid: String): Option[Key]
+
   def getDefaultKey(keycloakInstance: KeycloakInstance): Option[Key]
+
   def init(keycloakInstances: KeycloakInstance*): Task[List[(String, Key)]]
 }
 
@@ -38,25 +40,24 @@ class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryS
     publicKeyDiscoveryService.getKey(keycloakInstance, kid)
 
   override def init(keycloakInstances: KeycloakInstance*): Task[List[(String, Key)]] = {
-    Task
-      .sequence {
-        keycloakInstances.toList.flatMap(instance => acceptedKids(instance).map(kid => (instance, kid))).map {
-          case (instance, kid) =>
-            for {
-              maybeKey <- getKeyFromDiscoveryService(instance, kid)
-            } yield {
+    Task.sequence {
+      keycloakInstances.toList.flatMap(instance => acceptedKids(instance).map(kid => (instance, kid))).map {
+        case (instance, kid) =>
+          for {
+            maybeKey <- getKeyFromDiscoveryService(instance, kid)
+          } yield {
 
-              val res = maybeKey match {
-                case Some(value) => cache.put(kid, value).map(x => (kid, x))
-                case None =>
-                  logger.warn("kid_not_found={}", kid)
-                  None
-              }
-              res.toList
-
+            val res = maybeKey match {
+              case Some(value) => cache.put(kid, value).map(x => (kid, x))
+              case None =>
+                logger.warn("kid_not_found={}", kid)
+                None
             }
-        }
+            res.toList
+
+          }
       }
+    }
       .map(_.flatten)
 
   }

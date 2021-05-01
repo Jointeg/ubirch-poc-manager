@@ -6,10 +6,15 @@ import com.ubirch.ConfPaths
 
 trait KeycloakDeviceConfig {
   def serverUrl: String
+
   def serverRealm: String
+
   def username: String
+
   def password: String
+
   def clientId: String
+
   def realm: String
 }
 

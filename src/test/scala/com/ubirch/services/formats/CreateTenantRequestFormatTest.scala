@@ -11,16 +11,17 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
     "Parse if all required fields are provided" in {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
-        val createTenantRequestJSON = parse("""
-                                              |{
-                                              |    "tenantName": "someRandomName",
-                                              |    "usageType": "API",
-                                              |    "deviceCreationToken": "1234567890",
-                                              |    "certificationCreationToken": "987654321",
-                                              |    "idGardIdentifier": "gard-identifier",
-                                              |    "tenantGroupId": "random-group"
-                                              |}
-                                              |""".stripMargin)
+        val createTenantRequestJSON = parse(
+          """
+            |{
+            |    "tenantName": "someRandomName",
+            |    "usageType": "API",
+            |    "deviceCreationToken": "1234567890",
+            |    "certificationCreationToken": "987654321",
+            |    "idGardIdentifier": "gard-identifier",
+            |    "tenantGroupId": "random-group"
+            |}
+            |""".stripMargin)
 
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),

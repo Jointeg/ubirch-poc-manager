@@ -1,4 +1,5 @@
 package com.ubirch.services
+
 import com.ubirch.services.keycloak.{
   DeviceKeycloakConnector,
   KeycloakDeviceConfig,
@@ -11,6 +12,7 @@ import javax.inject.Inject
 
 trait KeycloakConnector {
   def getKeycloak(keycloakInstance: KeycloakInstance): Keycloak
+
   def getKeycloakRealm(keycloakInstance: KeycloakInstance): String
 }
 
@@ -25,6 +27,7 @@ class DefaultKeycloakConnector @Inject() (
       case UsersKeycloak  => usersKeycloakConnector.keycloak
       case DeviceKeycloak => deviceKeycloakConnector.keycloak
     }
+
   override def getKeycloakRealm(keycloakInstance: KeycloakInstance): String =
     keycloakInstance match {
       case UsersKeycloak  => keycloakUsersConfig.realm
@@ -33,5 +36,7 @@ class DefaultKeycloakConnector @Inject() (
 }
 
 sealed trait KeycloakInstance
+
 case object UsersKeycloak extends KeycloakInstance
+
 case object DeviceKeycloak extends KeycloakInstance

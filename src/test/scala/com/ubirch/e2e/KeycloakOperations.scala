@@ -100,4 +100,5 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
 }
 
 case class TenantAdmin(userName: UserName, password: String)
+
 case class SuperAdmin(userName: UserName, password: String)

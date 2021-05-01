@@ -11,6 +11,7 @@ import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import org.scalactic.StringNormalizations._
 
 import scala.concurrent.duration.DurationInt

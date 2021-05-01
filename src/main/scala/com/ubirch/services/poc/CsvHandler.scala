@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
+import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
@@ -16,7 +17,7 @@ import scala.io.Source
 trait CsvPocBatchParserTrait {
 
   @throws[HeaderCsvException]
-  def parsePocCreationList(csv: String): Seq[Either[String, (Poc, String)]]
+  def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]]
 
 }
 
@@ -27,7 +28,7 @@ case class HeaderCsvException(errorMsg: String) extends CsvException
 class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
 
   @throws[HeaderCsvException]
-  override def parsePocCreationList(csv: String): Seq[Either[String, (Poc, String)]] = {
+  override def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]] = {
 
     val s: Source = Source.fromString(csv)
 
@@ -38,7 +39,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       }
       val pocRows = lines.map { line =>
         val cols = line.split(columnSeparator).map(_.trim)
-        parsePoC(cols, line)
+        parsePoC(cols, line, tenant)
       }.toSeq
       pocRows
     } catch {
@@ -63,12 +64,12 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
     }
   }
 
-  private def parsePoC(cols: Array[String], line: String): Either[String, (Poc, String)] = {
+  private def parsePoC(cols: Array[String], line: String, tenant: Tenant): Either[String, (Poc, String)] = {
 
     val csvPoc = PocRow.fromCsv(cols)
     val pocAddress = validatePocAddress(csvPoc)
     val pocManager = validatePocManager(csvPoc)
-    val poc = validatePoc(csvPoc, pocAddress, pocManager)
+    val poc = validatePoc(csvPoc, pocAddress, pocManager, tenant)
 
     poc match {
       case Valid(poc) =>
@@ -81,7 +82,8 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
   private def validatePoc(
     csvPoc: PocRow,
     pocAddress: AllErrorsOr[Address],
-    pocManager: AllErrorsOr[PocManager]): AllErrorsOr[Poc] =
+    pocManager: AllErrorsOr[PocManager],
+    tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPoc.externalId),
       validateString(pocName, csvPoc.pocName),
@@ -94,20 +96,36 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
     ).mapN {
-      (pocId, pocName, address, pocPhone, pocCertifyApp, logoUrl, clientCert, dataSchemaId, extraConfig, manager) =>
-        poc.Poc(
-          UUID.randomUUID(),
-          pocId,
-          pocName,
-          address,
-          pocPhone,
-          pocCertifyApp,
-          logoUrl.map(LogoURL(_)),
-          clientCert,
-          dataSchemaId,
-          extraConfig.map(JsonConfig(_)),
-          manager
-        )
+      (
+        externalId,
+        pocName,
+        address,
+        pocPhone,
+        pocCertifyApp,
+        logoUrl,
+        clientCert,
+        dataSchemaId,
+        extraConfig,
+        manager) =>
+        {
+          val id = UUID.randomUUID() //Todo: create namespaced UUID?
+          poc.Poc(
+            id,
+            tenant.id.value,
+            tenant.groupId.value,
+            externalId,
+            pocName,
+            address,
+            pocPhone,
+            pocCertifyApp,
+            logoUrl.map(LogoURL(_)),
+            clientCert,
+            dataSchemaId,
+            extraConfig.map(JsonConfig(_)),
+            manager
+          )
+        }
+
     }
 
   private def validatePocManager(csvPoc: PocRow): AllErrorsOr[PocManager] =

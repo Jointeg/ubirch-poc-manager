@@ -13,9 +13,11 @@ trait KeycloakGroupService {
   def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
     keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupAlreadyExists, Unit]]
+
   def findGroup(
     groupName: GroupName,
     keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupNotFound, KeycloakGroup]]
+
   def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit]
 
 }

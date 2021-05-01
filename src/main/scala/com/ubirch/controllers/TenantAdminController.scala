@@ -2,14 +2,17 @@ package com.ubirch.controllers
 
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
+import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
-  KeycloakBearerAuthenticationSupport
+  KeycloakBearerAuthenticationSupport,
+  Token
 }
-import com.ubirch.db.tables.PocStatusRepository
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
-import com.ubirch.models.poc.PocStatus
+import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
@@ -19,7 +22,7 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization.write
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import org.scalatra.{ InternalServerError, NotFound, Ok, ScalatraBase }
+import org.scalatra.{ InternalServerError, NotFound, Ok, ScalatraBase, _ }
 
 import java.util.UUID
 import javax.inject.Inject
@@ -29,6 +32,8 @@ import scala.util.{ Failure, Success, Try }
 class TenantAdminController @Inject() (
   pocBatchHandler: PocBatchHandlerImpl,
   pocStatusTable: PocStatusRepository,
+  pocTable: PocRepository,
+  tenantTable: TenantTable,
   config: Config,
   val swagger: Swagger,
   jFormats: Formats,
@@ -41,6 +46,7 @@ class TenantAdminController @Inject() (
 
   override protected def applicationDescription: String = "Tenant Admin Controller"
 
+  private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
@@ -74,22 +80,27 @@ class TenantAdminController @Inject() (
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
 
-  //Todo: Add authentication regarding Tenant-Admin role and retrieve tenant id to add it to each PoC
   post("/pocs/create", operation(createListOfPocs)) {
-    authenticated() { token =>
+    authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
       asyncResult("Create poc batch") { _ => _ =>
-        pocBatchHandler
-          .createListOfPoCs(request.body)
-          .map {
-            case Right(_)  => Ok()
-            case Left(csv) => Ok(csv)
-          }
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            pocBatchHandler
+              .createListOfPoCs(request.body, tenant)
+              .map {
+                case Right(_)  => Ok()
+                case Left(csv) => Ok(csv)
+              }
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
       }
     }
   }
 
   get("/pocStatus/:id", operation(getPocStatus)) {
-    authenticated() { token =>
+    authenticated(_.hasRole(tenantAdminRole)) { token =>
       asyncResult("Get Poc Status") { _ => _ =>
         val id = params("id")
         Try(UUID.fromString(id)) match {
@@ -100,7 +111,6 @@ class TenantAdminController @Inject() (
                 case Some(pocStatus) => toJson(pocStatus)
                 case None            => NotFound(NOK.resourceNotFoundError(s"pocStatus with $id couldn't be found"))
               }
-
           case Failure(ex) =>
             val errorMsg = s"error on retrieving pocStatus with $id:"
             logger.error(errorMsg, ex)
@@ -109,6 +119,47 @@ class TenantAdminController @Inject() (
             }
         }
       }
+    }
+  }
+
+  get("/pocs", operation(getPocStatus)) {
+    authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
+      asyncResult("Get all PoCs for a tenant") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            pocTable
+              .getAllPocsByTenantId(tenant.id.value)
+              .map(toJson)
+              .onErrorHandle(ex =>
+                InternalServerError(NOK.serverError(
+                  s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage)))
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
+  private def toJson(pocs: List[Poc]) = {
+    Try(write[List[Poc]](pocs)) match {
+      case Success(json) => Ok(json)
+      case Failure(ex) =>
+        val errorMsg = s"error parsing list of ${pocs.size} to json"
+        logger.error(errorMsg, ex)
+        InternalServerError(NOK.serverError(errorMsg))
+    }
+  }
+
+  private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
+    token.roles.find(_.name.startsWith("T_")) match {
+
+      case Some(tenantRole) =>
+        tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
+          case Some(tenant) => Right(tenant)
+          case None         => Left(s"couldn't find tenant in db for ${tenantRole.name}")
+        }
+      case None => Task(Left("the user's token is missing a tenant role"))
     }
   }
 

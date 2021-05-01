@@ -1,4 +1,5 @@
 package com.ubirch.services.keycloak.roles
+
 import com.ubirch.models.keycloak.roles._
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
@@ -35,6 +36,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
       }
     }
   }
+
   override def findRole(
     roleName: RoleName,
     keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]] =
@@ -42,6 +44,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
       case UsersKeycloak  => Task(rolesUserDatastore.get(roleName))
       case DeviceKeycloak => Task(rolesDeviceDatastore.get(roleName))
     }
+
   override def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] =
     keycloakInstance match {
       case UsersKeycloak =>

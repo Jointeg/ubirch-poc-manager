@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists }
 import com.ubirch.models.user.UserName
 import com.ubirch.services.{ KeycloakConnector, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ KeycloakConnector, KeycloakInstance, UsersKeycloak }
 import com.ubirch.services.keycloak.{ KeycloakUsersConfig, UsersKeycloakConnector }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
@@ -20,7 +21,9 @@ trait KeycloakUserService {
   def createUser(
     createKeycloakUser: CreateKeycloakUser,
     keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserAlreadyExists, Unit]]
+
   def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit]
+
   def getUser(username: UserName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[UserRepresentation]]
 }
 

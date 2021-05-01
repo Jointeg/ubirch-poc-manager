@@ -1,4 +1,5 @@
 package com.ubirch.services.keycloak.groups
+
 import com.ubirch.models.keycloak.group._
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
@@ -52,6 +53,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
       }
     }
   }
+
   override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] =
     keycloakInstance match {
       case UsersKeycloak =>

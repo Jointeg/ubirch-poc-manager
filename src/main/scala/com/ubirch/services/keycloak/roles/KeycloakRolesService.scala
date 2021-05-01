@@ -12,7 +12,9 @@ trait KeycloakRolesService {
   def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
     keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]]
+
   def findRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]]
+
   def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit]
 }
 

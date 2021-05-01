@@ -3,8 +3,8 @@ import com.ubirch.data.KeycloakTestData
 import com.ubirch.e2e.{ E2ETestBase, KeycloakOperations }
 import com.ubirch.models.keycloak.user.CreateKeycloakUser
 import com.ubirch.models.user.{ Email, FirstName, LastName }
-import com.ubirch.services.keycloak.{ DeviceKeycloakConnector, UsersKeycloakConnector }
 import com.ubirch.services.keycloak.users.{ KeycloakUserService, UserPollingService }
+import com.ubirch.services.keycloak.{ DeviceKeycloakConnector, UsersKeycloakConnector }
 import monix.eval.Task
 import monix.reactive.Observable
 import sttp.client.HttpError

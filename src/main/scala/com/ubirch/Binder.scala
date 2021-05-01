@@ -35,36 +35,55 @@ import scala.concurrent.ExecutionContext
 class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
+
   def KeycloakUsersConfig: ScopedBindingBuilder =
     bind(classOf[KeycloakUsersConfig]).to(classOf[RealKeycloakUsersConfig])
+
   def KeycloakDeviceConfig: ScopedBindingBuilder =
     bind(classOf[KeycloakDeviceConfig]).to(classOf[RealKeycloakDeviceConfig])
+
   def ExecutionContext: ScopedBindingBuilder = bind(classOf[ExecutionContext]).toProvider(classOf[ExecutionProvider])
+
   def Scheduler: ScopedBindingBuilder = bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
+
   def Swagger: ScopedBindingBuilder = bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
+
   def Formats: ScopedBindingBuilder = bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
+
   def Lifecycle: ScopedBindingBuilder = bind(classOf[Lifecycle]).to(classOf[DefaultLifecycle])
+
   def JVMHook: ScopedBindingBuilder = bind(classOf[JVMHook]).to(classOf[DefaultJVMHook])
+
   def JsonConverterService: ScopedBindingBuilder =
     bind(classOf[JsonConverterService]).to(classOf[DefaultJsonConverterService])
+
   def TokenCreationService: ScopedBindingBuilder =
     bind(classOf[TokenCreationService]).to(classOf[DefaultTokenCreationService])
+
   def TokenVerificationService: ScopedBindingBuilder =
     bind(classOf[TokenVerificationService]).to(classOf[DefaultTokenVerificationService])
+
   def PublicKeyDiscoveryService: ScopedBindingBuilder =
     bind(classOf[PublicKeyDiscoveryService]).to(classOf[DefaultPublicKeyDiscoveryService])
+
   def PublicKeyPoolService: ScopedBindingBuilder =
     bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
+
   def TenantService: ScopedBindingBuilder =
     bind(classOf[TenantService]).to(classOf[DefaultTenantService])
+
   def KeycloakUserConnector: ScopedBindingBuilder =
     bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])
+
   def KeycloakDeviceConnector: ScopedBindingBuilder =
     bind(classOf[DeviceKeycloakConnector]).to(classOf[DeviceKeycloakConfigConnector])
+
   def KeycloakConnector: ScopedBindingBuilder =
     bind(classOf[KeycloakConnector]).to(classOf[DefaultKeycloakConnector])
+
   def KeycloakUserService: ScopedBindingBuilder =
     bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
+
   def KeycloakRolesService: ScopedBindingBuilder =
     bind(classOf[KeycloakRolesService]).to(classOf[DefaultKeycloakRolesService])
 
