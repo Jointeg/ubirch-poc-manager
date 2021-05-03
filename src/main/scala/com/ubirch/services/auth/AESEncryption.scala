@@ -1,12 +1,12 @@
 package com.ubirch.services.auth
-import com.ubirch.models.auth.{ DecryptedData, EncryptedData }
+import com.ubirch.models.auth.{DecryptedData, EncryptedData}
 import monix.eval.Task
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 import javax.crypto.spec.IvParameterSpec
-import javax.crypto.{ Cipher, SecretKey }
+import javax.crypto.{Cipher, SecretKey}
 import javax.inject.Inject
 
 trait AESEncryption {
@@ -29,6 +29,7 @@ class AESEncryptionCBCMode @Inject() (aesKeyProvider: AESKeyProvider) extends AE
       cipherText <- cipherData(cipher, dataToBeEncrypted.getBytes(StandardCharsets.UTF_8))
     } yield mapper(EncryptedData.fromIVAndDataBytes(iv.getIV, cipherText))
   }
+
   override def decrypt[Result](encryptedData: EncryptedData)(mapper: DecryptedData => Result): Task[Result] = {
     for {
       secretKey <- aesKeyProvider.getAESKey
