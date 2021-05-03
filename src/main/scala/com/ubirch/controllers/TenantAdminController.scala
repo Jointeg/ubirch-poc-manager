@@ -28,6 +28,7 @@ import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success, Try }
 
 class TenantAdminController @Inject() (
   pocBatchHandler: PocBatchHandlerImpl,
@@ -81,6 +82,7 @@ class TenantAdminController @Inject() (
       .tags("Tenant-Admin, PocStatus")
 
   post("/pocs/create", operation(createListOfPocs)) {
+
     authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
       asyncResult("Create poc batch") { _ => _ =>
         retrieveTenantFromToken(token).flatMap {

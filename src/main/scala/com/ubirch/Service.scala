@@ -1,8 +1,11 @@
 package com.ubirch
 
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.FlywayProvider
+import com.ubirch.models.auth.Base64String
 import com.ubirch.services.jwt.PublicKeyPoolService
+import com.ubirch.services.keyhash.KeyHashVerifierService
 import com.ubirch.services.rest.RestService
 import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import monix.eval.Task
@@ -10,6 +13,8 @@ import monix.execution.Scheduler
 import org.flywaydb.core.api.FlywayException
 
 import java.util.concurrent.CountDownLatch
+import javax.inject.{ Inject, Singleton }
+import scala.concurrent.duration.DurationInt
 import javax.inject.{ Inject, Singleton }
 
 /**
@@ -19,7 +24,9 @@ import javax.inject.{ Inject, Singleton }
 class Service @Inject() (
   restService: RestService,
   publicKeyPoolService: PublicKeyPoolService,
-  flywayProvider: FlywayProvider
+  flywayProvider: FlywayProvider,
+  config: Config,
+  keyHashVerifierService: KeyHashVerifierService
   /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
   extends LazyLogging {
 
@@ -47,6 +54,10 @@ class Service @Inject() (
         logger.error(s"something went wrong on database migration; unknown exceptionType: ${ex.getMessage}", ex)
         throw ex
     }
+
+    keyHashVerifierService
+      .verifyHash(Base64String(config.getString(ConfPaths.AESEncryptionPaths.SECRET_KEY)))
+      .runSyncUnsafe(15.seconds)
 
     //    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
     //
