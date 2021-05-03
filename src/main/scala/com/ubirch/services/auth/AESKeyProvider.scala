@@ -17,8 +17,6 @@ trait AESKeyProvider {
 class ConfigKeyProvider @Inject() (config: Config) extends AESKeyProvider with LazyLogging {
   private val key = Base64String(config.getString(AESEncryptionPaths.SECRET_KEY))
 
-  override def getAESKey: Task[SecretKey] = {
-    println(s"AES key base64 encoded: ${key.value}")
+  override def getAESKey: Task[SecretKey] =
     Task(new SecretKeySpec(key.decode, "AES"))
-  }
 }
