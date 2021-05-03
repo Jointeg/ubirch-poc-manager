@@ -19,7 +19,7 @@ class DefaultKeyHashVerifier @Inject() (hashingService: HashingService, keyHashR
     keyHashRepository.getFirst
       .flatMap {
         case Some(hash) => Task(existingHashFlow(key, hash, hashingService))
-        case None => insertNewHashFlow(key, hashingService, keyHashRepository)
+        case None       => insertNewHashFlow(key, hashingService, keyHashRepository)
       }
       .flatMap {
         case NewHashCreated => Task(logger.warn("Successfully created a new hash from provided key"))
