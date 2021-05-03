@@ -1,5 +1,5 @@
 package com.ubirch.db.tables
-import com.ubirch.models.auth.{Hash, HashedData}
+import com.ubirch.models.auth.{ Hash, HashedData }
 import monix.eval.Task
 
 import scala.collection.mutable

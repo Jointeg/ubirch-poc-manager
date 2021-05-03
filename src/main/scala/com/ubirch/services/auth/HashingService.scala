@@ -1,6 +1,6 @@
 package com.ubirch.services.auth
 
-import com.ubirch.models.auth.{Base64String, Hash, HashedData, Salt}
+import com.ubirch.models.auth.{ Base64String, Hash, HashedData, Salt }
 
 import java.security.MessageDigest
 

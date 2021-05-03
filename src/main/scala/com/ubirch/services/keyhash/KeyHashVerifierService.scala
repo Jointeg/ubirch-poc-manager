@@ -2,7 +2,7 @@ package com.ubirch.services.keyhash
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.tables.KeyHashRepository
-import com.ubirch.models.auth.{Base64String, HashedData}
+import com.ubirch.models.auth.{ Base64String, HashedData }
 import com.ubirch.services.auth.HashingService
 import monix.eval.Task
 
