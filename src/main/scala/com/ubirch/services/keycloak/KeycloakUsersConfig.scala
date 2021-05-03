@@ -1,19 +1,28 @@
 package com.ubirch.services.keycloak
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths
 
 trait KeycloakUsersConfig {
   def serverUrl: String
+
   def serverRealm: String
+
   def username: String
+
   def password: String
+
   def clientId: String
+
   def realm: String
+
   def clientConfig: String
+
   def clientAdminUsername: String
+
   def clientAdminPassword: String
+
   def userPollingInterval: Int
 }
 

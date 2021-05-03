@@ -3,14 +3,15 @@ package com.ubirch.e2e.keycloak
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.keycloak.group.{GroupAlreadyExists, GroupName, GroupNotFound}
-import com.ubirch.models.keycloak.roles.{RoleAlreadyExists, RoleName}
+import com.ubirch.models.keycloak.group.{ GroupAlreadyExists, GroupName, GroupNotFound }
+import com.ubirch.models.keycloak.roles.{ RoleAlreadyExists, RoleName }
 import com.ubirch.models.keycloak.user.UserAlreadyExists
 import com.ubirch.models.user.UserName
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import org.scalactic.StringNormalizations._
 
 import scala.concurrent.duration.DurationInt

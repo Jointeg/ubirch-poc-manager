@@ -3,7 +3,7 @@ package com.ubirch.services.jwt
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.KeycloakPaths
-import com.ubirch.services.{DeviceKeycloak, KeycloakInstance, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
 
 import java.security.Key
@@ -12,7 +12,9 @@ import scala.collection.concurrent.TrieMap
 
 trait PublicKeyPoolService {
   def getKey(kid: String): Option[Key]
+
   def getDefaultKey(keycloakInstance: KeycloakInstance): Option[Key]
+
   def init(keycloakInstances: KeycloakInstance*): Task[List[(String, Key)]]
 }
 
@@ -23,7 +25,7 @@ class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryS
 
   private def acceptedKids(keycloakInstance: KeycloakInstance): List[String] =
     keycloakInstance match {
-      case UsersKeycloak => List(config.getString(KeycloakPaths.UsersKeycloak.KID))
+      case UsersKeycloak  => List(config.getString(KeycloakPaths.UsersKeycloak.KID))
       case DeviceKeycloak => List(config.getString(KeycloakPaths.DeviceKeycloak.KID))
     }
 
@@ -38,25 +40,24 @@ class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryS
     publicKeyDiscoveryService.getKey(keycloakInstance, kid)
 
   override def init(keycloakInstances: KeycloakInstance*): Task[List[(String, Key)]] = {
-    Task
-      .sequence {
-        keycloakInstances.toList.flatMap(instance => acceptedKids(instance).map(kid => (instance, kid))).map {
-          case (instance, kid) =>
-            for {
-              maybeKey <- getKeyFromDiscoveryService(instance, kid)
-            } yield {
+    Task.sequence {
+      keycloakInstances.toList.flatMap(instance => acceptedKids(instance).map(kid => (instance, kid))).map {
+        case (instance, kid) =>
+          for {
+            maybeKey <- getKeyFromDiscoveryService(instance, kid)
+          } yield {
 
-              val res = maybeKey match {
-                case Some(value) => cache.put(kid, value).map(x => (kid, x))
-                case None =>
-                  logger.warn("kid_not_found={}", kid)
-                  None
-              }
-              res.toList
-
+            val res = maybeKey match {
+              case Some(value) => cache.put(kid, value).map(x => (kid, x))
+              case None =>
+                logger.warn("kid_not_found={}", kid)
+                None
             }
-        }
+            res.toList
+
+          }
       }
+    }
       .map(_.flatten)
 
   }

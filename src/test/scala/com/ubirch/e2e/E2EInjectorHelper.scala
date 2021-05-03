@@ -1,13 +1,13 @@
 package com.ubirch.e2e
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import com.ubirch._
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.keycloak.{KeycloakDeviceConfig, KeycloakUsersConfig}
-import io.getquill.{PostgresJdbcContext, SnakeCase}
+import com.ubirch.services.keycloak.{ KeycloakDeviceConfig, KeycloakUsersConfig }
+import io.getquill.{ PostgresJdbcContext, SnakeCase }
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 case class KeycloakUsersRuntimeConfig(tenantAdmin: TenantAdmin)
 
@@ -55,14 +55,14 @@ object StaticTestPostgresJdbcContext {
   val ctx: PostgresJdbcContext[SnakeCase] = new PostgresJdbcContext(
     SnakeCase,
     ConfigFactory.parseString(s"""
-      |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
-      |    dataSource.user = postgres
-      |    dataSource.password = postgres
-      |    dataSource.databaseName = postgres
-      |    dataSource.portNumber = ${PostgresDbContainer.container.container.getFirstMappedPort}
-      |    dataSource.serverName = ${PostgresDbContainer.container.container.getContainerIpAddress}
-      |    connectionTimeout = 30000
-      |""".stripMargin))
+                                 |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
+                                 |    dataSource.user = postgres
+                                 |    dataSource.password = postgres
+                                 |    dataSource.databaseName = postgres
+                                 |    dataSource.portNumber = ${PostgresDbContainer.container.container.getFirstMappedPort}
+                                 |    dataSource.serverName = ${PostgresDbContainer.container.container.getContainerIpAddress}
+                                 |    connectionTimeout = 30000
+                                 |""".stripMargin))
 }
 
 class E2EInjectorHelperImpl(val superAdmin: SuperAdmin, val tenantAdmin: TenantAdmin)

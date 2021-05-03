@@ -1,12 +1,12 @@
 package com.ubirch.services.auth
-import com.ubirch.models.auth.{DecryptedData, EncryptedData}
+import com.ubirch.models.auth.{ DecryptedData, EncryptedData }
 import monix.eval.Task
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 import javax.crypto.spec.IvParameterSpec
-import javax.crypto.{Cipher, SecretKey}
+import javax.crypto.{ Cipher, SecretKey }
 import javax.inject.Inject
 
 trait AESEncryption {

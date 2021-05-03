@@ -33,7 +33,8 @@ object NOK {
   final val AUTHENTICATION_ERROR = 'AuthenticationError
   final val RESOURCE_NOT_FOUND_ERROR = 'ResourceNotFoundError
 
-  def apply(errorType: Symbol, errorMessage: String): NOK = new NOK(Response.version, ok = false, errorType, errorMessage)
+  def apply(errorType: Symbol, errorMessage: String): NOK =
+    new NOK(Response.version, ok = false, errorType, errorMessage)
 
   def serverError(errorMessage: String): NOK = NOK(SERVER_ERROR, errorMessage)
   def parsingError(errorMessage: String): NOK = NOK(PARSING_ERROR, errorMessage)
@@ -50,4 +51,3 @@ object Return {
   def apply(data: Any): Return = new Return(Response.version, ok = true, data)
   def apply(ok: Boolean, data: Any): Return = new Return(Response.version, ok = ok, data)
 }
-

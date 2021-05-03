@@ -3,14 +3,18 @@ package com.ubirch.e2e
 import cats.implicits._
 import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.keycloak.{DeviceKeycloakConnector, UsersKeycloakConnector}
-import com.ubirch.{Awaits, ExecutionContextsTests}
+import com.ubirch.services.keycloak.{ DeviceKeycloakConnector, UsersKeycloakConnector }
+import com.ubirch.{ Awaits, ExecutionContextsTests }
 import monix.eval.Task
-import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
+import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 import org.scalatest.Matchers.fail
-import org.scalatest.{EitherValues, OptionValues}
+import org.scalatest.{ EitherValues, OptionValues }
 
-import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{
+  iterableAsScalaIterableConverter,
+  mapAsJavaMapConverter,
+  seqAsJavaListConverter
+}
 import scala.util.Random
 
 trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionValues with EitherValues {
@@ -96,4 +100,5 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
 }
 
 case class TenantAdmin(userName: UserName, password: String)
+
 case class SuperAdmin(userName: UserName, password: String)

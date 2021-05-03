@@ -1,39 +1,32 @@
 package com.ubirch
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.google.inject.{AbstractModule, Module}
+import com.google.inject.{ AbstractModule, Module }
 import com.typesafe.config.Config
-import com.ubirch.db.context.{PostgresQuillJdbcContext, QuillJdbcContext}
+import com.ubirch.db.context.{ PostgresQuillJdbcContext, QuillJdbcContext }
 import com.ubirch.db.tables._
-import com.ubirch.db.{FlywayProvider, FlywayProviderImpl}
-import com.ubirch.services.auth.{
-  AESEncryption,
-  AESEncryptionCBCMode,
-  AESKeyProvider,
-  ConfigKeyProvider,
-  DefaultHashingService,
-  HashingService
-}
+import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
+import com.ubirch.services.auth._
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.execution.{ExecutionProvider, SchedulerProvider}
-import com.ubirch.services.formats.{DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider}
+import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
+import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
-import com.ubirch.services.keycloak.auth.{AuthClient, KeycloakAuthzClient}
-import com.ubirch.services.keycloak.groups.{DefaultKeycloakGroupService, KeycloakGroupService}
-import com.ubirch.services.keycloak.roles.{DefaultKeycloakRolesService, KeycloakRolesService}
+import com.ubirch.services.keycloak.auth.{ AuthClient, KeycloakAuthzClient }
+import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, KeycloakGroupService }
+import com.ubirch.services.keycloak.roles.{ DefaultKeycloakRolesService, KeycloakRolesService }
 import com.ubirch.services.keycloak.users.{
   KeycloakUserPollingService,
   KeycloakUserService,
   KeycloakUserServiceImpl,
   UserPollingService
 }
-import com.ubirch.services.keyhash.{DefaultKeyHashVerifier, KeyHashVerifierService}
-import com.ubirch.services.lifeCycle.{DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle}
-import com.ubirch.services.poc.{PocBatchHandlerImpl, PocBatchHandlerTrait}
+import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
+import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
+import com.ubirch.services.poc.{ PocBatchHandlerImpl, PocBatchHandlerTrait }
 import com.ubirch.services.rest.SwaggerProvider
-import com.ubirch.services.superadmin.{DefaultTenantService, TenantService}
-import com.ubirch.services.{DefaultKeycloakConnector, KeycloakConnector}
+import com.ubirch.services.superadmin.{ DefaultTenantService, TenantService }
+import com.ubirch.services.{ DefaultKeycloakConnector, KeycloakConnector }
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.Swagger
@@ -43,36 +36,55 @@ import scala.concurrent.ExecutionContext
 class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
+
   def KeycloakUsersConfig: ScopedBindingBuilder =
     bind(classOf[KeycloakUsersConfig]).to(classOf[RealKeycloakUsersConfig])
+
   def KeycloakDeviceConfig: ScopedBindingBuilder =
     bind(classOf[KeycloakDeviceConfig]).to(classOf[RealKeycloakDeviceConfig])
+
   def ExecutionContext: ScopedBindingBuilder = bind(classOf[ExecutionContext]).toProvider(classOf[ExecutionProvider])
+
   def Scheduler: ScopedBindingBuilder = bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
+
   def Swagger: ScopedBindingBuilder = bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
+
   def Formats: ScopedBindingBuilder = bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
+
   def Lifecycle: ScopedBindingBuilder = bind(classOf[Lifecycle]).to(classOf[DefaultLifecycle])
+
   def JVMHook: ScopedBindingBuilder = bind(classOf[JVMHook]).to(classOf[DefaultJVMHook])
+
   def JsonConverterService: ScopedBindingBuilder =
     bind(classOf[JsonConverterService]).to(classOf[DefaultJsonConverterService])
+
   def TokenCreationService: ScopedBindingBuilder =
     bind(classOf[TokenCreationService]).to(classOf[DefaultTokenCreationService])
+
   def TokenVerificationService: ScopedBindingBuilder =
     bind(classOf[TokenVerificationService]).to(classOf[DefaultTokenVerificationService])
+
   def PublicKeyDiscoveryService: ScopedBindingBuilder =
     bind(classOf[PublicKeyDiscoveryService]).to(classOf[DefaultPublicKeyDiscoveryService])
+
   def PublicKeyPoolService: ScopedBindingBuilder =
     bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
+
   def TenantService: ScopedBindingBuilder =
     bind(classOf[TenantService]).to(classOf[DefaultTenantService])
+
   def KeycloakUserConnector: ScopedBindingBuilder =
     bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])
+
   def KeycloakDeviceConnector: ScopedBindingBuilder =
     bind(classOf[DeviceKeycloakConnector]).to(classOf[DeviceKeycloakConfigConnector])
+
   def KeycloakConnector: ScopedBindingBuilder =
     bind(classOf[KeycloakConnector]).to(classOf[DefaultKeycloakConnector])
+
   def KeycloakUserService: ScopedBindingBuilder =
     bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
+
   def KeycloakRolesService: ScopedBindingBuilder =
     bind(classOf[KeycloakRolesService]).to(classOf[DefaultKeycloakRolesService])
 
