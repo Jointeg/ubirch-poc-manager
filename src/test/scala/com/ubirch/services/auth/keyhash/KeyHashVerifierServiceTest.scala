@@ -1,7 +1,7 @@
 package com.ubirch.services.auth.keyhash
 import com.ubirch.db.tables.KeyHashRepository
-import com.ubirch.e2e.{E2EInjectorHelperImpl, E2ETestBase}
-import com.ubirch.models.auth.{Base64String, HashedData}
+import com.ubirch.e2e.{ E2EInjectorHelperImpl, E2ETestBase }
+import com.ubirch.models.auth.{ Base64String, HashedData }
 import com.ubirch.services.auth.HashingService
 import com.ubirch.services.keyhash.KeyHashVerifierService
 

@@ -410,7 +410,6 @@ class UnitTestInjectorHelper()
     override def PublicKeyPoolService: ScopedBindingBuilder = {
       bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
     }
-
     override def UserRepository: ScopedBindingBuilder =
       bind(classOf[UserRepository]).to(classOf[UserTestTable])
 

@@ -28,7 +28,6 @@ import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
-import scala.util.{ Failure, Success, Try }
 
 class TenantAdminController @Inject() (
   pocBatchHandler: PocBatchHandlerImpl,
@@ -116,9 +115,8 @@ class TenantAdminController @Inject() (
           case Failure(ex) =>
             val errorMsg = s"error on retrieving pocStatus with $id:"
             logger.error(errorMsg, ex)
-            Task {
-              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
-            }
+            Task(InternalServerError(NOK.serverError(errorMsg + ex.getMessage)))
+
         }
       }
     }
