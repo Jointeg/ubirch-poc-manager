@@ -52,5 +52,19 @@ case class PocStatus(
       s"lastUpdated:$lastUpdated\n" +
       s"created:$created"
   }
+}
 
+object PocStatus {
+  def init(poc: Poc, dataSchemaGroupIds: List[String]): PocStatus =
+    //Todo: check if poc.clientCertRequired == false, that tenant already has idgard URL?!
+    PocStatus(
+      pocId = poc.id,
+      validDataSchemaGroup = dataSchemaGroupIds.contains(poc.dataSchemaId),
+      clientCertRequired = poc.clientCertRequired,
+      clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
+      clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
+      logoRequired = poc.certifyApp,
+      logoReceived = if (poc.certifyApp) Some(false) else None,
+      logoStored = if (poc.certifyApp) Some(false) else None
+    )
 }

@@ -126,12 +126,21 @@ class Binder extends AbstractModule {
 
   def CsvHandler: ScopedBindingBuilder = bind(classOf[CsvHandlerTrait]).to(classOf[CsvHandlerImp])
 
+  def ProcessPoc: ScopedBindingBuilder = bind(classOf[ProcessPoc]) to (classOf[ProcessPocImpl])
+
+  def ProcessPocAdmin: ScopedBindingBuilder = bind(classOf[ProcessPocAdmin]) to (classOf[ProcessPocAdminImpl])
+
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
 
   def PocStatusRepository: ScopedBindingBuilder = bind(classOf[PocStatusRepository]).to(classOf[PocStatusTable])
 
   def TenantAdminService: ScopedBindingBuilder =
     bind(classOf[TenantAdminService]).to(classOf[DefaultTenantAdminService])
+
+  def PocAdminRepository: ScopedBindingBuilder = bind(classOf[PocAdminRepository]).to(classOf[PocAdminTable])
+
+  def PocAdminStatusRepository: ScopedBindingBuilder =
+    bind(classOf[PocAdminStatusRepository]).to(classOf[PocAdminStatusTable])
 
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
@@ -177,8 +186,12 @@ class Binder extends AbstractModule {
     UserRepository
     PocBatchHandler
     CsvHandler
+    ProcessPoc
+    ProcessPocAdmin
     PocRepository
     PocStatusRepository
+    PocAdminRepository
+    PocAdminStatusRepository
     TenantRepository
     AESKeyProvider
     AESEncryption

@@ -22,12 +22,18 @@ object CsvConstants {
   val managerEmail = "manager_email*"
   val managerMobilePhone = "manager_mobile_phone*"
   val jsonConfig = "extra_config"
+  val technicianSurname = "technician_surname"
+  val technicianName = "technician_name"
+  val technicianEmail = "technician_email"
+  val technicianMobilePhone = "technician_mobile_phone"
+  val technicianDateOfBirth = "technician_date_of_birth"
+  val webIdentRequired = "web_ident_required"
 
   val columnSeparator = ";"
   val comma = ","
   val carriageReturn = "\n"
 
-  val headerColsOrder: Array[String] = Array(
+  val pocHeaderColsOrder: Array[String] = Array(
     externalId,
     pocName,
     street,
@@ -49,9 +55,42 @@ object CsvConstants {
     managerMobilePhone,
     jsonConfig
   )
+  val pocHeaderColOrderLength = pocHeaderColsOrder.length
 
-  val headerLine: String = headerColsOrder.mkString(columnSeparator)
+  val pocAdminHeaderColsOrder: Array[String] = Array(
+    externalId,
+    pocName,
+    street,
+    streetNumber,
+    additionalAddress,
+    zipcode,
+    city,
+    county,
+    federalState,
+    country,
+    phone,
+    certifyApp,
+    logoUrl,
+    clientCert,
+    dataSchemaId,
+    managerSurname,
+    managerName,
+    managerEmail,
+    managerMobilePhone,
+    jsonConfig,
+    technicianSurname,
+    technicianName,
+    technicianEmail,
+    technicianMobilePhone,
+    technicianDateOfBirth,
+    webIdentRequired
+  )
+  val pocAdminHeaderColOrderLength = pocAdminHeaderColsOrder.length
+
+  val pocHeaderLine: String = pocHeaderColsOrder.mkString(columnSeparator)
+  val pocAdminHeaderLine: String = pocAdminHeaderColsOrder.mkString(columnSeparator)
 
   def headerErrorMsg(col: String, header: String): String =
-    s"$col didn't equal expected header $header; the right header order would be: ${headerColsOrder.mkString(comma)}"
+    s"$col didn't equal expected header $header; the right header order would be: ${pocHeaderColsOrder.mkString(comma)}"
+
 }

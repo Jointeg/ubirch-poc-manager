@@ -1,81 +1,49 @@
 package com.ubirch.services.poc
 
 import com.google.inject.Inject
-import com.ubirch.db.tables.{ PocStatusTable, PocTable }
-import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.poc.util.CsvConstants
+import com.ubirch.services.poc.util.CsvConstants.{
+  columnSeparator,
+  pocAdminHeaderColOrderLength,
+  pocHeaderColOrderLength
+}
+import com.ubirch.services.poc.util.HeaderCsvException
+import com.ubirch.services.util.CsvHelper
 import monix.eval.Task
 import monix.execution.Scheduler
 
 import javax.inject.Singleton
-import scala.util.{ Failure, Success, Try }
 
 trait PocBatchHandlerTrait {
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]]
 }
 
 @Singleton
-class PocBatchHandlerImpl @Inject() (csvHandler: CsvHandlerTrait, pocTable: PocTable, pocStatusTable: PocStatusTable)
+class PocBatchHandlerImpl @Inject() (processPoc: ProcessPoc, processPocAdmin: ProcessPocAdmin)
   extends PocBatchHandlerTrait {
+
 
   implicit val scheduler: Scheduler = monix.execution.Scheduler.global
 
-  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
+  /**
+    * This method dispatches processes for a Poc csv file and a PocAdmin csv file.
+    */
+  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] =
+    CsvHelper.openFile(csv).use { source =>
+      val lines = source.getLines()
 
-    Try(csvHandler.parsePocCreationList(csv, tenant)) match {
-
-      case Success(parsingResult) =>
-        val r = parsingResult.map {
-          case Right((poc, csvRow)) =>
-            storePocAndStatus(poc, csvRow)
-          case Left(csvRow) =>
-            Task(Some(csvRow))
+      if (lines.hasNext) {
+        val colNum = lines.next().split(columnSeparator).map(_.trim).length
+        colNum match {
+          case `pocHeaderColOrderLength` =>
+            processPoc.createListOfPoCs(csv, tenant)
+          case `pocAdminHeaderColOrderLength` =>
+            processPocAdmin.createListOfPoCsAndAdmin(csv, tenant)
+          case _ =>
+            throw HeaderCsvException(s"the number of column is incorrect. $colNum")
         }
-        createResponse(r)
-
-      case Failure(ex: HeaderCsvException) =>
-        Task(Left(ex.message))
-
-      case Failure(ex: Throwable) =>
-        Task(Left(s"something unexpected went wrong ${ex.getMessage}"))
-    }
-  }
-
-  private def storePocAndStatus(poc: Poc, csvRow: String): Task[Option[String]] = {
-    val status = createInitialPocCreationState(poc)
-
-    (for {
-      _ <- pocTable.createPoc(poc)
-      _ <- pocStatusTable.createPocStatus(status)
-    } yield {
-      None
-    }).onErrorHandle(_ => Some(csvRow))
-  }
-
-  private def createResponse(result: Seq[Task[Option[String]]]): Task[Either[String, Unit]] = {
-    Task
-      .gather(result)
-      .map { csvRowOptions =>
-        val errorCsvRows = csvRowOptions.flatten
-        if (errorCsvRows.isEmpty)
-          Right(Unit)
-        else {
-          val csvRows = CsvConstants.headerLine +: errorCsvRows
-          Left(csvRows.mkString(CsvConstants.carriageReturn))
-        }
+      } else {
+        throw HeaderCsvException("the csv is empty.")
       }
   }
-
-  def createInitialPocCreationState(poc: Poc): PocStatus =
-    PocStatus(
-      pocId = poc.id,
-      clientCertRequired = poc.clientCertRequired,
-      clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
-      clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
-      logoRequired = poc.certifyApp,
-      logoReceived = if (poc.certifyApp) Some(false) else None,
-      logoStored = if (poc.certifyApp) Some(false) else None
-    )
-
 }

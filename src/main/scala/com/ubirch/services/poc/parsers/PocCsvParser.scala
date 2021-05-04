@@ -1,12 +1,7 @@
-package com.ubirch.services.poc
+package com.ubirch.services.poc.parsers
 
-import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{
-  catsSyntaxTuple10Semigroupal,
-  catsSyntaxTuple2Semigroupal,
-  catsSyntaxTuple4Semigroupal,
-  catsSyntaxTuple8Semigroupal
-}
+import cats.data.Validated.{Invalid, Valid}
+import cats.implicits.{catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal}
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
@@ -14,75 +9,19 @@ import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.{ dataSchemaId, _ }
+import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
+import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
+import scala.util.{Success, Failure}
 
 import java.util.UUID
-import scala.io.Source
-import scala.util.{ Failure, Success }
+import javax.inject.Singleton
 
-trait CsvHandlerTrait {
+case class PocParseResult(poc: Poc, csvRow: String) extends ParseRowResult
 
-  @throws[HeaderCsvException]
-  def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]]
-
-}
-
-abstract class CsvException(message: String) extends Exception(message)
-
-case class HeaderCsvException(message: String) extends CsvException(message)
-case class EmptyCsvException(message: String) extends CsvException(message)
-
-class CsvHandlerImp @Inject() (pocConfig: PocConfig) extends CsvHandlerTrait with LazyLogging {
-
-  @throws[HeaderCsvException]
-  override def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]] = {
-
-    val s: Source = Source.fromString(csv)
-
-    try {
-      val lines = s.getLines()
-      validateHeaders(lines)
-      parseRows(tenant, lines)
-    } catch {
-      case ex: CsvException => throw ex
-      case ex: Throwable =>
-        val errorMsg = "something unexpected went wrong parsing the csv"
-        logger.error(errorMsg, ex)
-        Seq(Left(errorMsg))
-    } finally {
-      s.close()
-    }
-  }
-
-  private def parseRows(tenant: Tenant, lines: Iterator[String]): Seq[Either[String, (Poc, String)]] = {
-    lines.map { line =>
-      val cols = line.split(columnSeparator).map(_.trim)
-      parsePoC(cols, line, tenant)
-    }.toSeq
-  }
-
-  @throws[CsvException]
-  private def validateHeaders(lines: Iterator[String]): Unit = {
-    if (lines.hasNext) {
-      val cols = lines.next().split(columnSeparator).map(_.trim)
-      if (cols.length < headerColsOrder.length) {
-        throw HeaderCsvException(
-          s"the numbers of columns ${cols.length} is not enough. should be ${headerColsOrder.length}.")
-      } else {
-        headerColsOrder.zip(cols.toSeq).foreach {
-          case (header, col) =>
-            if (header != col)
-              throw HeaderCsvException(headerErrorMsg(col, header))
-        }
-      }
-    } else {
-      throw EmptyCsvException("the csv file mustn't be empty")
-    }
-  }
-
-  private def parsePoC(cols: Array[String], line: String, tenant: Tenant): Either[String, (Poc, String)] = {
+@Singleton
+class PocCsvParser @Inject() (pocConfig: PocConfig) extends CsvParser[PocParseResult] with LazyLogging {
+  protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, PocParseResult] = {
     PocRow.fromCsv(cols) match {
       case Success(csvPoc) =>
         val pocAddress = validatePocAddress(csvPoc)
@@ -91,15 +30,24 @@ class CsvHandlerImp @Inject() (pocConfig: PocConfig) extends CsvHandlerTrait wit
 
         poc match {
           case Valid(poc) =>
-            Right(poc, line)
+            Right(PocParseResult(poc, line))
           case Invalid(errors) =>
             Left(line + columnSeparator + errors.toList.mkString(comma))
         }
       case Failure(_) =>
         Left(line + columnSeparator +
-          s"the numbers of column ${cols.length} is invalid. should be ${headerColsOrder.length}.")
+          s"the numbers of column ${cols.length} is invalid. should be ${pocHeaderColsOrder.length}.")
     }
 
+  }
+
+  @throws[HeaderCsvException]
+  protected def validateHeaders(cols: Array[String]): Unit = {
+    pocHeaderColsOrder.zip(cols.toSeq).foreach {
+      case (header, col) =>
+        if (header != col)
+          throw HeaderCsvException(headerErrorMsg(col, header))
+    }
   }
 
   private def validatePoc(
@@ -187,5 +135,4 @@ class CsvHandlerImp @Inject() (pocConfig: PocConfig) extends CsvHandlerTrait wit
         pocCountry
       )
     }
-
 }

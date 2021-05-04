@@ -11,6 +11,7 @@ import io.getquill.{ Insert, Ord, Query, Update }
 import monix.eval.Task
 
 import java.util.UUID
+import javax.inject.Singleton
 
 trait PocRepository {
   def createPoc(poc: Poc): Task[UUID]
@@ -41,6 +42,7 @@ object PocRepository {
   case class PaginatedPocs(total: Long, pocs: Seq[Poc])
 }
 
+@Singleton
 class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocRepository {
 
   import quillJdbcContext.ctx._
