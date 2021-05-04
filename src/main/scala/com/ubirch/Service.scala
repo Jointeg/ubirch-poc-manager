@@ -10,13 +10,11 @@ import com.ubirch.services.rest.RestService
 import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import monix.eval.Task
 import monix.execution.Scheduler
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.flywaydb.core.api.FlywayException
 
-import java.security.Security
 import java.util.concurrent.CountDownLatch
-import scala.concurrent.duration.DurationInt
 import javax.inject.{ Inject, Singleton }
+import scala.concurrent.duration.DurationInt
 
 /**
   * Represents a bootable service object that starts the system
@@ -32,8 +30,6 @@ class Service @Inject() (
   extends LazyLogging {
 
   def start(): Unit = {
-
-    Security.addProvider(new BouncyCastleProvider())
 
     publicKeyPoolService
       .init(UsersKeycloak, DeviceKeycloak)
