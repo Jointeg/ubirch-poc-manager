@@ -1,4 +1,4 @@
-FROM ubirch/java
+FROM ubirch/java:v8.161
 ARG JAR_LIBS
 ARG JAR_FILE
 ARG VERSION
