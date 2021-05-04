@@ -1,22 +1,23 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
+import com.ubirch.ModelCreationHelper.{createPoc, createPocStatus, createTenant}
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, PocTable, TenantTable }
+import com.ubirch.controllers.TenantAdminController.PoC_OUT
+import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.{Poc, PocStatus}
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.formats.DomainObjectFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
 import org.json4s.native.Serialization.write
-import org.json4s.{ DefaultFormats, Formats }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
+import org.json4s.{DefaultFormats, Formats}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -147,7 +148,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         pocs.size shouldBe 2
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
-          body shouldBe write[List[Poc]](pocs)
+          body shouldBe write[PoC_OUT](PoC_OUT(2, pocs))
         }
       }
     }
@@ -169,7 +170,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
-          body shouldBe "[]"
+          body shouldBe write[PoC_OUT](PoC_OUT(0, Seq.empty))
         }
       }
     }

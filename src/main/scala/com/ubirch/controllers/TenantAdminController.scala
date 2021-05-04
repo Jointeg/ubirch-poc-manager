@@ -3,6 +3,7 @@ package com.ubirch.controllers
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
+import com.ubirch.controllers.TenantAdminController._
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -11,7 +12,7 @@ import com.ubirch.controllers.concerns.{
 }
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.Poc
 import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
@@ -22,12 +23,12 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization.write
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import org.scalatra.{ InternalServerError, NotFound, Ok, ScalatraBase, _ }
+import org.scalatra._
 
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Success, Try }
+import scala.util._
 
 class TenantAdminController @Inject() (
   pocBatchHandler: PocBatchHandlerImpl,
@@ -127,8 +128,10 @@ class TenantAdminController @Inject() (
       asyncResult("Get all PoCs for a tenant") { _ => _ =>
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
-            pocTable
-              .getAllPocsByTenantId(tenant.id.value)
+            (for {
+              pocs <- pocTable.getAllPocsByTenantId(tenant.id.value)
+              total <- Task(pocs.size)
+            } yield PoC_OUT(total, pocs))
               .map(toJson)
               .onErrorHandle(ex =>
                 InternalServerError(NOK.serverError(
@@ -138,16 +141,6 @@ class TenantAdminController @Inject() (
             Task(BadRequest(NOK.authenticationError(errorMsg)))
         }
       }
-    }
-  }
-
-  private def toJson(pocs: List[Poc]) = {
-    Try(write[List[Poc]](pocs)) match {
-      case Success(json) => Ok(json)
-      case Failure(ex) =>
-        val errorMsg = s"error parsing list of ${pocs.size} to json"
-        logger.error(errorMsg, ex)
-        InternalServerError(NOK.serverError(errorMsg))
     }
   }
 
@@ -163,13 +156,17 @@ class TenantAdminController @Inject() (
     }
   }
 
-  private def toJson(pocStatus: PocStatus) = {
-    Try(write[PocStatus](pocStatus)) match {
+  private def toJson[T](t: T): ActionResult = {
+    Try(write[T](t)) match {
       case Success(json) => Ok(json)
       case Failure(ex) =>
-        val errorMsg = s"error parsing pocStatus to json $pocStatus:"
+        val errorMsg = s"Could not parse ${t.getClass.getSimpleName} to json"
         logger.error(errorMsg, ex)
         InternalServerError(NOK.serverError(errorMsg))
     }
   }
+}
+
+object TenantAdminController {
+  case class PoC_OUT(total: Int, pocs: Seq[Poc])
 }
