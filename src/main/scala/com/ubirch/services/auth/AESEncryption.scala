@@ -62,7 +62,7 @@ class AESEncryptionCBCMode @Inject() (aesKeyProvider: AESKeyProvider) extends AE
 
   private def initCipher(mode: Int, secretKey: SecretKey, iv: IvParameterSpec) =
     Task {
-      val cipher = Cipher.getInstance(AES_CBC_PKCS5)
+      val cipher = Cipher.getInstance(AES_CBC_PKCS5, "BC")
       cipher.init(mode, secretKey, iv)
       cipher
     }
