@@ -2,8 +2,10 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.tables.PocRepository.{ PaginatedPocs, PocCriteria }
+import com.ubirch.models.common.{ Page, Sort }
 import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Status }
-import io.getquill.{ Insert, Update }
+import io.getquill.{ Insert, Query, Update }
 import monix.eval.Task
 
 import java.util.UUID
@@ -23,7 +25,14 @@ trait PocRepository {
 
   def getAllPocsByTenantId(tenantId: UUID): Task[List[Poc]]
 
+  def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs]
+
   def getAllUncompletedPocs(): Task[List[Poc]]
+}
+
+object PocRepository {
+  case class PocCriteria(tenantId: UUID, page: Page, sort: Sort)
+  case class PaginatedPocs(total: Long, pocs: Seq[Poc])
 }
 
 class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocRepository {
@@ -72,6 +81,20 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
     }
 
+  private def countAllPocsByCriteriaQuery(page: Int, size: Int): Quoted[Query[Poc]] =
+    quote {
+      querySchema[Poc]("poc_manager.poc_table")
+        .drop(liftScalar(page))
+        .take(liftScalar(size))
+    }
+
+  private def getAllPocsByCriteriaQuery(criteria: PocCriteria): Quoted[Query[Poc]] =
+    quote {
+      querySchema[Poc]("poc_manager.poc_table")
+        .drop(liftScalar(criteria.page.index * criteria.page.size))
+        .take(liftScalar(criteria.page.size))
+    }
+
   override def createPoc(poc: Poc): Task[UUID] = Task(run(createPocQuery(poc))).map(_ => poc.id)
 
   override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long] =
@@ -98,6 +121,16 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
 
   override def getAllPocsByTenantId(tenantId: UUID): Task[List[Poc]] =
     Task(run(getAllPocsByTenantIdQuery(tenantId: UUID)))
+
+  override def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs] =
+    Task {
+      transaction {
+        val total =
+          run(countAllPocsByCriteriaQuery(pocCriteria.page.index * pocCriteria.page.size, pocCriteria.page.size))
+        val pocs = run(getAllPocsByCriteriaQuery(pocCriteria))
+        PaginatedPocs(total.size, pocs)
+      }
+    }
 
   def getAllUncompletedPocs(): Task[List[Poc]] = Task(run(getAllPocsWithoutStatusQuery(Completed)))
 }

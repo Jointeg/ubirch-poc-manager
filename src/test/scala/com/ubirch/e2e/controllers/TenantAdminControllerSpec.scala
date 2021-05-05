@@ -1,23 +1,23 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{createPoc, createPocStatus, createTenant}
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.PoC_OUT
-import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.{Poc, PocStatus}
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.formats.DomainObjectFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization.write
-import org.json4s.{DefaultFormats, Formats}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.json4s.{ DefaultFormats, Formats }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -148,7 +148,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         pocs.size shouldBe 2
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
-          body shouldBe write[PoC_OUT](PoC_OUT(2, pocs))
+          body shouldBe write[PoC_OUT](PoC_OUT(pocs.size, pocs))
         }
       }
     }
@@ -183,6 +183,30 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           println(body)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
+      }
+    }
+
+    "return PoC page for given index and size" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+
+      addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(poc1id, tenantId))
+        _ <- pocTable.createPoc(createPoc(poc2id, tenantId))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
+        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+      } yield pocs
+      val pocs = await(r, 5.seconds)
+      get(
+        "/pocs",
+        params = Map("pageIndex" -> "1", "pageSize" -> "2"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+      ) {
+        status should equal(200)
+        body shouldBe write[PoC_OUT](PoC_OUT(2, pocs.sortBy(_.id).slice(2, 4)))
       }
     }
   }

@@ -4,25 +4,22 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
 import com.ubirch.controllers.TenantAdminController._
-import com.ubirch.controllers.concerns.{
-  ControllerBase,
-  KeycloakBearerAuthStrategy,
-  KeycloakBearerAuthenticationSupport,
-  Token
-}
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
+import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
+import com.ubirch.db.tables.PocRepository.PocCriteria
+import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.models.NOK
+import com.ubirch.models.common.{ASC, Page, Sort}
 import com.ubirch.models.poc.Poc
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
+import com.ubirch.models.tenant.{Tenant, TenantGroupId}
 import com.ubirch.services.DeviceKeycloak
-import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
+import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization.write
-import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
+import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
 import org.scalatra._
 
 import java.util.UUID
@@ -126,12 +123,14 @@ class TenantAdminController @Inject() (
   get("/pocs", operation(getPocStatus)) {
     authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
       asyncResult("Get all PoCs for a tenant") { _ => _ =>
+        val page = Page(params.get("pageIndex").map(_.toInt).getOrElse(0), params.get("pageSize").map(_.toInt).getOrElse(20))
+        val sort = Sort("id", ASC)
+
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             (for {
-              pocs <- pocTable.getAllPocsByTenantId(tenant.id.value)
-              total <- Task(pocs.size)
-            } yield PoC_OUT(total, pocs))
+              pocs <- pocTable.getAllPocsByCriteria(PocCriteria(tenant.id.value, page, sort))
+            } yield PoC_OUT(pocs.total, pocs.pocs))
               .map(toJson)
               .onErrorHandle(ex =>
                 InternalServerError(NOK.serverError(
@@ -168,5 +167,5 @@ class TenantAdminController @Inject() (
 }
 
 object TenantAdminController {
-  case class PoC_OUT(total: Int, pocs: Seq[Poc])
+  case class PoC_OUT(total: Long, pocs: Seq[Poc])
 }
