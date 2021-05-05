@@ -3,6 +3,7 @@ package com.ubirch
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -25,7 +26,7 @@ object ModelCreationHelper {
       deviceCreationToken,
       certCreationToken,
       IdGardIdentifier("folder-identifier"),
-      TenantGroupId("T_" + name),
+      TenantGroupId(TENANT_GROUP_PREFIX + name),
       ClientCert(base64X509Cert)
     )
   }
@@ -33,7 +34,7 @@ object ModelCreationHelper {
   def createPoc(
     id: UUID = UUID.randomUUID(),
     tenantId: UUID = UUID.randomUUID(),
-    tenantGroupName: String = s"T_$tenantName",
+    tenantGroupName: String = TENANT_GROUP_PREFIX + tenantName,
     externalId: String = UUID.randomUUID().toString): Poc =
     Poc(
       id,
