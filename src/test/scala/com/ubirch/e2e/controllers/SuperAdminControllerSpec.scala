@@ -33,6 +33,19 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |""".stripMargin
   }
 
+  private def createTenantJsonWithoutClientCert(tenantName: String) = {
+    s"""
+       |{
+       |    "tenantName": "$tenantName",
+       |    "usageType": "API",
+       |    "deviceCreationToken": "1234567890",
+       |    "certificationCreationToken": "987654321",
+       |    "idGardIdentifier": "gard-identifier",
+       |    "tenantGroupId": "random-group",
+       |}
+       |""".stripMargin
+  }
+
   private def missingRequiredFieldsCreateTenantJson(tenantName: String) = {
     s"""
        |{
@@ -66,7 +79,32 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
         maybeTenant.value.groupId shouldBe TenantGroupId("random-group")
-        maybeTenant.value.clientCert shouldBe ClientCert(ModelCreationHelper.base64X509Cert)
+        maybeTenant.value.clientCert shouldBe Some(ClientCert(ModelCreationHelper.base64X509Cert))
+      }
+    }
+
+    "be able to successfully create a Tenant without a client cert" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+
+        val tenantName = Random.alphanumeric.take(10).mkString
+        val createTenantBody = createTenantJsonWithoutClientCert(tenantName)
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(200)
+          assert(body == "")
+        }
+
+        val tenantRepository = injector.get[TenantRepository]
+        val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
+        maybeTenant.value.tenantName shouldBe TenantName(tenantName)
+        maybeTenant.value.usageType shouldBe API
+        maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
+        maybeTenant.value.groupId shouldBe TenantGroupId("random-group")
+        maybeTenant.value.clientCert shouldBe None
       }
     }
 

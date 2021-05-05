@@ -52,14 +52,14 @@ class PocCreationLoopImpl @Inject() (
     }
   }
 
-  def retrieveStatusAndTenant(poc: Poc): Task[(Option[PocStatus], Option[Tenant])] = {
+  private def retrieveStatusAndTenant(poc: Poc): Task[(Option[PocStatus], Option[Tenant])] = {
     for {
       status <- pocStatusTable.getPocStatus(poc.id)
       tenant <- tenantTable.getTenant(TenantId(poc.tenantId))
     } yield (status, tenant)
   }
 
-  def process(poc: Poc, status: PocStatus, tenant: Tenant): Unit = {
+  private def process(poc: Poc, status: PocStatus, tenant: Tenant): Unit = {
     val creationResult = for {
       //handle device realm
       status1 <- keycloakHelper.createDeviceRealmRole(poc, status)

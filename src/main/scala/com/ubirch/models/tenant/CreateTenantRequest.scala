@@ -7,5 +7,5 @@ case class CreateTenantRequest(
   certificationCreationToken: PlainCertificationCreationToken,
   idGardIdentifier: IdGardIdentifier,
   tenantGroupId: TenantGroupId,
-  clientCert: ClientCert
+  clientCert: Option[ClientCert]
 )

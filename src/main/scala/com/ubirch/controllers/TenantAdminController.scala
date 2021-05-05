@@ -47,7 +47,6 @@ class TenantAdminController @Inject() (
 
   override protected def applicationDescription: String = "Tenant Admin Controller"
 
-  private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =

@@ -8,5 +8,5 @@ case class Tenant(
   certificationCreationToken: EncryptedCertificationCreationToken,
   idGardIdentifier: IdGardIdentifier,
   groupId: TenantGroupId,
-  clientCert: ClientCert
+  clientCert: Option[ClientCert]
 )

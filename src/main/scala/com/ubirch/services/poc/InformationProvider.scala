@@ -59,12 +59,8 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   }
 
   override def toCertifyAPI(poc: Poc, statusAndPW: StatusAndDeviceInfo): Task[PocStatus] = {
-    val body = RegisterDeviceCertifyAPI(
-      poc.pocName,
-      poc.deviceId.toString,
-      statusAndPW.devicePassword.toString,
-      poc.roleName,
-      poc.roleName)
+    val body = createCertifyApiBody(poc, statusAndPW)
+
     val r = basicRequest
       .put(uri"$certifyApiURL")
       .body(write[RegisterDeviceCertifyAPI](body))
@@ -81,6 +77,16 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
     Task.fromFuture(r)
   }
 
+  private def createCertifyApiBody(
+    poc: Poc,
+    statusAndPW: StatusAndDeviceInfo) = {
+    RegisterDeviceCertifyAPI(
+      poc.pocName,
+      poc.deviceId.toString,
+      statusAndPW.devicePassword.toString,
+      poc.roleName,
+      poc.roleName)
+  }
   def throwError(status: PocStatus, msg: String) =
     throw PocCreationError(status.copy(errorMessages = Some(msg)))
 

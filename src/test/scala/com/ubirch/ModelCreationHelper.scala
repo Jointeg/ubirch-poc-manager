@@ -27,7 +27,7 @@ object ModelCreationHelper {
       certCreationToken,
       IdGardIdentifier("folder-identifier"),
       TenantGroupId(TENANT_GROUP_PREFIX + name),
-      ClientCert(base64X509Cert)
+      Some(ClientCert(base64X509Cert))
     )
   }
 
