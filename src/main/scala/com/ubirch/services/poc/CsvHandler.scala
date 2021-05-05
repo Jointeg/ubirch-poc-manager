@@ -48,7 +48,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
     }
   }
 
-  private def parseRows(tenant: Tenant, lines: Iterator[String]) = {
+  private def parseRows(tenant: Tenant, lines: Iterator[String]): Seq[Either[String, (Poc, String)]] = {
     lines.map { line =>
       val cols = line.split(columnSeparator).map(_.trim)
       parsePoC(cols, line, tenant)
@@ -96,7 +96,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       validatePhone(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
-      validateBoolean(clientCert, csvPoc.clientCert),
+      validateClientCert(clientCert, csvPoc.clientCert, tenant),
       validateString(dataSchemaId, csvPoc.dataSchemaId),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
@@ -113,7 +113,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
         extraConfig,
         manager) =>
         {
-          val id = UUID.randomUUID() //Todo: create namespaced UUID?
+          val id = UUID.randomUUID()
           poc.Poc(
             id,
             tenant.id.value,

@@ -18,7 +18,12 @@ object ModelCreationHelper {
   private val deviceCreationToken = EncryptedDeviceCreationToken(encryptedData)
   private val certCreationToken = EncryptedCertificationCreationToken(encryptedData)
   private val tenantName = "tenantName"
-  def createTenant(id: UUID = UUID.randomUUID(), name: String = tenantName): Tenant = {
+
+  def createTenant(
+    id: UUID = UUID.randomUUID(),
+    name: String = tenantName,
+    clientCert: Option[ClientCert] = Some(ClientCert(base64X509Cert))): Tenant = {
+
     Tenant(
       TenantId(id),
       TenantName(name),
@@ -27,7 +32,7 @@ object ModelCreationHelper {
       certCreationToken,
       IdGardIdentifier("folder-identifier"),
       TenantGroupId(TENANT_GROUP_PREFIX + name),
-      Some(ClientCert(base64X509Cert))
+      clientCert
     )
   }
 

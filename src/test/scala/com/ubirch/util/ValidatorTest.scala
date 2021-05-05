@@ -1,9 +1,10 @@
 package com.ubirch.util
 
+import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.ValidatorConstants.phoneValidationError
-import com.ubirch.services.poc.util.{ CsvConstants, ValidatorConstants }
+import com.ubirch.services.poc.util.{CsvConstants, ValidatorConstants}
 import com.ubirch.services.util.Validator
 
 class ValidatorTest extends TestBase {
@@ -125,6 +126,46 @@ class ValidatorTest extends TestBase {
         }
     }
   }
+
+  "Validator Client Cert" should {
+
+    val tenant = createTenant()
+    "validate 'TRUE' valid" in {
+      val str = "TRUE"
+      val validated = Validator.validateClientCert(clientCert, str, tenant)
+      assert(validated.isValid)
+    }
+
+    "validate 'tryx' valid" in {
+      val str = "tryx"
+      val validated = Validator.validateClientCert(clientCert, str, tenant)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.booleanError(clientCert))
+        }
+    }
+
+    "validate 'False' valid" in {
+      val str = "False"
+      val validated = Validator.validateClientCert(clientCert, str, tenant)
+      assert(validated.isValid)
+    }
+
+    val tenantWithoutCert = createTenant(clientCert = None)
+    "validate 'False' invalid when tenant does not have a client cert" in {
+      val str = "False"
+      val validated = Validator.validateClientCert(clientCert, str, tenantWithoutCert)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.clientCertError(clientCert))
+        }
+    }
+  }
+
 
   "Validator Phone" should {
 

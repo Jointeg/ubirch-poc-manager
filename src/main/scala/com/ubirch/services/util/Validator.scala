@@ -1,14 +1,16 @@
 package com.ubirch.services.util
 
+import cats.data.Validated.Valid
 import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
+import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.ValidatorConstants._
 import org.json4s.JValue
 import org.json4s.native.JsonMethods._
 
 import java.net.URL
 import javax.mail.internet.InternetAddress
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object Validator {
 
@@ -57,6 +59,16 @@ object Validator {
     Try(str.toBoolean) match {
       case Success(boolean) => boolean.validNel
       case Failure(_)       => booleanError(header).invalidNel
+    }
+  }
+
+  /**
+    * parsable to Boolean
+    */
+  def validateClientCert(header: String, str: String, tenant: Tenant): AllErrorsOr[Boolean] = {
+    validateBoolean(header, str) match {
+      case Valid(false) if tenant.clientCert.isEmpty => clientCertError(header).invalidNel
+      case validOrInvalid                            => validOrInvalid
     }
   }
 

@@ -27,6 +27,7 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
       .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
       .split(", ")
       .toList
+
   implicit val scheduler: Scheduler = monix.execution.Scheduler.global
 
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
@@ -48,11 +49,11 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
       case Failure(ex: Throwable) =>
         Task(Left(s"something unexpected went wrong ${ex.getMessage}"))
     }
-
   }
 
   private def storePocAndStatus(poc: Poc, csvRow: String): Task[Option[String]] = {
     val status = createInitialPocCreationState(poc)
+
     (for {
       _ <- pocTable.createPoc(poc)
       _ <- pocStatusTable.createPocStatus(status)
@@ -75,8 +76,7 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
       }
   }
 
-  def createInitialPocCreationState(poc: Poc): PocStatus = {
-    //Todo: check if poc.clientCertRequired == false, that tenant already has idgard URL?!
+  def createInitialPocCreationState(poc: Poc): PocStatus =
     PocStatus(
       pocId = poc.id,
       validDataSchemaGroup = dataSchemaGroupIds.contains(poc.dataSchemaId),
@@ -87,6 +87,5 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
       logoReceived = if (poc.certifyApp) Some(false) else None,
       logoStored = if (poc.certifyApp) Some(false) else None
     )
-  }
 
 }

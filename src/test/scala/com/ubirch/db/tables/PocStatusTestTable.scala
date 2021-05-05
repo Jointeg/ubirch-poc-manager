@@ -19,7 +19,6 @@ class PocStatusTestTable extends PocStatusRepository {
       pocStatusDatastore.update(pocStatus.pocId, pocStatus)
     }
 
-
   override def getPocStatus(pocStatusId: UUID): Task[Option[PocStatus]] = {
     Task(pocStatusDatastore.get(pocStatusId))
   }
