@@ -471,7 +471,7 @@
         <!-- Namespaced UUIDs -->
         <dependency>
             <groupId>com.47deg</groupId>
-            <artifactId>memeid</artifactId>
+            <artifactId>memeid4s_${scala.compat.version}</artifactId>
             <version>${memeid.version}</version>
         </dependency>
 
