@@ -141,19 +141,18 @@ class KeycloakHelperImpl @Inject() (
         case Left(ex: GroupCreationError) =>
           val errorMsg = s"creation of subgroup ${poc.roleName} for group of ${tenant.groupId} failed ${ex.errorMsg}"
           throwError(status, errorMsg)
-
         case Right(groupId) =>
           groupId
       }
   }
 
-  def throwError(status: PocStatus, msg: String) =
-    throw PocCreationError(status.copy(errorMessages = Some(msg)))
-
   private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
     logger.error(msg, ex)
     throwError(status, msg)
   }
+
+  def throwError(status: PocStatus, msg: String) =
+    throw PocCreationError(status.copy(errorMessages = Some(msg)))
 
   private def findRoleAndAddToGroup(
     poc: Poc,

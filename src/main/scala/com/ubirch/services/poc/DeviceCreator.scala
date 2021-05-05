@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.{ Poc, PocStatus, StatusAndDeviceInfo }
 import com.ubirch.models.tenant.Tenant
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -21,7 +21,7 @@ import scala.concurrent.Future
 
 trait DeviceCreator {
 
-  def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus]
+  def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndDeviceInfo]
 }
 
 class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extends DeviceCreator with LazyLogging {
@@ -30,51 +30,59 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
   private val thingUrl: String = conf.getString(ServicesConfPaths.THING_API_URL)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
+  private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc ${poc.pocName}"
 
-  //  private val thingApiURL: URI =
-  //    try {
-  //      val url = conf.getString(THING_API_URL)
-  //      new URI(url)
-  //    } catch {
-  //      case ex: Throwable =>
-  //        logger.error(s"couldn't parse thingApiURL ${conf.getString(THING_API_URL)}", ex)
-  //        throw ex
-  //    }
-
-  override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {
-    val body =
-      DeviceRequestBody(
-        poc.deviceId.toString,
-        s"device of ${tenant.tenantName}'s poc ${poc.pocName}",
-        List(poc.dataSchemaId, tenant.groupId.value, poc.roleName)
-      )
-
-    val response =
-      basicRequest
-        .post(uri"$thingUrl")
-        .body(write[DeviceRequestBody](body))
-        .auth
-        .bearer(tenant.deviceCreationToken.value.value.value)
-        .response(asJson[DeviceRequestResponse])
-        .send()
-        .map {
-          _.body match {
-            case Right(response: DeviceRequestResponse) =>
-              if (response.details.state == "Ok")
-                Right(response.details.apiConfig)
-              else
-                Left(s"state of DeviceCreationResponse from Thing APP is not ok, but ${response.details.state}")
-            case Left(error: ResponseError[Exception]) =>
-              val errorMsg = "something went wrong creating device via Thing API; "
-              logger.error(errorMsg, error)
-              Left(errorMsg + error.getMessage)
-          }
-        }
-    Task.fromFuture {
-      response
+  override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndDeviceInfo] = {
+    if (status.deviceCreated) {
+      throwError(status, "device has been created, but retrieval of password is not implemented yet")
+//      Task(StatusAndDeviceInfo(status, None))
+    } else {
+      Task.fromFuture(requestDeviceCreation(poc, status, tenant))
     }
-    Task(status)
   }
+
+  private def requestDeviceCreation(poc: Poc, status: PocStatus, tenant: Tenant) = {
+    val body = getBody(poc, tenant)
+
+    basicRequest
+      .post(uri"$thingUrl")
+      .body(write[DeviceRequestBody](body))
+      .auth
+      .bearer(tenant.deviceCreationToken.value.value.value)
+      .response(asJson[DeviceRequestResponse])
+      .send()
+      .map {
+        _.body match {
+          case Right(response: DeviceRequestResponse) =>
+            if (response.details.state == "Ok") {
+              val pw = response.details.apiConfig.password
+              StatusAndDeviceInfo(status, pw)
+            } else {
+              throwError(
+                status,
+                s"state of DeviceCreationResponse from Thing APP is not ok, but ${response.details.state}")
+            }
+          case Left(ex: ResponseError[Exception]) =>
+            throwAndLogError(status, "creating device via Thing API failed; ", ex)
+        }
+      }
+  }
+  private def getBody(poc: Poc, tenant: Tenant) = {
+    DeviceRequestBody(
+      poc.deviceId.toString,
+      deviceDescription(tenant, poc),
+      List(poc.dataSchemaId, tenant.groupId.value, poc.roleName)
+    )
+  }
+
+  private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
+    logger.error(msg, ex)
+    throwError(status, msg)
+  }
+
+  def throwError(status: PocStatus, msg: String) =
+    throw PocCreationError(status.copy(errorMessages = Some(msg)))
+
 }
 
 case class DeviceRequestBody(

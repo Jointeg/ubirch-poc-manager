@@ -64,18 +64,17 @@ class PocCreationLoopImpl @Inject() (
       //handle device realm
       status1 <- keycloakHelper.createDeviceRealmRole(poc, status)
       status2 <- keycloakHelper.createDeviceRealmGroup(poc, status1, tenant)
-      status3 <- keycloakHelper.assignDeviceRealmRoleToGroup(poc, status1, tenant)
+      status3 <- keycloakHelper.assignDeviceRealmRoleToGroup(poc, status2, tenant)
       //handle user realm
       status4 <- keycloakHelper.createUserRealmRole(poc, status3)
       status5 <- keycloakHelper.createUserRealmGroup(poc, status4, tenant)
-      status3 <- keycloakHelper.assignUserRealmRoleToGroup(poc, status1, tenant)
-
-      status6 <- deviceCreator.createDevice(poc, status5, tenant)
+      status6 <- keycloakHelper.assignUserRealmRoleToGroup(poc, status5, tenant)
       //    status7 <- certHandler.createCert(poc, status6)
       //    status8 <- certHandler.provideCert(poc, status7)
       //    status <- logoHandler.retrieveLogo(poc, status8)
       //    status9 <- logoHandler.storeLogo(poc, status9)
-      status10 <- informationProvider.toGoClient(poc, status5)
+      statusAndApi9 <- deviceCreator.createDevice(poc, status6, tenant)
+      status10 <- informationProvider.toGoClient(poc, statusAndApi9)
       status11 <- informationProvider.toCertifyAPI(poc, status10)
     } yield status11
 

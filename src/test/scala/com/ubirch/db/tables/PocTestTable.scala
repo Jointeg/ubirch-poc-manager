@@ -1,6 +1,6 @@
 package com.ubirch.db.tables
 import com.google.inject.Inject
-import com.ubirch.models.poc.{Completed, Poc, PocStatus}
+import com.ubirch.models.poc.{ Completed, Poc, PocStatus }
 import monix.eval.Task
 
 import java.util.UUID
@@ -8,7 +8,7 @@ import javax.inject.Singleton
 import scala.collection.mutable
 
 @Singleton
-class PocTestTable @Inject()(pocStatusTable: PocStatusTestTable) extends PocRepository {
+class PocTestTable @Inject() (pocStatusTable: PocStatusTestTable) extends PocRepository {
   private val pocDatastore = mutable.Map[UUID, Poc]()
 
   override def createPoc(poc: Poc): Task[UUID] =
@@ -45,14 +45,14 @@ class PocTestTable @Inject()(pocStatusTable: PocStatusTestTable) extends PocRepo
     Task(pocDatastore.remove(id))
 
   override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] = {
-    Task{
+    Task {
       pocDatastore += ((poc.id, poc))
       pocStatusTable.createPocStatus(pocStatus)
     }
   }
 
   override def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] = {
-    Task{
+    Task {
       pocDatastore.update(poc.id, poc)
       pocStatusTable.updatePocStatus(pocStatus)
     }
