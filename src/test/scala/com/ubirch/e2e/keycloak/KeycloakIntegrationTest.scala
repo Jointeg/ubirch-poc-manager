@@ -3,11 +3,10 @@ package com.ubirch.e2e.keycloak
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.keycloak.group.{ GroupAlreadyExists, GroupName, GroupNotFound }
-import com.ubirch.models.keycloak.roles.{ RoleAlreadyExists, RoleName }
+import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupAlreadyExists, GroupName, GroupNotFound }
+import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
 import com.ubirch.models.keycloak.user.UserAlreadyExists
 import com.ubirch.models.user.UserName
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -15,6 +14,7 @@ import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import org.scalactic.StringNormalizations._
 
 import scala.concurrent.duration.DurationInt
+import scala.jdk.CollectionConverters._
 
 class KeycloakIntegrationTest extends E2ETestBase {
 
@@ -26,14 +26,62 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val newGroup = createNewKeycloakGroup()
         val res = for {
           _ <- keycloakGroupService.createGroup(newGroup)
-          foundGroup <- keycloakGroupService.findGroup(newGroup.groupName)
+          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName)
           _ <- keycloakGroupService.deleteGroup(newGroup.groupName)
-          groupAfterDeletion <- keycloakGroupService.findGroup(newGroup.groupName)
+          groupAfterDeletion <- keycloakGroupService.findGroupByName(newGroup.groupName)
         } yield (foundGroup, groupAfterDeletion)
 
         val (maybeFoundGroup, groupAfterDeletion) = await(res, 2.seconds)
-        maybeFoundGroup.right.value.groupName shouldBe newGroup.groupName
+        maybeFoundGroup.right.value.getName shouldBe newGroup.groupName.value
         groupAfterDeletion.left.value shouldBe GroupNotFound(newGroup.groupName)
+      }
+    }
+
+    "Create group hierarchies with roles and find them" in {
+      withInjector { injector =>
+        val groups = injector.get[KeycloakGroupService]
+        val roles = injector.get[KeycloakRolesService]
+
+        val tenantName = "T_tenantName"
+        val pocName = "P_pocName"
+        val tenantPath = s"/$tenantName"
+        val childPocPath = s"$tenantPath/$pocName"
+
+        val res1 = for {
+
+          //create tenant role and group
+          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(tenantName)))
+          tenantRole <- roles.findRoleRepresentation(RoleName(tenantName))
+          tenantGroup <- groups.createGroup(CreateKeycloakGroup(GroupName(tenantName)))
+          - <- groups.addRoleToGroup(tenantGroup.right.value, tenantRole.get)
+
+          //create poc role and create as subGroup of tenantgroup
+          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(pocName)))
+          pocRole <- roles.findRoleRepresentation(RoleName(pocName))
+          pocGroup <- groups.addSubGroup(tenantGroup.right.value, GroupName(pocName))
+          - <- groups.addRoleToGroup(pocGroup.right.value, pocRole.get)
+
+          //retrieve final Groups
+          tenantGroupFinal <- groups.findGroupById(tenantGroup.right.value)
+          pocGroupFinal <- groups.findGroupById(pocGroup.right.value)
+
+        } yield {
+          (tenantGroupFinal, pocGroupFinal)
+        }
+
+        val (tenantGroup, pocGroup) = await(res1, 5.seconds)
+
+        tenantGroup.right.value.getName shouldBe tenantName
+        tenantGroup.right.value.getPath shouldBe tenantPath
+        tenantGroup.right.value.getRealmRoles shouldBe Array(tenantName).toList.asJava
+
+        val list = tenantGroup.right.value.getSubGroups
+        list.get(0).getName shouldBe pocName
+        list.get(0).getPath shouldBe childPocPath
+
+        pocGroup.right.value.getName shouldBe pocName
+        pocGroup.right.value.getPath shouldBe childPocPath
+        pocGroup.right.value.getRealmRoles shouldBe List(pocName).asJava
       }
     }
 
@@ -57,10 +105,11 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakGroupService = injector.get[KeycloakGroupService]
 
-        val result = keycloakGroupService.findGroup(GroupName("Unknown group"))
+        val groupName = GroupName("Unknown group")
+        val result = keycloakGroupService.findGroupByName(groupName)
 
         val maybeGroup = await(result, 2.seconds)
-        maybeGroup.left.value shouldBe GroupNotFound(GroupName("Unknown group"))
+        maybeGroup.left.value shouldBe GroupNotFound(groupName)
       }
     }
 
@@ -72,11 +121,11 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val res = for {
           _ <- keycloakGroupService.createGroup(newGroup)
           _ <- keycloakGroupService.deleteGroup(GroupName("Unknown group"))
-          foundGroup <- keycloakGroupService.findGroup(newGroup.groupName)
+          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName)
         } yield foundGroup
 
         val maybeFoundGroup = await(res, 2.seconds)
-        maybeFoundGroup.right.value.groupName shouldBe newGroup.groupName
+        maybeFoundGroup.right.value.getName shouldBe newGroup.groupName.value
       }
     }
   }

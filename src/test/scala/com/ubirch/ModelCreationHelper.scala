@@ -53,7 +53,7 @@ object ModelCreationHelper {
       id,
       validDataSchemaGroup = true,
       clientCertRequired = false,
-      clientCertDownloaded = None,
+      clientCertCreated = None,
       clientCertProvided = None,
       logoRequired = false,
       logoReceived = None,

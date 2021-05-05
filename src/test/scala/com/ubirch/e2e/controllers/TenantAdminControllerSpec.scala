@@ -156,7 +156,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
-          println(body)
           status should equal(400)
           assert(body == "NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for T_tenantName)")
         }
@@ -179,7 +178,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.superAdmin.prepare)) {
           status should equal(403)
-          println(body)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
       }

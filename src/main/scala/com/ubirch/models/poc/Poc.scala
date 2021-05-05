@@ -17,8 +17,9 @@ case class Poc(
   dataSchemaId: String,
   extraConfig: Option[JsonConfig],
   manager: PocManager,
-  roleAndGroupName: String,
-  groupPath: String,
+  roleName: String,
+  deviceRealmGroupId: Option[String] = None,
+  userRealmGroupId: Option[String] = None,
   deviceId: UUID = UUID.randomUUID(), //Todo: generate name spaced
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
@@ -56,8 +57,7 @@ object Poc {
       dataSchemaId = dataSchemaId,
       extraConfig = extraConfig,
       manager = manager,
-      roleName,
-      tenantGroupName + "/" + roleName
+      roleName
     )
   }
 

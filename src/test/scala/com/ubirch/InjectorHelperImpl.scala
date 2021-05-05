@@ -4,7 +4,14 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
+import com.ubirch.db.tables.{
+  PocRepository,
+  PocTestTable,
+  TenantRepository,
+  TenantTestTable,
+  UserRepository,
+  UserTestTable
+}
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
@@ -25,28 +32,6 @@ import monix.eval.Task
 
 import java.security.Key
 import javax.inject.{ Inject, Singleton }
-import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
-import com.ubirch.services.jwt.{
-  DefaultPublicKeyPoolService,
-  PublicKeyDiscoveryService,
-  PublicKeyPoolService,
-  TokenCreationService
-}
-import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
-import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
-import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserService,
-  TestKeycloakUserService,
-  TestUserPollingService,
-  UserPollingService
-}
-import monix.eval.Task
-
-import java.security.Key
-import javax.inject.{ Inject, Provider, Singleton }
 
 @Singleton
 class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
@@ -407,12 +392,14 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
 
 class UnitTestInjectorHelper()
   extends InjectorHelper(List(new Binder {
-    override def PublicKeyPoolService: ScopedBindingBuilder = {
+    override def PublicKeyPoolService: ScopedBindingBuilder =
       bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
-    }
 
     override def UserRepository: ScopedBindingBuilder =
       bind(classOf[UserRepository]).to(classOf[UserTestTable])
+
+    override def PocRepository: ScopedBindingBuilder =
+      bind(classOf[PocRepository]).to(classOf[PocTestTable])
 
     override def TenantRepository: ScopedBindingBuilder =
       bind(classOf[TenantRepository]).to(classOf[TenantTestTable])

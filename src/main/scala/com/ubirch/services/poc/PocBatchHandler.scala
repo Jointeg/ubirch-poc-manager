@@ -6,8 +6,6 @@ import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.db.tables.{ PocStatusTable, PocTable }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.db.tables.{ PocStatusTable, PocTable }
-import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.services.poc.util.CsvConstants
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -83,7 +81,7 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
       pocId = poc.id,
       validDataSchemaGroup = dataSchemaGroupIds.contains(poc.dataSchemaId),
       clientCertRequired = poc.clientCertRequired,
-      clientCertDownloaded = if (poc.clientCertRequired) Some(false) else None,
+      clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
       clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
       logoRequired = poc.certifyApp,
       logoReceived = if (poc.certifyApp) Some(false) else None,
