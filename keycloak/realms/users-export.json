@@ -70,10 +70,18 @@
       },
       {
         "id": "608ee4a3-03ec-484c-8c03-97b7b108d9dc",
-        "name": "SUPER_ADMIN",
+        "name": "super-admin",
         "composite": false,
         "clientRole": false,
         "containerId": "test-realm",
+        "attributes": {}
+      },
+      {
+        "id": "176f6494-167e-4221-95c2-973a46584323",
+        "name": "tenant-admin",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "users-realm",
         "attributes": {}
       }
     ],

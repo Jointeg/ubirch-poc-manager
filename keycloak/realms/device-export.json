@@ -44,7 +44,15 @@
     "realm": [
       {
         "id": "176f6498-167e-4221-95c2-973a46584323",
-        "name": "SUPER_ADMIN",
+        "name": "super-admin",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "device-realm",
+        "attributes": {}
+      },
+      {
+        "id": "176f6499-167e-4221-95c2-973a46584323",
+        "name": "tenant-admin",
         "composite": false,
         "clientRole": false,
         "containerId": "device-realm",

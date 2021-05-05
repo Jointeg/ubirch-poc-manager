@@ -3,7 +3,7 @@ package com.ubirch.e2e.controllers
 import com.ubirch.FakeTokenCreator
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, PocTable, TenantTable }
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.TenantId
@@ -12,6 +12,7 @@ import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
 import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization.write
@@ -76,7 +77,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           body = badCsv.getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(400)
-          assert(body == "NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for T_tenantName)")
+          assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
         }
       }
     }
@@ -158,7 +159,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           println(body)
           status should equal(400)
-          assert(body == "NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for T_tenantName)")
+          assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
         }
       }
     }
