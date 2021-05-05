@@ -19,7 +19,7 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import org.scalatra.{ NotFound, Ok, ScalatraBase }
+import org.scalatra.{ InternalServerError, NotFound, Ok, ScalatraBase }
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -72,14 +72,22 @@ class SuperAdminController @Inject() (
         bodyParam[String]("deviceCreationToken"),
         bodyParam[String]("certificationCreationToken"),
         bodyParam[String]("idGardIdentifier"),
-        bodyParam[String]("tenantGroupId")
+        bodyParam[String]("tenantGroupId"),
+        bodyParam[String]("clientCert")
       )
   }
 
   post("/tenants/create", operation(createTenantOperation)) {
     authenticated(_.hasRole(Token.SUPER_ADMIN)) { _ =>
       asyncResult("CreateTenant") { _ => _ =>
-        tenantService.createTenant(parsedBody.extract[CreateTenantRequest]).map(_ => Ok())
+        tenantService
+          .createTenant(parsedBody.extract[CreateTenantRequest])
+          .map(_ => Ok())
+          .onErrorHandle { ex: Throwable =>
+            val errorMsg = s"failure on tenant creation"
+            logger.error(errorMsg, ex)
+            InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+          }
       }
     }
   }

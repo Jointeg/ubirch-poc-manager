@@ -16,6 +16,7 @@ import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -80,8 +81,16 @@ class TenantAdminController @Inject() (
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
 
+  val getPocs: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve all pocs of the requesting tenant")
+      .summary("Get PoCs")
+      .description("Retrieve PoCs that belong to the querying tenant.")
+      .tags("Tenant-Admin, PoCs")
+      .authorizations()
+
   post("/pocs/create", operation(createListOfPocs)) {
-    authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
+
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult("Create poc batch") { _ => _ =>
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
@@ -100,7 +109,7 @@ class TenantAdminController @Inject() (
   }
 
   get("/pocStatus/:id", operation(getPocStatus)) {
-    authenticated(_.hasRole(tenantAdminRole)) { token =>
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { _ =>
       asyncResult("Get Poc Status") { _ => _ =>
         val id = params("id")
         Try(UUID.fromString(id)) match {
@@ -114,16 +123,15 @@ class TenantAdminController @Inject() (
           case Failure(ex) =>
             val errorMsg = s"error on retrieving pocStatus with $id:"
             logger.error(errorMsg, ex)
-            Task {
-              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
-            }
+            Task(InternalServerError(NOK.serverError(errorMsg + ex.getMessage)))
+
         }
       }
     }
   }
 
-  get("/pocs", operation(getPocStatus)) {
-    authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
+  get("/pocs", operation(getPocs)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult("Get all PoCs for a tenant") { _ => _ =>
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
@@ -152,7 +160,7 @@ class TenantAdminController @Inject() (
   }
 
   private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
-    token.roles.find(_.name.startsWith("T_")) match {
+    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
 
       case Some(tenantRole) =>
         tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {

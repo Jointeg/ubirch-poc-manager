@@ -19,4 +19,5 @@ class ConfigKeyProvider @Inject() (config: Config) extends AESKeyProvider with L
 
   override def getAESKey: Task[SecretKey] =
     Task(new SecretKeySpec(key.decode, "AES"))
+
 }

@@ -151,7 +151,7 @@ object FakeToken {
       |  "realm_access": {
       |    "roles": [
       |      "tenant-admin",
-      |      "T_tenantName",
+      |      "TEN_tenantName",
       |    ]
       |  },
       |  "resource_access": {
@@ -197,7 +197,7 @@ object FakeToken {
       |      "offline_access",
       |      "uma_authorization",
       |      "USER",
-      |      "SUPER_ADMIN"
+      |      "super-admin"
       |    ]
       |  },
       |  "resource_access": {

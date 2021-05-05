@@ -35,7 +35,8 @@ class DefaultTenantService @Inject() (aesEncryption: AESEncryption, tenantReposi
       encryptedDeviceCreationToken,
       encryptedCertificationCreationToken,
       createTenantRequest.idGardIdentifier,
-      createTenantRequest.tenantGroupId
+      createTenantRequest.tenantGroupId,
+      createTenantRequest.clientCert
     )
 
 }
