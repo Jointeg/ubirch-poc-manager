@@ -1,20 +1,24 @@
 package com.ubirch.services.auth
 import com.ubirch.models.auth.{ DecryptedData, EncryptedData }
 import monix.eval.Task
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import java.security.SecureRandom
+import java.security.{ SecureRandom, Security }
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.{ Cipher, SecretKey }
-import javax.inject.Inject
+import javax.inject.{ Inject, Singleton }
 
 trait AESEncryption {
   def encrypt[Result](dataToBeEncrypted: String)(mapper: EncryptedData => Result): Task[Result]
   def decrypt[Result](encryptedData: EncryptedData)(mapper: DecryptedData => Result): Task[Result]
 }
 
+@Singleton
 class AESEncryptionCBCMode @Inject() (aesKeyProvider: AESKeyProvider) extends AESEncryption {
+  Security.addProvider(new BouncyCastleProvider())
+
   private val IV_LENGTH = 16
   private val AES_CBC_PKCS5 = "AES/CBC/PKCS5Padding"
 
@@ -62,7 +66,7 @@ class AESEncryptionCBCMode @Inject() (aesKeyProvider: AESKeyProvider) extends AE
 
   private def initCipher(mode: Int, secretKey: SecretKey, iv: IvParameterSpec) =
     Task {
-      val cipher = Cipher.getInstance(AES_CBC_PKCS5)
+      val cipher = Cipher.getInstance(AES_CBC_PKCS5, "BC")
       cipher.init(mode, secretKey, iv)
       cipher
     }

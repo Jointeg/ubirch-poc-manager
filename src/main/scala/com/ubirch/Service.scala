@@ -15,7 +15,6 @@ import org.flywaydb.core.api.FlywayException
 import java.util.concurrent.CountDownLatch
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.duration.DurationInt
-import javax.inject.{ Inject, Singleton }
 
 /**
   * Represents a bootable service object that starts the system
