@@ -6,6 +6,7 @@ import com.ubirch.models.tenant._
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
+import scala.util.Random
 
 object ModelCreationHelper {
 
@@ -14,10 +15,9 @@ object ModelCreationHelper {
   private val encryptedData = EncryptedData(base64String)
   private val deviceCreationToken = EncryptedDeviceCreationToken(encryptedData)
   private val certCreationToken = EncryptedCertificationCreationToken(encryptedData)
-  private val tenantName = "tenantName"
-  def createTenant(id: UUID = UUID.randomUUID(), name: String = tenantName): Tenant = {
+  def createTenant(name: String = Random.alphanumeric.take(10).toList.mkString): Tenant = {
     Tenant(
-      TenantId(id),
+      TenantId(TenantName(name)),
       TenantName(name),
       API,
       deviceCreationToken,
@@ -29,13 +29,12 @@ object ModelCreationHelper {
 
   def createPoc(
     id: UUID = UUID.randomUUID(),
-    tenantId: UUID = UUID.randomUUID(),
-    tenantGroupName: String = s"T_$tenantName",
+    tenantName: TenantName,
     externalId: String = UUID.randomUUID().toString): Poc =
     Poc(
       id,
-      tenantId,
-      tenantGroupName,
+      TenantId(tenantName),
+      s"T_${tenantName.value}",
       externalId,
       "pocName",
       Address("", "", None, 67832, "", None, None, "France"),

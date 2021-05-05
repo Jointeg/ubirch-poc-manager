@@ -1,12 +1,13 @@
 package com.ubirch.models.poc
 
+import com.ubirch.models.tenant.TenantId
 import org.joda.time.DateTime
 
 import java.util.UUID
 
 case class Poc(
   id: UUID,
-  tenantId: UUID,
+  tenantId: TenantId,
   externalId: String,
   pocName: String,
   address: Address,
@@ -30,7 +31,7 @@ object Poc {
 
   def apply(
     id: UUID,
-    tenantId: UUID,
+    tenantId: TenantId,
     tenantGroupName: String,
     externalId: String,
     pocName: String,
