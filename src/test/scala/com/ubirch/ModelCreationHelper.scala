@@ -1,6 +1,6 @@
 package com.ubirch
 
-import com.ubirch.models.auth.{ Base64String, EncryptedData }
+import com.ubirch.models.auth.{Base64String, EncryptedData}
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import org.json4s.native.JsonMethods.parse
@@ -28,16 +28,18 @@ object ModelCreationHelper {
   }
 
   def createPoc(
-    id: UUID = UUID.randomUUID(),
-    tenantId: UUID = UUID.randomUUID(),
-    tenantGroupName: String = s"T_$tenantName",
-    externalId: String = UUID.randomUUID().toString): Poc =
+     id: UUID = UUID.randomUUID(),
+     tenantId: UUID = UUID.randomUUID(),
+     tenantGroupName: String = s"T_$tenantName",
+     externalId: String = UUID.randomUUID().toString,
+     name: String = "pocName"
+   ): Poc =
     Poc(
       id,
       tenantId,
       tenantGroupName,
       externalId,
-      "pocName",
+      name,
       Address("", "", None, 67832, "", None, None, "France"),
       "pocPhone",
       certifyApp = true,

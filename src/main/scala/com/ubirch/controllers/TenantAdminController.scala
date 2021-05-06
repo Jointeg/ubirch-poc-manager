@@ -8,7 +8,7 @@ import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrate
 import com.ubirch.db.tables.PocRepository.PocCriteria
 import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.models.NOK
-import com.ubirch.models.common.{ASC, Page, Sort}
+import com.ubirch.models.common.{Order, Page, Sort}
 import com.ubirch.models.poc.Poc
 import com.ubirch.models.tenant.{Tenant, TenantGroupId}
 import com.ubirch.services.DeviceKeycloak
@@ -19,8 +19,8 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization.write
-import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
 import org.scalatra._
+import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
 
 import java.util.UUID
 import javax.inject.Inject
@@ -122,19 +122,27 @@ class TenantAdminController @Inject() (
 
   get("/pocs", operation(getPocStatus)) {
     authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
-      asyncResult("Get all PoCs for a tenant") { _ => _ =>
-        val page = Page(params.get("pageIndex").map(_.toInt).getOrElse(0), params.get("pageSize").map(_.toInt).getOrElse(20))
-        val sort = Sort("id", ASC)
+      asyncResult("Get all PoCs for a tenant") { _ =>
+        _ =>
+          val page = Page(
+            params.get("pageIndex").map(_.toInt).getOrElse(0),
+            params.get("pageSize").map(_.toInt).getOrElse(20)
+          )
+          val sort = Sort(
+            params.get("sortColumn"),
+            Order.fromString(params.get("sortOrder").getOrElse("asc"))
+          )
+          val search = params.get("search")
 
-        retrieveTenantFromToken(token).flatMap {
-          case Right(tenant: Tenant) =>
-            (for {
-              pocs <- pocTable.getAllPocsByCriteria(PocCriteria(tenant.id.value, page, sort))
-            } yield PoC_OUT(pocs.total, pocs.pocs))
-              .map(toJson)
-              .onErrorHandle(ex =>
-                InternalServerError(NOK.serverError(
-                  s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage)))
+          retrieveTenantFromToken(token).flatMap {
+            case Right(tenant: Tenant) =>
+              (for {
+                pocs <- pocTable.getAllPocsByCriteria(PocCriteria(tenant.id.value, page, sort, search))
+              } yield PoC_OUT(pocs.total, pocs.pocs))
+                .map(toJson)
+                .onErrorHandle(ex =>
+                  InternalServerError(NOK.serverError(
+                    s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage)))
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))

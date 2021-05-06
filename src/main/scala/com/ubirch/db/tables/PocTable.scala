@@ -2,10 +2,10 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.db.tables.PocRepository.{ PaginatedPocs, PocCriteria }
-import com.ubirch.models.common.{ Page, Sort }
-import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Status }
-import io.getquill.{ Insert, Query, Update }
+import com.ubirch.db.tables.PocRepository.{PaginatedPocs, PocCriteria}
+import com.ubirch.models.common.{Page, Sort}
+import com.ubirch.models.poc.{Completed, Poc, PocStatus, Status}
+import io.getquill.{Insert, Query, Update}
 import monix.eval.Task
 
 import java.util.UUID
@@ -31,7 +31,8 @@ trait PocRepository {
 }
 
 object PocRepository {
-  case class PocCriteria(tenantId: UUID, page: Page, sort: Sort)
+  case class PocCriteria(tenantId: UUID, page: Page, sort: Sort, search: Option[String])
+
   case class PaginatedPocs(total: Long, pocs: Seq[Poc])
 }
 
@@ -81,18 +82,26 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
     }
 
-  private def countAllPocsByCriteriaQuery(page: Int, size: Int): Quoted[Query[Poc]] =
-    quote {
+  private def getAllPocsByCriteriaQuery(criteria: PocCriteria) = {
+    val pocByTenantId = quote {
       querySchema[Poc]("poc_manager.poc_table")
-        .drop(liftScalar(page))
-        .take(liftScalar(size))
+        .filter(_.tenantId == lift(criteria.tenantId))
     }
 
-  private def getAllPocsByCriteriaQuery(criteria: PocCriteria): Quoted[Query[Poc]] =
-    quote {
-      querySchema[Poc]("poc_manager.poc_table")
-        .drop(liftScalar(criteria.page.index * criteria.page.size))
-        .take(liftScalar(criteria.page.size))
+    criteria.search match {
+      case Some(s) =>
+        quote {
+          pocByTenantId
+            .filter(_.pocName.like(lift(s"$s%")))
+        }
+      case None => pocByTenantId
+    }
+  }
+
+  private def sortPocs(q: Quoted[Query[Poc]], sort: Sort) =
+    sort.field match {
+      case Some("name") => quote(q.sortBy(p => p.pocName))
+      case _ => quote(q.sortBy(p => p.id))
     }
 
   override def createPoc(poc: Poc): Task[UUID] = Task(run(createPocQuery(poc))).map(_ => poc.id)
@@ -125,10 +134,15 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
   override def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs] =
     Task {
       transaction {
-        val total =
-          run(countAllPocsByCriteriaQuery(pocCriteria.page.index * pocCriteria.page.size, pocCriteria.page.size))
-        val pocs = run(getAllPocsByCriteriaQuery(pocCriteria))
-        PaginatedPocs(total.size, pocs)
+        val pocsByCriteria = getAllPocsByCriteriaQuery(pocCriteria)
+        val sortedPocs = sortPocs(pocsByCriteria, pocCriteria.sort)
+        val total = run(pocsByCriteria.size)
+        val pocs = run {
+          sortedPocs
+            .drop(lift(pocCriteria.page.index * pocCriteria.page.size))
+            .take(lift(pocCriteria.page.size))
+        }
+        PaginatedPocs(total, pocs)
       }
     }
 
