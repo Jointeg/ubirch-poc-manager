@@ -32,8 +32,8 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           PlainDeviceCreationToken("1234567890"),
           PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
-          TenantGroupId("random-user-group"),
-          TenantGroupId("random-device-group"),
+          TenantUserGroupId("random-user-group"),
+          TenantDeviceGroupId("random-device-group"),
           None
         )
       }
@@ -63,8 +63,8 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           PlainDeviceCreationToken("1234567890"),
           PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
-          TenantGroupId("random-user-group"),
-          TenantGroupId("random-device-group"),
+          TenantUserGroupId("random-user-group"),
+          TenantDeviceGroupId("random-device-group"),
           Some(ClientCert(base64X509Cert))
         )
       }

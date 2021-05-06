@@ -11,7 +11,7 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
+import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
@@ -161,7 +161,7 @@ class TenantAdminController @Inject() (
     token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
 
       case Some(tenantRole) =>
-        tenantTable.getTenantByDeviceGroupId(TenantGroupId(tenantRole.name)).map {
+        tenantTable.getTenantByDeviceGroupId(TenantDeviceGroupId(tenantRole.name)).map {
           case Some(tenant) => Right(tenant)
           case None         => Left(s"couldn't find tenant in db for ${tenantRole.name}")
         }

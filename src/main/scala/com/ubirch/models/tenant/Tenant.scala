@@ -7,7 +7,7 @@ case class Tenant(
   deviceCreationToken: EncryptedDeviceCreationToken,
   certificationCreationToken: EncryptedCertificationCreationToken,
   idGardIdentifier: IdGardIdentifier,
-  userGroupId: TenantGroupId,
-  deviceGroupId: TenantGroupId,
+  userGroupId: TenantUserGroupId,
+  deviceGroupId: TenantDeviceGroupId,
   clientCert: Option[ClientCert]
 )
