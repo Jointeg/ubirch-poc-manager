@@ -2,10 +2,10 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.db.tables.PocRepository.{PaginatedPocs, PocCriteria}
-import com.ubirch.models.common.{Page, Sort}
-import com.ubirch.models.poc.{Completed, Poc, PocStatus, Status}
-import io.getquill.{Insert, Query, Update}
+import com.ubirch.db.tables.PocRepository.{ PaginatedPocs, PocCriteria }
+import com.ubirch.models.common.{ Page, Sort }
+import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Status }
+import io.getquill.{ Insert, Query, Update }
 import monix.eval.Task
 
 import java.util.UUID
@@ -101,7 +101,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
   private def sortPocs(q: Quoted[Query[Poc]], sort: Sort) =
     sort.field match {
       case Some("name") => quote(q.sortBy(p => p.pocName))
-      case _ => quote(q.sortBy(p => p.id))
+      case _            => q
     }
 
   override def createPoc(poc: Poc): Task[UUID] = Task(run(createPocQuery(poc))).map(_ => poc.id)

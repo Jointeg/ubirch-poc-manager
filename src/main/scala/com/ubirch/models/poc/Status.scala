@@ -21,4 +21,18 @@ object Status {
     case "PROCESSING" => Processing
     case "COMPLETED"  => Completed
   }
+
+  def unsafeFromString(value: String): Status =
+    value match {
+      case "PENDING"    => Pending
+      case "PROCESSING" => Processing
+      case "COMPLETED"  => Completed
+    }
+
+  def toStringFormat(status: Status): String =
+    status match {
+      case Pending    => "PENDING"
+      case Processing => "PROCESSING"
+      case Completed  => "COMPLETED"
+    }
 }

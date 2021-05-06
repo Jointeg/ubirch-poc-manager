@@ -15,7 +15,7 @@ import com.ubirch.services.poc.util.CsvConstants.headerLine
 import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import io.prometheus.client.CollectorRegistry
 import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
-import org.json4s.native.Serialization.write
+import org.json4s.native.Serialization.{write, read}
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
@@ -148,7 +148,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         pocs.size shouldBe 2
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
-          body shouldBe write[PoC_OUT](PoC_OUT(pocs.size, pocs.sortBy(_.id)))
+          val poC_OUT = read[PoC_OUT](body)
+          poC_OUT.total shouldBe 2
+          poC_OUT.pocs shouldBe pocs.filter(_.tenantId == tenantId)
         }
       }
     }
@@ -170,7 +172,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
-          body shouldBe write[PoC_OUT](PoC_OUT(0, Seq.empty))
+          val poC_OUT = read[PoC_OUT](body)
+          poC_OUT.total shouldBe 0
+          poC_OUT.pocs should have size 0
         }
       }
     }
@@ -180,7 +184,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.superAdmin.prepare)) {
           status should equal(403)
-          println(body)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
       }
@@ -199,14 +202,16 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
         pocs <- pocTable.getAllPocsByTenantId(tenantId)
       } yield pocs
-      val pocs = await(r, 5.seconds).sortBy(_.id)
+      val pocs = await(r, 5.seconds)
       get(
         "/pocs",
         params = Map("pageIndex" -> "1", "pageSize" -> "2"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
       ) {
         status should equal(200)
-        body shouldBe write[PoC_OUT](PoC_OUT(5, pocs.slice(2, 4)))
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 5
+        poC_OUT.pocs shouldBe pocs.slice(2, 4)
       }
     }
 
@@ -220,14 +225,16 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, name = "POC 2"))
         pocs <- pocTable.getAllPocsByTenantId(tenantId)
       } yield pocs
-      val pocs = await(r, 5.seconds).filter(_.pocName.startsWith("POC 1")).sortBy(_.id)
+      val pocs = await(r, 5.seconds)
       get(
         "/pocs",
         params = Map("search" -> "POC 1"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
       ) {
         status should equal(200)
-        body shouldBe write[PoC_OUT](PoC_OUT(2, pocs.take(2)))
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 2
+        poC_OUT.pocs shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
       }
     }
   }

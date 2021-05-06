@@ -1,14 +1,17 @@
 package com.ubirch.services.formats
+
+import com.ubirch.models.poc.Status
 import com.ubirch.models.tenant._
 import org.json4s.JsonAST.JString
 import org.json4s.{ CustomSerializer, MappingException }
 
 object DomainObjectFormats {
   val all = List(
-    createStringFormat(UsageType.unsafeFromString)(UsageType.toStringFormat)
+    createStringFormat(UsageType.unsafeFromString)(UsageType.toStringFormat),
+    createStringFormat(Status.unsafeFromString)(Status.toStringFormat)
   )
 
-  private def createStringFormat[A: Manifest](decode: String => A)(encode: A => String) = {
+  private def createStringFormat[A: Manifest](decode: String => A)(encode: A => String): CustomSerializer[A] = {
     val Class = implicitly[Manifest[A]].runtimeClass
     new CustomSerializer[A](_ =>
       (
