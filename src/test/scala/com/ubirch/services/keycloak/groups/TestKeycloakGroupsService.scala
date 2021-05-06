@@ -18,7 +18,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
   override def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupException, GroupId]] =
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]] =
     keycloakInstance match {
       case UsersKeycloak  => insertIfNotExists(groupsUsersDatastore, createKeycloakGroup)
       case DeviceKeycloak => insertIfNotExists(groupsDeviceDatastore, createKeycloakGroup)
@@ -26,10 +26,10 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
   private def insertIfNotExists(
     datastore: mutable.Map[String, GroupRepresentation],
-    createKeycloakGroup: CreateKeycloakGroup): Task[Either[GroupAlreadyExists, GroupId]] = {
+    createKeycloakGroup: CreateKeycloakGroup): Task[Either[GroupCreationError, GroupId]] = {
     Task {
       datastore.find(_._2.getName == createKeycloakGroup.groupName.value) match {
-        case Some(_) => Left(GroupAlreadyExists(createKeycloakGroup.groupName))
+        case Some(_) => Left(GroupCreationError(createKeycloakGroup.groupName.value))
         case None =>
           val group = createGroupRepresentation(createKeycloakGroup.groupName)
           datastore += ((group.getId, group))
@@ -78,30 +78,17 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
         Task(groupsDeviceDatastore -= groupName.value)
     }
 
-//  private def findViaNameInDatastore(
-//    datastore: mutable.Map[String, GroupRepresentation],
-//    groupId: GroupId): Either[String, GroupRepresentation] = {
-//    datastore.collectFirst { case tuple if tuple._2.getName == "TEN_tenantName" => tuple._2 } match {
-//      case Some(group) =>
-//        Right(group)
-//      case None =>
-//        Left(s"failed to find group TEN_tenantName")
-//    }
-//  }
-
   override def addSubGroup(
     parentGroupId: GroupId,
     childGroupName: GroupName,
-    instance: KeycloakInstance): Task[Either[GroupException, GroupId]] = {
+    instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]] = {
 
     val childGroup = createGroupRepresentation(childGroupName)
 
     val r = instance match {
       case UsersKeycloak =>
-//        findViaNameInDatastore(groupsUsersDatastore, parentGroupId)
         findIdInDatastore(groupsUsersDatastore, parentGroupId)
       case DeviceKeycloak =>
-//        findViaNameInDatastore(groupsDeviceDatastore, parentGroupId)
         findIdInDatastore(groupsDeviceDatastore, parentGroupId)
     }
     r match {

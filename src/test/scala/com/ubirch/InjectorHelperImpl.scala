@@ -4,16 +4,7 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{
-  PocRepository,
-  PocStatusRepository,
-  PocStatusTestTable,
-  PocTestTable,
-  TenantRepository,
-  TenantTestTable,
-  UserRepository,
-  UserTestTable
-}
+import com.ubirch.db.tables._
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
@@ -28,6 +19,12 @@ import com.ubirch.services.keycloak.users.{
   TestKeycloakUserService,
   TestUserPollingService,
   UserPollingService
+}
+import com.ubirch.services.poc.{
+  DeviceCreator,
+  InformationProvider,
+  TestDeviceCreatorImpl,
+  TestInformationProviderImpl
 }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
@@ -423,6 +420,12 @@ class UnitTestInjectorHelper()
 
     override def KeycloakUserService: ScopedBindingBuilder =
       bind(classOf[KeycloakUserService]).to(classOf[TestKeycloakUserService])
+
+    override def DeviceCreator: ScopedBindingBuilder =
+      bind(classOf[DeviceCreator]).to(classOf[TestDeviceCreatorImpl])
+
+    override def InformationProvider: ScopedBindingBuilder =
+      bind(classOf[InformationProvider]).to(classOf[TestInformationProviderImpl])
 
     override def configure(): Unit = {
       super.configure()

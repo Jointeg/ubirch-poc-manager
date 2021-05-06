@@ -16,7 +16,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupException, GroupId]] = {
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]] = {
 
     Task {
       val group = createKeycloakGroup.toKeycloakRepresentation
@@ -70,7 +70,8 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
   override def addSubGroup(
     parentGroupId: GroupId,
     childGroupName: GroupName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupException, GroupId]] = {
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]] = {
+
     Task {
       val group = CreateKeycloakGroup(childGroupName).toKeycloakRepresentation
       val response = keycloakConnector
@@ -124,15 +125,12 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         Task.unit
     }
 
-  private def processCreationResponse(response: Response, groupName: GroupName): Either[GroupException, GroupId] = {
+  private def processCreationResponse(response: Response, groupName: GroupName): Either[GroupCreationError, GroupId] = {
 
-    if (response.getStatus == 409) {
-      logger.error(s"could not create group $groupName as it already exists")
-      Left(GroupAlreadyExists(groupName))
-    } else if (response.getStatusInfo.equals(Status.CREATED)) {
+    if (response.getStatusInfo.equals(Status.CREATED)) {
       Right(getIdFromPath(response))
     } else {
-      Left(GroupCreationError(s"failed to create group $groupName; response has status ${response.getStatus}"))
+      Left(GroupCreationError(s"failed to create group ${groupName.value}; response has status ${response.getStatus}"))
     }
   }
 

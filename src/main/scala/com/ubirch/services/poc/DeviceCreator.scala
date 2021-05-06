@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
-import com.ubirch.models.poc.{ Poc, PocStatus, StatusAndDeviceInfo }
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -16,12 +16,11 @@ import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import sttp.client.json4s.asJson
 import sttp.client.{ basicRequest, ResponseError, SttpBackend, UriContext }
 
-import java.util.UUID
 import scala.concurrent.Future
 
 trait DeviceCreator {
 
-  def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndDeviceInfo]
+  def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW]
 }
 
 class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extends DeviceCreator with LazyLogging {
@@ -32,21 +31,19 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc ${poc.pocName}"
 
-  override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndDeviceInfo] = {
+  override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW] = {
     if (status.deviceCreated) {
       throwError(status, "device has been created, but retrieval of password is not implemented yet")
-//      Task(StatusAndDeviceInfo(status, None))
     } else {
-      Task.fromFuture(requestDeviceCreation(poc, status, tenant))
+      val body = getBody(poc, tenant)
+      Task.fromFuture(requestDeviceCreation(status, tenant, body))
     }
   }
 
-  private def requestDeviceCreation(poc: Poc, status: PocStatus, tenant: Tenant) = {
-    val body = getBody(poc, tenant)
-
+  protected def requestDeviceCreation(status: PocStatus, tenant: Tenant, body: String): Future[StatusAndPW] = {
     basicRequest
       .post(uri"$thingUrl")
-      .body(write[DeviceRequestBody](body))
+      .body(body)
       .auth
       .bearer(tenant.deviceCreationToken.value.value.value)
       .response(asJson[Array[Map[String, DeviceResponse]]])
@@ -56,7 +53,7 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
           case Right(array: Array[Map[String, DeviceResponse]]) =>
             if (array.length == 1 && array.head.size == 1) {
               val pw = array.head.head._2.apiConfig.password
-              StatusAndDeviceInfo(status, pw)
+              StatusAndPW(status.copy(deviceCreated = true), pw)
             } else {
               throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
             }
@@ -65,12 +62,14 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
         }
       }
   }
-  private def getBody(poc: Poc, tenant: Tenant) = {
-    DeviceRequestBody(
+
+  private def getBody(poc: Poc, tenant: Tenant): String = {
+    val body = DeviceRequestBody(
       poc.deviceId.toString,
       deviceDescription(tenant, poc),
       List(poc.dataSchemaId, tenant.deviceGroupId.value, poc.roleName)
     )
+    write[DeviceRequestBody](body)
   }
 
   private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {

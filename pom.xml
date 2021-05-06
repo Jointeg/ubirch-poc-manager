@@ -220,7 +220,7 @@
         <!-- https://mvnrepository.com/artifact/org.typelevel/cats-core -->
         <dependency>
             <groupId>org.typelevel</groupId>
-            <artifactId>cats-core_2.12</artifactId>
+            <artifactId>cats-core_${scala.compat.version}</artifactId>
             <version>2.5.0</version>
         </dependency>
 
@@ -269,6 +269,7 @@
             <artifactId>simpleclient_httpserver</artifactId>
             <version>${io.prometheus.simpleclient_httpserver.version}</version>
         </dependency>
+
         <!-- SimpleClient_Logback -->
         <dependency>
             <groupId>io.prometheus</groupId>

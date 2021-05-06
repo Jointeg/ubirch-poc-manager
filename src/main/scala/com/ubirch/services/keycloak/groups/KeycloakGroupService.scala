@@ -9,7 +9,7 @@ trait KeycloakGroupService {
 
   def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupException, GroupId]]
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]]
 
   def findGroupById(
     groupId: GroupId,
@@ -22,7 +22,7 @@ trait KeycloakGroupService {
   def addSubGroup(
     parentGroupId: GroupId,
     childGroupName: GroupName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupException, GroupId]]
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]]
 
   def addRoleToGroup(
     groupId: GroupId,

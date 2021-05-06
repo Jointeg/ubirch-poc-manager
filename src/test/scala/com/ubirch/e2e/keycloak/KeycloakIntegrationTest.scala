@@ -3,7 +3,12 @@ package com.ubirch.e2e.keycloak
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupAlreadyExists, GroupName, GroupNotFound }
+import com.ubirch.models.keycloak.group.{
+  CreateKeycloakGroup,
+  GroupCreationError,
+  GroupName,
+  GroupNotFound
+}
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
 import com.ubirch.models.keycloak.user.UserAlreadyExists
 import com.ubirch.models.user.UserName
@@ -91,13 +96,14 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newGroup = createNewKeycloakGroup()
         val res = for {
-          firstGroup <- keycloakGroupService.createGroup(newGroup)
-          secondGroup <- keycloakGroupService.createGroup(newGroup)
-        } yield (firstGroup, secondGroup)
+          first <- keycloakGroupService.createGroup(newGroup)
+          second <- keycloakGroupService.createGroup(newGroup)
+        } yield (first, second)
 
-        val (maybeFirstGroup, maybeSecondGroup) = await(res, 2.seconds)
-        maybeFirstGroup.right.value
-        maybeSecondGroup.left.value shouldBe GroupAlreadyExists(newGroup.groupName)
+        val (firstGroup, secondGroup) = await(res, 2.seconds)
+        firstGroup.isRight shouldBe true
+        secondGroup.left.value shouldBe GroupCreationError(
+          s"failed to create group ${newGroup.groupName.value}; response has status 409")
       }
     }
 
@@ -160,7 +166,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
         } yield (firstCreationResult, secondCreationResult)
 
         val (firstCreationResult, secondCreationResult) = await(response, 2.seconds)
-        firstCreationResult.right.value
+        firstCreationResult.isRight shouldBe true
         secondCreationResult.left.value shouldBe RoleAlreadyExists(newRole.roleName)
       }
     }
@@ -230,7 +236,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val (firstCreationResult, secondCreationResult) = await(result, 5.seconds)
 
-        firstCreationResult.right.value
+        firstCreationResult.isRight shouldBe true
         secondCreationResult.left.value shouldBe UserAlreadyExists(newKeycloakUser.userName)
 
       }
@@ -269,7 +275,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
   }
 
   "Double Keycloak integration" should {
-    "allow to create same users (Name/Email/Username etc.) in Device and Users Keycloaks" in {
+    "allow to create same users (Name/Email/Username etc.) in Device and Users Keycloak" in {
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
 

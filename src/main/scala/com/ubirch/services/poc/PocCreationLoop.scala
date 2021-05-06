@@ -19,12 +19,6 @@ trait PocCreationLoop {
   def createPocs(): Task[PocCreationResult]
 }
 
-case class PocCreationError(pocStatus: PocStatus) extends Exception
-
-trait PocCreationResult
-case class PocCreationSuccess() extends PocCreationResult
-case class PocCreationMaybeSuccess(list: Seq[Either[String, PocStatus]]) extends PocCreationResult
-
 class PocCreationLoopImpl @Inject() (
   //  certHandler: CertHandler,
   deviceCreator: DeviceCreator,
@@ -69,6 +63,7 @@ class PocCreationLoopImpl @Inject() (
         Task(Left(errorMsg))
     }.flatten
   }
+
   private def retrieveStatusAndTenant(poc: Poc): Task[(Option[PocStatus], Option[Tenant])] = {
     for {
       status <- pocStatusTable.getPocStatus(poc.id)
@@ -79,7 +74,6 @@ class PocCreationLoopImpl @Inject() (
   //Todo: create and provide client certs
   //Todo: download and store logo
   private def process(poc: Poc, status: PocStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
-    logger.info(s"processing poc with ${poc.id}")
     val creationResult = for {
       status1 <- doDeviceRealmRelatedTasks(poc, status, tenant)
       status2 <- doUserRealmRelatedTasks(poc, status1, tenant)
@@ -87,11 +81,11 @@ class PocCreationLoopImpl @Inject() (
       status4 <- infoToGoClient(poc, status3)
       status5 <- infoToCertifyAPI(poc, status4)
     } yield status5
-    logger.info(s"finished processing poc with ${poc.id}")
     creationResult
       .map { status =>
-        pocStatusTable.updatePocStatus(status)
-        Task(Right(status))
+        pocStatusTable
+          .updatePocStatus(status)
+          .map(_ => Right(status))
       }
       .onErrorHandle(handlePocCreationError).flatten
   }
@@ -131,3 +125,11 @@ class PocCreationLoopImpl @Inject() (
   }
 
 }
+
+case class StatusAndPW(pocStatus: PocStatus, devicePassword: String)
+
+case class PocCreationError(pocStatus: PocStatus) extends Exception
+
+trait PocCreationResult
+case class PocCreationSuccess() extends PocCreationResult
+case class PocCreationMaybeSuccess(list: Seq[Either[String, PocStatus]]) extends PocCreationResult

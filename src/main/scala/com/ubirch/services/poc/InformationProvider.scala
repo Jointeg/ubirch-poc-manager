@@ -3,7 +3,7 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.ServicesConfPaths
-import com.ubirch.models.poc.{ Poc, PocStatus, StatusAndDeviceInfo }
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -19,9 +19,9 @@ import scala.concurrent.Future
 
 trait InformationProvider {
 
-  def infoToGoClient(poc: Poc, status: StatusAndDeviceInfo): Task[StatusAndDeviceInfo]
+  def infoToGoClient(poc: Poc, status: StatusAndPW): Task[StatusAndPW]
 
-  def infoToCertifyAPI(poc: Poc, status: StatusAndDeviceInfo): Task[PocStatus]
+  def infoToCertifyAPI(poc: Poc, status: StatusAndPW): Task[PocStatus]
 
 }
 
@@ -40,31 +40,48 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   private val contentTypeHeaderKey: String = "Content-Type"
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
 
-  override def infoToGoClient(poc: Poc, statusAndPW: StatusAndDeviceInfo): Task[StatusAndDeviceInfo] = {
+  override def infoToGoClient(poc: Poc, statusAndPW: StatusAndPW): Task[StatusAndPW] = {
+    val status = statusAndPW.pocStatus
+    if (status.goClientProvided) {
+      Task(statusAndPW)
+    } else {
+      val registerDevice = RegisterDeviceGoClient(poc.deviceId, statusAndPW.devicePassword)
+      val body = write[RegisterDeviceGoClient](registerDevice)
+      Task.fromFuture(goClientRequest(statusAndPW, body))
+    }
+  }
 
-    val body = RegisterDeviceGoClient(poc.deviceId, statusAndPW.devicePassword)
-    val r = basicRequest
+  protected def goClientRequest(statusAndPW: StatusAndPW, body: String): Future[StatusAndPW] = {
+    basicRequest
       .put(uri"$goClientURL")
-      .body(write[RegisterDeviceGoClient](body))
+      .body(body)
       .header(xAuthHeaderKey, goClientToken)
       .header(contentTypeHeaderKey, "application/json")
       .send()
       .map {
         _.code match {
           case Ok =>
-            StatusAndDeviceInfo(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
+            StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
           case code =>
             throwError(statusAndPW.pocStatus, s"failure when providing device info to goClient, errorCode: $code")
         }
       }
-    Task.fromFuture(r)
   }
 
-  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndDeviceInfo): Task[PocStatus] = {
-    val body = createCertifyApiBody(poc, statusAndPW)
-    val r = basicRequest
+  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW): Task[PocStatus] = {
+    val status = statusAndPW.pocStatus
+    if (status.certApiProvided) {
+      Task(status)
+    } else {
+      val body = createCertifyApiBody(poc, statusAndPW)
+      Task.fromFuture(certApiRequest(statusAndPW, body))
+    }
+  }
+
+  protected def certApiRequest(statusAndPW: StatusAndPW, body: String): Future[PocStatus] =
+    basicRequest
       .put(uri"$certifyApiURL")
-      .body(write[RegisterDeviceCertifyAPI](body))
+      .body(body)
       .header(xAuthHeaderKey, certifyApiToken)
       .header(contentTypeHeaderKey, "application/json")
       .send()
@@ -76,19 +93,19 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
             throwError(statusAndPW.pocStatus, s"failure when providing device info to certifyAPI, errorCode: $code")
         }
       }
-    Task.fromFuture(r)
-  }
 
   private def createCertifyApiBody(
     poc: Poc,
-    statusAndPW: StatusAndDeviceInfo) = {
-    RegisterDeviceCertifyAPI(
+    statusAndPW: StatusAndPW): String = {
+    val deviceRequest = RegisterDeviceCertifyAPI(
       poc.pocName,
       poc.deviceId.toString,
       statusAndPW.devicePassword,
       poc.roleName,
       poc.roleName)
+    write[RegisterDeviceCertifyAPI](deviceRequest)
   }
+
   def throwError(status: PocStatus, msg: String) =
     throw PocCreationError(status.copy(errorMessages = Some(msg)))
 

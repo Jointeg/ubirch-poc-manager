@@ -74,7 +74,7 @@ class KeycloakHelperImpl @Inject() (
       addSubGroup(poc, status, tenant.deviceGroupId, DeviceKeycloak)
         .flatMap { groupId =>
           val updatedPoc = poc.copy(deviceGroupId = Some(groupId.value))
-          updatePoc(updatedPoc, status, status.copy(deviceRealmRoleCreated = true), groupId)
+          updatePoc(updatedPoc, status, status.copy(deviceRealmGroupCreated = true), groupId)
         }
     }
   }

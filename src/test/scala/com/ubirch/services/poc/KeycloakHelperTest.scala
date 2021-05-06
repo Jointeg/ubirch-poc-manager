@@ -69,7 +69,7 @@ class KeycloakHelperTest extends UnitTestBase {
         val res = helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId)
         val pocAndStatus = await(res, 1.seconds)
 
-        pocAndStatus.status.deviceRealmGroupCreated shouldBe false
+        pocAndStatus.status.deviceRealmGroupCreated shouldBe true
         pocAndStatus.status.userRealmGroupCreated shouldBe false
 
         val updatedPoc = await(pocTable.getPoc(poc.id), 5.seconds)
