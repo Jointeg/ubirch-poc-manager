@@ -135,7 +135,7 @@ class KeycloakHelperImpl @Inject() (
       .updatePoc(poc)
       .map(_ => PocAndStatus(poc, successStatus))
       .onErrorHandle { ex =>
-        val errorMsg = s"couldn't store newly created device realm groupId ${groupId.value} for poc with id ${poc.id}"
+        val errorMsg = s"couldn't store newly created device realm groupId ${groupId.value} for poc with id ${poc.id}; "
         throwAndLogError(failedStatus, errorMsg, ex)
       }
   }

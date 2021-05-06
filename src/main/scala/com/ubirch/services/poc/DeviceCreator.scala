@@ -36,7 +36,9 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
       throwError(status, "device has been created, but retrieval of password is not implemented yet")
     } else {
       val body = getBody(poc, tenant)
-      Task.fromFuture(requestDeviceCreation(status, tenant, body))
+      Task
+        .fromFuture(requestDeviceCreation(status, tenant, body))
+        .onErrorHandle(ex => throwAndLogError(status, "an error occurred when creating device via thing api; ", ex))
     }
   }
 

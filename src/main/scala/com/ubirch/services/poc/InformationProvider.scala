@@ -2,8 +2,9 @@ package com.ubirch.services.poc
 
 import com.google.inject.Inject
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.{Poc, PocStatus}
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -11,10 +12,9 @@ import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
-import sttp.client.{ basicRequest, SttpBackend, UriContext }
+import sttp.client.{SttpBackend, UriContext, basicRequest}
 import sttp.model.StatusCode.Ok
 
-import java.util.UUID
 import scala.concurrent.Future
 
 trait InformationProvider {
@@ -28,7 +28,9 @@ trait InformationProvider {
 case class RegisterDeviceGoClient(deviceId: String, password: String)
 case class RegisterDeviceCertifyAPI(name: String, deviceId: String, password: String, role: String, cert: String)
 
-class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats) extends InformationProvider {
+class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats)
+  extends InformationProvider
+  with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
@@ -47,7 +49,9 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
     } else {
       val registerDevice = RegisterDeviceGoClient(poc.deviceId.value.value.toString, statusAndPW.devicePassword)
       val body = write[RegisterDeviceGoClient](registerDevice)
-      Task.fromFuture(goClientRequest(statusAndPW, body))
+      Task
+        .fromFuture(goClientRequest(statusAndPW, body))
+        .onErrorHandle(ex => throwAndLogError(status, "an error occurred when providing info to go client; ", ex))
     }
   }
 
@@ -74,7 +78,9 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
       Task(status)
     } else {
       val body = createCertifyApiBody(poc, statusAndPW)
-      Task.fromFuture(certApiRequest(statusAndPW, body))
+      Task
+        .fromFuture(certApiRequest(statusAndPW, body))
+        .onErrorHandle(ex => throwAndLogError(status, "an error occurred when providing info to certify API; ", ex))
     }
   }
 
@@ -108,5 +114,10 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   def throwError(status: PocStatus, msg: String) =
     throw PocCreationError(status.copy(errorMessages = Some(msg)))
+
+  private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
+    logger.error(msg, ex)
+    throwError(status, msg + ex.getMessage)
+  }
 
 }
