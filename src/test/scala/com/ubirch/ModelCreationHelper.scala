@@ -38,7 +38,7 @@ object ModelCreationHelper {
     Poc(
       id,
       TenantId(tenantName),
-      s"$TENANT_GROUP_PREFIX_${tenantName.value}",
+      s"$TENANT_GROUP_PREFIX${tenantName.value}",
       externalId,
       "pocName",
       Address("", "", None, 67832, "", None, None, "France"),

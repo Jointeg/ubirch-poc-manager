@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
 import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
+import com.ubirch.models.tenant.TenantName
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
@@ -21,33 +22,11 @@ import com.ubirch.services.keycloak.users.{
   UserPollingService
 }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
 
 import java.security.Key
 import javax.inject.{ Inject, Singleton }
-import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
-import com.ubirch.models.tenant.TenantName
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
-import com.ubirch.services.jwt.{
-  DefaultPublicKeyPoolService,
-  PublicKeyDiscoveryService,
-  PublicKeyPoolService,
-  TokenCreationService
-}
-import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
-import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
-import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserService,
-  TestKeycloakUserService,
-  TestUserPollingService,
-  UserPollingService
-}
-import monix.eval.Task
-
-import java.security.Key
-import javax.inject.{ Inject, Provider, Singleton }
 
 @Singleton
 class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
@@ -167,7 +146,7 @@ object FakeToken {
        |  "realm_access": {
        |    "roles": [
        |      "tenant-admin",
-       |      "T_${tenantName.value}",
+       |      "$TENANT_GROUP_PREFIX${tenantName.value}",
        |    ]
        |  },
        |  "resource_access": {
