@@ -25,7 +25,7 @@ trait InformationProvider {
 
 }
 
-case class RegisterDeviceGoClient(deviceId: UUID, password: String)
+case class RegisterDeviceGoClient(deviceId: String, password: String)
 case class RegisterDeviceCertifyAPI(name: String, deviceId: String, password: String, role: String, cert: String)
 
 class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats) extends InformationProvider {
@@ -45,7 +45,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
     if (status.goClientProvided) {
       Task(statusAndPW)
     } else {
-      val registerDevice = RegisterDeviceGoClient(poc.deviceId, statusAndPW.devicePassword)
+      val registerDevice = RegisterDeviceGoClient(poc.deviceId.value.value.toString, statusAndPW.devicePassword)
       val body = write[RegisterDeviceGoClient](registerDevice)
       Task.fromFuture(goClientRequest(statusAndPW, body))
     }

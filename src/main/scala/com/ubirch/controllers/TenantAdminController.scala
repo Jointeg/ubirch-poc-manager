@@ -135,7 +135,7 @@ class TenantAdminController @Inject() (
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             pocTable
-              .getAllPocsByTenantId(tenant.id.value)
+              .getAllPocsByTenantId(tenant.id)
               .map(toJson)
               .onErrorHandle(ex =>
                 InternalServerError(NOK.serverError(

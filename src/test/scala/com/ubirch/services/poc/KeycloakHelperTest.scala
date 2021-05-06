@@ -16,7 +16,7 @@ import scala.concurrent.duration.DurationInt
 class KeycloakHelperTest extends UnitTestBase {
 
   private val tenant = createTenant()
-  private val poc: Poc = createPoc(tenantId = tenant.id.value)
+  private val poc: Poc = createPoc(tenantName = tenant.tenantName)
   private val pocStatus: PocStatus = createPocStatus(poc.id)
 
   "KeycloakHelper" should {

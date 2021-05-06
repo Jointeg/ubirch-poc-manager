@@ -3,12 +3,7 @@ package com.ubirch.e2e.keycloak
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.keycloak.group.{
-  CreateKeycloakGroup,
-  GroupCreationError,
-  GroupName,
-  GroupNotFound
-}
+import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupCreationError, GroupName, GroupNotFound }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
 import com.ubirch.models.keycloak.user.UserAlreadyExists
 import com.ubirch.models.user.UserName

@@ -104,6 +104,7 @@
         <scalatest-maven-plugin.version>2.0.0</scalatest-maven-plugin.version>
         <license-maven-plugin.version>2.0.0</license-maven-plugin.version>
         <maven-scalafmt.version>1.0.1614576627.86a5663</maven-scalafmt.version>
+        <memeid.version>0.1</memeid.version>
         <!-- plugins -->
 
     </properties>
@@ -466,6 +467,13 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
             <version>${flyway.version}</version>
+        </dependency>
+
+        <!-- Namespaced UUIDs -->
+        <dependency>
+            <groupId>com.47deg</groupId>
+            <artifactId>memeid4s_${scala.compat.version}</artifactId>
+            <version>${memeid.version}</version>
         </dependency>
 
         <!-- test dependencies -->

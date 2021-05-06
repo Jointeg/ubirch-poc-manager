@@ -113,10 +113,9 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
         extraConfig,
         manager) =>
         {
-          val id = UUID.randomUUID()
           poc.Poc(
-            id,
-            tenant.id.value,
+            UUID.randomUUID(),
+            tenant.id,
             externalId,
             pocName,
             address,

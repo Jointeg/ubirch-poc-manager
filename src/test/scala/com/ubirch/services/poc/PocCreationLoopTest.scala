@@ -23,7 +23,7 @@ class PocCreationLoopTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
 
         val tenant: Tenant = createTenant()
-        val poc = createPoc(tenantId = tenant.id.value)
+        val poc = createPoc(tenantName = tenant.tenantName)
         val pocStatus = createPocStatus(poc.id)
 
         val tenantGroup = CreateKeycloakGroup(GroupName(TENANT_GROUP_PREFIX + tenant.tenantName.value))

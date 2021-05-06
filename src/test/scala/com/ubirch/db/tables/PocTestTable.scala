@@ -1,6 +1,7 @@
 package com.ubirch.db.tables
 import com.google.inject.Inject
 import com.ubirch.models.poc.{ Completed, Poc, PocStatus }
+import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
 import java.util.UUID
@@ -23,7 +24,7 @@ class PocTestTable @Inject() (pocStatusTable: PocStatusTestTable) extends PocRep
       poc.id
     }
 
-  override def getAllPocsByTenantId(tenantId: UUID): Task[List[Poc]] =
+  override def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]] =
     Task {
       pocDatastore.collect {
         case (_, poc: Poc) if poc.tenantId == tenantId => poc

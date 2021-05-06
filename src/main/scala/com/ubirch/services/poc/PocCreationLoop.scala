@@ -67,7 +67,7 @@ class PocCreationLoopImpl @Inject() (
   private def retrieveStatusAndTenant(poc: Poc): Task[(Option[PocStatus], Option[Tenant])] = {
     for {
       status <- pocStatusTable.getPocStatus(poc.id)
-      tenant <- tenantTable.getTenant(TenantId(poc.tenantId))
+      tenant <- tenantTable.getTenant(poc.tenantId)
     } yield (status, tenant)
   }
 
