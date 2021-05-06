@@ -95,7 +95,8 @@ case class Token(value: String, json: JValue, sub: String, name: String, email: 
 object Token {
   final val ADMIN = 'ADMIN
   final val USER = 'USER
-  final val SUPER_ADMIN = 'SUPER_ADMIN
+  final val SUPER_ADMIN = Symbol("super-admin")
+  final val TENANT_ADMIN = Symbol("tenant-admin")
   def apply(value: String): Token = new Token(value, JNothing, sub = "", name = "", email = "", roles = Nil)
 }
 

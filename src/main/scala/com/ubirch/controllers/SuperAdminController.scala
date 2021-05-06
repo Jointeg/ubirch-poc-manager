@@ -72,7 +72,8 @@ class SuperAdminController @Inject() (
         bodyParam[String]("deviceCreationToken"),
         bodyParam[String]("certificationCreationToken"),
         bodyParam[String]("idGardIdentifier"),
-        bodyParam[String]("tenantGroupId")
+        bodyParam[String]("tenantGroupId"),
+        bodyParam[String]("clientCert")
       )
   }
 

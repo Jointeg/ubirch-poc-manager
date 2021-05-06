@@ -1,6 +1,7 @@
 package com.ubirch.models.poc
 
 import com.ubirch.models.tenant.TenantId
+import com.ubirch.util.ServiceConstants.POC_GROUP_PREFIX
 import org.joda.time.DateTime
 
 import java.util.UUID
@@ -43,7 +44,7 @@ object Poc {
     dataSchemaId: String,
     extraConfig: Option[JsonConfig],
     manager: PocManager): Poc = {
-    val roleName = s"P_${pocName.take(10)}_$id"
+    val roleName = POC_GROUP_PREFIX + pocName.take(10) + "_" + id
     Poc(
       id = id,
       tenantId = tenantId,

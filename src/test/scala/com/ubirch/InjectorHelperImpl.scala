@@ -213,7 +213,7 @@ object FakeToken {
       |      "offline_access",
       |      "uma_authorization",
       |      "USER",
-      |      "SUPER_ADMIN"
+      |      "super-admin"
       |    ]
       |  },
       |  "resource_access": {
