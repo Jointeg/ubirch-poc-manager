@@ -11,8 +11,8 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId }
-import com.ubirch.services.DeviceKeycloak
+import com.ubirch.models.tenant.{ Tenant, TenantName }
+import com.ubirch.services.{ DeviceKeycloak }
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
@@ -158,12 +158,12 @@ class TenantAdminController @Inject() (
   }
 
   private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
-    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
 
-      case Some(tenantRole) =>
-        tenantTable.getTenantByDeviceGroupId(TenantDeviceGroupId(tenantRole.name)).map {
+    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
+      case Some(roleName) =>
+        tenantTable.getTenantByName(TenantName(roleName.name.stripPrefix(TENANT_GROUP_PREFIX))).map {
           case Some(tenant) => Right(tenant)
-          case None         => Left(s"couldn't find tenant in db for ${tenantRole.name}")
+          case None         => Left(s"couldn't find tenant in db for ${roleName.name}")
         }
       case None => Task(Left("the user's token is missing a tenant role"))
     }
