@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table
     manager_email               text            NOT NULL,
     manager_mobile_phone        text            NOT NULL,
     role_name                   text            NOT NULL,
-    device_realm_group_id       text,
-    user_realm_group_id         text,
+    device_group_id       text,
+    user_group_id         text,
     device_id                   UUID            NOT NULL,
     client_cert_folder          text,
     status                      varchar(10)     NOT NULL,
@@ -76,9 +76,17 @@ CREATE TABLE IF NOT EXISTS poc_manager.tenants
     tenant_name                  text         NOT NULL,
     usage_type                   varchar(255) NOT NULL,
     device_creation_token        text         NOT NULL,
-    certification_creation_token text         NOT NULL,
+    certification_creation_token text,
     id_gard_identifier           text         NOT NULL,
-    group_id                     text         NOT NULL,
-    organisational_unit_group_id text         NOT NULL,
+    user_group_id                text,
+    device_group_id              text,
+    client_cert                  text,
     PRIMARY KEY(id)
+);
+
+CREATE TABLE IF NOT EXISTS poc_manager.key_hash
+(
+    hash text NOT NULL,
+    salt bytea NOT NULL,
+    PRIMARY KEY (hash)
 );

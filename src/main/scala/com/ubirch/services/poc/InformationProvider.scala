@@ -19,9 +19,9 @@ import scala.concurrent.Future
 
 trait InformationProvider {
 
-  def toGoClient(poc: Poc, status: StatusAndDeviceInfo): Task[StatusAndDeviceInfo]
+  def infoToGoClient(poc: Poc, status: StatusAndDeviceInfo): Task[StatusAndDeviceInfo]
 
-  def toCertifyAPI(poc: Poc, status: StatusAndDeviceInfo): Task[PocStatus]
+  def infoToCertifyAPI(poc: Poc, status: StatusAndDeviceInfo): Task[PocStatus]
 
 }
 
@@ -37,15 +37,17 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   private val certifyApiURL: String = conf.getString(ServicesConfPaths.CERTIFY_API_URL)
   private val certifyApiToken: String = conf.getString(ServicesConfPaths.CERTIFY_API_TOKEN)
   private val xAuthHeaderKey: String = "X-Auth-Token"
+  private val contentTypeHeaderKey: String = "Content-Type"
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
 
-  override def toGoClient(poc: Poc, statusAndPW: StatusAndDeviceInfo): Task[StatusAndDeviceInfo] = {
+  override def infoToGoClient(poc: Poc, statusAndPW: StatusAndDeviceInfo): Task[StatusAndDeviceInfo] = {
 
-    val body = RegisterDeviceGoClient(poc.deviceId, statusAndPW.devicePassword.toString)
+    val body = RegisterDeviceGoClient(poc.deviceId, statusAndPW.devicePassword)
     val r = basicRequest
       .put(uri"$goClientURL")
       .body(write[RegisterDeviceGoClient](body))
       .header(xAuthHeaderKey, goClientToken)
+      .header(contentTypeHeaderKey, "application/json")
       .send()
       .map {
         _.code match {
@@ -58,13 +60,13 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
     Task.fromFuture(r)
   }
 
-  override def toCertifyAPI(poc: Poc, statusAndPW: StatusAndDeviceInfo): Task[PocStatus] = {
+  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndDeviceInfo): Task[PocStatus] = {
     val body = createCertifyApiBody(poc, statusAndPW)
-
     val r = basicRequest
       .put(uri"$certifyApiURL")
       .body(write[RegisterDeviceCertifyAPI](body))
       .header(xAuthHeaderKey, certifyApiToken)
+      .header(contentTypeHeaderKey, "application/json")
       .send()
       .map {
         _.code match {
@@ -83,7 +85,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
     RegisterDeviceCertifyAPI(
       poc.pocName,
       poc.deviceId.toString,
-      statusAndPW.devicePassword.toString,
+      statusAndPW.devicePassword,
       poc.roleName,
       poc.roleName)
   }

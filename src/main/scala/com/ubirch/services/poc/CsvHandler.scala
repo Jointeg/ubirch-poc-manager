@@ -117,7 +117,6 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
           poc.Poc(
             id,
             tenant.id.value,
-            tenant.groupId.value,
             externalId,
             pocName,
             address,

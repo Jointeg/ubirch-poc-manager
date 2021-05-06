@@ -34,7 +34,7 @@ class KeycloakHelperTest extends UnitTestBase {
         roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
           role.isDefined shouldBe true
           role.get.getName shouldBe poc.roleName
-          role.get.getId shouldBe poc.deviceRealmGroupId.get
+          role.get.getId shouldBe poc.deviceGroupId.get
         }
       }
     }
@@ -52,7 +52,7 @@ class KeycloakHelperTest extends UnitTestBase {
         roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
           role.isDefined shouldBe true
           role.get.getName shouldBe poc.roleName
-          role.get.getId shouldBe poc.deviceRealmGroupId.get
+          role.get.getId shouldBe poc.deviceGroupId.get
         }
       }
     }
@@ -63,21 +63,22 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
         val pocTable = injector.get[PocRepository]
 
-        val tenantWithRightGroupId: Tenant = createTenantGroup(groups, DeviceKeycloak)
+        val tenantWithRightGroupId =
+          tenant.copy(deviceGroupId = TenantGroupId(createTenantGroup(groups, DeviceKeycloak)))
 
         val res = helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId)
-        val status = await(res, 1.seconds)
+        val pocAndStatus = await(res, 1.seconds)
 
-        status.deviceRealmGroupCreated shouldBe false
-        status.userRealmGroupCreated shouldBe false
+        pocAndStatus.status.deviceRealmGroupCreated shouldBe false
+        pocAndStatus.status.userRealmGroupCreated shouldBe false
 
         val updatedPoc = await(pocTable.getPoc(poc.id), 5.seconds)
-        val groupId = updatedPoc.value.deviceRealmGroupId.value
+        val groupId = updatedPoc.value.deviceGroupId.value
 
         groups.findGroupById(GroupId(groupId), DeviceKeycloak).map {
           case Right(group) =>
             group.getName shouldBe poc.roleName
-            group.getId shouldBe poc.deviceRealmGroupId.get
+            group.getId shouldBe poc.deviceGroupId.get
           case Left(_) => assert(false)
         }
       }
@@ -89,23 +90,23 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
         val pocTable = injector.get[PocRepository]
 
-        val tenantWithRightGroupId: Tenant = createTenantGroup(groups, UsersKeycloak)
+        val tenantWithRightGroupId = tenant.copy(userGroupId = TenantGroupId(createTenantGroup(groups, UsersKeycloak)))
 
         val res = helper.createUserRealmGroup(poc, pocStatus, tenantWithRightGroupId)
-        val status = await(res, 1.seconds)
+        val pocAndStatus = await(res, 1.seconds)
         //assert
-        status.deviceRealmGroupCreated shouldBe false
-        status.userRealmGroupCreated shouldBe true
+        pocAndStatus.status.deviceRealmGroupCreated shouldBe false
+        pocAndStatus.status.userRealmGroupCreated shouldBe true
 
         val updatedPoc = await(pocTable.getPoc(poc.id), 5.seconds)
-        val groupId = updatedPoc.value.userRealmGroupId.value
+        val groupId = updatedPoc.value.userGroupId.value
         //assert
         groups
           .findGroupById(GroupId(groupId))
           .map {
             case Right(group) =>
               group.getName shouldBe poc.roleName
-              group.getId shouldBe poc.userRealmGroupId.get
+              group.getId shouldBe poc.userGroupId.get
             case Left(_) => assert(false)
           }
       }
@@ -117,11 +118,11 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
         val pocTable = injector.get[PocRepository]
 
-        val tenantWithRightGroupId = createTenantGroup(groups, UsersKeycloak)
+        val tenantWithRightGroupId = tenant.copy(userGroupId = TenantGroupId(createTenantGroup(groups, UsersKeycloak)))
         await(helper.createUserRealmRole(poc, pocStatus), 1.seconds)
-        val status = await(helper.createUserRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
+        val pocAndStatus = await(helper.createUserRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
         val updatedPoc = await(pocTable.getPoc(poc.id), 2.seconds).value
-        val res = helper.assignUserRealmRoleToGroup(updatedPoc, status, tenantWithRightGroupId)
+        val res = helper.assignUserRealmRoleToGroup(pocAndStatus, tenantWithRightGroupId)
         val updatedStatus = await(res, 2.seconds)
         //assert
         updatedStatus.userRealmGroupRoleAssigned shouldBe true
@@ -134,11 +135,12 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
         val pocTable = injector.get[PocRepository]
 
-        val tenantWithRightGroupId = createTenantGroup(groups, DeviceKeycloak)
+        val tenantWithRightGroupId =
+          tenant.copy(deviceGroupId = TenantGroupId(createTenantGroup(groups, DeviceKeycloak)))
         await(helper.createDeviceRealmRole(poc, pocStatus), 1.seconds)
-        val status = await(helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
-        val updatedPoc = await(pocTable.getPoc(poc.id), 2.seconds).value
-        val res: Task[PocStatus] = helper.assignDeviceRealmRoleToGroup(updatedPoc, status, tenantWithRightGroupId)
+        val pocAndStatus = await(helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
+//        val updatedPoc = await(pocTable.getPoc(poc.id), 2.seconds).value
+        val res: Task[PocStatus] = helper.assignDeviceRealmRoleToGroup(pocAndStatus, tenantWithRightGroupId)
         val updatedStatus = await(res, 2.seconds)
         //assert
         updatedStatus.deviceRealmGroupRoleAssigned shouldBe true
@@ -146,10 +148,11 @@ class KeycloakHelperTest extends UnitTestBase {
     }
   }
 
-  private def createTenantGroup(groups: TestKeycloakGroupsService, instance: KeycloakInstance): Tenant = {
+  private def createTenantGroup(groups: TestKeycloakGroupsService, instance: KeycloakInstance): String = {
     val createGroup = CreateKeycloakGroup(GroupName(tenant.tenantName.value))
     val res = groups.createGroup(createGroup, instance)
     val tenantGroup = await(res, 1.seconds)
-    tenant.copy(groupId = TenantGroupId(tenantGroup.right.get.value))
+    tenantGroup.right.get.value
+
   }
 }

@@ -49,18 +49,16 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
       .body(write[DeviceRequestBody](body))
       .auth
       .bearer(tenant.deviceCreationToken.value.value.value)
-      .response(asJson[DeviceRequestResponse])
+      .response(asJson[Array[Map[String, DeviceResponse]]])
       .send()
       .map {
         _.body match {
-          case Right(response: DeviceRequestResponse) =>
-            if (response.details.state == "Ok") {
-              val pw = response.details.apiConfig.password
+          case Right(array: Array[Map[String, DeviceResponse]]) =>
+            if (array.length == 1 && array.head.size == 1) {
+              val pw = array.head.head._2.apiConfig.password
               StatusAndDeviceInfo(status, pw)
             } else {
-              throwError(
-                status,
-                s"state of DeviceCreationResponse from Thing APP is not ok, but ${response.details.state}")
+              throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
             }
           case Left(ex: ResponseError[Exception]) =>
             throwAndLogError(status, "creating device via Thing API failed; ", ex)
@@ -71,7 +69,7 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
     DeviceRequestBody(
       poc.deviceId.toString,
       deviceDescription(tenant, poc),
-      List(poc.dataSchemaId, tenant.groupId.value, poc.roleName)
+      List(poc.dataSchemaId, tenant.deviceGroupId.value, poc.roleName)
     )
   }
 
@@ -92,8 +90,5 @@ case class DeviceRequestBody(
   attributes: Map[String, List[String]] = Map.empty
 )
 
-case class DeviceRequestResponse(id: String, details: ResponseDetails)
-
-case class ResponseDetails(state: String, apiConfig: ApiConfig)
-
-case class ApiConfig(password: UUID, keyService: String, niomon: String, data: String)
+case class DeviceResponse(state: String, apiConfig: ApiConfig)
+case class ApiConfig(password: String, keyService: String, niomon: String, data: String)

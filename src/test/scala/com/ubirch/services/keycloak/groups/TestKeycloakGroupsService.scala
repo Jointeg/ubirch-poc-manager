@@ -78,6 +78,17 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
         Task(groupsDeviceDatastore -= groupName.value)
     }
 
+//  private def findViaNameInDatastore(
+//    datastore: mutable.Map[String, GroupRepresentation],
+//    groupId: GroupId): Either[String, GroupRepresentation] = {
+//    datastore.collectFirst { case tuple if tuple._2.getName == "TEN_tenantName" => tuple._2 } match {
+//      case Some(group) =>
+//        Right(group)
+//      case None =>
+//        Left(s"failed to find group TEN_tenantName")
+//    }
+//  }
+
   override def addSubGroup(
     parentGroupId: GroupId,
     childGroupName: GroupName,
@@ -87,8 +98,10 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
     val r = instance match {
       case UsersKeycloak =>
+//        findViaNameInDatastore(groupsUsersDatastore, parentGroupId)
         findIdInDatastore(groupsUsersDatastore, parentGroupId)
       case DeviceKeycloak =>
+//        findViaNameInDatastore(groupsDeviceDatastore, parentGroupId)
         findIdInDatastore(groupsDeviceDatastore, parentGroupId)
     }
     r match {

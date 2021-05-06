@@ -6,6 +6,8 @@ import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
 import com.ubirch.db.tables.{
   PocRepository,
+  PocStatusRepository,
+  PocStatusTestTable,
   PocTestTable,
   TenantRepository,
   TenantTestTable,
@@ -400,6 +402,9 @@ class UnitTestInjectorHelper()
 
     override def PocRepository: ScopedBindingBuilder =
       bind(classOf[PocRepository]).to(classOf[PocTestTable])
+
+    override def PocStatusRepository: ScopedBindingBuilder =
+      bind(classOf[PocStatusRepository]).to(classOf[PocStatusTestTable])
 
     override def TenantRepository: ScopedBindingBuilder =
       bind(classOf[TenantRepository]).to(classOf[TenantTestTable])

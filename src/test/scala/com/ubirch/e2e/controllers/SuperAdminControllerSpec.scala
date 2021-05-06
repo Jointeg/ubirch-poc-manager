@@ -27,7 +27,8 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "deviceCreationToken": "1234567890",
        |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
-       |    "tenantGroupId": "random-group",
+       |    "userGroupId": "random-user-group",
+       |    "deviceGroupId": "random-device-group",
        |    "clientCert": "${ModelCreationHelper.base64X509Cert.value}"
        |}
        |""".stripMargin
@@ -41,7 +42,8 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "deviceCreationToken": "1234567890",
        |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
-       |    "tenantGroupId": "random-group",
+       |    "userGroupId": "random-user-group",
+       |    "deviceGroupId": "random-device-group"
        |}
        |""".stripMargin
   }
@@ -52,7 +54,8 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "tenantName": "$tenantName",
        |    "deviceCreationToken": "1234567890",
        |    "idGardIdentifier": "gard-identifier",
-       |    "tenantGroupId": "random-group"
+       |    "userGroupId": "random-user-group",
+       |    "deviceGroupId": "random-device-group"
        |}
        |""".stripMargin
   }
@@ -78,7 +81,8 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.tenantName shouldBe TenantName(tenantName)
         maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
-        maybeTenant.value.groupId shouldBe TenantGroupId("random-group")
+        maybeTenant.value.userGroupId shouldBe TenantGroupId("random-user-group")
+        maybeTenant.value.deviceGroupId shouldBe TenantGroupId("random-device-group")
         maybeTenant.value.clientCert shouldBe Some(ClientCert(ModelCreationHelper.base64X509Cert))
       }
     }
@@ -103,7 +107,8 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.tenantName shouldBe TenantName(tenantName)
         maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
-        maybeTenant.value.groupId shouldBe TenantGroupId("random-group")
+        maybeTenant.value.userGroupId shouldBe TenantGroupId("random-user-group")
+        maybeTenant.value.deviceGroupId shouldBe TenantGroupId("random-device-group")
         maybeTenant.value.clientCert shouldBe None
       }
     }

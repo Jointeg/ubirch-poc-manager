@@ -134,6 +134,8 @@ class Binder extends AbstractModule {
   def InformationProvider: ScopedBindingBuilder =
     bind(classOf[InformationProvider]).to(classOf[InformationProviderImpl])
 
+  def PocCreationLoop: ScopedBindingBuilder = bind(classOf[PocCreationLoop]).to(classOf[PocCreationLoopImpl])
+
   override def configure(): Unit = {
     Config
     KeycloakUsersConfig
@@ -173,6 +175,7 @@ class Binder extends AbstractModule {
     KeyHashVerifier
     HashingService
     HashKeyRepository
+    PocCreationLoop
     ()
   }
 }

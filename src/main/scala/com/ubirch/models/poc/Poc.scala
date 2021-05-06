@@ -19,8 +19,8 @@ case class Poc(
   extraConfig: Option[JsonConfig],
   manager: PocManager,
   roleName: String,
-  deviceRealmGroupId: Option[String] = None,
-  userRealmGroupId: Option[String] = None,
+  deviceGroupId: Option[String] = None,
+  userGroupId: Option[String] = None,
   deviceId: UUID = UUID.randomUUID(), //Todo: generate name spaced
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
@@ -33,7 +33,6 @@ object Poc {
   def apply(
     id: UUID,
     tenantId: UUID,
-    tenantGroupName: String,
     externalId: String,
     pocName: String,
     address: Address,

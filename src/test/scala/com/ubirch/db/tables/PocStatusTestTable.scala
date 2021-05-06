@@ -3,8 +3,10 @@ import com.ubirch.models.poc.PocStatus
 import monix.eval.Task
 
 import java.util.UUID
+import javax.inject.Singleton
 import scala.collection.mutable
 
+@Singleton
 class PocStatusTestTable extends PocStatusRepository {
 
   private val pocStatusDatastore = mutable.Map[UUID, PocStatus]()
@@ -19,8 +21,8 @@ class PocStatusTestTable extends PocStatusRepository {
       pocStatusDatastore.update(pocStatus.pocId, pocStatus)
     }
 
-  override def getPocStatus(pocStatusId: UUID): Task[Option[PocStatus]] = {
-    Task(pocStatusDatastore.get(pocStatusId))
+  override def getPocStatus(pocId: UUID): Task[Option[PocStatus]] = {
+    Task(pocStatusDatastore.get(pocId))
   }
 
   override def deletePocStatus(pocId: UUID): Task[Unit] =

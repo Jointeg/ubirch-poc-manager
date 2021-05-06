@@ -10,7 +10,7 @@ import org.json4s.native.JsonMethods._
 
 import java.net.URL
 import javax.mail.internet.InternetAddress
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object Validator {
 

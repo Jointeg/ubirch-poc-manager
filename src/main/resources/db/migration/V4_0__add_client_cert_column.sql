@@ -1,1 +1,0 @@
-ALTER TABLE poc_manager.tenants ADD COLUMN client_cert text;

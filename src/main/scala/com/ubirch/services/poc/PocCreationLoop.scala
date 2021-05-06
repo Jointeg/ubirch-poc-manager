@@ -2,7 +2,7 @@ package com.ubirch.services.poc
 
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.db.tables.{ PocStatusTable, PocTable, TenantTable }
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantId }
 import monix.eval.Task
@@ -16,42 +16,59 @@ import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import scala.concurrent.Future
 
 trait PocCreationLoop {
-  def createPocs()
+  def createPocs(): Task[PocCreationResult]
 }
 
 case class PocCreationError(pocStatus: PocStatus) extends Exception
+
+trait PocCreationResult
+case class PocCreationSuccess() extends PocCreationResult
+case class PocCreationMaybeSuccess(list: Seq[Either[String, PocStatus]]) extends PocCreationResult
 
 class PocCreationLoopImpl @Inject() (
   //  certHandler: CertHandler,
   deviceCreator: DeviceCreator,
   informationProvider: InformationProvider,
   keycloakHelper: KeycloakHelper,
-  pocTable: PocTable,
-  pocStatusTable: PocStatusTable,
-  tenantTable: TenantTable)(implicit formats: Formats)
+  pocTable: PocRepository,
+  pocStatusTable: PocStatusRepository,
+  tenantTable: TenantRepository)(implicit formats: Formats)
   extends PocCreationLoop
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
+  import deviceCreator._
+  import informationProvider._
+  import keycloakHelper._
 
-  override def createPocs(): Unit = {
-    pocTable.getAllUncompletedPocs().foreach {
+  override def createPocs(): Task[PocCreationResult] = {
+    pocTable.getAllUncompletedPocs().flatMap {
       case pocs if pocs.isEmpty =>
         logger.debug("no pocs waiting for completion")
+        Task(PocCreationSuccess())
       case pocs =>
-        pocs.foreach { poc =>
-          retrieveStatusAndTenant(poc).map {
-            case (Some(status), Some(tenant)) => process(poc, status, tenant)
-            case (status, tenant) =>
-              logger.error(
-                s"poc cannot become created as pocStatus $status or tenant $tenant couldn't be found for poc with id ${poc.id}")
-          }
-        }
+        logger.info(s"starting to create ${pocs.size} pocs")
+        Task
+          .gather(pocs.map(preparePocCreation))
+          .map(PocCreationMaybeSuccess)
     }
   }
 
+  private def preparePocCreation(poc: Poc): Task[Either[String, PocStatus]] = {
+    retrieveStatusAndTenant(poc).map {
+      case (Some(status: PocStatus), Some(tenant: Tenant)) =>
+        logger.info("found status and tenant")
+        process(poc, status, tenant)
+
+      case (_, _) =>
+        val errorMsg =
+          s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
+        logger.error(errorMsg)
+        Task(Left(errorMsg))
+    }.flatten
+  }
   private def retrieveStatusAndTenant(poc: Poc): Task[(Option[PocStatus], Option[Tenant])] = {
     for {
       status <- pocStatusTable.getPocStatus(poc.id)
@@ -59,39 +76,57 @@ class PocCreationLoopImpl @Inject() (
     } yield (status, tenant)
   }
 
-  private def process(poc: Poc, status: PocStatus, tenant: Tenant): Unit = {
+  //Todo: create and provide client certs
+  //Todo: download and store logo
+  private def process(poc: Poc, status: PocStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
+    logger.info(s"processing poc with ${poc.id}")
     val creationResult = for {
-      //handle device realm
-      status1 <- keycloakHelper.createDeviceRealmRole(poc, status)
-      status2 <- keycloakHelper.createDeviceRealmGroup(poc, status1, tenant)
-      status3 <- keycloakHelper.assignDeviceRealmRoleToGroup(poc, status2, tenant)
-      //handle user realm
-      status4 <- keycloakHelper.createUserRealmRole(poc, status3)
-      status5 <- keycloakHelper.createUserRealmGroup(poc, status4, tenant)
-      status6 <- keycloakHelper.assignUserRealmRoleToGroup(poc, status5, tenant)
-      //    status7 <- certHandler.createCert(poc, status6)
-      //    status8 <- certHandler.provideCert(poc, status7)
-      //    status <- logoHandler.retrieveLogo(poc, status8)
-      //    status9 <- logoHandler.storeLogo(poc, status9)
-      statusAndApi9 <- deviceCreator.createDevice(poc, status6, tenant)
-      status10 <- informationProvider.toGoClient(poc, statusAndApi9)
-      status11 <- informationProvider.toCertifyAPI(poc, status10)
-    } yield status11
-
+      status1 <- doDeviceRealmRelatedTasks(poc, status, tenant)
+      status2 <- doUserRealmRelatedTasks(poc, status1, tenant)
+      status3 <- createDevice(poc, status2, tenant)
+      status4 <- infoToGoClient(poc, status3)
+      status5 <- infoToCertifyAPI(poc, status4)
+    } yield status5
+    logger.info(s"finished processing poc with ${poc.id}")
     creationResult
-      .map(pocStatusTable.updatePocStatus)
-      .onErrorHandle(handlePocCreationError)
+      .map { status =>
+        pocStatusTable.updatePocStatus(status)
+        Task(Right(status))
+      }
+      .onErrorHandle(handlePocCreationError).flatten
   }
 
-  private def handlePocCreationError(ex: Throwable): Unit = {
+  private def doDeviceRealmRelatedTasks(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {
+    for {
+      status1 <- createDeviceRealmRole(poc, status)
+      pocAndStatus <- createDeviceRealmGroup(poc, status1, tenant)
+      status3 <- assignDeviceRealmRoleToGroup(pocAndStatus, tenant)
+    } yield status3
+  }
+
+  private def doUserRealmRelatedTasks(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {
+    for {
+      status4 <- createUserRealmRole(poc, status)
+      pocAndStatus <- createUserRealmGroup(poc, status4, tenant)
+      status6 <- assignUserRealmRoleToGroup(pocAndStatus, tenant)
+    } yield status6
+  }
+
+  private def handlePocCreationError(ex: Throwable): Task[Left[String, Nothing]] = {
     ex match {
       case pce: PocCreationError =>
         pocStatusTable
           .updatePocStatus(pce.pocStatus)
-          .onErrorHandle(logger.error(s"couldn't update poc status in table ${pce.pocStatus}", _))
+          .map(_ => Left(s"updated poc status with errorMsg; ${pce.pocStatus}"))
+          .onErrorHandle { ex =>
+            logger.error(s"couldn't update poc status in table ${pce.pocStatus}", ex)
+            Left(s"couldn't update poc status with errorMsg; ${ex.getMessage}")
+          }
 
       case ex: Throwable =>
-        logger.error("unexpected error during poc creation", ex)
+        val errorMsg = "unexpected error during poc creation; "
+        logger.error(errorMsg, ex)
+        Task(Left(errorMsg + ex.getMessage))
     }
   }
 
