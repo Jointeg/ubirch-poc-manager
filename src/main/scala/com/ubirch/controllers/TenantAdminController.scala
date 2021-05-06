@@ -2,7 +2,6 @@ package com.ubirch.controllers
 
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
