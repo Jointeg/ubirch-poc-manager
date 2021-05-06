@@ -20,7 +20,7 @@ case class Poc(
   manager: PocManager,
   roleAndGroupName: String,
   groupPath: String,
-  deviceId: UUID = UUID.randomUUID(), //Todo: generate name spaced
+  deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
   lastUpdated: Updated = Updated(DateTime.now()),
@@ -45,9 +45,9 @@ object Poc {
     manager: PocManager): Poc = {
     val roleName = s"P_${pocName.take(10)}_$id"
     Poc(
-      id,
+      id = id,
       tenantId = tenantId,
-      externalId,
+      externalId = externalId,
       pocName = pocName,
       address = address,
       phone = phone,
@@ -57,8 +57,9 @@ object Poc {
       dataSchemaId = dataSchemaId,
       extraConfig = extraConfig,
       manager = manager,
-      roleName,
-      tenantGroupName + "/" + roleName
+      roleAndGroupName = roleName,
+      groupPath = tenantGroupName + "/" + roleName,
+      deviceId = DeviceId(tenantId, externalId)
     )
   }
 
