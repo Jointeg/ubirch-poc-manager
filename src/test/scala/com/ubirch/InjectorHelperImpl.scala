@@ -4,7 +4,7 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
+import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable, _ }
 import com.ubirch.models.tenant.TenantName
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
@@ -20,6 +20,12 @@ import com.ubirch.services.keycloak.users.{
   TestKeycloakUserService,
   TestUserPollingService,
   UserPollingService
+}
+import com.ubirch.services.poc.{
+  DeviceCreator,
+  InformationProvider,
+  TestDeviceCreatorImpl,
+  TestInformationProviderImpl
 }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
@@ -388,11 +394,17 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
 
 class UnitTestInjectorHelper()
   extends InjectorHelper(List(new Binder {
-    override def PublicKeyPoolService: ScopedBindingBuilder = {
+    override def PublicKeyPoolService: ScopedBindingBuilder =
       bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
-    }
+
     override def UserRepository: ScopedBindingBuilder =
       bind(classOf[UserRepository]).to(classOf[UserTestTable])
+
+    override def PocRepository: ScopedBindingBuilder =
+      bind(classOf[PocRepository]).to(classOf[PocTestTable])
+
+    override def PocStatusRepository: ScopedBindingBuilder =
+      bind(classOf[PocStatusRepository]).to(classOf[PocStatusTestTable])
 
     override def TenantRepository: ScopedBindingBuilder =
       bind(classOf[TenantRepository]).to(classOf[TenantTestTable])
@@ -411,6 +423,12 @@ class UnitTestInjectorHelper()
 
     override def KeycloakUserService: ScopedBindingBuilder =
       bind(classOf[KeycloakUserService]).to(classOf[TestKeycloakUserService])
+
+    override def DeviceCreator: ScopedBindingBuilder =
+      bind(classOf[DeviceCreator]).to(classOf[TestDeviceCreatorImpl])
+
+    override def InformationProvider: ScopedBindingBuilder =
+      bind(classOf[InformationProvider]).to(classOf[TestInformationProviderImpl])
 
     override def configure(): Unit = {
       super.configure()

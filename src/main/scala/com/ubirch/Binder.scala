@@ -23,7 +23,7 @@ import com.ubirch.services.keycloak.users.{
 }
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
-import com.ubirch.services.poc.{ PocBatchHandlerImpl, PocBatchHandlerTrait }
+import com.ubirch.services.poc._
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultTenantService, TenantService }
 import com.ubirch.services.{ DefaultKeycloakConnector, KeycloakConnector }
@@ -127,6 +127,15 @@ class Binder extends AbstractModule {
 
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
+  def DeviceCreator: ScopedBindingBuilder = bind(classOf[DeviceCreator]).to(classOf[DeviceCreatorImpl])
+
+  def KeycloakHelper: ScopedBindingBuilder = bind(classOf[KeycloakHelper]).to(classOf[KeycloakHelperImpl])
+
+  def InformationProvider: ScopedBindingBuilder =
+    bind(classOf[InformationProvider]).to(classOf[InformationProviderImpl])
+
+  def PocCreationLoop: ScopedBindingBuilder = bind(classOf[PocCreationLoop]).to(classOf[PocCreationLoopImpl])
+
   override def configure(): Unit = {
     Config
     KeycloakUsersConfig
@@ -160,9 +169,13 @@ class Binder extends AbstractModule {
     AESKeyProvider
     AESEncryption
     FlywayProvider
+    DeviceCreator
+    KeycloakHelper
+    InformationProvider
     KeyHashVerifier
     HashingService
     HashKeyRepository
+    PocCreationLoop
     ()
   }
 }

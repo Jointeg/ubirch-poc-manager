@@ -2,7 +2,6 @@ package com.ubirch.controllers
 
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -47,7 +46,6 @@ class TenantAdminController @Inject() (
 
   override protected def applicationDescription: String = "Tenant Admin Controller"
 
-  private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
@@ -163,7 +161,7 @@ class TenantAdminController @Inject() (
     token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
 
       case Some(tenantRole) =>
-        tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
+        tenantTable.getTenantByDeviceGroupId(TenantGroupId(tenantRole.name)).map {
           case Some(tenant) => Right(tenant)
           case None         => Left(s"couldn't find tenant in db for ${tenantRole.name}")
         }

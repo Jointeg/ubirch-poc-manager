@@ -6,7 +6,7 @@ import com.ubirch.controllers.TenantAdminController
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.services.formats.DomainObjectFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
@@ -161,8 +161,8 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     "return Bad Request when tenant doesn't exist" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
+//        get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)) {
-          println(body)
           status should equal(400)
           assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
         }
@@ -185,7 +185,6 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.superAdmin.prepare)) {
           status should equal(403)
-          println(body)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
       }

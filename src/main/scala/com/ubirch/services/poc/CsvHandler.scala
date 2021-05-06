@@ -24,6 +24,7 @@ trait CsvPocBatchParserTrait {
 sealed trait CsvException extends Exception
 
 case class HeaderCsvException(errorMsg: String) extends CsvException
+case class EmptyCsvException(errorMsg: String) extends CsvException
 
 class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
 
@@ -34,17 +35,10 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
 
     try {
       val lines = s.getLines()
-      if (lines.hasNext) {
-        validateHeaders(lines.next().split(columnSeparator).map(_.trim))
-      }
-      val pocRows = lines.map { line =>
-        val cols = line.split(columnSeparator).map(_.trim)
-        parsePoC(cols, line, tenant)
-      }.toSeq
-      pocRows
+      validateHeaders(lines)
+      parseRows(tenant, lines)
     } catch {
-      case ex: HeaderCsvException => throw ex
-
+      case ex: CsvException => throw ex
       case ex: Throwable =>
         val errorMsg = "something unexpected went wrong parsing the csv"
         logger.error(errorMsg, ex)
@@ -54,13 +48,24 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
     }
   }
 
-  @throws[HeaderCsvException]
-  private def validateHeaders(cols: Array[String]): Unit = {
-    headerColsOrder.zip(cols.toSeq).foreach {
-      case (header, col) =>
-        if (header != col)
-          throw HeaderCsvException(headerErrorMsg(col, header))
+  private def parseRows(tenant: Tenant, lines: Iterator[String]): Seq[Either[String, (Poc, String)]] = {
+    lines.map { line =>
+      val cols = line.split(columnSeparator).map(_.trim)
+      parsePoC(cols, line, tenant)
+    }.toSeq
+  }
 
+  @throws[CsvException]
+  private def validateHeaders(lines: Iterator[String]): Unit = {
+    if (lines.hasNext) {
+      val cols = lines.next().split(columnSeparator).map(_.trim)
+      headerColsOrder.zip(cols.toSeq).foreach {
+        case (header, col) =>
+          if (header != col)
+            throw HeaderCsvException(headerErrorMsg(col, header))
+      }
+    } else {
+      throw EmptyCsvException("the csv file mustn't be empty")
     }
   }
 
@@ -91,7 +96,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       validatePhone(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
-      validateBoolean(clientCert, csvPoc.clientCert),
+      validateClientCert(clientCert, csvPoc.clientCert, tenant),
       validateString(dataSchemaId, csvPoc.dataSchemaId),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
@@ -111,7 +116,6 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
           poc.Poc(
             UUID.randomUUID(),
             tenant.id,
-            tenant.groupId.value,
             externalId,
             pocName,
             address,
