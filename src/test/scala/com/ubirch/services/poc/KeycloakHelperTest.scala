@@ -5,7 +5,7 @@ import com.ubirch.db.tables.PocRepository
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.keycloak.roles.RoleName
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
+import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantUserGroupId }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.keycloak.roles.TestKeycloakRolesService
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
@@ -64,7 +64,7 @@ class KeycloakHelperTest extends UnitTestBase {
         val pocTable = injector.get[PocRepository]
 
         val tenantWithRightGroupId =
-          tenant.copy(deviceGroupId = TenantGroupId(createTenantGroup(groups, DeviceKeycloak)))
+          tenant.copy(deviceGroupId = TenantDeviceGroupId(createTenantGroup(groups, DeviceKeycloak)))
 
         val res = helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId)
         val pocAndStatus = await(res, 1.seconds)
@@ -90,7 +90,8 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
         val pocTable = injector.get[PocRepository]
 
-        val tenantWithRightGroupId = tenant.copy(userGroupId = TenantGroupId(createTenantGroup(groups, UsersKeycloak)))
+        val tenantWithRightGroupId =
+          tenant.copy(userGroupId = TenantUserGroupId(createTenantGroup(groups, UsersKeycloak)))
 
         val res = helper.createUserRealmGroup(poc, pocStatus, tenantWithRightGroupId)
         val pocAndStatus = await(res, 1.seconds)
@@ -118,7 +119,8 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
         val pocTable = injector.get[PocRepository]
 
-        val tenantWithRightGroupId = tenant.copy(userGroupId = TenantGroupId(createTenantGroup(groups, UsersKeycloak)))
+        val tenantWithRightGroupId =
+          tenant.copy(userGroupId = TenantUserGroupId(createTenantGroup(groups, UsersKeycloak)))
         await(helper.createUserRealmRole(poc, pocStatus), 1.seconds)
         val pocAndStatus = await(helper.createUserRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
         val updatedPoc = await(pocTable.getPoc(poc.id), 2.seconds).value
@@ -136,7 +138,7 @@ class KeycloakHelperTest extends UnitTestBase {
         val pocTable = injector.get[PocRepository]
 
         val tenantWithRightGroupId =
-          tenant.copy(deviceGroupId = TenantGroupId(createTenantGroup(groups, DeviceKeycloak)))
+          tenant.copy(deviceGroupId = TenantDeviceGroupId(createTenantGroup(groups, DeviceKeycloak)))
         await(helper.createDeviceRealmRole(poc, pocStatus), 1.seconds)
         val pocAndStatus = await(helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
 //        val updatedPoc = await(pocTable.getPoc(poc.id), 2.seconds).value

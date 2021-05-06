@@ -4,7 +4,7 @@ import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.{ PocStatusTestTable, PocTestTable, TenantTestTable }
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
+import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantUserGroupId }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
@@ -58,7 +58,9 @@ class PocCreationLoopTest extends UnitTestBase {
     val tenantGroup = CreateKeycloakGroup(GroupName(TENANT_GROUP_PREFIX + tenant.tenantName.value))
     val deviceGroup: GroupId = await(groups.createGroup(tenantGroup, DeviceKeycloak), 1.seconds).right.get
     val userGroup: GroupId = await(groups.createGroup(tenantGroup, UsersKeycloak), 1.seconds).right.get
-    tenant.copy(deviceGroupId = TenantGroupId(deviceGroup.value), userGroupId = TenantGroupId(userGroup.value))
+    tenant.copy(
+      deviceGroupId = TenantDeviceGroupId(deviceGroup.value),
+      userGroupId = TenantUserGroupId(userGroup.value))
   }
 
   private def addPocTripleToRepository(
@@ -67,7 +69,8 @@ class PocCreationLoopTest extends UnitTestBase {
     pocStatusTable: PocStatusTestTable,
     poc: Poc,
     pocStatus: PocStatus,
-    updatedTenant: Tenant) = {
+    updatedTenant: Tenant): Unit = {
+
     await(tenantTable.createTenant(updatedTenant), 1.seconds)
     await(pocTable.createPoc(poc), 1.seconds)
     await(pocStatusTable.createPocStatus(pocStatus), 1.seconds)

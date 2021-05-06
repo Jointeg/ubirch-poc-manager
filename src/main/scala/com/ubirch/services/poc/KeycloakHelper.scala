@@ -6,7 +6,7 @@ import com.ubirch.db.tables.PocRepository
 import com.ubirch.models.keycloak.group.{ GroupCreationError, GroupId, GroupName }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
+import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
@@ -71,7 +71,7 @@ class KeycloakHelperImpl @Inject() (
     if (status.deviceRealmGroupCreated)
       Task(PocAndStatus(poc, status))
     else {
-      addSubGroup(poc, status, tenant.deviceGroupId, DeviceKeycloak)
+      addSubGroup(poc, status, tenant.deviceGroupId.value, DeviceKeycloak)
         .flatMap { groupId =>
           val updatedPoc = poc.copy(deviceGroupId = Some(groupId.value))
           updatePoc(updatedPoc, status, status.copy(deviceRealmGroupCreated = true), groupId)
@@ -83,7 +83,7 @@ class KeycloakHelperImpl @Inject() (
     if (status.userRealmGroupCreated) {
       Task(PocAndStatus(poc, status))
     } else {
-      addSubGroup(poc, status, tenant.userGroupId, UsersKeycloak)
+      addSubGroup(poc, status, tenant.userGroupId.value, UsersKeycloak)
         .flatMap { groupId =>
           val updatedPoc = poc.copy(userGroupId = Some(groupId.value))
           updatePoc(updatedPoc, status, status.copy(userRealmGroupCreated = true), groupId)
@@ -143,14 +143,14 @@ class KeycloakHelperImpl @Inject() (
   private def addSubGroup(
     poc: Poc,
     status: PocStatus,
-    tenantId: TenantGroupId,
+    tenantId: String,
     keycloak: KeycloakInstance): Task[GroupId] =
     groups
-      .addSubGroup(GroupId(tenantId.value), GroupName(poc.roleName), keycloak)
+      .addSubGroup(GroupId(tenantId), GroupName(poc.roleName), keycloak)
       .map {
         case Left(ex: GroupCreationError) =>
           val errorMsg =
-            s"creation of subgroup ${poc.roleName} for group of ${tenantId.value} in realm $keycloak failed; ${ex.errorMsg}"
+            s"creation of subgroup ${poc.roleName} for group of $tenantId in realm $keycloak failed; ${ex.errorMsg}"
           throwError(status, errorMsg)
         case Right(groupId) =>
           groupId
