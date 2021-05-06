@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
 import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
+import com.ubirch.models.tenant.TenantName
 import com.ubirch.services.jwt.{
   DefaultPublicKeyPoolService,
   PublicKeyDiscoveryService,
@@ -21,32 +22,11 @@ import com.ubirch.services.keycloak.users.{
   UserPollingService
 }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
 
 import java.security.Key
 import javax.inject.{ Inject, Singleton }
-import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable }
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
-import com.ubirch.services.jwt.{
-  DefaultPublicKeyPoolService,
-  PublicKeyDiscoveryService,
-  PublicKeyPoolService,
-  TokenCreationService
-}
-import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
-import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
-import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserService,
-  TestKeycloakUserService,
-  TestUserPollingService,
-  UserPollingService
-}
-import monix.eval.Task
-
-import java.security.Key
-import javax.inject.{ Inject, Provider, Singleton }
 
 @Singleton
 class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
@@ -146,49 +126,49 @@ object FakeToken {
       |  "email": "carlos.sanchez@ubirch.com"
       |}""".stripMargin
 
-  val tenantAdmin: String =
-    """
-      |{
-      |  "exp": 1718338181,
-      |  "iat": 1604336381,
-      |  "jti": "2fb1c61d-2113-4b8e-9432-97c28c697b98",
-      |  "iss": "https://id.dev.ubirch.com/auth/realms/ubirch-default-realm",
-      |  "aud": "account",
-      |  "sub": "963995ed-ce12-4ea5-89dc-b181701d1d7b",
-      |  "typ": "Bearer",
-      |  "azp": "ubirch-2.0-user-access",
-      |  "session_state": "f334122a-4693-4826-a2c0-546391886eda",
-      |  "acr": "1",
-      |  "allowed-origins": [
-      |    "http://localhost:9101",
-      |    "https://console.dev.ubirch.com"
-      |  ],
-      |  "realm_access": {
-      |    "roles": [
-      |      "tenant-admin",
-      |      "TEN_tenantName",
-      |    ]
-      |  },
-      |  "resource_access": {
-      |    "account": {
-      |      "roles": [
-      |        "manage-account",
-      |        "manage-account-links",
-      |        "view-profile",
-      |      ]
-      |    }
-      |  },
-      |  "scope": "fav_color profile email",
-      |  "email_verified": true,
-      |  "fav_fruit": [
-      |    "/OWN_DEVICES_carlos.sanchez@ubirch.com"
-      |  ],
-      |  "name": "Carlos Sanchez",
-      |  "preferred_username": "carlos.sanchez@ubirch.com",
-      |  "given_name": "Carlos",
-      |  "family_name": "Sanchez",
-      |  "email": "carlos.sanchez@ubirch.com"
-      |}""".stripMargin
+  def tenantAdmin(tenantName: TenantName): String =
+    s"""
+       |{
+       |  "exp": 1718338181,
+       |  "iat": 1604336381,
+       |  "jti": "2fb1c61d-2113-4b8e-9432-97c28c697b98",
+       |  "iss": "https://id.dev.ubirch.com/auth/realms/ubirch-default-realm",
+       |  "aud": "account",
+       |  "sub": "963995ed-ce12-4ea5-89dc-b181701d1d7b",
+       |  "typ": "Bearer",
+       |  "azp": "ubirch-2.0-user-access",
+       |  "session_state": "f334122a-4693-4826-a2c0-546391886eda",
+       |  "acr": "1",
+       |  "allowed-origins": [
+       |    "http://localhost:9101",
+       |    "https://console.dev.ubirch.com"
+       |  ],
+       |  "realm_access": {
+       |    "roles": [
+       |      "tenant-admin",
+       |      "$TENANT_GROUP_PREFIX${tenantName.value}",
+       |    ]
+       |  },
+       |  "resource_access": {
+       |    "account": {
+       |      "roles": [
+       |        "manage-account",
+       |        "manage-account-links",
+       |        "view-profile",
+       |      ]
+       |    }
+       |  },
+       |  "scope": "fav_color profile email",
+       |  "email_verified": true,
+       |  "fav_fruit": [
+       |    "/OWN_DEVICES_carlos.sanchez@ubirch.com"
+       |  ],
+       |  "name": "Carlos Sanchez",
+       |  "preferred_username": "carlos.sanchez@ubirch.com",
+       |  "given_name": "Carlos",
+       |  "family_name": "Sanchez",
+       |  "email": "carlos.sanchez@ubirch.com"
+       |}""".stripMargin
 
   val superAdmin: String =
     """
@@ -396,7 +376,8 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
   }
 
   val user: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.user, UsersKeycloak)
-  val userOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.tenantAdmin, DeviceKeycloak)
+  def userOnDevicesKeycloak(tenantName: TenantName): FakeToken =
+    fakeToken(FakeToken.deviceHeader, FakeToken.tenantAdmin(tenantName), DeviceKeycloak)
   val superAdmin: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
   val superAdminOnUsersKeycloak: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.superAdmin, UsersKeycloak)
   val userWithDoubleRoles: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.userWithDoubleRoles, UsersKeycloak)
