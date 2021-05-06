@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS poc_manager.tenants
     usage_type                   varchar(255) NOT NULL,
     device_creation_token        text         NOT NULL,
     certification_creation_token text,
-    id_gard_identifier           text         NOT NULL,
+    id_gard_identifier           text,
     user_group_id                text,
     device_group_id              text,
     client_cert                  text,

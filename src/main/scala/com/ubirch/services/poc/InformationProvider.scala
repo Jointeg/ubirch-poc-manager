@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
-import com.ubirch.models.poc.{Poc, PocStatus}
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -12,7 +12,7 @@ import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
-import sttp.client.{SttpBackend, UriContext, basicRequest}
+import sttp.client.{ basicRequest, SttpBackend, UriContext }
 import sttp.model.StatusCode.Ok
 
 import scala.concurrent.Future
