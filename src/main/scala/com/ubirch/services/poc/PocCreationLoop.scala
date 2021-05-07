@@ -3,13 +3,8 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.ServicesConfPaths.POC_CREATION_INTERVAL
 import monix.reactive.Observable
-import org.json4s.native.Serialization
-import sttp.client.SttpBackend
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 
 import javax.inject.Singleton
-import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 trait PocCreationLoop {
@@ -19,8 +14,6 @@ trait PocCreationLoop {
 @Singleton
 class PocCreationLoopImpl @Inject() (conf: Config, pocCreator: PocCreator) extends PocCreationLoop {
 
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
-  implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   private val pocCreatorInterval = conf.getInt(POC_CREATION_INTERVAL)
 
   private val startPocCreation: Observable[PocCreationResult] = {
