@@ -27,6 +27,7 @@ class ProcessPocAdminImpl @Inject() (
   extends ProcessPocAdmin {
   import quillJdbcContext.ctx._
 
+  private val pocAdminCsvParser = new PocAdminCsvParser
   private val dataSchemaGroupIds =
     conf
       .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
@@ -34,7 +35,7 @@ class ProcessPocAdminImpl @Inject() (
       .toList
 
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
-    PocAdminCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
+    pocAdminCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
       val r = parsingResult.map {
         case Right(rowResult) =>
           storePocAndStatus(rowResult.poc, rowResult.pocAdmin, rowResult.csvRow)
@@ -55,15 +56,15 @@ class ProcessPocAdminImpl @Inject() (
     val pocStatus = PocStatus.init(poc, dataSchemaGroupIds)
     val pocAdminStatus = PocAdminStatus.init(pocAdmin)
     transaction {
-      (for {
+      for {
         _ <- pocRepository.createPoc(poc)
         _ <- pocStatusRepository.createPocStatus(pocStatus)
         _ <- pocAdminRepository.createPoc(pocAdmin)
         _ <- pocAdminStatusRepository.createPocAdminStatus(pocAdminStatus)
       } yield {
         None
-      }).onErrorHandle(_ => Some(csvRow))
-    }
+      }
+    }.onErrorHandle(_ => Some(csvRow))
   }
 
   private def createResponse(result: Seq[Task[Option[String]]]): Task[Either[String, Unit]] = {

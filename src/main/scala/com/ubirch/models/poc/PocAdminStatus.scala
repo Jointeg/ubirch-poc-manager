@@ -23,8 +23,8 @@ case class PocAdminStatus(
 
 object PocAdminStatus {
   def init(podAdmin: PocAdmin): PocAdminStatus = {
-    val webIdentSuccess = if(podAdmin.webIdentRequired) Some(false) else None
-    val webIdentIdentifier = if(podAdmin.webIdentRequired) Some(false) else None
+    val webIdentSuccess = if (podAdmin.webIdentRequired) Some(false) else None
+    val webIdentIdentifier = if (podAdmin.webIdentRequired) Some(false) else None
     PocAdminStatus(
       podAdmin.id,
       podAdmin.webIdentRequired,

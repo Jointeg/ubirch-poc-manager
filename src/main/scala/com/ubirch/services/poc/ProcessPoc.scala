@@ -17,6 +17,7 @@ trait ProcessPoc {
 
 @Singleton
 class ProcessPocImpl @Inject() (conf: Config, pocRepository: PocRepository) extends ProcessPoc {
+  private val pocCsvParser = new PocCsvParser
   private val dataSchemaGroupIds =
     conf
       .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
@@ -24,7 +25,7 @@ class ProcessPocImpl @Inject() (conf: Config, pocRepository: PocRepository) exte
       .toList
 
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] =
-    PocCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
+    pocCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
       val r = parsingResult.map {
         case Right(rowResult) =>
           storePocAndStatus(rowResult.poc, rowResult.csvRow)

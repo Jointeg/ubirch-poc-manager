@@ -13,7 +13,7 @@ import java.util.UUID
 
 case class PocAdminParseResult(poc: Poc, pocAdmin: PocAdmin, csvRow: String) extends ParseRowResult
 
-object PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
+class PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
   protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, PocAdminParseResult] = {
     val csvPocAdmin = PocAdminRow.fromCsv(cols)
     val pocAddress = validatePocAddress(csvPocAdmin)
