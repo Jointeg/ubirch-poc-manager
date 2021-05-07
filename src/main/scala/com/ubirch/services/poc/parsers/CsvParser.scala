@@ -3,7 +3,7 @@ package com.ubirch.services.poc.parsers
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants.columnSeparator
-import com.ubirch.services.poc.util.{EmptyCsvException, HeaderCsvException}
+import com.ubirch.services.poc.util.{ EmptyCsvException, HeaderCsvException }
 import com.ubirch.services.util.CsvHelper
 import monix.eval.Task
 
@@ -40,4 +40,3 @@ trait CsvParser[T <: ParseRowResult] extends LazyLogging {
   @throws[HeaderCsvException]
   protected def validateHeaders(cols: Array[String]): Unit
 }
-

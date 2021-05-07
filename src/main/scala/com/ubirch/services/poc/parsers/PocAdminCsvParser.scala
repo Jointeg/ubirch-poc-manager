@@ -109,7 +109,7 @@ class PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
         manager) =>
         {
           poc.Poc(
-            UUID.randomUUID() ,
+            UUID.randomUUID(),
             tenant.id,
             externalId,
             pocName,

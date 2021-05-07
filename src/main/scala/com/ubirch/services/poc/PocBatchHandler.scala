@@ -22,7 +22,6 @@ trait PocBatchHandlerTrait {
 class PocBatchHandlerImpl @Inject() (processPoc: ProcessPoc, processPocAdmin: ProcessPocAdmin)
   extends PocBatchHandlerTrait {
 
-
   implicit val scheduler: Scheduler = monix.execution.Scheduler.global
 
   /**
@@ -45,5 +44,5 @@ class PocBatchHandlerImpl @Inject() (processPoc: ProcessPoc, processPocAdmin: Pr
       } else {
         throw HeaderCsvException("the csv is empty.")
       }
-  }
+    }
 }
