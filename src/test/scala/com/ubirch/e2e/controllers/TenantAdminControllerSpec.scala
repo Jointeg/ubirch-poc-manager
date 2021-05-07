@@ -200,6 +200,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
         _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
         _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), UUID.randomUUID()))
         pocs <- pocTable.getAllPocsByTenantId(tenantId)
       } yield pocs
       val pocs = await(r, 5.seconds)
@@ -235,6 +236,52 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 2
         poC_OUT.pocs shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
+      }
+    }
+
+    "return PoCs ordered asc by field" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+      } yield pocs
+      val pocs = await(r, 5.seconds).sortBy(_.pocName)
+      get(
+        "/pocs",
+        params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 3
+        poC_OUT.pocs shouldBe pocs
+      }
+    }
+
+    "return PoCs ordered desc by field" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+      } yield pocs
+      val pocs = await(r, 5.seconds).sortBy(_.pocName).reverse
+      get(
+        "/pocs",
+        params = Map("sortColumn" -> "pocName", "sortOrder" -> "desc"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 3
+        poC_OUT.pocs shouldBe pocs
       }
     }
   }
