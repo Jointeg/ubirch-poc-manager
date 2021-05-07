@@ -12,6 +12,8 @@ object TenantId {
   def apply(tenantName: TenantName): TenantId =
     new TenantId(NamespacedUUID(UUID.V5(NamespacedUUID.ubirchUUID, tenantName)))
 
+  def unsafeApply(uuid: String): TenantId = new TenantId(NamespacedUUID.fromJavaUUID(jUUID.fromString(uuid)))
+
   implicit val encodeTenantId: MappedEncoding[TenantId, jUUID] =
     MappedEncoding[TenantId, jUUID](_.value.value.asJava())
   implicit val decodeTenantId: MappedEncoding[jUUID, TenantId] =
