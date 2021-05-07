@@ -1,23 +1,23 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{createPoc, createPocStatus, createTenant}
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.PoC_OUT
-import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc.PocStatus
 import com.ubirch.models.tenant.TenantId
-import com.ubirch.services.formats.DomainObjectFormats
+import com.ubirch.services.formats.{ DomainObjectFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
-import org.json4s.native.Serialization.{write, read}
-import org.json4s.{DefaultFormats, Formats}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.native.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -28,7 +28,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
   private val poc2id: UUID = UUID.randomUUID()
   private val tenantId: UUID = UUID.randomUUID()
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ DomainObjectFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ DomainObjectFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
 
   private val badCsv =
     "poc_id*;poc_name*;poc_street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
@@ -144,7 +144,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         } yield {
           pocs
         }
-        val pocs = await(r, 5.seconds)
+        val pocs = await(r, 5.seconds).filter(_.tenantId == tenantId)
         pocs.size shouldBe 2
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)) {
           status should equal(200)
