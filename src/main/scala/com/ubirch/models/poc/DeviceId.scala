@@ -6,7 +6,9 @@ import memeid4s.UUID
 
 import java.util.{ UUID => jUUID }
 
-final case class DeviceId private (value: NamespacedUUID) extends AnyVal
+final case class DeviceId private (value: NamespacedUUID) extends AnyVal {
+  override def toString: String = value.value.toString
+}
 
 object DeviceId {
 

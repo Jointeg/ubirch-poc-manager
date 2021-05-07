@@ -6,7 +6,7 @@ import com.ubirch.controllers.TenantAdminController
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.services.formats.DomainObjectFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
@@ -187,6 +187,60 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           status should equal(403)
           println(body)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
+        }
+      }
+    }
+  }
+
+  "Endpoint GET /devices" should {
+    "return only simplified device info for PoCs belonging to tenant" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        val pocTable = Injector.get[PocRepository]
+        val tenant = addTenantToDB()
+        val poc1 = createPoc(poc1id, tenant.tenantName)
+        val poc2 = createPoc(poc2id, tenant.tenantName)
+        val r = for {
+          _ <- pocTable.createPoc(poc1)
+          _ <- pocTable.createPoc(poc2)
+          _ <- pocTable.createPoc(createPoc(
+            UUID.randomUUID(),
+            TenantName("other tenant")))
+        } yield ()
+        await(r, 5.seconds)
+
+        get(s"/devices", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          status should equal(200)
+          header("Content-Disposition") shouldBe "attachment; filename=simplified-devices-info.csv"
+          header("Content-Type") shouldBe "text/csv;charset=utf-8"
+          val bodyLines = body.split("\n")
+          bodyLines.size shouldBe 3
+          bodyLines should contain(""""externalId", "pocName", "deviceId"""")
+          bodyLines should contain(s""""${poc1.externalId}", "${poc1.pocName}", "${poc1.deviceId.toString}"""")
+          bodyLines should contain(s""""${poc2.externalId}", "${poc2.pocName}", "${poc2.deviceId.toString}"""")
+        }
+      }
+    }
+
+    "return empty list of simplified device info if there are no PoCs for given tenant" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        val pocTable = Injector.get[PocRepository]
+        val tenant = addTenantToDB()
+        val r = for {
+          _ <- pocTable.createPoc(createPoc(
+            UUID.randomUUID(),
+            TenantName("other tenant")))
+        } yield ()
+        await(r, 5.seconds)
+
+        get(s"/devices", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          status should equal(200)
+          header("Content-Disposition") shouldBe "attachment; filename=simplified-devices-info.csv"
+          header("Content-Type") shouldBe "text/csv;charset=utf-8"
+          val bodyLines = body.split("\n")
+          bodyLines.size shouldBe 1
+          bodyLines should contain(""""externalId", "pocName", "deviceId"""")
         }
       }
     }

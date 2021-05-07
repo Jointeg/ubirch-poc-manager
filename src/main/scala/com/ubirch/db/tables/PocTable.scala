@@ -2,7 +2,7 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Status }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
 import io.getquill.{ Insert, Update }
 import monix.eval.Task
@@ -25,6 +25,8 @@ trait PocRepository {
   def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]]
 
   def getAllUncompletedPocs(): Task[List[Poc]]
+
+  def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]]
 }
 
 class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocRepository {
@@ -68,6 +70,12 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       querySchema[Poc]("poc_manager.poc_table").filter(_.tenantId == lift(tenantId))
     }
 
+  private def getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId: TenantId) =
+    quote {
+      querySchema[Poc]("poc_manager.poc_table").filter(_.tenantId == lift(tenantId)).map(poc =>
+        SimplifiedDeviceInfo(poc.externalId, poc.pocName, poc.deviceId))
+    }
+
   private def getAllPocsWithoutStatusQuery(status: Status) =
     quote {
       querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
@@ -101,4 +109,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
     Task(run(getAllPocsByTenantIdQuery(tenantId)))
 
   def getAllUncompletedPocs(): Task[List[Poc]] = Task(run(getAllPocsWithoutStatusQuery(Completed)))
+
+  def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]] =
+    Task(run(getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId)))
 }

@@ -26,6 +26,7 @@ import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook
 import com.ubirch.services.poc.{ PocBatchHandlerImpl, PocBatchHandlerTrait }
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultTenantService, TenantService }
+import com.ubirch.services.tenantadmin.{ DefaultTenantAdminService, TenantAdminService }
 import com.ubirch.services.{ DefaultKeycloakConnector, KeycloakConnector }
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -125,6 +126,9 @@ class Binder extends AbstractModule {
 
   def PocStatusRepository: ScopedBindingBuilder = bind(classOf[PocStatusRepository]).to(classOf[PocStatusTable])
 
+  def TenantAdminService: ScopedBindingBuilder =
+    bind(classOf[TenantAdminService]).to(classOf[DefaultTenantAdminService])
+
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
   override def configure(): Unit = {
@@ -163,6 +167,7 @@ class Binder extends AbstractModule {
     KeyHashVerifier
     HashingService
     HashKeyRepository
+    TenantAdminService
     ()
   }
 }

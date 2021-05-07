@@ -16,6 +16,7 @@ import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.services.tenantadmin.TenantAdminService
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -39,7 +40,8 @@ class TenantAdminController @Inject() (
   val swagger: Swagger,
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
-  tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  tokenVerificationService: TokenVerificationService,
+  tenantAdminService: TenantAdminService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
@@ -86,6 +88,13 @@ class TenantAdminController @Inject() (
       .summary("Get PoCs")
       .description("Retrieve PoCs that belong to the querying tenant.")
       .tags("Tenant-Admin, PoCs")
+      .authorizations()
+
+  val getDevices: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Retrieve all devices from all PoCs of Tenant")
+      .summary("Get devices")
+      .description("Retrieves all devices that belongs to PoCs that are managed by querying Tenant.")
+      .tags("Tenant-Admin, Devices")
       .authorizations()
 
   post("/pocs/create", operation(createListOfPocs)) {
@@ -141,6 +150,24 @@ class TenantAdminController @Inject() (
               .onErrorHandle(ex =>
                 InternalServerError(NOK.serverError(
                   s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage)))
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
+  get("/devices", operation(getDevices)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult("Get all Devices for all PoCs of tenant") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            tenantAdminService.getSimplifiedDeviceInfoAsCSV(tenant).map(devicesInformation => {
+              response.setContentType("text/csv")
+              response.setHeader("Content-Disposition", "attachment; filename=simplified-devices-info.csv")
+              Ok(devicesInformation)
+            })
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))
