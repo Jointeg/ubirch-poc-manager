@@ -55,7 +55,6 @@ object ConfPaths {
     final val CERTIFY_API_TOKEN = "system.services.certifyApiToken"
     final val GO_CLIENT_URL = "system.services.goClientURL"
     final val GO_CLIENT_TOKEN = "system.services.goClientToken"
-    final val POC_CREATION_INTERVAL = "system.services.pocCreationInterval"
   }
 
   trait AESEncryption {
