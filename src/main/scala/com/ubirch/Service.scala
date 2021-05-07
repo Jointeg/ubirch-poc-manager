@@ -6,16 +6,17 @@ import com.ubirch.db.FlywayProvider
 import com.ubirch.models.auth.Base64String
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keyhash.KeyHashVerifierService
+import com.ubirch.services.poc.PocCreationLoop
 import com.ubirch.services.rest.RestService
 import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import monix.eval.Task
 import monix.execution.Scheduler
+import monix.reactive.Observable
 import org.flywaydb.core.api.FlywayException
 
 import java.util.concurrent.CountDownLatch
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.duration.DurationInt
-
 /**
   * Represents a bootable service object that starts the system
   */
@@ -25,7 +26,8 @@ class Service @Inject() (
   publicKeyPoolService: PublicKeyPoolService,
   flywayProvider: FlywayProvider,
   config: Config,
-  keyHashVerifierService: KeyHashVerifierService
+  keyHashVerifierService: KeyHashVerifierService,
+  pocCreationLoop: PocCreationLoop
   /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
   extends LazyLogging {
 
@@ -64,6 +66,13 @@ class Service @Inject() (
     //      logger.info("Shutdown of polling service")
     //      pollingService.cancel()
     //    }
+
+    val pocCreation = pocCreationLoop.startPocCreationLoop(resp => Observable(resp)).subscribe()
+
+    sys.addShutdownHook {
+      logger.info("Shutdown of poc creation loop service")
+      pocCreation.cancel()
+    }
 
     val cd = new CountDownLatch(1)
     cd.await()
