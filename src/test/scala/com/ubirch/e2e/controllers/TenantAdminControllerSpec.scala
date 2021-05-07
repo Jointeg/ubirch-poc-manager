@@ -1,23 +1,23 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
+import com.ubirch.ModelCreationHelper.{createPoc, createPocStatus, createTenant}
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.PoC_OUT
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
+import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.PocStatus
+import com.ubirch.models.poc.{Completed, Pending, PocStatus, Processing}
 import com.ubirch.models.tenant.TenantId
-import com.ubirch.services.formats.{ DomainObjectFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.{DomainObjectFormats, JodaDateTimeFormats}
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
-import org.json4s.native.Serialization.{ read, write }
-import org.json4s.{ DefaultFormats, Formats }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
+import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.native.Serialization.{read, write}
+import org.json4s.{DefaultFormats, Formats}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -276,6 +276,52 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
       get(
         "/pocs",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "desc"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 3
+        poC_OUT.pocs shouldBe pocs
+      }
+    }
+
+    "return only pocs with matching status" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, status = Pending))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, status = Processing))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, status = Completed))
+        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+      } yield pocs
+      val pocs = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status))
+      get(
+        "/pocs",
+        params = Map("filterColumnStatus" -> "pending,processing"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 2
+        poC_OUT.pocs shouldBe pocs
+      }
+    }
+
+    "return pocs with each status when filterColumnStatus parameter is empty" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, status = Pending))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, status = Processing))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, status = Completed))
+        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+      } yield pocs
+      val pocs = await(r, 5.seconds)
+      get(
+        "/pocs",
+        params = Map("filterColumnStatus" -> ""),
         headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
       ) {
         status should equal(200)

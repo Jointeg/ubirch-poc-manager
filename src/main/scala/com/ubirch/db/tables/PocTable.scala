@@ -32,7 +32,8 @@ trait PocRepository {
 }
 
 object PocRepository {
-  case class PocCriteria(tenantId: UUID, page: Page, sort: Sort, search: Option[String])
+  case class PocCriteria(tenantId: UUID, page: Page, sort: Sort, search: Option[String], filter: PocFilter)
+  case class PocFilter(status: Seq[Status])
 
   case class PaginatedPocs(total: Long, pocs: Seq[Poc])
 }
@@ -43,17 +44,17 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
 
   override def createPoc(poc: Poc): Task[UUID] = Task(run(createPocQuery(poc))).map(_ => poc.id)
 
-  private def createPocQuery(poc: Poc): Quoted[Insert[Poc]] =
-    quote {
-      querySchema[Poc]("poc_manager.poc_table").insert(lift(poc))
-    }
-
   override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long] =
     Task {
       transaction {
         run(createPocQuery(poc))
         run(createPocStatusQuery(pocStatus))
       }
+    }
+
+  private def createPocQuery(poc: Poc): Quoted[Insert[Poc]] =
+    quote {
+      querySchema[Poc]("poc_manager.poc_table").insert(lift(poc))
     }
 
   private def createPocStatusQuery(pocStatus: PocStatus): Quoted[Insert[PocStatus]] =
@@ -108,7 +109,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
   override def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs] =
     Task {
       transaction {
-        val pocsByCriteria = getAllPocsByCriteriaQuery(pocCriteria)
+        val pocsByCriteria = filterByStatuses(getAllPocsByCriteriaQuery(pocCriteria), pocCriteria.filter.status)
         val sortedPocs = sortPocs(pocsByCriteria, pocCriteria.sort)
         val total = run(pocsByCriteria.size)
         val pocs = run {
@@ -141,23 +142,24 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       case common.ASC  => Ord.asc[T]
       case common.DESC => Ord.desc[T]
     }
+    val dynamic = q.dynamic
     sort.field match {
-      case Some("id")                 => q.dynamic.sortBy(p => quote(p.id))(ord)
-      case Some("tenantId")           => q.dynamic.sortBy(p => quote(p.tenantId))(ord)
-      case Some("externalId")         => q.dynamic.sortBy(p => quote(p.externalId))(ord)
-      case Some("pocName")            => q.dynamic.sortBy(p => quote(p.pocName))(ord)
-      case Some("phone")              => q.dynamic.sortBy(p => quote(p.phone))(ord)
-      case Some("certifyApp")         => q.dynamic.sortBy(p => quote(p.certifyApp))(ord)
-      case Some("clientCertRequired") => q.dynamic.sortBy(p => quote(p.clientCertRequired))(ord)
-      case Some("dataSchemaId")       => q.dynamic.sortBy(p => quote(p.dataSchemaId))(ord)
-      case Some("roleAndGroupName")   => q.dynamic.sortBy(p => quote(p.roleAndGroupName))(ord)
-      case Some("groupPath")          => q.dynamic.sortBy(p => quote(p.groupPath))(ord)
-      case Some("deviceId")           => q.dynamic.sortBy(p => quote(p.deviceId))(ord)
-      case Some("clientCertFolder")   => q.dynamic.sortBy(p => quote(p.clientCertFolder))(ord)
-      case Some("status")             => q.dynamic.sortBy(p => quote(p.status))(ord)
-      case Some("lastUpdated")        => q.dynamic.sortBy(p => quote(p.lastUpdated))(ord)
-      case Some("created")            => q.dynamic.sortBy(p => quote(p.created))(ord)
-      case _                          => q.dynamic
+      case Some("id")                 => dynamic.sortBy(p => quote(p.id))(ord)
+      case Some("tenantId")           => dynamic.sortBy(p => quote(p.tenantId))(ord)
+      case Some("externalId")         => dynamic.sortBy(p => quote(p.externalId))(ord)
+      case Some("pocName")            => dynamic.sortBy(p => quote(p.pocName))(ord)
+      case Some("phone")              => dynamic.sortBy(p => quote(p.phone))(ord)
+      case Some("certifyApp")         => dynamic.sortBy(p => quote(p.certifyApp))(ord)
+      case Some("clientCertRequired") => dynamic.sortBy(p => quote(p.clientCertRequired))(ord)
+      case Some("dataSchemaId")       => dynamic.sortBy(p => quote(p.dataSchemaId))(ord)
+      case Some("roleAndGroupName")   => dynamic.sortBy(p => quote(p.roleAndGroupName))(ord)
+      case Some("groupPath")          => dynamic.sortBy(p => quote(p.groupPath))(ord)
+      case Some("deviceId")           => dynamic.sortBy(p => quote(p.deviceId))(ord)
+      case Some("clientCertFolder")   => dynamic.sortBy(p => quote(p.clientCertFolder))(ord)
+      case Some("status")             => dynamic.sortBy(p => quote(p.status))(ord)
+      case Some("lastUpdated")        => dynamic.sortBy(p => quote(p.lastUpdated))(ord)
+      case Some("created")            => dynamic.sortBy(p => quote(p.created))(ord)
+      case _                          => dynamic
     }
   }
 
@@ -166,5 +168,11 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
   private def getAllPocsWithoutStatusQuery(status: Status) =
     quote {
       querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
+    }
+
+  private def filterByStatuses(q: Quoted[Query[Poc]], statuses: Seq[Status]) =
+    statuses match {
+      case Nil => quote(q)
+      case _   => quote(q.filter(p => liftQuery(statuses).contains(p.status)))
     }
 }

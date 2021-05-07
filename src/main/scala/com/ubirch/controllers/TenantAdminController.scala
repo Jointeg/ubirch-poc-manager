@@ -4,15 +4,20 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
 import com.ubirch.controllers.TenantAdminController._
-import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
-import com.ubirch.db.tables.PocRepository.PocCriteria
-import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
+import com.ubirch.controllers.concerns.{
+  ControllerBase,
+  KeycloakBearerAuthStrategy,
+  KeycloakBearerAuthenticationSupport,
+  Token
+}
+import com.ubirch.db.tables.PocRepository.{ PocCriteria, PocFilter }
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
-import com.ubirch.models.common.{Order, Page, Sort}
-import com.ubirch.models.poc.Poc
-import com.ubirch.models.tenant.{Tenant, TenantGroupId}
+import com.ubirch.models.common.{ Order, Page, Sort }
+import com.ubirch.models.poc.{ Poc, Status }
+import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
 import com.ubirch.services.DeviceKeycloak
-import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
+import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -20,7 +25,7 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization.write
 import org.scalatra._
-import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
 import java.util.UUID
 import javax.inject.Inject
@@ -42,14 +47,7 @@ class TenantAdminController @Inject() (
 
   implicit override protected def jsonFormats: Formats = jFormats
 
-  override protected def applicationDescription: String = "Tenant Admin Controller"
-
-  private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
   override val service: String = config.getString(GenericConfPaths.NAME)
-
-  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
-
   override val successCounter: Counter =
     Counter
       .build()
@@ -57,26 +55,29 @@ class TenantAdminController @Inject() (
       .help("Represents the number of tenant admin controller successes")
       .labelNames("service", "method")
       .register()
-
   override val errorCounter: Counter = Counter
     .build()
     .name("tenant_admin_failures")
     .help("Represents the number of tenant admin controller failures")
     .labelNames("service", "method")
     .register()
-
   val createListOfPocs: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("create list of PoCs")
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC, Tenant-Admin")
-
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
+  private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
+
+  override protected def applicationDescription: String = "Tenant Admin Controller"
+
+  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
+    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
 
   post("/pocs/create", operation(createListOfPocs)) {
 
@@ -122,27 +123,28 @@ class TenantAdminController @Inject() (
 
   get("/pocs", operation(getPocStatus)) {
     authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
-      asyncResult("Get all PoCs for a tenant") { _ =>
-        _ =>
-          val page = Page(
-            params.get("pageIndex").map(_.toInt).getOrElse(0),
-            params.get("pageSize").map(_.toInt).getOrElse(20)
-          )
-          val sort = Sort(
-            params.get("sortColumn"),
-            Order.fromString(params.get("sortOrder").getOrElse("asc"))
-          )
-          val search = params.get("search")
+      asyncResult("Get all PoCs for a tenant") { _ => _ =>
+        val page = Page(
+          params.get("pageIndex").map(_.toInt).getOrElse(0),
+          params.get("pageSize").map(_.toInt).getOrElse(20)
+        )
+        val sort = Sort(
+          params.get("sortColumn"),
+          Order.fromString(params.get("sortOrder").getOrElse("asc"))
+        )
+        val search = params.get("search")
+        val status =
+          params.get("filterColumnStatus").map(_.split(",").filterNot(_.trim.isBlank).map(s => Status.unsafeFromString(s.toUpperCase)).toSeq).getOrElse(Seq.empty)
 
-          retrieveTenantFromToken(token).flatMap {
-            case Right(tenant: Tenant) =>
-              (for {
-                pocs <- pocTable.getAllPocsByCriteria(PocCriteria(tenant.id.value, page, sort, search))
-              } yield PoC_OUT(pocs.total, pocs.pocs))
-                .map(toJson)
-                .onErrorHandle(ex =>
-                  InternalServerError(NOK.serverError(
-                    s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage)))
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            (for {
+              pocs <- pocTable.getAllPocsByCriteria(PocCriteria(tenant.id.value, page, sort, search, PocFilter(status)))
+            } yield PoC_OUT(pocs.total, pocs.pocs))
+              .map(toJson)
+              .onErrorHandle(ex =>
+                InternalServerError(NOK.serverError(
+                  s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage)))
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))

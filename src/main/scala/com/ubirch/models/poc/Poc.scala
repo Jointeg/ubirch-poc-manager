@@ -41,7 +41,9 @@ object Poc {
     clientCertRequired: Boolean,
     dataSchemaId: String,
     extraConfig: Option[JsonConfig],
-    manager: PocManager): Poc = {
+    manager: PocManager,
+    status: Status
+  ): Poc = {
     val roleName = s"P_${pocName.take(10)}_$id"
     Poc(
       id,
@@ -56,8 +58,9 @@ object Poc {
       dataSchemaId = dataSchemaId,
       extraConfig = extraConfig,
       manager = manager,
-      roleName,
-      tenantGroupName + "/" + roleName
+      roleAndGroupName = roleName,
+      groupPath = tenantGroupName + "/" + roleName,
+      status = status
     )
   }
 
