@@ -19,8 +19,9 @@ case class Poc(
   dataSchemaId: String,
   extraConfig: Option[JsonConfig],
   manager: PocManager,
-  roleAndGroupName: String,
-  groupPath: String,
+  roleName: String,
+  deviceGroupId: Option[String] = None,
+  userGroupId: Option[String] = None,
   deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
@@ -33,7 +34,6 @@ object Poc {
   def apply(
     id: UUID,
     tenantId: TenantId,
-    tenantGroupName: String,
     externalId: String,
     pocName: String,
     address: Address,
@@ -44,6 +44,7 @@ object Poc {
     dataSchemaId: String,
     extraConfig: Option[JsonConfig],
     manager: PocManager): Poc = {
+
     val roleName = POC_GROUP_PREFIX + pocName.take(10) + "_" + id
     Poc(
       id = id,
@@ -58,8 +59,7 @@ object Poc {
       dataSchemaId = dataSchemaId,
       extraConfig = extraConfig,
       manager = manager,
-      roleAndGroupName = roleName,
-      groupPath = tenantGroupName + "/" + roleName,
+      roleName = roleName,
       deviceId = DeviceId(tenantId, externalId)
     )
   }

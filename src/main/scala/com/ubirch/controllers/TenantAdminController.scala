@@ -2,7 +2,6 @@ package com.ubirch.controllers
 
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -12,8 +11,8 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
-import com.ubirch.services.DeviceKeycloak
+import com.ubirch.models.tenant.{ Tenant, TenantName }
+import com.ubirch.services.{ DeviceKeycloak }
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import com.ubirch.services.tenantadmin.TenantAdminService
@@ -49,7 +48,6 @@ class TenantAdminController @Inject() (
 
   override protected def applicationDescription: String = "Tenant Admin Controller"
 
-  private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
@@ -187,12 +185,12 @@ class TenantAdminController @Inject() (
   }
 
   private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
-    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
 
-      case Some(tenantRole) =>
-        tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
+    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
+      case Some(roleName) =>
+        tenantTable.getTenantByName(TenantName(roleName.name.stripPrefix(TENANT_GROUP_PREFIX))).map {
           case Some(tenant) => Right(tenant)
-          case None         => Left(s"couldn't find tenant in db for ${tenantRole.name}")
+          case None         => Left(s"couldn't find tenant in db for ${roleName.name}")
         }
       case None => Task(Left("the user's token is missing a tenant role"))
     }

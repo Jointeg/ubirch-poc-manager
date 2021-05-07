@@ -1,6 +1,8 @@
 package com.ubirch.models.tenant
 import com.ubirch.UnitTestBase
 
+import scala.util.Random
+
 class TenantIdTest extends UnitTestBase {
 
   "TenantID" should {
@@ -19,6 +21,11 @@ class TenantIdTest extends UnitTestBase {
       val tenantId2 = TenantId(TenantName("name_2"))
 
       tenantId1 shouldNot be(tenantId2)
+    }
+
+    "be able to be created even if TenantName is extra long string" in {
+      val tenantName = TenantName(Random.alphanumeric.take(2000).mkString)
+      TenantId(tenantName)
     }
   }
 

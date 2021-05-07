@@ -12,11 +12,11 @@ import java.util.UUID
 trait PocRepository {
   def createPoc(poc: Poc): Task[UUID]
 
-  def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long]
+  def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit]
 
-  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long]
+  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit]
 
-  def updatePoc(poc: Poc): Task[Unit]
+  def updatePoc(poc: Poc): Task[UUID]
 
   def deletePoc(pocId: UUID): Task[Unit]
 
@@ -83,7 +83,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
 
   override def createPoc(poc: Poc): Task[UUID] = Task(run(createPocQuery(poc))).map(_ => poc.id)
 
-  override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long] =
+  override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] =
     Task {
       transaction {
         run(createPocQuery(poc))
@@ -91,7 +91,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       }
     }
 
-  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Long] =
+  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] =
     Task {
       transaction {
         run(updatePocQuery(poc))
@@ -99,7 +99,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       }
     }
 
-  override def updatePoc(poc: Poc): Task[Unit] = Task(run(updatePocQuery(poc)))
+  override def updatePoc(poc: Poc): Task[UUID] = Task(run(updatePocQuery(poc))).map(_ => poc.id)
 
   override def deletePoc(pocId: UUID): Task[Unit] = Task(run(removePocQuery(pocId)))
 

@@ -49,10 +49,12 @@ object ConfPaths {
 
   trait ServicesConfPaths {
     final val DATA_SCHEMA_GROUP_IDS = "system.services.dataSchemaGroupIds"
+    //urls and tokens
     final val THING_API_URL = "system.services.thingApiURL"
-    final val SUPER_ADMIN_ROLE = "system.services.superAdminRole"
-    final val TENANT_ADMIN_ROLE = "system.services.tenantAdminRole"
-    final val POC_ADMIN_ROLE = "system.services.pocAdminRole"
+    final val CERTIFY_API_URL = "system.services.certifyApiURL"
+    final val CERTIFY_API_TOKEN = "system.services.certifyApiToken"
+    final val GO_CLIENT_URL = "system.services.goClientURL"
+    final val GO_CLIENT_TOKEN = "system.services.goClientToken"
   }
 
   trait AESEncryption {

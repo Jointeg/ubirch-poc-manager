@@ -1,7 +1,6 @@
 package com.ubirch.db.tables
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId, TenantId, TenantName }
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantId, TenantName, TenantUserGroupId }
 import monix.eval.Task
 
 import javax.inject.Inject
@@ -13,7 +12,9 @@ trait TenantRepository {
 
   def getTenantByName(tenantName: TenantName): Task[Option[Tenant]]
 
-  def getTenantByGroupId(groupId: TenantGroupId): Task[Option[Tenant]]
+  def getTenantByDeviceGroupId(groupId: TenantDeviceGroupId): Task[Option[Tenant]]
+
+  def getTenantByUserGroupId(groupId: TenantUserGroupId): Task[Option[Tenant]]
 
   def deleteTenantById(id: TenantId): Task[Unit]
 
@@ -37,9 +38,14 @@ class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantR
       querySchema[Tenant]("poc_manager.tenants").filter(_.tenantName == lift(tenantName))
     }
 
-  private def getTenantByGroupIdQuery(groupId: TenantGroupId) =
+  private def getTenantByDeviceGroupIdQuery(groupId: TenantDeviceGroupId) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").filter(_.groupId == lift(groupId))
+      querySchema[Tenant]("poc_manager.tenants").filter(_.deviceGroupId == lift(groupId))
+    }
+
+  private def getTenantByUserGroupIdQuery(groupId: TenantUserGroupId) =
+    quote {
+      querySchema[Tenant]("poc_manager.tenants").filter(_.userGroupId == lift(groupId))
     }
 
   private def deleteTenantByIdQuery(id: TenantId) =
@@ -55,8 +61,11 @@ class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantR
   override def getTenantByName(tenantName: TenantName): Task[Option[Tenant]] =
     Task(run(getTenantByNameQuery(tenantName))).map(_.headOption)
 
-  def getTenantByGroupId(groupId: TenantGroupId): Task[Option[Tenant]] =
-    Task(run(getTenantByGroupIdQuery(groupId))).map(_.headOption)
+  def getTenantByDeviceGroupId(groupId: TenantDeviceGroupId): Task[Option[Tenant]] =
+    Task(run(getTenantByDeviceGroupIdQuery(groupId))).map(_.headOption)
+
+  def getTenantByUserGroupId(groupId: TenantUserGroupId): Task[Option[Tenant]] =
+    Task(run(getTenantByUserGroupIdQuery(groupId))).map(_.headOption)
 
   def deleteTenantById(id: TenantId): Task[Unit] = Task(run(deleteTenantByIdQuery(id)))
 }
