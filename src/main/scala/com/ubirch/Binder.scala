@@ -138,6 +138,8 @@ class Binder extends AbstractModule {
   def InformationProvider: ScopedBindingBuilder =
     bind(classOf[InformationProvider]).to(classOf[InformationProviderImpl])
 
+  def PocCreator: ScopedBindingBuilder = bind(classOf[PocCreator]).to(classOf[PocCreatorImpl])
+
   def PocCreationLoop: ScopedBindingBuilder = bind(classOf[PocCreationLoop]).to(classOf[PocCreationLoopImpl])
 
   override def configure(): Unit = {
@@ -180,6 +182,7 @@ class Binder extends AbstractModule {
     HashingService
     HashKeyRepository
     TenantAdminService
+    PocCreator
     PocCreationLoop
     ()
   }
