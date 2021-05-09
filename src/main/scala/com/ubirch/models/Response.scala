@@ -1,5 +1,7 @@
 package com.ubirch.models
 
+import cats.data.NonEmptyChain
+
 /**
   * Represents a simple Response object. Used for HTTP responses.
   */
@@ -25,13 +27,13 @@ case class NOK(version: String, ok: Boolean, errorType: Symbol, errorMessage: St
   * Companion object for the NOK response
   */
 object NOK {
-
   final val SERVER_ERROR = 'ServerError
   final val PARSING_ERROR = 'ParsingError
   final val NO_ROUTE_FOUND_ERROR = 'NoRouteFound
   final val DELETE_ERROR = 'TokenDeleteError
   final val AUTHENTICATION_ERROR = 'AuthenticationError
   final val RESOURCE_NOT_FOUND_ERROR = 'ResourceNotFoundError
+  final val BAD_REQUEST = 'BadRequest
 
   def apply(errorType: Symbol, errorMessage: String): NOK =
     new NOK(Response.version, ok = false, errorType, errorMessage)
@@ -43,6 +45,8 @@ object NOK {
   def authenticationError(errorMessage: String): NOK = NOK(AUTHENTICATION_ERROR, errorMessage)
 
   def resourceNotFoundError(errorMessage: String): NOK = NOK(RESOURCE_NOT_FOUND_ERROR, errorMessage)
+
+  def validationError(e: NonEmptyChain[String]): NOK = NOK(BAD_REQUEST, "")
 }
 
 case class Return(version: String, ok: Boolean, data: Any) extends Response[Boolean]

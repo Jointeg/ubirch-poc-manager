@@ -1,5 +1,6 @@
 package com.ubirch.controllers
 
+import cats.data.{ NonEmptyChain, Validated }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
@@ -10,11 +11,10 @@ import com.ubirch.controllers.concerns.{
   KeycloakBearerAuthenticationSupport,
   Token
 }
-import com.ubirch.db.tables.PocRepository.{ PocCriteria, PocFilter }
+import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
-import com.ubirch.models.common.{ Order, Page, Sort }
-import com.ubirch.models.poc.{ Poc, Status }
+import com.ubirch.models.poc.Poc
 import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
@@ -72,6 +72,7 @@ class TenantAdminController @Inject() (
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
+
   private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
 
   override protected def applicationDescription: String = "Tenant Admin Controller"
@@ -124,27 +125,21 @@ class TenantAdminController @Inject() (
   get("/pocs", operation(getPocStatus)) {
     authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
       asyncResult("Get all PoCs for a tenant") { _ => _ =>
-        val page = Page(
-          params.get("pageIndex").map(_.toInt).getOrElse(0),
-          params.get("pageSize").map(_.toInt).getOrElse(20)
-        )
-        val sort = Sort(
-          params.get("sortColumn"),
-          Order.fromString(params.get("sortOrder").getOrElse("asc"))
-        )
-        val search = params.get("search")
-        val status =
-          params.get("filterColumnStatus").map(_.split(",").filterNot(_.trim.isBlank).map(s => Status.unsafeFromString(s.toUpperCase)).toSeq).getOrElse(Seq.empty)
-
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             (for {
-              pocs <- pocTable.getAllPocsByCriteria(PocCriteria(tenant.id.value, page, sort, search, PocFilter(status)))
+              pocCriteria <- PocCriteriaValidator.validateParams(tenant.id.value, params) match {
+                case Validated.Valid(a)   => Task(a)
+                case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
+              }
+              pocs <- pocTable.getAllPocsByCriteria(pocCriteria)
             } yield PoC_OUT(pocs.total, pocs.pocs))
               .map(toJson)
-              .onErrorHandle(ex =>
-                InternalServerError(NOK.serverError(
-                  s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage)))
+              .onErrorHandle {
+                case ValidationError(e) => BadRequest(NOK.validationError(e))
+                case ex: Throwable => InternalServerError(NOK.serverError(
+                    s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
+              }
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))
@@ -178,4 +173,5 @@ class TenantAdminController @Inject() (
 
 object TenantAdminController {
   case class PoC_OUT(total: Long, pocs: Seq[Poc])
+  case class ValidationError(n: NonEmptyChain[String]) extends RuntimeException(s"Validation errors occurred")
 }

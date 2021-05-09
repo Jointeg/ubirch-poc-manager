@@ -6,6 +6,7 @@ import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.PoC_OUT
 import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.e2e.E2ETestBase
+import com.ubirch.models.NOK
 import com.ubirch.models.poc.{Completed, Pending, PocStatus, Processing}
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.formats.{DomainObjectFormats, JodaDateTimeFormats}
@@ -328,6 +329,18 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 3
         poC_OUT.pocs shouldBe pocs
+      }
+    }
+
+    "respond with a bad request when provided an invalid status" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      get(
+        "/pocs",
+        params = Map("filterColumnStatus" -> "invalid"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+      ) {
+        status should equal(400)
+//        val errorResponse = read[NOK](body)
       }
     }
   }
