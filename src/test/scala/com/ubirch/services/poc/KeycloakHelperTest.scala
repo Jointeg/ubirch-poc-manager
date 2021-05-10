@@ -5,11 +5,10 @@ import com.ubirch.db.tables.PocRepository
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.keycloak.roles.RoleName
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantUserGroupId }
+import com.ubirch.models.tenant.{ TenantDeviceGroupId, TenantUserGroupId }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.keycloak.roles.TestKeycloakRolesService
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
-import monix.eval.Task
 
 import scala.concurrent.duration.DurationInt
 
@@ -25,11 +24,11 @@ class KeycloakHelperTest extends UnitTestBase {
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val roles = injector.get[TestKeycloakRolesService]
 
-        val res = helper.createUserRealmRole(poc, pocStatus)
+        val res = helper.createUserRole(poc, pocStatus)
 
         val status = await(res, 1.seconds)
-        status.deviceRealmRoleCreated shouldBe false
-        status.userRealmRoleCreated shouldBe true
+        status.deviceRoleCreated shouldBe false
+        status.userRoleCreated shouldBe true
 
         roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
           role.isDefined shouldBe true
@@ -44,16 +43,39 @@ class KeycloakHelperTest extends UnitTestBase {
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val roles = injector.get[TestKeycloakRolesService]
 
-        val res = helper.createDeviceRealmRole(poc, pocStatus)
+        val res = helper.createDeviceRole(poc, pocStatus)
         val status = await(res, 1.seconds)
-        status.deviceRealmRoleCreated shouldBe true
-        status.userRealmRoleCreated shouldBe false
+        status.deviceRoleCreated shouldBe true
+        status.userRoleCreated shouldBe false
 
         roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
           role.isDefined shouldBe true
           role.get.getName shouldBe poc.roleName
           role.get.getId shouldBe poc.deviceGroupId.get
         }
+      }
+    }
+
+    "set poc user role created to true, if role already exists" in {
+      withInjector { injector =>
+        val helper: KeycloakHelper = injector.get[KeycloakHelper]
+
+        helper.createUserRole(poc, pocStatus)
+        val res = helper.createUserRole(poc, pocStatus)
+
+        val status = await(res, 1.seconds)
+        status.userRoleCreated shouldBe true
+      }
+    }
+
+    "set poc device role created to true, if role already exists" in {
+      withInjector { injector =>
+        val helper: KeycloakHelper = injector.get[KeycloakHelper]
+
+        helper.createDeviceRole(poc, pocStatus)
+        val res = helper.createDeviceRole(poc, pocStatus)
+        val status = await(res, 1.seconds)
+        status.deviceRoleCreated shouldBe true
       }
     }
 
@@ -66,11 +88,11 @@ class KeycloakHelperTest extends UnitTestBase {
         val tenantWithRightGroupId =
           tenant.copy(deviceGroupId = TenantDeviceGroupId(createTenantGroup(groups, DeviceKeycloak)))
 
-        val res = helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId)
+        val res = helper.createDeviceGroup(poc, pocStatus, tenantWithRightGroupId)
         val pocAndStatus = await(res, 1.seconds)
 
-        pocAndStatus.status.deviceRealmGroupCreated shouldBe true
-        pocAndStatus.status.userRealmGroupCreated shouldBe false
+        pocAndStatus.status.deviceGroupCreated shouldBe true
+        pocAndStatus.status.userGroupCreated shouldBe false
 
         val updatedPoc = await(pocTable.getPoc(poc.id), 5.seconds)
         val groupId = updatedPoc.value.deviceGroupId.value
@@ -93,11 +115,11 @@ class KeycloakHelperTest extends UnitTestBase {
         val tenantWithRightGroupId =
           tenant.copy(userGroupId = TenantUserGroupId(createTenantGroup(groups, UsersKeycloak)))
 
-        val res = helper.createUserRealmGroup(poc, pocStatus, tenantWithRightGroupId)
+        val res = helper.createUserGroup(poc, pocStatus, tenantWithRightGroupId)
         val pocAndStatus = await(res, 1.seconds)
         //assert
-        pocAndStatus.status.deviceRealmGroupCreated shouldBe false
-        pocAndStatus.status.userRealmGroupCreated shouldBe true
+        pocAndStatus.status.deviceGroupCreated shouldBe false
+        pocAndStatus.status.userGroupCreated shouldBe true
 
         val updatedPoc = await(pocTable.getPoc(poc.id), 5.seconds)
         val groupId = updatedPoc.value.userGroupId.value
@@ -117,17 +139,15 @@ class KeycloakHelperTest extends UnitTestBase {
       withInjector { injector =>
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]
-        val pocTable = injector.get[PocRepository]
 
         val tenantWithRightGroupId =
           tenant.copy(userGroupId = TenantUserGroupId(createTenantGroup(groups, UsersKeycloak)))
-        await(helper.createUserRealmRole(poc, pocStatus), 1.seconds)
-        val pocAndStatus = await(helper.createUserRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
-        val updatedPoc = await(pocTable.getPoc(poc.id), 2.seconds).value
-        val res = helper.assignUserRealmRoleToGroup(pocAndStatus, tenantWithRightGroupId)
+        await(helper.createUserRole(poc, pocStatus), 1.seconds)
+        val pocAndStatus = await(helper.createUserGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
+        val res = helper.assignUserRoleToGroup(pocAndStatus, tenantWithRightGroupId)
         val updatedStatus = await(res, 2.seconds)
         //assert
-        updatedStatus.userRealmGroupRoleAssigned shouldBe true
+        updatedStatus.userGroupRoleAssigned shouldBe true
       }
     }
 
@@ -135,17 +155,15 @@ class KeycloakHelperTest extends UnitTestBase {
       withInjector { injector =>
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]
-        val pocTable = injector.get[PocRepository]
 
         val tenantWithRightGroupId =
           tenant.copy(deviceGroupId = TenantDeviceGroupId(createTenantGroup(groups, DeviceKeycloak)))
-        await(helper.createDeviceRealmRole(poc, pocStatus), 1.seconds)
-        val pocAndStatus = await(helper.createDeviceRealmGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
-//        val updatedPoc = await(pocTable.getPoc(poc.id), 2.seconds).value
-        val res: Task[PocStatus] = helper.assignDeviceRealmRoleToGroup(pocAndStatus, tenantWithRightGroupId)
+        await(helper.createDeviceRole(poc, pocStatus), 1.seconds)
+        val pocAndStatus = await(helper.createDeviceGroup(poc, pocStatus, tenantWithRightGroupId), 1.seconds)
+        val res = helper.assignDeviceRealmRoleToGroup(pocAndStatus, tenantWithRightGroupId)
         val updatedStatus = await(res, 2.seconds)
         //assert
-        updatedStatus.deviceRealmGroupRoleAssigned shouldBe true
+        updatedStatus.deviceGroupRoleAssigned shouldBe true
       }
     }
   }

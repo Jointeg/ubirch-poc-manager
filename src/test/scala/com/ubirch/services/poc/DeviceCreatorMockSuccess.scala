@@ -9,7 +9,7 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class TestDeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extends DeviceCreatorImpl(conf) {
+class DeviceCreatorMockSuccess @Inject() (conf: Config)(implicit formats: Formats) extends DeviceCreatorImpl(conf) {
 
   override protected def requestDeviceCreation(
     status: PocStatus,

@@ -16,6 +16,8 @@ trait TenantRepository {
 
   def getTenantByUserGroupId(groupId: TenantUserGroupId): Task[Option[Tenant]]
 
+  def updateTenant(tenant: Tenant): Task[Unit]
+
   def deleteTenantById(id: TenantId): Task[Unit]
 
 }
@@ -48,17 +50,22 @@ class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantR
       querySchema[Tenant]("poc_manager.tenants").filter(_.userGroupId == lift(groupId))
     }
 
+  private def updateTenantQuery(tenant: Tenant) =
+    quote {
+      querySchema[Tenant]("poc_manager.tenants").filter(_.id == lift(tenant.id)).update(lift(tenant))
+    }
+
   private def deleteTenantByIdQuery(id: TenantId) =
     quote {
       querySchema[Tenant]("poc_manager.tenants").filter(_.id == lift(id)).delete
     }
 
-  override def createTenant(tenant: Tenant): Task[TenantId] = Task(run(createTenantQuery(tenant))).map(_ => tenant.id)
+  def createTenant(tenant: Tenant): Task[TenantId] = Task(run(createTenantQuery(tenant))).map(_ => tenant.id)
 
-  override def getTenant(tenantId: TenantId): Task[Option[Tenant]] =
+  def getTenant(tenantId: TenantId): Task[Option[Tenant]] =
     Task(run(getTenantQuery(tenantId))).map(_.headOption)
 
-  override def getTenantByName(tenantName: TenantName): Task[Option[Tenant]] =
+  def getTenantByName(tenantName: TenantName): Task[Option[Tenant]] =
     Task(run(getTenantByNameQuery(tenantName))).map(_.headOption)
 
   def getTenantByDeviceGroupId(groupId: TenantDeviceGroupId): Task[Option[Tenant]] =
@@ -66,6 +73,8 @@ class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantR
 
   def getTenantByUserGroupId(groupId: TenantUserGroupId): Task[Option[Tenant]] =
     Task(run(getTenantByUserGroupIdQuery(groupId))).map(_.headOption)
+
+  def updateTenant(tenant: Tenant): Task[Unit] = Task(run(updateTenantQuery(tenant)))
 
   def deleteTenantById(id: TenantId): Task[Unit] = Task(run(deleteTenantByIdQuery(id)))
 }

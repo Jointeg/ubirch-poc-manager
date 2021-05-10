@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.tables.PocRepository
 import com.ubirch.models.keycloak.group.{ GroupCreationError, GroupId, GroupName }
-import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
+import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleCreationException, RoleName }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
@@ -14,17 +14,17 @@ import monix.eval.Task
 
 trait KeycloakHelper {
 
-  def createDeviceRealmRole(poc: Poc, status: PocStatus): Task[PocStatus]
+  def createDeviceRole(poc: Poc, status: PocStatus): Task[PocStatus]
 
-  def createDeviceRealmGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus]
+  def createDeviceGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus]
 
   def assignDeviceRealmRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocStatus]
 
-  def createUserRealmRole(poc: Poc, status: PocStatus): Task[PocStatus]
+  def createUserRole(poc: Poc, status: PocStatus): Task[PocStatus]
 
-  def createUserRealmGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus]
+  def createUserGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus]
 
-  def assignUserRealmRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocStatus]
+  def assignUserRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocStatus]
 
 }
 
@@ -37,109 +37,101 @@ class KeycloakHelperImpl @Inject() (
   extends KeycloakHelper
   with LazyLogging {
 
-  override def createDeviceRealmRole(poc: Poc, status: PocStatus): Task[PocStatus] = {
-    if (status.deviceRealmRoleCreated)
-      Task(status)
+  @throws[PocCreationError]
+  override def createUserRole(poc: Poc, status: PocStatus): Task[PocStatus] = {
+    if (status.userRoleCreated) Task(status)
     else {
-      roles
-        .createNewRole(CreateKeycloakRole(RoleName(poc.roleName)), DeviceKeycloak)
+      roles.createNewRole(CreateKeycloakRole(RoleName(poc.roleName)), UsersKeycloak)
         .map {
-          case Right(_) =>
-            status.copy(deviceRealmRoleCreated = true)
-          case Left(l: RoleAlreadyExists) =>
-            throwError(status, s"deviceRealmRole already exists :${l.roleName}")
+          case Right(_)                       => status.copy(userRoleCreated = true)
+          case Left(_: RoleAlreadyExists)     => status.copy(userRoleCreated = true)
+          case Left(l: RoleCreationException) => throwError(status, s"userRealmRole already exists :${l.roleName}")
         }
     }
   }
 
-  override def createUserRealmRole(poc: Poc, status: PocStatus): Task[PocStatus] = {
-    if (status.userRealmRoleCreated) {
-      Task(status)
-    } else {
-      roles
-        .createNewRole(CreateKeycloakRole(RoleName(poc.roleName)), UsersKeycloak)
-        .map {
-          case Right(_) =>
-            status.copy(userRealmRoleCreated = true)
-          case Left(l: RoleAlreadyExists) =>
-            throwError(status, s"userRealmRole already exists :${l.roleName}")
+  @throws[PocCreationError]
+  override def createUserGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus] = {
+    if (status.userGroupCreated) Task(PocAndStatus(poc, status))
+    else {
+      addSubGroup(poc, status, tenant.userGroupId.value, UsersKeycloak)
+        .flatMap { groupId =>
+          val updatedPoc = poc.copy(userGroupId = Some(groupId.value))
+          updatePoc(updatedPoc, status, status.copy(userGroupCreated = true), groupId)
         }
     }
   }
 
-  override def createDeviceRealmGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus] = {
-    if (status.deviceRealmGroupCreated)
-      Task(PocAndStatus(poc, status))
+  @throws[PocCreationError]
+  override def assignUserRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocStatus] = {
+    val poc = pocAndStatus.poc
+    val status = pocAndStatus.status
+
+    if (status.userGroupRoleAssigned) Task(status)
+    else if (poc.userGroupId.isEmpty)
+      throwError(status, s"groupId for poc with id ${poc.id} is missing, though poc status says it was already created")
+    else {
+      findRoleAndAddToGroup(poc, poc.userGroupId.get, status, UsersKeycloak)
+        .map {
+          case Right(_)       => status.copy(userGroupRoleAssigned = true)
+          case Left(errorMsg) => throwError(status, errorMsg)
+        }
+    }
+  }
+
+  @throws[PocCreationError]
+  override def createDeviceRole(poc: Poc, status: PocStatus): Task[PocStatus] = {
+    if (status.deviceRoleCreated) Task(status)
+    else {
+      roles.createNewRole(CreateKeycloakRole(RoleName(poc.roleName)), DeviceKeycloak)
+        .map {
+          case Right(_)                       => status.copy(deviceRoleCreated = true)
+          case Left(_: RoleAlreadyExists)     => status.copy(deviceRoleCreated = true)
+          case Left(l: RoleCreationException) => throwError(status, s"deviceRealmRole already exists :${l.roleName}")
+        }
+    }
+  }
+
+  @throws[PocCreationError]
+  override def createDeviceGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus] = {
+    if (status.deviceGroupCreated) Task(PocAndStatus(poc, status))
     else {
       addSubGroup(poc, status, tenant.deviceGroupId.value, DeviceKeycloak)
         .flatMap { groupId =>
           val updatedPoc = poc.copy(deviceGroupId = Some(groupId.value))
-          updatePoc(updatedPoc, status, status.copy(deviceRealmGroupCreated = true), groupId)
+          updatePoc(updatedPoc, status, status.copy(deviceGroupCreated = true), groupId)
         }
     }
   }
 
-  override def createUserRealmGroup(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocAndStatus] = {
-    if (status.userRealmGroupCreated) {
-      Task(PocAndStatus(poc, status))
-    } else {
-      addSubGroup(poc, status, tenant.userGroupId.value, UsersKeycloak)
-        .flatMap { groupId =>
-          val updatedPoc = poc.copy(userGroupId = Some(groupId.value))
-          updatePoc(updatedPoc, status, status.copy(userRealmGroupCreated = true), groupId)
-        }
-    }
-  }
-
+  @throws[PocCreationError]
   override def assignDeviceRealmRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocStatus] = {
     val poc = pocAndStatus.poc
     val status = pocAndStatus.status
-    if (status.deviceRealmGroupRoleAssigned) {
-      Task(status)
-    } else if (poc.deviceGroupId.isEmpty) {
-      val errorMsg = s"groupId for poc with id ${poc.id} is missing though poc status says it was already created"
-      throwError(status, errorMsg)
-    } else {
+
+    if (status.deviceGroupRoleAssigned) Task(status)
+    else if (poc.deviceGroupId.isEmpty)
+      throwError(status, s"groupId for poc with id ${poc.id} is missing though poc status says it was already created")
+    else {
       findRoleAndAddToGroup(poc, poc.deviceGroupId.get, status, DeviceKeycloak)
         .map {
-          case Right(_)       => status.copy(deviceRealmGroupRoleAssigned = true)
+          case Right(_)       => status.copy(deviceGroupRoleAssigned = true)
           case Left(errorMsg) => throwError(status, errorMsg)
         }
     }
   }
 
-  override def assignUserRealmRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocStatus] = {
-    val poc = pocAndStatus.poc
-    val status = pocAndStatus.status
-    if (status.userRealmGroupRoleAssigned) {
-      Task(status)
-    } else if (poc.userGroupId.isEmpty) {
-      val errorMsg = s"groupId for poc with id ${poc.id} is missing, though poc status says it was already created"
-      throwError(status, errorMsg)
-    } else {
-      findRoleAndAddToGroup(poc, poc.userGroupId.get, status, UsersKeycloak)
-        .map {
-          case Right(_)       => status.copy(userRealmGroupRoleAssigned = true)
-          case Left(errorMsg) => throwError(status, errorMsg)
-        }
-    }
-  }
-
-  private def updatePoc(
-    poc: Poc,
-    failedStatus: PocStatus,
-    successStatus: PocStatus,
-    groupId: GroupId): Task[PocAndStatus] = {
-
+  @throws[PocCreationError]
+  private def updatePoc(poc: Poc, failure: PocStatus, success: PocStatus, groupId: GroupId): Task[PocAndStatus] =
     pocRepository
       .updatePoc(poc)
-      .map(_ => PocAndStatus(poc, successStatus))
+      .map(_ => PocAndStatus(poc, success))
       .onErrorHandle { ex =>
         val errorMsg = s"couldn't store newly created device realm groupId ${groupId.value} for poc with id ${poc.id}; "
-        throwAndLogError(failedStatus, errorMsg, ex)
+        throwAndLogError(failure, errorMsg, ex)
       }
-  }
 
+  @throws[PocCreationError]
   private def addSubGroup(
     poc: Poc,
     status: PocStatus,
@@ -148,22 +140,11 @@ class KeycloakHelperImpl @Inject() (
     groups
       .addSubGroup(GroupId(tenantId), GroupName(poc.roleName), keycloak)
       .map {
-        case Left(ex: GroupCreationError) =>
-          val errorMsg =
-            s"creation of subgroup ${poc.roleName} for group of $tenantId in realm $keycloak failed; ${ex.errorMsg}"
-          throwError(status, errorMsg)
-        case Right(groupId) =>
-          groupId
+        case Right(groupId)               => groupId
+        case Left(ex: GroupCreationError) => throwError(status, ex.errorMsg)
       }
 
-  private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
-    logger.error(msg, ex)
-    throwError(status, msg)
-  }
-
-  def throwError(status: PocStatus, msg: String) =
-    throw PocCreationError(status.copy(errorMessages = Some(msg)))
-
+  @throws[PocCreationError]
   private def findRoleAndAddToGroup(
     poc: Poc,
     groupId: String,
@@ -172,12 +153,20 @@ class KeycloakHelperImpl @Inject() (
     roles
       .findRoleRepresentation(RoleName(poc.roleName), instance)
       .flatMap {
-        case Some(role) =>
-          groups
-            .addRoleToGroup(GroupId(groupId), role, instance)
+        case Some(role) => groups.addRoleToGroup(GroupId(groupId), role, instance)
         case None =>
           throwError(status, s"adding role ${poc.roleName} to ${poc.deviceGroupId} failed as role doesn't exist")
       }
   }
+
+  @throws[PocCreationError]
+  private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
+    logger.error(msg, ex)
+    throwError(status, msg)
+  }
+
+  @throws[PocCreationError]
+  def throwError(status: PocStatus, msg: String) =
+    throw PocCreationError(status.copy(errorMessage = Some(msg)))
 
 }
