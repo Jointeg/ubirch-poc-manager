@@ -8,12 +8,12 @@ import monix.eval.Task
 
 import javax.inject.Inject
 
-trait TenantService {
+trait SuperAdminService {
   def createTenant(createTenantRequest: CreateTenantRequest): Task[Either[CreateTenantErrors, TenantId]]
 }
 
-class DefaultTenantService @Inject() (aesEncryption: AESEncryption, tenantRepository: TenantRepository)
-  extends TenantService
+class DefaultSuperAdminService @Inject() (aesEncryption: AESEncryption, tenantRepository: TenantRepository)
+  extends SuperAdminService
   with LazyLogging {
 
   override def createTenant(createTenantRequest: CreateTenantRequest): Task[Either[CreateTenantErrors, TenantId]] = {
