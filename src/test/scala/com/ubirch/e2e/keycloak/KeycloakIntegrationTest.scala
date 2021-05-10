@@ -3,7 +3,7 @@ package com.ubirch.e2e.keycloak
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupCreationError, GroupName, GroupNotFound }
+import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupName, GroupNotFound }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
 import com.ubirch.models.keycloak.user.UserAlreadyExists
 import com.ubirch.models.user.UserName
@@ -85,20 +85,39 @@ class KeycloakIntegrationTest extends E2ETestBase {
       }
     }
 
-    "Not be able to create two groups with same names" in {
+    "Retrieve id of child group, if already exists" in {
+      withInjector { injector =>
+        val keycloakGroupService = injector.get[KeycloakGroupService]
+
+        val parentGroup = createNewKeycloakGroup()
+        val childGroup = createNewKeycloakGroup()
+        val res = for {
+          parentGroup <- keycloakGroupService.createGroup(parentGroup)
+          first <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName)
+          second <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName)
+        } yield (first, second)
+
+        val (firstGroup, secondGroup) = await(res, 2.seconds)
+        firstGroup.isRight shouldBe true
+        secondGroup.isRight shouldBe true
+        secondGroup.right.value shouldBe firstGroup.right.value
+      }
+    }
+
+    "Retrieve id of group, if already exists" in {
       withInjector { injector =>
         val keycloakGroupService = injector.get[KeycloakGroupService]
 
         val newGroup = createNewKeycloakGroup()
         val res = for {
-          first <- keycloakGroupService.createGroup(newGroup)
-          second <- keycloakGroupService.createGroup(newGroup)
+          first <- keycloakGroupService.createGroup(newGroup, DeviceKeycloak)
+          second <- keycloakGroupService.createGroup(newGroup, DeviceKeycloak)
         } yield (first, second)
 
         val (firstGroup, secondGroup) = await(res, 2.seconds)
         firstGroup.isRight shouldBe true
-        secondGroup.left.value shouldBe GroupCreationError(
-          s"failed to create group ${newGroup.groupName.value}; response has status 409")
+        secondGroup.isRight shouldBe true
+        secondGroup.right.value shouldBe firstGroup.right.value
       }
     }
 

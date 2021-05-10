@@ -27,7 +27,9 @@ case class Poc(
   status: Status = Pending,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())
-)
+) {
+  def getDeviceId: String = deviceId.value.value.toString
+}
 
 object Poc {
 

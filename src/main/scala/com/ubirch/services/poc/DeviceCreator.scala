@@ -31,6 +31,7 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc ${poc.pocName}"
 
+  @throws[PocCreationError]
   override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW] = {
     if (status.deviceCreated) {
       throwError(status, "device has been created, but retrieval of password is not implemented yet")
@@ -43,44 +44,47 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
   }
 
   protected def requestDeviceCreation(status: PocStatus, tenant: Tenant, body: String): Future[StatusAndPW] = {
-    basicRequest
-      .post(uri"$thingUrl")
-      .body(body)
-      .auth
-      .bearer(tenant.deviceCreationToken.value.value.value)
-      .response(asJson[Array[Map[String, DeviceResponse]]])
-      .send()
-      .map {
-        _.body match {
-          case Right(array: Array[Map[String, DeviceResponse]]) =>
-            if (array.length == 1 && array.head.size == 1) {
-              val pw = array.head.head._2.apiConfig.password
-              StatusAndPW(status.copy(deviceCreated = true), pw)
-            } else {
-              throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
-            }
-          case Left(ex: ResponseError[Exception]) =>
-            throwAndLogError(status, "creating device via Thing API failed; ", ex)
-        }
-      }
+    Future(
+      basicRequest
+        .post(uri"$thingUrl")
+        .body(body)
+        .auth
+        .bearer(tenant.deviceCreationToken.value.value.value)
+        .response(asJson[Array[Map[String, DeviceResponse]]])
+        .send()
+        .map {
+          _.body match {
+            case Right(array: Array[Map[String, DeviceResponse]]) =>
+              if (array.length == 1 && array.head.size == 1) {
+                val pw = array.head.head._2.apiConfig.password
+                StatusAndPW(status.copy(deviceCreated = true), pw)
+              } else {
+                throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
+              }
+            case Left(ex: ResponseError[Exception]) =>
+              throwAndLogError(status, "creating device via Thing API failed: ", ex)
+          }
+        }).flatten
   }
 
   private def getBody(poc: Poc, tenant: Tenant): String = {
     val body = DeviceRequestBody(
-      poc.deviceId.toString,
+      poc.getDeviceId,
       deviceDescription(tenant, poc),
       List(poc.dataSchemaId, tenant.deviceGroupId.value, poc.roleName)
     )
     write[DeviceRequestBody](body)
   }
 
+  @throws[PocCreationError]
   private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
     logger.error(msg, ex)
     throwError(status, msg)
   }
 
+  @throws[PocCreationError]
   def throwError(status: PocStatus, msg: String) =
-    throw PocCreationError(status.copy(errorMessages = Some(msg)))
+    throw PocCreationError(status.copy(errorMessage = Some(msg)))
 
 }
 
