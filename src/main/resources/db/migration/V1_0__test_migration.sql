@@ -81,7 +81,8 @@ CREATE TABLE IF NOT EXISTS poc_manager.tenants
     user_group_id                text,
     device_group_id              text,
     client_cert                  text,
-    PRIMARY KEY(id)
+    PRIMARY KEY(id),
+    CONSTRAINT unique_tenant UNIQUE (tenant_name)
 );
 
 CREATE TABLE IF NOT EXISTS poc_manager.key_hash
