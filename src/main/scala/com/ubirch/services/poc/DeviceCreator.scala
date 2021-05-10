@@ -4,8 +4,10 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
+import com.ubirch.models.auth.DecryptedData
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
+import com.ubirch.services.auth.AESEncryption
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -23,7 +25,9 @@ trait DeviceCreator {
   def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW]
 }
 
-class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extends DeviceCreator with LazyLogging {
+class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(implicit formats: Formats)
+  extends DeviceCreator
+  with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
@@ -37,19 +41,24 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
       throwError(status, "device has been created, but retrieval of password is not implemented yet")
     } else {
       val body = getBody(poc, tenant)
-      Task
-        .fromFuture(requestDeviceCreation(status, tenant, body))
+      decryptToken(tenant)
+        .map(token => Task.fromFuture(requestDeviceCreation(token, status, body)))
+        .flatten
         .onErrorHandle(ex => throwAndLogError(status, "an error occurred when creating device via thing api; ", ex))
     }
   }
 
-  protected def requestDeviceCreation(status: PocStatus, tenant: Tenant, body: String): Future[StatusAndPW] = {
+  protected def requestDeviceCreation(
+    token: DecryptedData,
+    status: PocStatus,
+    body: String): Future[StatusAndPW] = {
+
     Future(
       basicRequest
         .post(uri"$thingUrl")
         .body(body)
         .auth
-        .bearer(tenant.deviceCreationToken.value.value.value)
+        .bearer(token.value)
         .response(asJson[Array[Map[String, DeviceResponse]]])
         .send()
         .map {
@@ -75,6 +84,10 @@ class DeviceCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) exte
     )
     write[DeviceRequestBody](body)
   }
+
+  protected def decryptToken(tenant: Tenant): Task[DecryptedData] =
+    aESEncryption
+      .decrypt(tenant.deviceCreationToken.value)(identity)
 
   @throws[PocCreationError]
   private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
