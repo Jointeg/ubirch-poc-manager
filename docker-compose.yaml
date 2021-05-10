@@ -65,6 +65,11 @@ services:
     depends_on:
       - postgres
 
+  teamdrive:
+    image: teamdrive/agent:latest
+    ports:
+      - 4040:4040
+
 networks:
   db_network:
   keycloak_users_network:
