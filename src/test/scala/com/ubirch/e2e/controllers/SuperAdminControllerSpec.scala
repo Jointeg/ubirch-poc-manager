@@ -163,7 +163,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    "authenticate users related to devices keycloak only" in {
+    "authenticate users related to users keycloak only" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val tenantName = Random.alphanumeric.take(10).mkString
@@ -172,7 +172,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         post(
           "/tenants/create",
           body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdminOnUsersKeycloak.prepare)) {
+          headers = Map("authorization" -> token.superAdminOnDevicesKeycloak.prepare)) {
           status should equal(403)
           assert(body.contains("AuthenticationError"))
         }
