@@ -82,7 +82,12 @@ class SuperAdminController @Inject() (
       asyncResult("CreateTenant") { _ => _ =>
         tenantService
           .createTenant(parsedBody.extract[CreateTenantRequest])
-          .map(_ => Ok())
+          .map {
+            case Left(error) =>
+              logger.error(s"Could not create a tenant because: $error")
+              InternalServerError(NOK.serverError("Failure during tenant creation"))
+            case Right(_) => Ok()
+          }
           .onErrorHandle { ex: Throwable =>
             val errorMsg = s"failure on tenant creation"
             logger.error(errorMsg, ex)
