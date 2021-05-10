@@ -10,7 +10,7 @@ class SimplifiedDeviceInfoTest extends UnitTestBase {
       val simplifiedDeviceInfo = SimplifiedDeviceInfo("extId", "PoCName", deviceId)
 
       simplifiedDeviceInfo.toCSVFormat shouldBe
-        s""""extId", "PoCName", "${deviceId.toString}"""".stripMargin
+        s""""extId"; "PoCName"; "${deviceId.toString}"""".stripMargin
     }
   }
 }

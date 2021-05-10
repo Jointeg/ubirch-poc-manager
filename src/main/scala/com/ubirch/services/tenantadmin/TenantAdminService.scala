@@ -10,7 +10,7 @@ trait TenantAdminService {
 }
 
 class DefaultTenantAdminService @Inject() (pocRepository: PocRepository) extends TenantAdminService {
-  private val simplifiedDeviceInfoCSVHeader = """"externalId", "pocName", "deviceId""""
+  private val simplifiedDeviceInfoCSVHeader = """"externalId"; "pocName"; "deviceId""""
 
   override def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String] = {
     for {

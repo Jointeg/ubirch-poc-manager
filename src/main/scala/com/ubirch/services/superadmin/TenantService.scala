@@ -10,7 +10,7 @@ trait TenantService {
   def createTenant(createTenantRequest: CreateTenantRequest): Task[TenantId]
 }
 
-class DefaultTenantService @Inject() (aesEncryption: AESEncryption, tenantRepository: TenantRepository)
+class DefaultSuperAdminService @Inject() (aesEncryption: AESEncryption, tenantRepository: TenantRepository)
   extends TenantService {
 
   override def createTenant(createTenantRequest: CreateTenantRequest): Task[TenantId] = {

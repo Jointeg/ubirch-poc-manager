@@ -214,9 +214,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           header("Content-Type") shouldBe "text/csv;charset=utf-8"
           val bodyLines = body.split("\n")
           bodyLines.size shouldBe 3
-          bodyLines should contain(""""externalId", "pocName", "deviceId"""")
-          bodyLines should contain(s""""${poc1.externalId}", "${poc1.pocName}", "${poc1.deviceId.toString}"""")
-          bodyLines should contain(s""""${poc2.externalId}", "${poc2.pocName}", "${poc2.deviceId.toString}"""")
+          bodyLines should contain(""""externalId"; "pocName"; "deviceId"""")
+          bodyLines should contain(s""""${poc1.externalId}"; "${poc1.pocName}"; "${poc1.deviceId.toString}"""")
+          bodyLines should contain(s""""${poc2.externalId}"; "${poc2.pocName}"; "${poc2.deviceId.toString}"""")
         }
       }
     }
@@ -239,7 +239,7 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           header("Content-Type") shouldBe "text/csv;charset=utf-8"
           val bodyLines = body.split("\n")
           bodyLines.size shouldBe 1
-          bodyLines should contain(""""externalId", "pocName", "deviceId"""")
+          bodyLines should contain(""""externalId"; "pocName"; "deviceId"""")
         }
       }
     }
