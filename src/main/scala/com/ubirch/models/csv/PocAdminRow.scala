@@ -1,5 +1,7 @@
 package com.ubirch.models.csv
 
+import scala.util.Try
+
 case class PocAdminRow(
   externalId: String,
   pocName: String,
@@ -30,7 +32,7 @@ case class PocAdminRow(
 
 object PocAdminRow {
 
-  def fromCsv(columns: Array[String]): PocAdminRow = {
+  def fromCsv(columns: Array[String]): Try[PocAdminRow] = Try {
     PocAdminRow(
       columns(0),
       columns(1),

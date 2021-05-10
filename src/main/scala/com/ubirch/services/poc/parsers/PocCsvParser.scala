@@ -12,10 +12,10 @@ import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
-import scala.util.{Success, Failure}
 
 import java.util.UUID
 import javax.inject.Singleton
+import scala.util.{Failure, Success, Try}
 
 case class PocParseResult(poc: Poc, csvRow: String) extends ParseRowResult
 
@@ -42,11 +42,16 @@ class PocCsvParser @Inject() (pocConfig: PocConfig) extends CsvParser[PocParseRe
   }
 
   @throws[HeaderCsvException]
-  protected def validateHeaders(cols: Array[String]): Unit = {
-    pocHeaderColsOrder.zip(cols.toSeq).foreach {
-      case (header, col) =>
-        if (header != col)
-          throw HeaderCsvException(headerErrorMsg(col, header))
+  protected def validateHeaders(cols: Array[String]): Try[Unit] = Try {
+    if (cols.length != pocHeaderColOrderLength) {
+      throw HeaderCsvException(
+        s"the numbers of column ${cols.length} is invalid. should be ${pocHeaderColOrderLength}.")
+    } else {
+      pocHeaderColsOrder.zip(cols.toSeq).foreach {
+        case (header, col) =>
+          if (header != col)
+            throw HeaderCsvException(headerErrorMsg(col, header))
+      }
     }
   }
 

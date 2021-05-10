@@ -55,6 +55,7 @@ class ProcessPocAdminImpl @Inject() (
   private def storePocAndStatus(poc: Poc, pocAdmin: PocAdmin, csvRow: String): Task[Option[String]] = {
     val pocStatus = PocStatus.init(poc, dataSchemaGroupIds)
     val pocAdminStatus = PocAdminStatus.init(pocAdmin)
+    // @TODO check it works properly
     transaction {
       for {
         _ <- pocRepository.createPoc(poc)

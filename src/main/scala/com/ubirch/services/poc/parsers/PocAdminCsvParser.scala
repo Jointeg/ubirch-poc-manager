@@ -3,39 +3,49 @@ package com.ubirch.services.poc.parsers
 import cats.syntax.apply._
 import com.ubirch.models.csv.PocAdminRow
 import com.ubirch.models.poc
-import com.ubirch.models.poc.{ Address, JsonConfig, LogoURL, Poc, PocAdmin, PocManager }
+import com.ubirch.models.poc.{Address, JsonConfig, LogoURL, Poc, PocAdmin, PocManager}
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants._
-import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
+import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
+import scala.util.{Failure, Success, Try}
 
 case class PocAdminParseResult(poc: Poc, pocAdmin: PocAdmin, csvRow: String) extends ParseRowResult
 
 class PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
   protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, PocAdminParseResult] = {
-    val csvPocAdmin = PocAdminRow.fromCsv(cols)
-    val pocAddress = validatePocAddress(csvPocAdmin)
-    val pocManager = validatePocManager(csvPocAdmin)
-    val pocV = validatePoc(csvPocAdmin, pocAddress, pocManager, tenant)
-    val pocAdminV = validatePocAdminInfo(csvPocAdmin, pocV)
+    PocAdminRow.fromCsv(cols) match {
+      case Success(csvPocAdmin) =>
+        val pocAddress = validatePocAddress(csvPocAdmin)
+        val pocManager = validatePocManager(csvPocAdmin)
+        val pocV = validatePoc(csvPocAdmin, pocAddress, pocManager, tenant)
+        val pocAdminV = validatePocAdminInfo(csvPocAdmin, pocV)
 
-    (pocV, pocAdminV).mapN {
-      (poc, pocAdmin) =>
-        PocAdminParseResult(poc, pocAdmin, line)
-    }.fold(
-      errors => Left(line + columnSeparator + errors.toList.mkString(comma)),
-      result => Right(result)
-    )
+        (pocV, pocAdminV).mapN {
+          (poc, pocAdmin) =>
+            PocAdminParseResult(poc, pocAdmin, line)
+        }.fold(
+          errors => Left(line + columnSeparator + errors.toList.mkString(comma)),
+          result => Right(result)
+        )
+      case Failure(_) =>
+        Left(line + columnSeparator + s"the numbers of columns ${cols.length} is invalid. should be ${pocAdminHeaderColOrderLength}.")
+    }
   }
 
   @throws[HeaderCsvException]
-  protected def validateHeaders(cols: Array[String]): Unit = {
-    pocAdminHeaderColsOrder.zip(cols.toSeq).foreach {
-      case (header, col) =>
-        if (header != col)
-          throw HeaderCsvException(headerErrorMsg(col, header))
+  protected def validateHeaders(cols: Array[String]): Try[Unit] = Try {
+    if (cols.length != pocAdminHeaderColOrderLength) {
+      throw HeaderCsvException(
+        s"the numbers of columns ${cols.length} is invalid. should be ${pocAdminHeaderColOrderLength}.")
+    } else {
+      pocAdminHeaderColsOrder.zip(cols.toSeq).foreach {
+        case (header, col) =>
+          if (header != col)
+            throw HeaderCsvException(headerErrorMsg(col, header))
+      }
     }
   }
 
