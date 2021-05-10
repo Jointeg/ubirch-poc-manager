@@ -13,7 +13,7 @@ import com.ubirch.models.NOK
 import com.ubirch.models.tenant.{ API, APP, Both, CreateTenantRequest }
 import com.ubirch.services.UsersKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.superadmin.TenantService
+import com.ubirch.services.superadmin.SuperAdminService
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -31,7 +31,7 @@ class SuperAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
-  tenantService: TenantService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  tenantService: SuperAdminService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
   override protected val applicationDescription: String = "Super Admin controller"

@@ -2,7 +2,7 @@ package com.ubirch.services.formats
 
 import com.ubirch.models.poc._
 import org.json4s.JsonDSL._
-import org.json4s.{ CustomSerializer, JObject }
+import org.json4s.{CustomSerializer, Formats, JObject}
 
 object PocFormats extends FormatHelperMethods {
   private val pocStatusFormat: CustomSerializer[Status] =
@@ -11,7 +11,7 @@ object PocFormats extends FormatHelperMethods {
     (
       {
         case jsonObj: JObject =>
-          implicit val formats = format
+          implicit val formats: Formats = format
           val firstName = (jsonObj \ "firstName").extract[String]
           val lastName = (jsonObj \ "lastName").extract[String]
           val email = (jsonObj \ "email").extract[String]

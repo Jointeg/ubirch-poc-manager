@@ -25,7 +25,8 @@ import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierServ
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
 import com.ubirch.services.rest.SwaggerProvider
-import com.ubirch.services.superadmin.{ DefaultTenantService, TenantService }
+import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
+import com.ubirch.services.tenantadmin.{ DefaultTenantAdminService, TenantAdminService }
 import com.ubirch.services.{ DefaultKeycloakConnector, KeycloakConnector }
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -71,7 +72,7 @@ class Binder extends AbstractModule {
     bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
 
   def TenantService: ScopedBindingBuilder =
-    bind(classOf[TenantService]).to(classOf[DefaultTenantService])
+    bind(classOf[SuperAdminService]).to(classOf[DefaultSuperAdminService])
 
   def KeycloakUserConnector: ScopedBindingBuilder =
     bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])
@@ -125,6 +126,9 @@ class Binder extends AbstractModule {
 
   def PocStatusRepository: ScopedBindingBuilder = bind(classOf[PocStatusRepository]).to(classOf[PocStatusTable])
 
+  def TenantAdminService: ScopedBindingBuilder =
+    bind(classOf[TenantAdminService]).to(classOf[DefaultTenantAdminService])
+
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
   def DeviceCreator: ScopedBindingBuilder = bind(classOf[DeviceCreator]).to(classOf[DeviceCreatorImpl])
@@ -177,6 +181,7 @@ class Binder extends AbstractModule {
     KeyHashVerifier
     HashingService
     HashKeyRepository
+    TenantAdminService
     PocCreator
     PocCreationLoop
     ()

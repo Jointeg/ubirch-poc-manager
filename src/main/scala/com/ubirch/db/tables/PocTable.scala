@@ -5,7 +5,7 @@ import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.db.tables.PocRepository.{ PaginatedPocs, PocCriteria }
 import com.ubirch.models.common
 import com.ubirch.models.common.{ Page, Sort }
-import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Status }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
 import io.getquill.{ Insert, Ord, Query, Update }
 import monix.eval.Task
@@ -30,6 +30,8 @@ trait PocRepository {
   def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs]
 
   def getAllUncompletedPocs(): Task[List[Poc]]
+
+  def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]]
 }
 
 object PocRepository {
@@ -78,6 +80,12 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
   private def getAllPocsByTenantIdQuery(tenantId: TenantId) =
     quote {
       querySchema[Poc]("poc_manager.poc_table").filter(_.tenantId == lift(tenantId))
+    }
+
+  private def getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId: TenantId) =
+    quote {
+      querySchema[Poc]("poc_manager.poc_table").filter(_.tenantId == lift(tenantId)).map(poc =>
+        SimplifiedDeviceInfo(poc.externalId, poc.pocName, poc.deviceId))
     }
 
   private def getAllPocsWithoutStatusQuery(status: Status) =
@@ -176,4 +184,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       case _   => quote(q.filter(p => liftQuery(statuses).contains(p.status)))
     }
 
+
+  def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]] =
+    Task(run(getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId)))
 }
