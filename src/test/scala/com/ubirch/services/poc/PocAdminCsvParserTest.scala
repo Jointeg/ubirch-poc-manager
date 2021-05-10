@@ -43,7 +43,6 @@ class PocAdminCsvParserTest extends TestBase {
       assertThrows[HeaderCsvException](pocAdminCsvParser.parseList(invalidHeader, tenant).runSyncUnsafe())
     }
 
-
     "return invalid csvRows with errorMsg and validCsvRow as Poc" in {
       val resultT = pocAdminCsvParser.parseList(validHeaderButBadCsvRows, tenant)
       val result = resultT.runSyncUnsafe()
@@ -53,8 +52,7 @@ class PocAdminCsvParserTest extends TestBase {
       assert(result(
         1).left.get == s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;017782;01.1971;TRUE;column technician_mobile_phone must contain a valid phone number e.g. +46-498-313789,column technician_date_of_birth must contain a valid date e.g. 01.01.1970""")
       assert(result(2).left.get ==
-        s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;the numbers of columns 25 is invalid. should be 26."""
-      )
+        s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;the numbers of columns 25 is invalid. should be 26.""")
       assert(result(3).isRight)
     }
   }

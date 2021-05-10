@@ -7,7 +7,6 @@ import java.util.UUID
 case class PocAdminStatus(
   pocAdminId: UUID,
   webIdentRequired: Boolean,
-  webIdentSuccess: Option[Boolean],
   webIdentIdentifier: Option[Boolean],
   userRealmCreated: Boolean = false,
   emailActionRequired: Boolean = false,
@@ -23,12 +22,10 @@ case class PocAdminStatus(
 
 object PocAdminStatus {
   def init(podAdmin: PocAdmin): PocAdminStatus = {
-    val webIdentSuccess = if (podAdmin.webIdentRequired) Some(false) else None
     val webIdentIdentifier = if (podAdmin.webIdentRequired) Some(false) else None
     PocAdminStatus(
       podAdmin.id,
       podAdmin.webIdentRequired,
-      webIdentSuccess,
       webIdentIdentifier
     )
   }

@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_admin_table
     email                       text            NOT NULL,
     mobile_phone                varchar(20)     NOT NULL,
     web_ident_required          boolean         NOt NULL,
-    web_ident_success           boolean,
     web_ident_identifier        boolean,
     key_cloak_user_id           UUID            NOT NULL,
     date_of_birth               varchar(20)            NOT NULL,
@@ -25,7 +24,6 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_admin_status_table
 (
     poc_admin_id                 UUID            NOT NULL,
     web_ident_required           boolean         NOT NULL,
-    web_ident_success            boolean,
     web_ident_identifier         boolean,
     user_realm_created           boolean         NOT NULL,
     email_action_requied         boolean         NOT NULL,

@@ -14,7 +14,6 @@ case class PocAdmin(
   email: String,
   mobilePhone: String,
   webIdentRequired: Boolean,
-  webIdentSuccess: Option[Boolean],
   webIdentIdentifier: Option[String],
   keyCloakUserId: UUID,
   dateOfBirth: BirthDate,
@@ -45,7 +44,6 @@ object PocAdmin {
       email,
       mobilePhone,
       webIdentRequired,
-      None,
       None,
       keyCloakUserId,
       BirthDate(dateOfBirth)

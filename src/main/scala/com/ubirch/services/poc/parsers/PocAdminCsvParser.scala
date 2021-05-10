@@ -3,14 +3,14 @@ package com.ubirch.services.poc.parsers
 import cats.syntax.apply._
 import com.ubirch.models.csv.PocAdminRow
 import com.ubirch.models.poc
-import com.ubirch.models.poc.{Address, JsonConfig, LogoURL, Poc, PocAdmin, PocManager}
+import com.ubirch.models.poc.{ Address, JsonConfig, LogoURL, Poc, PocAdmin, PocManager }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants._
-import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
+import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class PocAdminParseResult(poc: Poc, pocAdmin: PocAdmin, csvRow: String) extends ParseRowResult
 

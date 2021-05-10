@@ -1,21 +1,21 @@
 package com.ubirch.services.poc.parsers
 
-import cats.data.Validated.{Invalid, Valid}
-import cats.implicits.{catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal}
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
+import cats.data.Validated.{ Invalid, Valid }
+import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
+import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
 import javax.inject.Singleton
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class PocParseResult(poc: Poc, csvRow: String) extends ParseRowResult
 
