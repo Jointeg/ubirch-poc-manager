@@ -6,7 +6,7 @@ import javax.inject.Singleton
 import scala.collection.mutable
 
 @Singleton
-class TenantTestTable extends TenantRepository {
+class TenantRepositoryMock extends TenantRepository {
   private val tenantDatastore = mutable.Map[TenantId, Tenant]()
 
   override def createTenant(tenant: Tenant): Task[TenantId] =
@@ -36,6 +36,11 @@ class TenantTestTable extends TenantRepository {
       tenantDatastore.collectFirst {
         case (_, tenant) if tenant.userGroupId == groupId => tenant
       }
+    }
+
+  def updateTenant(tenantUpdated: Tenant): Task[Unit] =
+    Task {
+      tenantDatastore.update(tenantUpdated.id, tenantUpdated)
     }
 
   override def deleteTenantById(id: TenantId): Task[Unit] =

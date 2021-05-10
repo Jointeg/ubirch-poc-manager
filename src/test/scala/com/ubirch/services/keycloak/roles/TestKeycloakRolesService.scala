@@ -25,6 +25,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   private def insertIfNotExists(
     datastore: mutable.Map[RoleName, KeycloakRole],
     createKeycloakRole: CreateKeycloakRole) = {
+
     Task {
       val roleName = createKeycloakRole.roleName
       datastore.find(_._1 == roleName) match {

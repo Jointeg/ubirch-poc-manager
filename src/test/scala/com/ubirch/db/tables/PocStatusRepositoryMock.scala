@@ -7,7 +7,7 @@ import javax.inject.Singleton
 import scala.collection.mutable
 
 @Singleton
-class PocStatusTestTable extends PocStatusRepository {
+class PocStatusRepositoryMock extends PocStatusRepository {
 
   private val pocStatusDatastore = mutable.Map[UUID, PocStatus]()
 

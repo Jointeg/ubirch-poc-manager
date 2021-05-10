@@ -1,6 +1,6 @@
 package com.ubirch.services.poc
 import com.ubirch.UnitTestBase
-import com.ubirch.db.tables.{ PocStatusTestTable, PocTestTable, TenantTestTable }
+import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.models.poc.PocStatus
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.poc.PocTestHelper._
@@ -16,9 +16,9 @@ class PocCreationLoopTest extends UnitTestBase {
       withInjector { injector =>
         //services
         val loop = injector.get[PocCreationLoop]
-        val tenantTable = injector.get[TenantTestTable]
-        val pocTable = injector.get[PocTestTable]
-        val pocStatusTable = injector.get[PocStatusTestTable]
+        val tenantTable = injector.get[TenantRepositoryMock]
+        val pocTable = injector.get[PocRepositoryMock]
+        val pocStatusTable = injector.get[PocStatusRepositoryMock]
         val groups = injector.get[TestKeycloakGroupsService]
 
         //creating needed objects
@@ -39,15 +39,15 @@ class PocCreationLoopTest extends UnitTestBase {
   }
 
   private def assertStatusAllTrue(status: PocStatus): Assertion = {
-    status.deviceRealmRoleCreated shouldBe true
-    status.deviceRealmGroupCreated shouldBe true
-    status.deviceRealmGroupRoleAssigned shouldBe true
+    status.deviceRoleCreated shouldBe true
+    status.deviceGroupCreated shouldBe true
+    status.deviceGroupRoleAssigned shouldBe true
 
-    status.userRealmRoleCreated shouldBe true
-    status.userRealmGroupCreated shouldBe true
-    status.userRealmGroupRoleAssigned shouldBe true
+    status.userRoleCreated shouldBe true
+    status.userGroupCreated shouldBe true
+    status.userGroupRoleAssigned shouldBe true
     status.deviceCreated shouldBe true
     status.goClientProvided shouldBe true
-    status.certApiProvided shouldBe true
+    status.certifyApiProvided shouldBe true
   }
 }

@@ -12,7 +12,7 @@ import javax.ws.rs.{ ClientErrorException, NotFoundException }
 trait KeycloakRolesService {
   def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]]
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RolesException, Unit]]
 
   def findRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]]
 
@@ -30,7 +30,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]] = {
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RolesException, Unit]] = {
     val roleRepresentation = createKeycloakRole.toKeycloakRepresentation
 
     Task(
@@ -42,10 +42,12 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
           .create(roleRepresentation)
       )
     ).onErrorRecover {
-      case exception: ClientErrorException if exception.getResponse.getStatus == 409 =>
-        logger.error(s"Can't create role ${createKeycloakRole.roleName} as it already exists")
+      case ex: ClientErrorException if ex.getResponse.getStatus == 409 =>
+        logger.error(s"can't create role ${createKeycloakRole.roleName} as it already exists")
         Left(RoleAlreadyExists(createKeycloakRole.roleName))
-      //Todo: shouldn't this cover more exceptions?
+      case ex: Exception =>
+        logger.error(s"creation of role ${createKeycloakRole.roleName} failed ", ex)
+        Left(RoleCreationException(createKeycloakRole.roleName))
     }
   }
 
@@ -57,8 +59,11 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
         .roles()
         .deleteRole(roleName.value)
     ).onErrorRecover {
-      case _: NotFoundException =>
-        logger.error(s"Tried to delete not existing role $roleName")
+      case ex: NotFoundException =>
+        logger.error(s"tried to delete not existing role $roleName", ex)
+      case ex: Exception =>
+        logger.error(s"could not find role with ${roleName.value} role name", ex)
+        None
     }
   }
 
@@ -74,8 +79,11 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
         .toRepresentation
       Some(KeycloakRole(RoleId(keycloakRoleRepresentation.getId), RoleName(keycloakRoleRepresentation.getName)))
     }.onErrorRecover {
-      case _: NotFoundException =>
-        logger.error(s"Could not find role with ${roleName.value} role name")
+      case ex: NotFoundException =>
+        logger.error(s"could not find role with ${roleName.value} role name", ex)
+        None
+      case ex: Exception =>
+        logger.error(s"could not find role with ${roleName.value} role name", ex)
         None
     }
   }
@@ -92,8 +100,11 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
         .toRepresentation
       Some(keycloakRoleRepresentation)
     }.onErrorRecover {
-      case _: NotFoundException =>
-        logger.error(s"Could not find role with ${roleName.value} role name")
+      case ex: NotFoundException =>
+        logger.error(s"could not find role with ${roleName.value} role name", ex)
+        None
+      case ex: Exception =>
+        logger.error(s"could not find role with ${roleName.value} role name", ex)
         None
     }
   }

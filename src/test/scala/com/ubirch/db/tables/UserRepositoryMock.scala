@@ -3,7 +3,7 @@ import com.ubirch.models.user.{ User, UserId }
 import monix.eval.Task
 import scala.collection.mutable
 
-class UserTestTable extends UserRepository {
+class UserRepositoryMock extends UserRepository {
   private val userDatastore = mutable.Map[UserId, User]()
 
   override def createUser(user: User): Task[Unit] =
