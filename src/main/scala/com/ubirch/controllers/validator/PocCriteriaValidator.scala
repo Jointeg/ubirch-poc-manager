@@ -69,7 +69,7 @@ sealed trait PocCriteriaValidator {
     params.get("filterColumnStatus") match {
       case Some(v) =>
         val (invalidStatuses, validStatuses) = v.split(",")
-          .filterNot(_.trim.isBlank)
+          .filterNot(_.trim == "")
           .map { s =>
             Try(Status.unsafeFromString(s.toUpperCase)) match {
               case Failure(_) => s.asLeft

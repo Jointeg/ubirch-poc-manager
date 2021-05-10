@@ -2,7 +2,7 @@ package com.ubirch.services.formats
 
 import com.ubirch.models.poc._
 import org.json4s.JsonDSL._
-import org.json4s.{CustomSerializer, Formats, JObject}
+import org.json4s.{ CustomSerializer, Formats, JObject }
 
 object PocFormats extends FormatHelperMethods {
   private val pocStatusFormat: CustomSerializer[Status] =

@@ -184,7 +184,6 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       case _   => quote(q.filter(p => liftQuery(statuses).contains(p.status)))
     }
 
-
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]] =
     Task(run(getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId)))
 }
