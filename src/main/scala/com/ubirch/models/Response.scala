@@ -61,8 +61,10 @@ case class ValidationErrorsResponse(
   version: String,
   ok: Boolean,
   errorType: Symbol,
-  validationErrors: Map[String, String])
+  validationErrors: Seq[FieldError])
   extends Response[Boolean]
+
+case class FieldError(name: String, error: String)
 
 object ValidationErrorsResponse {
   def apply(validationErrors: Map[String, String]): ValidationErrorsResponse =
@@ -70,5 +72,5 @@ object ValidationErrorsResponse {
       version = Response.version,
       ok = false,
       errorType = BAD_REQUEST,
-      validationErrors = validationErrors)
+      validationErrors = validationErrors.map { case (field, error) => FieldError(field, error) }.toSeq)
 }

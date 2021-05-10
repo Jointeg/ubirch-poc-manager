@@ -1,25 +1,25 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{createPoc, createPocStatus, createTenant}
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.PoC_OUT
-import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
-import com.ubirch.models.poc.{Completed, Pending, PocStatus, Processing}
+import com.ubirch.models.poc.{ Completed, Pending, PocStatus, Processing }
 import com.ubirch.models.tenant.TenantId
-import com.ubirch.services.formats.{DomainObjectFormats, JodaDateTimeFormats}
+import com.ubirch.services.formats.{ DomainObjectFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
-import com.ubirch.services.{DeviceKeycloak, UsersKeycloak}
+import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
-import org.json4s.native.Serialization.{read, write}
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.native.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.prop.TableDrivenPropertyChecks
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -351,22 +351,23 @@ class TenantAdminControllerSpec
       ("pageIndex", ""),
       ("pageSize", "invalid"),
       ("pageSize", "-1"),
-      ("pageSize", ""),
+      ("pageSize", "")
     )
 
   forAll(invalidParameterPocs) { (param, value) =>
-    s"Endpoint GET /pocs must respond with a bad request when provided an invalid value '$value' for '$param'" in withInjector { Injector =>
-      val token = Injector.get[FakeTokenCreator]
-      addTenantToDB()
-      get(
-        "/pocs",
-        params = Map(param -> value),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
-      ) {
-        status should equal(400)
-        val errorResponse = read[ValidationErrorsResponse](body)
-        errorResponse.validationErrors.keys should contain(param)
-      }
+    s"Endpoint GET /pocs must respond with a bad request when provided an invalid value '$value' for '$param'" in withInjector {
+      Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        addTenantToDB()
+        get(
+          "/pocs",
+          params = Map(param -> value, "sortOrder" -> "dsadas"),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+        ) {
+          status should equal(400)
+          val errorResponse = read[ValidationErrorsResponse](body)
+          errorResponse.validationErrors.filter(_.name == param) should have size 1
+        }
     }
   }
 

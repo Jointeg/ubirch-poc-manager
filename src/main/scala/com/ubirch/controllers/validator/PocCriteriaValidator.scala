@@ -36,7 +36,7 @@ sealed trait PocCriteriaValidator {
     params.get("pageIndex") match {
       case Some(v) =>
         if (v.forall(_.isDigit) && v.nonEmpty) v.toInt.validNec
-        else ("pageIndex", s"Invalid 'pageIndex': $v").invalidNec
+        else ("pageIndex", s"Invalid value for param 'pageIndex': $v").invalidNec
       case None => default.validNec
     }
 
@@ -44,7 +44,7 @@ sealed trait PocCriteriaValidator {
     params.get("pageSize") match {
       case Some(v) =>
         if (v.forall(_.isDigit) && v.nonEmpty) v.toInt.validNec
-        else ("pageSize", s"Invalid 'pageSize': $v").invalidNec
+        else ("pageSize", s"Invalid value for param 'pageSize': $v").invalidNec
       case None => default.validNec
     }
 
@@ -52,7 +52,7 @@ sealed trait PocCriteriaValidator {
     params.get("sortOrder") match {
       case Some(v) =>
         if (Seq("asc", "desc").contains(v)) Order.fromString(v).validNec
-        else ("sortOrder", s"Invalid 'sortOrder': $v. Valid values: asc, desc").invalidNec
+        else ("sortOrder", s"Invalid value for param 'sortOrder': $v. Valid values: asc, desc").invalidNec
       case None => default.validNec
     }
 
@@ -60,7 +60,9 @@ sealed trait PocCriteriaValidator {
     params.get("sortColumn") match {
       case Some(v) =>
         if (validSortColumns.contains(v)) v.some.validNec
-        else ("sortColumn", s"Invalid 'sortColumn': $v. Valid values: ${validSortColumns.mkString(", ")}").invalidNec
+        else (
+          "sortColumn",
+          s"Invalid value for param 'sortColumn': $v. Valid values: ${validSortColumns.mkString(", ")}").invalidNec
       case None => None.validNec
     }
 
@@ -82,7 +84,9 @@ sealed trait PocCriteriaValidator {
           }
 
         if (invalidStatuses.nonEmpty)
-          ("filterColumnStatus", s"Invalid 'filterColumnStatus': ${invalidStatuses.mkString(", ")}").invalidNec
+          (
+            "filterColumnStatus",
+            s"Invalid value for param 'filterColumnStatus': ${invalidStatuses.mkString(", ")}").invalidNec
         else validStatuses.validNec
       case None => Seq.empty.validNec
     }
