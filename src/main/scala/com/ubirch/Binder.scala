@@ -25,7 +25,7 @@ import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierServ
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
 import com.ubirch.services.rest.SwaggerProvider
-import com.ubirch.services.superadmin.{ DefaultSuperAdminService, TenantService }
+import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.tenantadmin.{ DefaultTenantAdminService, TenantAdminService }
 import com.ubirch.services.{ DefaultKeycloakConnector, KeycloakConnector }
 import monix.execution.Scheduler
@@ -72,7 +72,7 @@ class Binder extends AbstractModule {
     bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
 
   def TenantService: ScopedBindingBuilder =
-    bind(classOf[TenantService]).to(classOf[DefaultSuperAdminService])
+    bind(classOf[SuperAdminService]).to(classOf[DefaultSuperAdminService])
 
   def KeycloakUserConnector: ScopedBindingBuilder =
     bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])

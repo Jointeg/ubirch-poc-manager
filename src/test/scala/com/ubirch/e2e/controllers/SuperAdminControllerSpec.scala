@@ -113,6 +113,31 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
+    "not be able to create a Tenant with duplicated tenantName" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+
+        val tenantName = Random.alphanumeric.take(10).mkString
+        val createTenantBody = createTenantJson(tenantName)
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(200)
+          assert(body == "")
+        }
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(500)
+          assert(body.contains("Failure during tenant creation"))
+        }
+      }
+    }
+
     "create tenant with encrypted DeviceCreationToken and CertificationCreationToken" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
@@ -163,7 +188,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    "authenticate users related to devices keycloak only" in {
+    "authenticate users related to users keycloak only" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val tenantName = Random.alphanumeric.take(10).mkString
@@ -172,7 +197,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         post(
           "/tenants/create",
           body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdminOnUsersKeycloak.prepare)) {
+          headers = Map("authorization" -> token.superAdminOnDevicesKeycloak.prepare)) {
           status should equal(403)
           assert(body.contains("AuthenticationError"))
         }

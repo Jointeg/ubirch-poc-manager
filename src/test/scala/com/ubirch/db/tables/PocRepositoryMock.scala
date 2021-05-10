@@ -9,7 +9,7 @@ import javax.inject.Singleton
 import scala.collection.mutable
 
 @Singleton
-class PocTestTable @Inject() (pocStatusTable: PocStatusTestTable) extends PocRepository {
+class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) extends PocRepository {
   private val pocDatastore = mutable.Map[UUID, Poc]()
 
   override def createPoc(poc: Poc): Task[UUID] =

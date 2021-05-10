@@ -1,32 +1,10 @@
 package com.ubirch
 
-import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
-import com.ubirch.db.tables.{ TenantRepository, TenantTestTable, UserRepository, UserTestTable, _ }
 import com.ubirch.models.tenant.TenantName
-import com.ubirch.services.jwt.{
-  DefaultPublicKeyPoolService,
-  PublicKeyDiscoveryService,
-  PublicKeyPoolService,
-  TokenCreationService
-}
-import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
-import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
-import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserService,
-  TestKeycloakUserService,
-  TestUserPollingService,
-  UserPollingService
-}
-import com.ubirch.services.poc.{
-  DeviceCreator,
-  InformationProvider,
-  TestDeviceCreatorImpl,
-  TestInformationProviderImpl
-}
+import com.ubirch.services.jwt.{ DefaultPublicKeyPoolService, PublicKeyDiscoveryService, TokenCreationService }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
@@ -383,54 +361,11 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
 
   val user: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.user, UsersKeycloak)
   def userOnDevicesKeycloak(tenantName: TenantName): FakeToken =
-    fakeToken(FakeToken.deviceHeader, FakeToken.tenantAdmin(tenantName), DeviceKeycloak)
-  val superAdmin: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
-  val superAdminOnUsersKeycloak: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.superAdmin, UsersKeycloak)
+    fakeToken(FakeToken.usersHeader, FakeToken.tenantAdmin(tenantName), UsersKeycloak)
+  val superAdmin: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.superAdmin, UsersKeycloak)
+  val superAdminOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
   val userWithDoubleRoles: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.userWithDoubleRoles, UsersKeycloak)
   val userNoPrincipal: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.userNoPrincipal, UsersKeycloak)
   val admin: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.admin, UsersKeycloak)
 
 }
-
-class UnitTestInjectorHelper()
-  extends InjectorHelper(List(new Binder {
-    override def PublicKeyPoolService: ScopedBindingBuilder =
-      bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
-
-    override def UserRepository: ScopedBindingBuilder =
-      bind(classOf[UserRepository]).to(classOf[UserTestTable])
-
-    override def PocRepository: ScopedBindingBuilder =
-      bind(classOf[PocRepository]).to(classOf[PocTestTable])
-
-    override def PocStatusRepository: ScopedBindingBuilder =
-      bind(classOf[PocStatusRepository]).to(classOf[PocStatusTestTable])
-
-    override def TenantRepository: ScopedBindingBuilder =
-      bind(classOf[TenantRepository]).to(classOf[TenantTestTable])
-
-    override def UserPollingService: ScopedBindingBuilder =
-      bind(classOf[UserPollingService]).to(classOf[TestUserPollingService])
-
-    override def AuthClient: ScopedBindingBuilder =
-      bind(classOf[AuthClient]).to(classOf[TestAuthClient])
-
-    override def KeycloakGroupService: ScopedBindingBuilder =
-      bind(classOf[KeycloakGroupService]).to(classOf[TestKeycloakGroupsService])
-
-    override def KeycloakRolesService: ScopedBindingBuilder =
-      bind(classOf[KeycloakRolesService]).to(classOf[TestKeycloakRolesService])
-
-    override def KeycloakUserService: ScopedBindingBuilder =
-      bind(classOf[KeycloakUserService]).to(classOf[TestKeycloakUserService])
-
-    override def DeviceCreator: ScopedBindingBuilder =
-      bind(classOf[DeviceCreator]).to(classOf[TestDeviceCreatorImpl])
-
-    override def InformationProvider: ScopedBindingBuilder =
-      bind(classOf[InformationProvider]).to(classOf[TestInformationProviderImpl])
-
-    override def configure(): Unit = {
-      super.configure()
-    }
-  }))

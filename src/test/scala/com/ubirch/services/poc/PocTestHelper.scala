@@ -1,7 +1,7 @@
 package com.ubirch.services.poc
 import com.ubirch.Awaits
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
-import com.ubirch.db.tables.{ PocStatusTestTable, PocTestTable, TenantTestTable }
+import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantUserGroupId }
@@ -33,9 +33,9 @@ object PocTestHelper extends Awaits {
   }
 
   def addPocTripleToRepository(
-    tenantTable: TenantTestTable,
-    pocTable: PocTestTable,
-    pocStatusTable: PocStatusTestTable,
+    tenantTable: TenantRepositoryMock,
+    pocTable: PocRepositoryMock,
+    pocStatusTable: PocStatusRepositoryMock,
     poc: Poc,
     pocStatus: PocStatus,
     updatedTenant: Tenant): Unit = {
@@ -45,16 +45,4 @@ object PocTestHelper extends Awaits {
     await(pocStatusTable.createPocStatus(pocStatus), 1.seconds)
   }
 
-  def assertStatusAllTrue(status: PocStatus): Assertion = {
-    status.deviceRealmRoleCreated shouldBe true
-    status.deviceRealmGroupCreated shouldBe true
-    status.deviceRealmGroupRoleAssigned shouldBe true
-
-    status.userRealmRoleCreated shouldBe true
-    status.userRealmGroupCreated shouldBe true
-    status.userRealmGroupRoleAssigned shouldBe true
-    status.deviceCreated shouldBe true
-    status.goClientProvided shouldBe true
-    status.certApiProvided shouldBe true
-  }
 }

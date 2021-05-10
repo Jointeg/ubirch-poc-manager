@@ -12,7 +12,7 @@ import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantName }
-import com.ubirch.services.{ DeviceKeycloak }
+import com.ubirch.services.UsersKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import com.ubirch.services.tenantadmin.TenantAdminService
@@ -51,7 +51,7 @@ class TenantAdminController @Inject() (
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
+    new KeycloakBearerAuthStrategy(app, UsersKeycloak, tokenVerificationService, publicKeyPoolService)
 
   override val successCounter: Counter =
     Counter

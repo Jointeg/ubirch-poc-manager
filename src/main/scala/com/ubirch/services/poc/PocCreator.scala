@@ -46,20 +46,18 @@ class PocCreatorImpl @Inject() (
       case pocs =>
         logger.info(s"starting to create ${pocs.size} pocs")
         Task
-          .gather(pocs.map(preparePocCreation))
+          .gather(pocs.map(createPoc))
           .map(PocCreationMaybeSuccess)
     }
   }
 
-  private def preparePocCreation(poc: Poc): Task[Either[String, PocStatus]] = {
+  private def createPoc(poc: Poc): Task[Either[String, PocStatus]] = {
     retrieveStatusAndTenant(poc).map {
       case (Some(status: PocStatus), Some(tenant: Tenant)) =>
-        logger.info("found status and tenant")
         process(poc, status, tenant)
 
       case (_, _) =>
-        val errorMsg =
-          s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
+        val errorMsg = s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
         logger.error(errorMsg)
         Task(Left(errorMsg))
     }.flatten
@@ -75,35 +73,37 @@ class PocCreatorImpl @Inject() (
   //Todo: create and provide client certs
   //Todo: download and store logo
   private def process(poc: Poc, status: PocStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
+    logger.info(s"starting to create poc with id ${poc.id}")
     val creationResult = for {
-      status1 <- doDeviceRealmRelatedTasks(poc, status, tenant)
-      status2 <- doUserRealmRelatedTasks(poc, status1, tenant)
+      status1 <- doUserRealmRelatedTasks(poc, status, tenant)
+      status2 <- doDeviceRealmRelatedTasks(poc, status1, tenant)
       status3 <- createDevice(poc, status2, tenant)
       status4 <- infoToGoClient(poc, status3)
       status5 <- infoToCertifyAPI(poc, status4)
+      _ <- pocStatusTable.updatePocStatus(status)
     } yield status5
+
     creationResult
       .map { status =>
         pocStatusTable
           .updatePocStatus(status)
           .map(_ => Right(status))
-      }
-      .onErrorHandle(handlePocCreationError).flatten
+      }.onErrorHandle(handlePocCreationError).flatten
   }
 
   private def doDeviceRealmRelatedTasks(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {
     for {
-      status1 <- createDeviceRealmRole(poc, status)
-      pocAndStatus <- createDeviceRealmGroup(poc, status1, tenant)
+      status1 <- createDeviceRole(poc, status)
+      pocAndStatus <- createDeviceGroup(poc, status1, tenant)
       status3 <- assignDeviceRealmRoleToGroup(pocAndStatus, tenant)
     } yield status3
   }
 
   private def doUserRealmRelatedTasks(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {
     for {
-      status4 <- createUserRealmRole(poc, status)
-      pocAndStatus <- createUserRealmGroup(poc, status4, tenant)
-      status6 <- assignUserRealmRoleToGroup(pocAndStatus, tenant)
+      status4 <- createUserRole(poc, status)
+      pocAndStatus <- createUserGroup(poc, status4, tenant)
+      status6 <- assignUserRoleToGroup(pocAndStatus, tenant)
     } yield status6
   }
 
@@ -112,10 +112,14 @@ class PocCreatorImpl @Inject() (
       case pce: PocCreationError =>
         pocStatusTable
           .updatePocStatus(pce.pocStatus)
-          .map(_ => Left(s"updated poc status with errorMsg; ${pce.pocStatus}"))
-          .onErrorHandle { ex =>
-            logger.error(s"couldn't update poc status in table ${pce.pocStatus}", ex)
-            Left(s"couldn't update poc status with errorMsg; ${ex.getMessage}")
+          .map { _ =>
+            val msg = s"updated poc status after poc creation failed; ${pce.pocStatus}"
+            logger.error(msg)
+            Left(msg)
+          }.onErrorHandle { ex =>
+            val errorMsg = s"couldn't persist poc status after failed poc creation ${pce.pocStatus}"
+            logger.error(errorMsg, ex)
+            Left(errorMsg)
           }
 
       case ex: Throwable =>
