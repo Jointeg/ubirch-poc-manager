@@ -113,6 +113,31 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
+    "not be able to create a Tenant with duplicated tenantName" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+
+        val tenantName = Random.alphanumeric.take(10).mkString
+        val createTenantBody = createTenantJson(tenantName)
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(200)
+          assert(body == "")
+        }
+
+        post(
+          "/tenants/create",
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(500)
+          assert(body.contains("Failure during tenant creation"))
+        }
+      }
+    }
+
     "create tenant with encrypted DeviceCreationToken and CertificationCreationToken" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
