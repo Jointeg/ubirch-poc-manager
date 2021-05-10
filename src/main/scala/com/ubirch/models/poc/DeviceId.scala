@@ -13,6 +13,9 @@ object DeviceId {
   def apply(tenantId: TenantId, externalId: String) =
     new DeviceId(NamespacedUUID(UUID.V5(tenantId.value.value, externalId)))
 
+  def unsafeApply(uuid: String) =
+    new DeviceId(NamespacedUUID.fromJavaUUID(jUUID.fromString(uuid)))
+
   implicit val encodeTenantId: MappedEncoding[DeviceId, jUUID] =
     MappedEncoding[DeviceId, jUUID](_.value.value.asJava())
   implicit val decodeTenantId: MappedEncoding[jUUID, DeviceId] =

@@ -9,7 +9,7 @@ import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
 import com.ubirch.models.poc.{ Completed, Pending, PocStatus, Processing }
 import com.ubirch.models.tenant.{ Tenant, TenantName }
-import com.ubirch.services.formats.{ DomainObjectFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.headerLine
@@ -34,7 +34,7 @@ class TenantAdminControllerSpec
   private val poc1id: UUID = UUID.randomUUID()
   private val poc2id: UUID = UUID.randomUUID()
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ DomainObjectFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
 
   private val badCsv =
     "poc_id*;poc_name*;poc_street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
