@@ -1,10 +1,11 @@
 package com.ubirch.db.tables
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId, TenantId, TenantName }
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantId, TenantName, TenantUserGroupId }
 import monix.eval.Task
 
+import javax.inject.Singleton
 import scala.collection.mutable
 
+@Singleton
 class TenantTestTable extends TenantRepository {
   private val tenantDatastore = mutable.Map[TenantId, Tenant]()
 
@@ -23,10 +24,17 @@ class TenantTestTable extends TenantRepository {
       }
     }
 
-  override def getTenantByGroupId(groupId: TenantGroupId): Task[Option[Tenant]] =
+  def getTenantByDeviceGroupId(groupId: TenantDeviceGroupId): Task[Option[Tenant]] =
     Task {
       tenantDatastore.collectFirst {
-        case (_, tenant) if tenant.groupId == groupId => tenant
+        case (_, tenant) if tenant.deviceGroupId == groupId => tenant
+      }
+    }
+
+  def getTenantByUserGroupId(groupId: TenantUserGroupId): Task[Option[Tenant]] =
+    Task {
+      tenantDatastore.collectFirst {
+        case (_, tenant) if tenant.userGroupId == groupId => tenant
       }
     }
 

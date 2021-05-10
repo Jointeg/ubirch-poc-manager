@@ -9,11 +9,11 @@ import monix.eval.Task
 import java.util.UUID
 
 trait PocStatusRepository {
-  def createPocStatus(pocStatus: PocStatus): Task[Long]
+  def createPocStatus(pocStatus: PocStatus): Task[Unit]
 
-  def updatePocStatus(pocStatus: PocStatus): Task[Long]
+  def updatePocStatus(pocStatus: PocStatus): Task[Unit]
 
-  def deletePocStatus(pocId: UUID): Task[Long]
+  def deletePocStatus(pocId: UUID): Task[Unit]
 
   def getPocStatus(pocId: UUID): Task[Option[PocStatus]]
 }
@@ -44,11 +44,11 @@ class PocStatusTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocS
       querySchema[PocStatus]("poc_manager.poc_status_table").filter(_.pocId == lift(pocStatusId))
     }
 
-  override def createPocStatus(pocStatus: PocStatus): Task[Long] = Task(run(createPocStatusQuery(pocStatus)))
+  override def createPocStatus(pocStatus: PocStatus): Task[Unit] = Task(run(createPocStatusQuery(pocStatus)))
 
-  override def updatePocStatus(pocStatus: PocStatus): Task[Long] = Task(run(updatePocStatusQuery(pocStatus)))
+  override def updatePocStatus(pocStatus: PocStatus): Task[Unit] = Task(run(updatePocStatusQuery(pocStatus)))
 
-  override def deletePocStatus(pocId: UUID): Task[Long] = Task(run(removePocStatusQuery(pocId)))
+  override def deletePocStatus(pocId: UUID): Task[Unit] = Task(run(removePocStatusQuery(pocId)))
 
   override def getPocStatus(pocId: UUID): Task[Option[PocStatus]] =
     Task(run(getPocStatusQuery(pocId))).map(_.headOption)

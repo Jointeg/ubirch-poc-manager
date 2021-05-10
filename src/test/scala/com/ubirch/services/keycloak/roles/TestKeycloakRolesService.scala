@@ -3,6 +3,7 @@ package com.ubirch.services.keycloak.roles
 import com.ubirch.models.keycloak.roles._
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
+import org.keycloak.representations.idm.RoleRepresentation
 
 import java.util.UUID
 import javax.inject.Singleton
@@ -25,13 +26,11 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
     datastore: mutable.Map[RoleName, KeycloakRole],
     createKeycloakRole: CreateKeycloakRole) = {
     Task {
-      datastore.find(_._1 == createKeycloakRole.roleName) match {
-        case Some(_) => Left(RoleAlreadyExists(createKeycloakRole.roleName))
+      val roleName = createKeycloakRole.roleName
+      datastore.find(_._1 == roleName) match {
+        case Some(_) => Left(RoleAlreadyExists(roleName))
         case None =>
-          datastore += (
-            (
-              createKeycloakRole.roleName,
-              KeycloakRole(RoleId(UUID.randomUUID().toString), createKeycloakRole.roleName)))
+          datastore += ((roleName, KeycloakRole(RoleId(UUID.randomUUID().toString), roleName)))
           Right(())
       }
     }
@@ -58,4 +57,23 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
           ()
         }
     }
+
+  override def findRoleRepresentation(
+    roleName: RoleName,
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[RoleRepresentation]] = {
+    val opt: Option[KeycloakRole] = keycloakInstance match {
+      case UsersKeycloak =>
+        val r = rolesUserDatastore.get(roleName)
+        r
+      case DeviceKeycloak =>
+        rolesDeviceDatastore.get(roleName)
+    }
+    Task(opt.map { keycloakRole =>
+      val role = new RoleRepresentation()
+      role.setName(keycloakRole.roleName.value)
+      role.setId(keycloakRole.id.value)
+      role
+    })
+  }
+
 }

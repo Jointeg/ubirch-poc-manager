@@ -29,13 +29,15 @@ class DefaultTenantService @Inject() (aesEncryption: AESEncryption, tenantReposi
     encryptedCertificationCreationToken: EncryptedCertificationCreationToken,
     createTenantRequest: CreateTenantRequest): Tenant =
     Tenant(
-      TenantId.random,
+      TenantId(createTenantRequest.tenantName),
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
       encryptedDeviceCreationToken,
       encryptedCertificationCreationToken,
       createTenantRequest.idGardIdentifier,
-      createTenantRequest.tenantGroupId
+      createTenantRequest.userGroupId,
+      createTenantRequest.deviceGroupId,
+      createTenantRequest.clientCert
     )
 
 }

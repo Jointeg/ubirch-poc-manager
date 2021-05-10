@@ -14,6 +14,9 @@ object ValidatorConstants {
   def booleanError(header: String) =
     s"column $header must be either 'TRUE' or 'FALSE'"
 
+  def clientCertError(header: String) =
+    s"column $header can only be false, if tenant has client cert"
+
   def urlError(header: String) =
     s"column $header must contain a proper url"
 

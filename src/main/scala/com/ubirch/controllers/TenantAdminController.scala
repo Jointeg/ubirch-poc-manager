@@ -3,7 +3,6 @@ package com.ubirch.controllers
 import cats.data.{ NonEmptyChain, Validated }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -13,11 +12,12 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc.Poc
-import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
+import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -48,7 +48,13 @@ class TenantAdminController @Inject() (
 
   implicit override protected def jsonFormats: Formats = jFormats
 
+  override protected def applicationDescription: String = "Tenant Admin Controller"
+
   override val service: String = config.getString(GenericConfPaths.NAME)
+
+  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
+    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
+
   override val successCounter: Counter =
     Counter
       .build()
@@ -56,34 +62,37 @@ class TenantAdminController @Inject() (
       .help("Represents the number of tenant admin controller successes")
       .labelNames("service", "method")
       .register()
+
   override val errorCounter: Counter = Counter
     .build()
     .name("tenant_admin_failures")
     .help("Represents the number of tenant admin controller failures")
     .labelNames("service", "method")
     .register()
+
   val createListOfPocs: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("create list of PoCs")
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC, Tenant-Admin")
+
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin, PocStatus")
 
-  private val tenantAdminRole = Symbol(config.getString(TENANT_ADMIN_ROLE))
-
-  override protected def applicationDescription: String = "Tenant Admin Controller"
-
-  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, DeviceKeycloak, tokenVerificationService, publicKeyPoolService)
+  val getPocs: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve all pocs of the requesting tenant")
+      .summary("Get PoCs")
+      .description("Retrieve PoCs that belong to the querying tenant.")
+      .tags("Tenant-Admin, PoCs")
+      .authorizations()
 
   post("/pocs/create", operation(createListOfPocs)) {
 
-    authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult("Create poc batch") { _ => _ =>
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
@@ -102,7 +111,7 @@ class TenantAdminController @Inject() (
   }
 
   get("/pocStatus/:id", operation(getPocStatus)) {
-    authenticated(_.hasRole(tenantAdminRole)) { token =>
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { _ =>
       asyncResult("Get Poc Status") { _ => _ =>
         val id = params("id")
         Try(UUID.fromString(id)) match {
@@ -123,13 +132,13 @@ class TenantAdminController @Inject() (
     }
   }
 
-  get("/pocs", operation(getPocStatus)) {
-    authenticated(_.hasRole(tenantAdminRole)) { token: Token =>
+  get("/pocs", operation(getPocs)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult("Get all PoCs for a tenant") { _ => _ =>
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             (for {
-              pocCriteria <- PocCriteriaValidator.validateParams(tenant.id.value, params) match {
+              pocCriteria <- PocCriteriaValidator.validateParams(tenant.id, params) match {
                 case Validated.Valid(a)   => Task(a)
                 case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
               }
@@ -155,12 +164,12 @@ class TenantAdminController @Inject() (
   }
 
   private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
-    token.roles.find(_.name.startsWith("T_")) match {
 
-      case Some(tenantRole) =>
-        tenantTable.getTenantByGroupId(TenantGroupId(tenantRole.name)).map {
+    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
+      case Some(roleName) =>
+        tenantTable.getTenantByName(TenantName(roleName.name.stripPrefix(TENANT_GROUP_PREFIX))).map {
           case Some(tenant) => Right(tenant)
-          case None         => Left(s"couldn't find tenant in db for ${tenantRole.name}")
+          case None         => Left(s"couldn't find tenant in db for ${roleName.name}")
         }
       case None => Task(Left("the user's token is missing a tenant role"))
     }
@@ -175,7 +184,6 @@ class TenantAdminController @Inject() (
         InternalServerError(NOK.serverError(errorMsg))
     }
   }
-
 }
 
 object TenantAdminController {

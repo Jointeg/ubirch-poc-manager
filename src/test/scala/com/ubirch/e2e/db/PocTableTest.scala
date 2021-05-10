@@ -2,9 +2,9 @@ package com.ubirch.e2e.db
 
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus }
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc._
+import com.ubirch.models.tenant.TenantName
 import org.postgresql.util.PSQLException
 
 import java.util.UUID
@@ -16,7 +16,7 @@ class PocTableTest extends E2ETestBase {
     "be able to store and retrieve data in DB" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
-        val poc = createPoc()
+        val poc = createPoc(tenantName = TenantName("tenant"))
         val res = for {
           _ <- repo.createPoc(poc)
           data <- repo.getPoc(poc.id)
@@ -29,7 +29,7 @@ class PocTableTest extends E2ETestBase {
     "fail when same Poc is tried to be stored twice, when unique constraint is violated" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
-        val poc = createPoc()
+        val poc = createPoc(tenantName = TenantName("tenant"))
         val res = for {
           _ <- repo.createPoc(poc)
           _ <- repo.createPoc(poc.copy(UUID.randomUUID()))
@@ -44,7 +44,7 @@ class PocTableTest extends E2ETestBase {
     "fail when same Poc is tried to be stored twice, when only primary key is the same" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
-        val poc = createPoc()
+        val poc = createPoc(tenantName = TenantName("tenant"))
         val res = for {
           _ <- repo.createPoc(poc)
           _ <- repo.createPoc(poc.copy(dataSchemaId = "x"))
@@ -59,7 +59,7 @@ class PocTableTest extends E2ETestBase {
     "be able to store and update data in DB" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
-        val poc = createPoc()
+        val poc = createPoc(tenantName = TenantName("tenant"))
         val updatedPoc = poc.copy(dataSchemaId = "xxx")
 
         val res1 = for {
@@ -77,7 +77,7 @@ class PocTableTest extends E2ETestBase {
     "be able to store and delete data in DB" in {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
-        val poc = createPoc()
+        val poc = createPoc(tenantName = TenantName("tenant"))
         val res1 = for {
           _ <- repo.createPoc(poc)
           data <- repo.getPoc(poc.id)
@@ -100,7 +100,7 @@ class PocTableTest extends E2ETestBase {
       withInjector { injector =>
         val pocRepo = injector.get[PocRepository]
         val statusRepo = injector.get[PocStatusRepository]
-        val poc = createPoc()
+        val poc = createPoc(tenantName = TenantName("tenant"))
         val pocStatus = createPocStatus(poc.id)
 
         val poc1 = poc.copy(UUID.randomUUID(), pocName = "new name")
