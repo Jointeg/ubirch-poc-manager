@@ -12,7 +12,7 @@ import javax.inject._
 class JsonFormatsProvider extends Provider[Formats] {
 
   private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
   override def get(): Formats = formats
 
 }

@@ -40,12 +40,15 @@ object ModelCreationHelper {
   def createPoc(
     id: UUID = UUID.randomUUID(),
     tenantName: TenantName,
-    externalId: String = UUID.randomUUID().toString): Poc =
+    externalId: String = UUID.randomUUID().toString,
+    name: String = "pocName",
+    status: Status = Pending
+  ): Poc =
     Poc(
       id,
       TenantId(tenantName),
       externalId,
-      "pocName",
+      name,
       Address("", "", None, 67832, "", None, None, "France"),
       "pocPhone",
       certifyApp = true,
@@ -53,7 +56,8 @@ object ModelCreationHelper {
       clientCertRequired = false,
       "data-schema-id",
       Some(JsonConfig(parse("""{"test":"hello"}"""))),
-      PocManager("surname", "", "", "08023-782137")
+      PocManager("surname", "", "", "08023-782137"),
+      status
     )
 
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =

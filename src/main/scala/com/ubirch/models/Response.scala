@@ -1,5 +1,7 @@
 package com.ubirch.models
 
+import com.ubirch.models.NOK.BAD_REQUEST
+
 /**
   * Represents a simple Response object. Used for HTTP responses.
   */
@@ -25,24 +27,27 @@ case class NOK(version: String, ok: Boolean, errorType: Symbol, errorMessage: St
   * Companion object for the NOK response
   */
 object NOK {
-
   final val SERVER_ERROR = 'ServerError
   final val PARSING_ERROR = 'ParsingError
   final val NO_ROUTE_FOUND_ERROR = 'NoRouteFound
   final val DELETE_ERROR = 'TokenDeleteError
   final val AUTHENTICATION_ERROR = 'AuthenticationError
   final val RESOURCE_NOT_FOUND_ERROR = 'ResourceNotFoundError
-
-  def apply(errorType: Symbol, errorMessage: String): NOK =
-    new NOK(Response.version, ok = false, errorType, errorMessage)
+  final val BAD_REQUEST = 'BadRequest
 
   def serverError(errorMessage: String): NOK = NOK(SERVER_ERROR, errorMessage)
+
   def parsingError(errorMessage: String): NOK = NOK(PARSING_ERROR, errorMessage)
+
   def noRouteFound(errorMessage: String): NOK = NOK(NO_ROUTE_FOUND_ERROR, errorMessage)
 
   def authenticationError(errorMessage: String): NOK = NOK(AUTHENTICATION_ERROR, errorMessage)
 
   def resourceNotFoundError(errorMessage: String): NOK = NOK(RESOURCE_NOT_FOUND_ERROR, errorMessage)
+
+  def apply(errorType: Symbol, errorMessage: String): NOK =
+    new NOK(Response.version, ok = false, errorType, errorMessage)
+
 }
 
 case class Return(version: String, ok: Boolean, data: Any) extends Response[Boolean]
@@ -50,4 +55,22 @@ case class Return(version: String, ok: Boolean, data: Any) extends Response[Bool
 object Return {
   def apply(data: Any): Return = new Return(Response.version, ok = true, data)
   def apply(ok: Boolean, data: Any): Return = new Return(Response.version, ok = ok, data)
+}
+
+case class ValidationErrorsResponse(
+  version: String,
+  ok: Boolean,
+  errorType: Symbol,
+  validationErrors: Seq[FieldError])
+  extends Response[Boolean]
+
+case class FieldError(name: String, error: String)
+
+object ValidationErrorsResponse {
+  def apply(validationErrors: Map[String, String]): ValidationErrorsResponse =
+    ValidationErrorsResponse(
+      version = Response.version,
+      ok = false,
+      errorType = BAD_REQUEST,
+      validationErrors = validationErrors.map { case (field, error) => FieldError(field, error) }.toSeq)
 }

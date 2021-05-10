@@ -2,9 +2,12 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.tables.PocRepository.{ PaginatedPocs, PocCriteria }
+import com.ubirch.models.common
+import com.ubirch.models.common.{ Page, Sort }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
-import io.getquill.{ Insert, Update }
+import io.getquill.{ Insert, Ord, Query, Update }
 import monix.eval.Task
 
 import java.util.UUID
@@ -24,9 +27,18 @@ trait PocRepository {
 
   def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]]
 
+  def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs]
+
   def getAllUncompletedPocs(): Task[List[Poc]]
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]]
+}
+
+object PocRepository {
+  case class PocCriteria(tenantId: TenantId, page: Page, sort: Sort, search: Option[String], filter: PocFilter)
+  case class PocFilter(status: Seq[Status])
+
+  case class PaginatedPocs(total: Long, pocs: Seq[Poc])
 }
 
 class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocRepository {
@@ -109,6 +121,68 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
     Task(run(getAllPocsByTenantIdQuery(tenantId)))
 
   def getAllUncompletedPocs(): Task[List[Poc]] = Task(run(getAllPocsWithoutStatusQuery(Completed)))
+
+  override def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs] =
+    Task {
+      transaction {
+        val pocsByCriteria = filterByStatuses(getAllPocsByCriteriaQuery(pocCriteria), pocCriteria.filter.status)
+        val sortedPocs = sortPocs(pocsByCriteria, pocCriteria.sort)
+        val total = run(pocsByCriteria.size)
+        val pocs = run {
+          sortedPocs
+            .drop(quote(lift(pocCriteria.page.index * pocCriteria.page.size)))
+            .take(quote(lift(pocCriteria.page.size)))
+        }
+        PaginatedPocs(total, pocs)
+      }
+    }
+
+  private def getAllPocsByCriteriaQuery(criteria: PocCriteria) = {
+    val pocByTenantId = quote {
+      querySchema[Poc]("poc_manager.poc_table")
+        .filter(_.tenantId == lift(criteria.tenantId))
+    }
+
+    criteria.search match {
+      case Some(s) =>
+        quote {
+          pocByTenantId
+            .filter(_.pocName.like(lift(s"$s%")))
+        }
+      case None => pocByTenantId
+    }
+  }
+
+  private def sortPocs(q: Quoted[Query[Poc]], sort: Sort) = {
+    def ord[T]: Ord[T] = sort.order match {
+      case common.ASC  => Ord.asc[T]
+      case common.DESC => Ord.desc[T]
+    }
+    val dynamic = q.dynamic
+    sort.field match {
+      case Some("id")                 => dynamic.sortBy(p => quote(p.id))(ord)
+      case Some("tenantId")           => dynamic.sortBy(p => quote(p.tenantId))(ord)
+      case Some("externalId")         => dynamic.sortBy(p => quote(p.externalId))(ord)
+      case Some("pocName")            => dynamic.sortBy(p => quote(p.pocName))(ord)
+      case Some("phone")              => dynamic.sortBy(p => quote(p.phone))(ord)
+      case Some("certifyApp")         => dynamic.sortBy(p => quote(p.certifyApp))(ord)
+      case Some("clientCertRequired") => dynamic.sortBy(p => quote(p.clientCertRequired))(ord)
+      case Some("dataSchemaId")       => dynamic.sortBy(p => quote(p.dataSchemaId))(ord)
+      case Some("roleName")           => dynamic.sortBy(p => quote(p.roleName))(ord)
+      case Some("deviceId")           => dynamic.sortBy(p => quote(p.deviceId))(ord)
+      case Some("clientCertFolder")   => dynamic.sortBy(p => quote(p.clientCertFolder))(ord)
+      case Some("status")             => dynamic.sortBy(p => quote(p.status))(ord)
+      case Some("lastUpdated")        => dynamic.sortBy(p => quote(p.lastUpdated))(ord)
+      case Some("created")            => dynamic.sortBy(p => quote(p.created))(ord)
+      case _                          => dynamic
+    }
+  }
+
+  private def filterByStatuses(q: Quoted[Query[Poc]], statuses: Seq[Status]) =
+    statuses match {
+      case Nil => quote(q)
+      case _   => quote(q.filter(p => liftQuery(statuses).contains(p.status)))
+    }
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]] =
     Task(run(getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId)))

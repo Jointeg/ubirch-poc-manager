@@ -3,31 +3,43 @@ package com.ubirch.e2e.controllers
 import com.ubirch.FakeTokenCreator
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
+import com.ubirch.controllers.TenantAdminController.PoC_OUT
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.ValidationErrorsResponse
+import com.ubirch.models.poc.{ Completed, Created, Pending, Poc, PocStatus, Processing, Updated }
 import com.ubirch.models.tenant.{ Tenant, TenantName }
-import com.ubirch.services.formats.CustomFormats
+import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.headerLine
+import com.ubirch.services.poc.util.CsvConstants.{ headerLine, pocName }
 import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
-import org.json4s.native.Serialization.write
+import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.json4s.ext.{ DateParser, JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.native.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats }
+import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
-class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
+class TenantAdminControllerSpec
+  extends E2ETestBase
+  with TableDrivenPropertyChecks
+  with BeforeAndAfterEach
+  with BeforeAndAfterAll {
+
+  import TenantAdminControllerSpec._
 
   private val poc1id: UUID = UUID.randomUUID()
   private val poc2id: UUID = UUID.randomUUID()
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
 
   private val badCsv =
     "poc_id*;poc_name*;poc_street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
@@ -149,11 +161,13 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         } yield {
           pocs
         }
-        val pocs = await(r, 5.seconds)
+        val pocs = await(r, 5.seconds).filter(_.tenantId == tenant.id).map(_.datesToIsoFormat)
         pocs.size shouldBe 2
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
-          body shouldBe write[List[Poc]](pocs)
+          val poC_OUT = read[PoC_OUT](body)
+          poC_OUT.total shouldBe 2
+          poC_OUT.pocs shouldBe pocs.filter(_.tenantId == tenant.id)
         }
       }
     }
@@ -175,7 +189,9 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
-          body shouldBe "[]"
+          val poC_OUT = read[PoC_OUT](body)
+          poC_OUT.total shouldBe 0
+          poC_OUT.pocs should have size 0
         }
       }
     }
@@ -188,6 +204,181 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
       }
+    }
+
+    "return PoC page for given index and size" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(poc1id, tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(poc2id, tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), TenantName("some name")))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("pageIndex" -> "1", "pageSize" -> "2"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 5
+        poC_OUT.pocs shouldBe pocs.slice(2, 4)
+      }
+    }
+
+    "return PoCs for passed search query" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("search" -> "POC 1"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 2
+        poC_OUT.pocs shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
+      }
+    }
+
+    "return PoCs ordered asc by field" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).sortBy(_.pocName).map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 3
+        poC_OUT.pocs shouldBe pocs
+      }
+    }
+
+    "return PoCs ordered desc by field" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).sortBy(_.pocName).reverse.map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("sortColumn" -> "pocName", "sortOrder" -> "desc"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 3
+        poC_OUT.pocs shouldBe pocs
+      }
+    }
+
+    "return only pocs with matching status" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("filterColumnStatus" -> "pending,processing"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 2
+        poC_OUT.pocs shouldBe pocs
+      }
+    }
+
+    "return pocs with each status when filterColumnStatus parameter is empty" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("filterColumnStatus" -> ""),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[PoC_OUT](body)
+        poC_OUT.total shouldBe 3
+        poC_OUT.pocs shouldBe pocs
+      }
+    }
+  }
+
+  private val invalidParameterPocs =
+    Table(
+      ("param", "value"),
+      ("filterColumnStatus", "invalid"),
+      ("sortColumn", "invalid"),
+      ("sortColumn", ""),
+      ("sortOrder", "invalid"),
+      ("sortOrder", ""),
+      ("pageIndex", "invalid"),
+      ("pageIndex", "-1"),
+      ("pageIndex", ""),
+      ("pageSize", "invalid"),
+      ("pageSize", "-1"),
+      ("pageSize", "")
+    )
+
+  forAll(invalidParameterPocs) { (param, value) =>
+    s"Endpoint GET /pocs must respond with a bad request when provided an invalid value '$value' for '$param'" in withInjector {
+      Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        val tenant = addTenantToDB()
+        get(
+          "/pocs",
+          params = Map(param -> value, "sortOrder" -> "dsadas"),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        ) {
+          status should equal(400)
+          val errorResponse = read[ValidationErrorsResponse](body)
+          errorResponse.validationErrors.filter(_.name == param) should have size 1
+        }
     }
   }
 
@@ -269,4 +460,15 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
     }
   }
 
+}
+
+object TenantAdminControllerSpec {
+  implicit class PocOps(poc: Poc) {
+    def datesToIsoFormat: Poc = {
+      poc.copy(
+        created = Created(DateTime.parse(Instant.ofEpochMilli(poc.created.dateTime.getMillis).toString)),
+        lastUpdated = Updated(DateTime.parse(Instant.ofEpochMilli(poc.lastUpdated.dateTime.getMillis).toString))
+      )
+    }
+  }
 }
