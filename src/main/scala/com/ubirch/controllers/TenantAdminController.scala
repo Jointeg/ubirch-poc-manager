@@ -4,7 +4,6 @@ import cats.data.{ NonEmptyChain, Validated }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.ConfPaths.ServicesConfPaths.TENANT_ADMIN_ROLE
-import com.ubirch.controllers.TenantAdminController._
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -13,9 +12,9 @@ import com.ubirch.controllers.concerns.{
 }
 import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
-import com.ubirch.models.NOK
 import com.ubirch.models.poc.Poc
 import com.ubirch.models.tenant.{ Tenant, TenantGroupId }
+import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
@@ -44,6 +43,8 @@ class TenantAdminController @Inject() (
   tokenVerificationService: TokenVerificationService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
+
+  import TenantAdminController._
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -135,10 +136,15 @@ class TenantAdminController @Inject() (
               pocs <- pocTable.getAllPocsByCriteria(pocCriteria)
             } yield PoC_OUT(pocs.total, pocs.pocs))
               .map(toJson)
-              .onErrorHandle {
-                case ValidationError(e) => BadRequest(NOK.validationError(e))
-                case ex: Throwable => InternalServerError(NOK.serverError(
-                    s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
+              .onErrorRecoverWith {
+                case ValidationError(e) =>
+                  ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
+                    .toJson
+                    .map(BadRequest(_))
+              }
+              .onErrorHandle { ex =>
+                InternalServerError(NOK.serverError(
+                  s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
               }
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
@@ -169,9 +175,14 @@ class TenantAdminController @Inject() (
         InternalServerError(NOK.serverError(errorMsg))
     }
   }
+
 }
 
 object TenantAdminController {
   case class PoC_OUT(total: Long, pocs: Seq[Poc])
-  case class ValidationError(n: NonEmptyChain[String]) extends RuntimeException(s"Validation errors occurred")
+  case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
+
+  implicit class ResponseOps[T](r: Response[T]) {
+    def toJson(implicit f: Formats): Task[String] = Task(write[Response[T]](r))
+  }
 }

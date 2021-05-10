@@ -6,7 +6,7 @@ import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.PoC_OUT
 import com.ubirch.db.tables.{PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.NOK
+import com.ubirch.models.ValidationErrorsResponse
 import com.ubirch.models.poc.{Completed, Pending, PocStatus, Processing}
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.formats.{DomainObjectFormats, JodaDateTimeFormats}
@@ -18,12 +18,17 @@ import io.prometheus.client.CollectorRegistry
 import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
 import org.json4s.native.Serialization.{read, write}
 import org.json4s.{DefaultFormats, Formats}
+import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
-class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
+class TenantAdminControllerSpec
+  extends E2ETestBase
+  with TableDrivenPropertyChecks
+  with BeforeAndAfterEach
+  with BeforeAndAfterAll {
 
   private val poc1id: UUID = UUID.randomUUID()
   private val poc2id: UUID = UUID.randomUUID()
@@ -331,16 +336,36 @@ class TenantAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         poC_OUT.pocs shouldBe pocs
       }
     }
+  }
 
-    "respond with a bad request when provided an invalid status" in withInjector { Injector =>
+  private val invalidParameterPocs =
+    Table(
+      ("param", "value"),
+      ("filterColumnStatus", "invalid"),
+      ("sortColumn", "invalid"),
+      ("sortColumn", ""),
+      ("sortOrder", "invalid"),
+      ("sortOrder", ""),
+      ("pageIndex", "invalid"),
+      ("pageIndex", "-1"),
+      ("pageIndex", ""),
+      ("pageSize", "invalid"),
+      ("pageSize", "-1"),
+      ("pageSize", ""),
+    )
+
+  forAll(invalidParameterPocs) { (param, value) =>
+    s"Endpoint GET /pocs must respond with a bad request when provided an invalid value '$value' for '$param'" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
+      addTenantToDB()
       get(
         "/pocs",
-        params = Map("filterColumnStatus" -> "invalid"),
+        params = Map(param -> value),
         headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
       ) {
         status should equal(400)
-//        val errorResponse = read[NOK](body)
+        val errorResponse = read[ValidationErrorsResponse](body)
+        errorResponse.validationErrors.keys should contain(param)
       }
     }
   }
