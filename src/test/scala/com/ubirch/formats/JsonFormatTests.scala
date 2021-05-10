@@ -3,7 +3,7 @@ package com.ubirch.formats
 import com.ubirch.UnitTestBase
 import com.ubirch.models.poc.{ Created, DeviceId, PocManager, Updated }
 import com.ubirch.models.tenant.{ TenantId, TenantName }
-import com.ubirch.services.formats.DomainObjectFormats
+import com.ubirch.services.formats.CustomFormats
 import org.joda.time.DateTime
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization._
@@ -12,7 +12,7 @@ import org.json4s.{ DefaultFormats, Formats, StringInput }
 class JsonFormatTests extends UnitTestBase {
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ DomainObjectFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   "TenantId" should {
     "be serialized to value: uuid format" in {

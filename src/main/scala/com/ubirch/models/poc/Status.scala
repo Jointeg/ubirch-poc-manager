@@ -11,14 +11,19 @@ case object Processing extends Status
 case object Completed extends Status
 
 object Status {
-  implicit val encodeStatus: MappedEncoding[Status, String] = MappedEncoding[Status, String] {
-    case Pending    => "PENDING"
-    case Processing => "PROCESSING"
-    case Completed  => "COMPLETED"
-  }
-  implicit val decodeStatus: MappedEncoding[String, Status] = MappedEncoding[String, Status] {
+
+  def unsafeFromString(value: String): Status = value match {
     case "PENDING"    => Pending
     case "PROCESSING" => Processing
     case "COMPLETED"  => Completed
   }
+
+  def toFormattedString(status: Status): String = status match {
+    case Pending    => "PENDING"
+    case Processing => "PROCESSING"
+    case Completed  => "COMPLETED"
+  }
+
+  implicit val encodeStatus: MappedEncoding[Status, String] = MappedEncoding[Status, String](toFormattedString)
+  implicit val decodeStatus: MappedEncoding[String, Status] = MappedEncoding[String, Status](unsafeFromString)
 }
