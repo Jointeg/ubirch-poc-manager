@@ -38,12 +38,12 @@ object ModelCreationHelper {
   }
 
   def createPoc(
-     id: UUID = UUID.randomUUID(),
-     tenantName: TenantName,
-     externalId: String = UUID.randomUUID().toString,
-     name: String = "pocName",
-     status: Status = Pending
-   ): Poc =
+    id: UUID = UUID.randomUUID(),
+    tenantName: TenantName,
+    externalId: String = UUID.randomUUID().toString,
+    name: String = "pocName",
+    status: Status = Pending
+  ): Poc =
     Poc(
       id,
       TenantId(tenantName),

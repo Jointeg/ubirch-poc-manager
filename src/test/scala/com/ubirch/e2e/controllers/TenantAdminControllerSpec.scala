@@ -7,21 +7,24 @@ import com.ubirch.controllers.TenantAdminController.PoC_OUT
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
-import com.ubirch.models.poc.{ Completed, Pending, PocStatus, Processing }
+import com.ubirch.models.poc.{ Completed, Created, Pending, Poc, PocStatus, Processing, Updated }
 import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.headerLine
+import com.ubirch.services.poc.util.CsvConstants.{ headerLine, pocName }
 import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
-import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.json4s.ext.{ DateParser, JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
@@ -30,6 +33,8 @@ class TenantAdminControllerSpec
   with TableDrivenPropertyChecks
   with BeforeAndAfterEach
   with BeforeAndAfterAll {
+
+  import TenantAdminControllerSpec._
 
   private val poc1id: UUID = UUID.randomUUID()
   private val poc2id: UUID = UUID.randomUUID()
@@ -156,7 +161,7 @@ class TenantAdminControllerSpec
         } yield {
           pocs
         }
-        val pocs = await(r, 5.seconds).filter(_.tenantId == tenant.id)
+        val pocs = await(r, 5.seconds).filter(_.tenantId == tenant.id).map(_.datesToIsoFormat)
         pocs.size shouldBe 2
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
@@ -215,7 +220,7 @@ class TenantAdminControllerSpec
         _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), TenantName("some name")))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
-      val pocs = await(r, 5.seconds)
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
       get(
         "/pocs",
         params = Map("pageIndex" -> "1", "pageSize" -> "2"),
@@ -238,7 +243,7 @@ class TenantAdminControllerSpec
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
-      val pocs = await(r, 5.seconds)
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
       get(
         "/pocs",
         params = Map("search" -> "POC 1"),
@@ -261,7 +266,7 @@ class TenantAdminControllerSpec
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
-      val pocs = await(r, 5.seconds).sortBy(_.pocName)
+      val pocs = await(r, 5.seconds).sortBy(_.pocName).map(_.datesToIsoFormat)
       get(
         "/pocs",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
@@ -284,7 +289,7 @@ class TenantAdminControllerSpec
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
-      val pocs = await(r, 5.seconds).sortBy(_.pocName).reverse
+      val pocs = await(r, 5.seconds).sortBy(_.pocName).reverse.map(_.datesToIsoFormat)
       get(
         "/pocs",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "desc"),
@@ -307,7 +312,7 @@ class TenantAdminControllerSpec
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
-      val pocs = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status))
+      val pocs = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.datesToIsoFormat)
       get(
         "/pocs",
         params = Map("filterColumnStatus" -> "pending,processing"),
@@ -330,7 +335,7 @@ class TenantAdminControllerSpec
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
-      val pocs = await(r, 5.seconds)
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
       get(
         "/pocs",
         params = Map("filterColumnStatus" -> ""),
@@ -401,4 +406,15 @@ class TenantAdminControllerSpec
     }
   }
 
+}
+
+object TenantAdminControllerSpec {
+  implicit class PocOps(poc: Poc) {
+    def datesToIsoFormat: Poc = {
+      poc.copy(
+        created = Created(DateTime.parse(Instant.ofEpochMilli(poc.created.dateTime.getMillis).toString)),
+        lastUpdated = Updated(DateTime.parse(Instant.ofEpochMilli(poc.lastUpdated.dateTime.getMillis).toString))
+      )
+    }
+  }
 }
