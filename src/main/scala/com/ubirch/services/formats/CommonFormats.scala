@@ -11,7 +11,7 @@ object CommonFormats extends FormatHelperMethods {
   private val tenantIdFormat: CustomSerializer[NamespacedUUID] =
     createStringFormat(
       string => NamespacedUUID.fromJavaUUID(UUID.fromString(string)),
-      string => Base64.isBase64(string))(
+      _ => true)(
       _.value.toString)
 
   private val usageTypeFormat: CustomSerializer[UsageType] =
