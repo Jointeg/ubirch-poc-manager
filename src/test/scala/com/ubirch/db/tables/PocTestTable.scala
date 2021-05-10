@@ -1,5 +1,6 @@
 package com.ubirch.db.tables
 import com.google.inject.Inject
+import com.ubirch.db.tables.PocRepository.PaginatedPocs
 import com.ubirch.models.poc.{ Completed, Poc, PocStatus }
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
@@ -60,4 +61,9 @@ class PocTestTable @Inject() (pocStatusTable: PocStatusTestTable) extends PocRep
 
   }
 
+  override def getAllPocsByCriteria(pocCriteria: PocRepository.PocCriteria): Task[PocRepository.PaginatedPocs] =
+    Task {
+      val pocs = pocDatastore.filter { case (_, poc) => poc.tenantId == pocCriteria.tenantId }.values
+      PaginatedPocs(pocs.size, pocs.toSeq)
+    }
 }

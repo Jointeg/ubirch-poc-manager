@@ -7,9 +7,9 @@ import com.ubirch.controllers.validator.PocCriteriaValidator.PocCriteriaValidati
 import com.ubirch.db.tables.PocRepository.{ PocCriteria, PocFilter }
 import com.ubirch.models.common.{ ASC, Order, Page, Sort }
 import com.ubirch.models.poc.Status
+import com.ubirch.models.tenant.TenantId
 import org.scalatra.Params
 
-import java.util.UUID
 import scala.util.{ Failure, Success, Try }
 
 sealed trait PocCriteriaValidator {
@@ -23,8 +23,7 @@ sealed trait PocCriteriaValidator {
       "certifyApp",
       "clientCertRequired",
       "dataSchemaId",
-      "roleAndGroupName",
-      "groupPath",
+      "roleName",
       "deviceId",
       "clientCertFolder",
       "status",
@@ -95,7 +94,7 @@ sealed trait PocCriteriaValidator {
 object PocCriteriaValidator extends PocCriteriaValidator {
   type PocCriteriaValidationResult[A] = ValidatedNec[(String, String), A]
 
-  def validateParams(tenantId: UUID, params: Params): PocCriteriaValidationResult[PocCriteria] = {
+  def validateParams(tenantId: TenantId, params: Params): PocCriteriaValidationResult[PocCriteria] = {
     val page = (validatePageIndex(params, default = 0), validatePageSize(params, default = 20)).mapN(Page)
     val sort = (validateSortColumn(params), validateSortOrder(params, default = ASC)).mapN(Sort)
     val serach: PocCriteriaValidationResult[Option[String]] = params.get("search").validNec

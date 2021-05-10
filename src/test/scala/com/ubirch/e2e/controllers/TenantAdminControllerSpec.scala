@@ -156,13 +156,13 @@ class TenantAdminControllerSpec
         } yield {
           pocs
         }
-        val pocs = await(r, 5.seconds).filter(_.tenantId == tenantId)
+        val pocs = await(r, 5.seconds).filter(_.tenantId == tenant.id)
         pocs.size shouldBe 2
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           val poC_OUT = read[PoC_OUT](body)
           poC_OUT.total shouldBe 2
-          poC_OUT.pocs shouldBe pocs.filter(_.tenantId == tenantId)
+          poC_OUT.pocs shouldBe pocs.filter(_.tenantId == tenant.id)
         }
       }
     }
@@ -204,22 +204,22 @@ class TenantAdminControllerSpec
     "return PoC page for given index and size" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
 
-      addTenantToDB()
       val r = for {
-        _ <- pocTable.createPoc(createPoc(poc1id, tenantId))
-        _ <- pocTable.createPoc(createPoc(poc2id, tenantId))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenantId))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), UUID.randomUUID()))
-        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+        _ <- pocTable.createPoc(createPoc(poc1id, tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(poc2id, tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
+        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), TenantName("some name")))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds)
       get(
         "/pocs",
         params = Map("pageIndex" -> "1", "pageSize" -> "2"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
@@ -231,18 +231,18 @@ class TenantAdminControllerSpec
     "return PoCs for passed search query" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      addTenantToDB()
+      val tenant = addTenantToDB()
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, name = "POC 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, name = "POC 11"))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, name = "POC 2"))
-        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds)
       get(
         "/pocs",
         params = Map("search" -> "POC 1"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
@@ -254,18 +254,18 @@ class TenantAdminControllerSpec
     "return PoCs ordered asc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      addTenantToDB()
+      val tenant = addTenantToDB()
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, name = "POC 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, name = "POC 11"))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, name = "POC 2"))
-        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds).sortBy(_.pocName)
       get(
         "/pocs",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
@@ -277,18 +277,18 @@ class TenantAdminControllerSpec
     "return PoCs ordered desc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      addTenantToDB()
+      val tenant = addTenantToDB()
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, name = "POC 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, name = "POC 11"))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, name = "POC 2"))
-        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds).sortBy(_.pocName).reverse
       get(
         "/pocs",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "desc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
@@ -300,18 +300,18 @@ class TenantAdminControllerSpec
     "return only pocs with matching status" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      addTenantToDB()
+      val tenant = addTenantToDB()
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, status = Pending))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, status = Processing))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, status = Completed))
-        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status))
       get(
         "/pocs",
         params = Map("filterColumnStatus" -> "pending,processing"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
@@ -323,18 +323,18 @@ class TenantAdminControllerSpec
     "return pocs with each status when filterColumnStatus parameter is empty" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      addTenantToDB()
+      val tenant = addTenantToDB()
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantId = tenantId, status = Pending))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantId = tenantId, status = Processing))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantId = tenantId, status = Completed))
-        pocs <- pocTable.getAllPocsByTenantId(tenantId)
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds)
       get(
         "/pocs",
         params = Map("filterColumnStatus" -> ""),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
@@ -364,11 +364,11 @@ class TenantAdminControllerSpec
     s"Endpoint GET /pocs must respond with a bad request when provided an invalid value '$value' for '$param'" in withInjector {
       Injector =>
         val token = Injector.get[FakeTokenCreator]
-        addTenantToDB()
+        val tenant = addTenantToDB()
         get(
           "/pocs",
           params = Map(param -> value, "sortOrder" -> "dsadas"),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak.prepare)
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
         ) {
           status should equal(400)
           val errorResponse = read[ValidationErrorsResponse](body)

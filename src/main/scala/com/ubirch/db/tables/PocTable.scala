@@ -33,7 +33,7 @@ trait PocRepository {
 }
 
 object PocRepository {
-  case class PocCriteria(tenantId: UUID, page: Page, sort: Sort, search: Option[String], filter: PocFilter)
+  case class PocCriteria(tenantId: TenantId, page: Page, sort: Sort, search: Option[String], filter: PocFilter)
   case class PocFilter(status: Seq[Status])
 
   case class PaginatedPocs(total: Long, pocs: Seq[Poc])
@@ -160,8 +160,7 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       case Some("certifyApp")         => dynamic.sortBy(p => quote(p.certifyApp))(ord)
       case Some("clientCertRequired") => dynamic.sortBy(p => quote(p.clientCertRequired))(ord)
       case Some("dataSchemaId")       => dynamic.sortBy(p => quote(p.dataSchemaId))(ord)
-      case Some("roleAndGroupName")   => dynamic.sortBy(p => quote(p.roleAndGroupName))(ord)
-      case Some("groupPath")          => dynamic.sortBy(p => quote(p.groupPath))(ord)
+      case Some("roleName")   => dynamic.sortBy(p => quote(p.roleName))(ord)
       case Some("deviceId")           => dynamic.sortBy(p => quote(p.deviceId))(ord)
       case Some("clientCertFolder")   => dynamic.sortBy(p => quote(p.clientCertFolder))(ord)
       case Some("status")             => dynamic.sortBy(p => quote(p.status))(ord)
