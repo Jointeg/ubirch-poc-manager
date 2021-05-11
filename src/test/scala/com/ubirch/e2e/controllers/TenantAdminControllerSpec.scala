@@ -167,7 +167,7 @@ class TenantAdminControllerSpec
           status should equal(200)
           val poC_OUT = read[PoC_OUT](body)
           poC_OUT.total shouldBe 2
-          poC_OUT.pocs shouldBe pocs.filter(_.tenantId == tenant.id)
+          poC_OUT.records shouldBe pocs.filter(_.tenantId == tenant.id)
         }
       }
     }
@@ -191,7 +191,7 @@ class TenantAdminControllerSpec
           status should equal(200)
           val poC_OUT = read[PoC_OUT](body)
           poC_OUT.total shouldBe 0
-          poC_OUT.pocs should have size 0
+          poC_OUT.records should have size 0
         }
       }
     }
@@ -229,7 +229,7 @@ class TenantAdminControllerSpec
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 5
-        poC_OUT.pocs shouldBe pocs.slice(2, 4)
+        poC_OUT.records shouldBe pocs.slice(2, 4)
       }
     }
 
@@ -252,7 +252,7 @@ class TenantAdminControllerSpec
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 2
-        poC_OUT.pocs shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
+        poC_OUT.records shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
       }
     }
 
@@ -275,7 +275,7 @@ class TenantAdminControllerSpec
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 3
-        poC_OUT.pocs shouldBe pocs
+        poC_OUT.records shouldBe pocs
       }
     }
 
@@ -298,7 +298,7 @@ class TenantAdminControllerSpec
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 3
-        poC_OUT.pocs shouldBe pocs
+        poC_OUT.records shouldBe pocs
       }
     }
 
@@ -321,7 +321,7 @@ class TenantAdminControllerSpec
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 2
-        poC_OUT.pocs shouldBe pocs
+        poC_OUT.records shouldBe pocs
       }
     }
 
@@ -344,7 +344,7 @@ class TenantAdminControllerSpec
         status should equal(200)
         val poC_OUT = read[PoC_OUT](body)
         poC_OUT.total shouldBe 3
-        poC_OUT.pocs shouldBe pocs
+        poC_OUT.records shouldBe pocs
       }
     }
   }
