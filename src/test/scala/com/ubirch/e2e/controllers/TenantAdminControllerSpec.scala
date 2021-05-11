@@ -315,7 +315,7 @@ class TenantAdminControllerSpec
       val pocs = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.datesToIsoFormat)
       get(
         "/pocs",
-        params = Map("filterColumnStatus" -> "pending,processing"),
+        params = Map("filterColumn[status]" -> "pending,processing"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
@@ -338,7 +338,7 @@ class TenantAdminControllerSpec
       val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
       get(
         "/pocs",
-        params = Map("filterColumnStatus" -> ""),
+        params = Map("filterColumn[status]" -> ""),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
@@ -352,7 +352,7 @@ class TenantAdminControllerSpec
   private val invalidParameterPocs =
     Table(
       ("param", "value"),
-      ("filterColumnStatus", "invalid"),
+      ("filterColumn[status]", "invalid"),
       ("sortColumn", "invalid"),
       ("sortColumn", ""),
       ("sortOrder", "invalid"),
