@@ -1,16 +1,17 @@
 package com.ubirch.services.poc
 
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
-import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus, PocStatus }
+import com.ubirch.db.tables.{PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository}
+import com.ubirch.models.poc.{Poc, PocAdmin, PocAdminStatus, PocStatus}
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocAdminCsvParser
-import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
+import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
 import monix.eval.Task
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 trait ProcessPocAdmin {
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]]
@@ -24,7 +25,7 @@ class ProcessPocAdminImpl @Inject() (
   pocAdminRepository: PocAdminRepository,
   pocStatusRepository: PocStatusRepository,
   pocAdminStatusRepository: PocAdminStatusRepository)
-  extends ProcessPocAdmin {
+  extends ProcessPocAdmin with LazyLogging {
   import quillJdbcContext.ctx._
 
   private val pocAdminCsvParser = new PocAdminCsvParser
@@ -60,12 +61,16 @@ class ProcessPocAdminImpl @Inject() (
       for {
         _ <- pocRepository.createPoc(poc)
         _ <- pocStatusRepository.createPocStatus(pocStatus)
-        _ <- pocAdminRepository.createPoc(pocAdmin)
-        _ <- pocAdminStatusRepository.createPocAdminStatus(pocAdminStatus)
+        _ <- pocAdminRepository.createPocAdmin(pocAdmin)
+        _ <- pocAdminStatusRepository.createStatus(pocAdminStatus)
       } yield {
         None
       }
-    }.onErrorHandle(_ => Some(csvRow))
+    }.onErrorHandle {
+      case e =>
+        logger.error(s"fail to create poc admin and status. poc: $poc, pocAdmin: $pocAdmin, error: ${e.getMessage}")
+        Some(csvRow)
+    }
   }
 
   private def createResponse(result: Seq[Task[Option[String]]]): Task[Either[String, Unit]] = {

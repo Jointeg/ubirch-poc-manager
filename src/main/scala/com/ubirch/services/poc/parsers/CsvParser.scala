@@ -2,7 +2,10 @@ package com.ubirch.services.poc.parsers
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.poc.util.CsvConstants.columnSeparator
+import com.ubirch.services.poc.util.CsvConstants.{
+  columnSeparator,
+  headerErrorMsg
+}
 import com.ubirch.services.poc.util.{ EmptyCsvException, HeaderCsvException }
 import com.ubirch.services.util.CsvHelper
 import monix.eval.Task
@@ -41,6 +44,20 @@ trait CsvParser[T <: ParseRowResult] extends LazyLogging {
 
   protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, T]
 
+  val headerColOrder: Array[String]
+
   @throws[HeaderCsvException]
-  protected def validateHeaders(cols: Array[String]): Try[Unit]
+  protected def validateHeaders(cols: Array[String]): Try[Unit] = Try {
+    if (cols.length != headerColOrder.length) {
+      throw HeaderCsvException(
+        s"the numbers of columns ${cols.length} is invalid. should be ${headerColOrder.length}.")
+    } else {
+      headerColOrder.zip(cols.toSeq).foreach {
+        case (header, col) =>
+          if (header != col)
+            throw HeaderCsvException(headerErrorMsg(col, header))
+      }
+    }
+  }
+
 }

@@ -6,11 +6,11 @@ import com.ubirch.models.poc
 import com.ubirch.models.poc.{ Address, JsonConfig, LogoURL, Poc, PocAdmin, PocManager }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants._
-import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
+import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 
 case class PocAdminParseResult(poc: Poc, pocAdmin: PocAdmin, csvRow: String) extends ParseRowResult
 
@@ -35,19 +35,7 @@ class PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
     }
   }
 
-  @throws[HeaderCsvException]
-  protected def validateHeaders(cols: Array[String]): Try[Unit] = Try {
-    if (cols.length != pocAdminHeaderColOrderLength) {
-      throw HeaderCsvException(
-        s"the numbers of columns ${cols.length} is invalid. should be ${pocAdminHeaderColOrderLength}.")
-    } else {
-      pocAdminHeaderColsOrder.zip(cols.toSeq).foreach {
-        case (header, col) =>
-          if (header != col)
-            throw HeaderCsvException(headerErrorMsg(col, header))
-      }
-    }
-  }
+  val headerColOrder: Array[String] = pocAdminHeaderColsOrder
 
   private def validatePocAdminInfo(
     csvPocAdmin: PocAdminRow,

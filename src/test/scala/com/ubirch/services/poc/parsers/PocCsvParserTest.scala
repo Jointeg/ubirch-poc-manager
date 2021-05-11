@@ -1,11 +1,10 @@
-package com.ubirch.services.poc
+package com.ubirch.services.poc.parsers
 
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.PocConfig
 import org.mockito.Mockito.when
 import org.scalatest.mockito.MockitoSugar.mock
 import com.ubirch.TestBase
-import com.ubirch.services.poc.parsers.PocCsvParser
 import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
 import com.ubirch.services.poc.util.HeaderCsvException
 

@@ -1,8 +1,7 @@
-package com.ubirch.services.poc
+package com.ubirch.services.poc.parsers
 
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
-import com.ubirch.services.poc.parsers.PocAdminCsvParser
 import com.ubirch.services.poc.util.CsvConstants.pocAdminHeaderLine
 import com.ubirch.services.poc.util.HeaderCsvException
 

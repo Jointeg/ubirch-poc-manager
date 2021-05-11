@@ -1,22 +1,23 @@
 package com.ubirch.services.poc
 
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.db.tables.PocRepository
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.{Poc, PocStatus}
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocCsvParser
-import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
+import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
 import monix.eval.Task
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 trait ProcessPoc {
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]]
 }
 
 @Singleton
-class ProcessPocImpl @Inject() (conf: Config, pocRepository: PocRepository) extends ProcessPoc {
+class ProcessPocImpl @Inject() (conf: Config, pocRepository: PocRepository) extends ProcessPoc with LazyLogging {
   private val pocCsvParser = new PocCsvParser
   private val dataSchemaGroupIds =
     conf
@@ -47,7 +48,11 @@ class ProcessPocImpl @Inject() (conf: Config, pocRepository: PocRepository) exte
       _ <- pocRepository.createPocAndStatus(poc, status)
     } yield {
       None
-    }).onErrorHandle(_ => Some(csvRow))
+    }).onErrorHandle {
+      case e =>
+        logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
+        Some(csvRow)
+    }
   }
 
   private def createResponse(result: Seq[Task[Option[String]]]): Task[Either[String, Unit]] = {
