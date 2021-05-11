@@ -32,7 +32,8 @@ class ProcessPocAdminImpl @Inject() (
   private val dataSchemaGroupIds =
     conf
       .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
-      .split(", ")
+      .split(",")
+      .map(_.trim)
       .toList
 
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {

@@ -7,15 +7,14 @@ import java.util.UUID
 case class PocAdminStatus(
   pocAdminId: UUID,
   webIdentRequired: Boolean,
-  webIdentIdentifier: Option[Boolean],
-  userRealmCreated: Boolean = false,
+  webIdentIdentified: Option[Boolean],
+  keycloakUserCreated: Boolean = false,
   emailActionRequired: Boolean = false,
-  emailVerified: Boolean = false,
-  passwordUpdated: Boolean = false,
-  twoFactorAuthCreated: Boolean = false,
-  pocGroupRoleAdded: Boolean = false,
-  pocAdminRoleAdded: Boolean = false,
-  errorMessages: Option[String] = None,
+  verifyEmailSet: Boolean = false,
+  updatePasswordSet: Boolean = false,
+  twoFactorAuthSet: Boolean = false,
+  pocGroupAdded: Boolean = false,
+  errorMessage: Option[String] = None,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())
 )

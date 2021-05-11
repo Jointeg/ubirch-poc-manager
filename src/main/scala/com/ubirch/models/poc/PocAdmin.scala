@@ -10,7 +10,7 @@ case class PocAdmin(
   pocId: UUID,
   tenantId: TenantId,
   name: String,
-  surName: String,
+  surname: String,
   email: String,
   mobilePhone: String,
   webIdentRequired: Boolean,
