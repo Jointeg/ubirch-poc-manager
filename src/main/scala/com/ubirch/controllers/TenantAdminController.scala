@@ -214,7 +214,7 @@ class TenantAdminController @Inject() (
 }
 
 object TenantAdminController {
-  case class PoC_OUT(total: Long, pocs: Seq[Poc])
+  case class PoC_OUT(total: Long, records: Seq[Poc])
   case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
 
   implicit class ResponseOps[T](r: Response[T]) {

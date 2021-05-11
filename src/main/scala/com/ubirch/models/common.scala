@@ -1,7 +1,7 @@
 package com.ubirch.models
 
 object common {
-  sealed class Order
+  sealed trait Order
 
   case class Page(index: Int, size: Int)
 
