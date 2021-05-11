@@ -102,7 +102,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
         .map {
           _.code match {
             case Ok =>
-              statusAndPW.pocStatus.copy(goClientProvided = true)
+              statusAndPW.pocStatus.copy(certifyApiProvided = true)
             case code =>
               throwError(statusAndPW.pocStatus, s"failure when providing device info to certifyAPI, errorCode: $code")
           }

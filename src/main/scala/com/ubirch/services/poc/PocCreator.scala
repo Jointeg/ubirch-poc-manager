@@ -42,7 +42,7 @@ class PocCreatorImpl @Inject() (
     pocTable.getAllUncompletedPocs().flatMap {
       case pocs if pocs.isEmpty =>
         logger.debug("no pocs waiting for completion")
-        Task(PocCreationSuccess())
+        Task(PocCreationSuccess)
       case pocs =>
         logger.info(s"starting to create ${pocs.size} pocs")
         Task
@@ -136,6 +136,6 @@ case class StatusAndPW(pocStatus: PocStatus, devicePassword: String)
 case class PocCreationError(pocStatus: PocStatus) extends Exception
 
 trait PocCreationResult
-case class PocCreationFailure() extends PocCreationResult
-case class PocCreationSuccess() extends PocCreationResult
+case object PocCreationFailure extends PocCreationResult
+case object PocCreationSuccess extends PocCreationResult
 case class PocCreationMaybeSuccess(list: Seq[Either[String, PocStatus]]) extends PocCreationResult

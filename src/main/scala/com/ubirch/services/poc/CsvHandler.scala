@@ -13,6 +13,7 @@ import com.ubirch.services.util.Validator._
 
 import java.util.UUID
 import scala.io.Source
+import scala.util.{ Failure, Success }
 
 trait CsvPocBatchParserTrait {
 
@@ -59,10 +60,15 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
   private def validateHeaders(lines: Iterator[String]): Unit = {
     if (lines.hasNext) {
       val cols = lines.next().split(columnSeparator).map(_.trim)
-      headerColsOrder.zip(cols.toSeq).foreach {
-        case (header, col) =>
-          if (header != col)
-            throw HeaderCsvException(headerErrorMsg(col, header))
+      if (cols.length < headerColsOrder.length) {
+        throw HeaderCsvException(
+          s"the numbers of columns ${cols.length} is not enough. should be ${headerColsOrder.length}.")
+      } else {
+        headerColsOrder.zip(cols.toSeq).foreach {
+          case (header, col) =>
+            if (header != col)
+              throw HeaderCsvException(headerErrorMsg(col, header))
+        }
       }
     } else {
       throw EmptyCsvException("the csv file mustn't be empty")
@@ -71,17 +77,23 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
 
   private def parsePoC(cols: Array[String], line: String, tenant: Tenant): Either[String, (Poc, String)] = {
 
-    val csvPoc = PocRow.fromCsv(cols)
-    val pocAddress = validatePocAddress(csvPoc)
-    val pocManager = validatePocManager(csvPoc)
-    val poc = validatePoc(csvPoc, pocAddress, pocManager, tenant)
+    PocRow.fromCsv(cols) match {
+      case Success(csvPoc) =>
+        val pocAddress = validatePocAddress(csvPoc)
+        val pocManager = validatePocManager(csvPoc)
+        val poc = validatePoc(csvPoc, pocAddress, pocManager, tenant)
 
-    poc match {
-      case Valid(poc) =>
-        Right(poc, line)
-      case Invalid(errors) =>
-        Left(line + columnSeparator + errors.toList.mkString(comma))
+        poc match {
+          case Valid(poc) =>
+            Right(poc, line)
+          case Invalid(errors) =>
+            Left(line + columnSeparator + errors.toList.mkString(comma))
+        }
+      case Failure(_) =>
+        Left(line + columnSeparator +
+          s"the numbers of column ${cols.length} is invalid. should be ${headerColsOrder.length}.")
     }
+
   }
 
   private def validatePoc(
