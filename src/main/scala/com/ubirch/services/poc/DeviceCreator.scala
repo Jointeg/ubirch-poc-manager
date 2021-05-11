@@ -50,9 +50,9 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   protected def requestDeviceCreation(
     token: DecryptedData,
     status: PocStatus,
-    body: String): Task[StatusAndPW] = Task.defer(Task.fromFuture {
+    body: String): Task[StatusAndPW] = Task.deferFuture {
     // an error could occur before calls the send() method.
-    // In this case, the defer method is needed because the fromFuture method can't catch such an error.
+    // In this case, the deferFuture method is needed because the fromFuture method can't catch such an error.
     basicRequest
       .post(uri"$thingUrl")
       .body(body)
@@ -73,7 +73,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
             throwAndLogError(status, "creating device via Thing API failed: ", ex)
         }
       }
-  })
+  }
 
   private def getBody(poc: Poc, tenant: Tenant): String = {
     val body = DeviceRequestBody(

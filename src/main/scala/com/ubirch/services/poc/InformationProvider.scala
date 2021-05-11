@@ -55,10 +55,8 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   }
 
   @throws[PocCreationError]
-  protected def goClientRequest(statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] =
-    Task.defer(Task.fromFuture {
-      // an error could occur before calls the send() method.
-      // In this case, the defer method is needed because the fromFuture method can't catch such an error.
+  protected def goClientRequest(statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] = {
+    Task.deferFuture {
       basicRequest
         .put(uri"$goClientURL")
         .header(xAuthHeaderKey, goClientToken)
@@ -75,7 +73,8 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
               throwError(statusAndPW.pocStatus, s"failure when providing device info to goClient, statusCode: $code")
           }
         }
-    })
+    }
+  }
 
   @throws[PocCreationError]
   override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW): Task[PocStatus] = {
@@ -91,9 +90,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   @throws[PocCreationError]
   protected def certifyApiRequest(statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
-    Task.defer(Task.fromFuture {
-      // an error could occur before calls the send() method.
-      // In this case, the defer method is needed because the fromFuture method can't catch such an error.
+    Task.deferFuture {
       basicRequest
         .put(uri"$certifyApiURL")
         .body(body)
@@ -108,7 +105,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
               throwError(statusAndPW.pocStatus, s"failure when providing device info to certifyAPI, errorCode: $code")
           }
         }
-    })
+    }
 
   private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW): String = {
 
