@@ -4,14 +4,14 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.db.context.QuillJdbcContext
-import com.ubirch.db.tables.{PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository}
-import com.ubirch.models.poc.{Poc, PocAdmin, PocAdminStatus, PocStatus}
+import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
+import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocAdminCsvParser
-import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
+import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import monix.eval.Task
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 trait ProcessPocAdmin {
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]]
@@ -25,7 +25,8 @@ class ProcessPocAdminImpl @Inject() (
   pocAdminRepository: PocAdminRepository,
   pocStatusRepository: PocStatusRepository,
   pocAdminStatusRepository: PocAdminStatusRepository)
-  extends ProcessPocAdmin with LazyLogging {
+  extends ProcessPocAdmin
+  with LazyLogging {
   import quillJdbcContext.ctx._
 
   private val pocAdminCsvParser = new PocAdminCsvParser

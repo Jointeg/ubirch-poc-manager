@@ -4,13 +4,13 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.db.tables.PocRepository
-import com.ubirch.models.poc.{Poc, PocStatus}
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocCsvParser
-import com.ubirch.services.poc.util.{CsvConstants, HeaderCsvException}
+import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import monix.eval.Task
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 trait ProcessPoc {
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]]

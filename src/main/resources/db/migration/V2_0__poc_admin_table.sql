@@ -34,6 +34,5 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_admin_status_table
     error_message                text,
     last_updated                 text            NOT NULL,
     created                      text            NOT NULL,
-    PRIMARY KEY (poc_admin_id),
-    FOREIGN KEY (poc_admin_id) REFERENCES poc_admin_table(id)
+    PRIMARY KEY (poc_admin_id)
     );
