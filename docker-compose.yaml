@@ -67,6 +67,7 @@ services:
 
   teamdrive:
     image: teamdrive/agent:latest
+    restart: unless-stopped
     ports:
       - 4040:4040
 

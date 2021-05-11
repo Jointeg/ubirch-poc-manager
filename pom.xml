@@ -450,6 +450,12 @@
             <version>2.2.9</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>slf4j-backend_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
         <!-- Quill -->
         <dependency>
             <groupId>io.getquill</groupId>
