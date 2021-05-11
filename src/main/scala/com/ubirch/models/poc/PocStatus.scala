@@ -23,8 +23,8 @@ case class PocStatus(
   logoRequired: Boolean,
   logoReceived: Option[Boolean],
   logoStored: Option[Boolean],
-  certifyApiProvided: Boolean = false,
   goClientProvided: Boolean = false,
+  certifyApiProvided: Boolean = false,
   errorMessage: Option[String] = None,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())

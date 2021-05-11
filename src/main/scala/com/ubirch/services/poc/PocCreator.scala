@@ -3,7 +3,7 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
-import com.ubirch.models.poc.{ Completed, Poc, PocStatus }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -54,18 +54,17 @@ class PocCreatorImpl @Inject() (
   private def createPoc(poc: Poc): Task[Either[String, PocStatus]] = {
     retrieveStatusAndTenant(poc).flatMap {
       case (Some(status: PocStatus), Some(tenant: Tenant)) =>
-        process(poc, status, tenant)
-
+        updateStatusOfPoc(poc, Processing)
+          .flatMap(process(_, status, tenant))
       case (_, _) =>
         val errorMsg = s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
         logger.error(errorMsg)
         Task(Left(errorMsg))
-    }.onErrorHandle {
-      case e =>
-        val errorMsg =
-          s"cannot create poc with id ${poc.id} as status and tenant couldn't be found. error: ${e.getMessage}"
-        logger.error(errorMsg)
-        Left(errorMsg)
+    }.onErrorHandle { e =>
+      val errorMsg =
+        s"cannot create poc with id ${poc.id} as status and tenant couldn't be found. error: ${e.getMessage}"
+      logger.error(errorMsg)
+      Left(errorMsg)
     }
   }
 
@@ -91,26 +90,35 @@ class PocCreatorImpl @Inject() (
 
     creationResult
       .flatMap { status =>
-        val completePoc = poc.copy(status = Completed)
-        // transaction is not necessary here with PocStatusTable as this part would be retry again.
-        pocTable.updatePoc(completePoc).map(_ => Right(status))
+        updateStatusOfPoc(poc, Completed)
+          .map(_ => Right(status))
       }.onErrorHandleWith(handlePocCreationError)
+  }
+
+  private def updateStatusOfPoc(poc: Poc, newStatus: Status): Task[Poc] = {
+    if (poc.status == newStatus) Task(poc)
+    else {
+      val updatedPoc = poc.copy(status = newStatus)
+      pocTable
+        .updatePoc(updatedPoc)
+        .map(_ => updatedPoc)
+    }
   }
 
   private def doDeviceRealmRelatedTasks(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {
     for {
-      status1 <- createDeviceRole(poc, status)
-      pocAndStatus <- createDeviceGroup(poc, status1, tenant)
-      status3 <- assignDeviceRealmRoleToGroup(pocAndStatus, tenant)
-    } yield status3
+      status <- createDeviceRole(poc, status)
+      pocAndStatus <- createDeviceGroup(poc, status, tenant)
+      statusFinal <- assignDeviceRealmRoleToGroup(pocAndStatus, tenant)
+    } yield statusFinal
   }
 
   private def doUserRealmRelatedTasks(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {
     for {
-      status4 <- createUserRole(poc, status)
-      pocAndStatus <- createUserGroup(poc, status4, tenant)
-      status6 <- assignUserRoleToGroup(pocAndStatus, tenant)
-    } yield status6
+      status <- createUserRole(poc, status)
+      pocAndStatus <- createUserGroup(poc, status, tenant)
+      statusFinal <- assignUserRoleToGroup(pocAndStatus, tenant)
+    } yield statusFinal
   }
 
   private def handlePocCreationError(ex: Throwable): Task[Left[String, Nothing]] = {

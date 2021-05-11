@@ -1,7 +1,7 @@
 package com.ubirch.services.poc
 import com.ubirch.UnitTestBase
-import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
-import com.ubirch.models.poc.{ Completed, PocStatus }
+import com.ubirch.db.tables.{PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock}
+import com.ubirch.models.poc.{Completed, PocStatus, Processing}
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.poc.PocTestHelper._
@@ -68,17 +68,19 @@ class PocCreatorTest extends UnitTestBase {
         val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
         maybeSuccess.list.head.isLeft shouldBe true
 
+        //pocStatus should be updated correctly
         val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe().get
-        val expected = pocStatus.copy(
-          userRoleCreated = true,
-          errorMessage = Some("couldn't find parentGroup"))
-
+        val expected = pocStatus.copy(userRoleCreated = true, errorMessage = Some("couldn't find parentGroup"))
         status shouldBe expected
 
+        //poc.status should be set to Processing
+        pocTable.getPoc(poc.id).runSyncUnsafe().get.status shouldBe Processing
+
+        //fix requirements
         val updatedTenant: Tenant = createNeededTenantGroups(tenant, groups)
         tenantTable.updateTenant(updatedTenant).runSyncUnsafe()
 
-        //start process again
+        //start processing again
         val result2 = await(loop.createPocs(), 5.seconds)
 
         //validate result
@@ -126,8 +128,8 @@ class PocCreatorTest extends UnitTestBase {
       logoRequired = false,
       None,
       None,
-      certifyApiProvided = true,
       goClientProvided = true,
+      certifyApiProvided = true,
       None
     )
   }
