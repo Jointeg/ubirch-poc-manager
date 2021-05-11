@@ -9,8 +9,6 @@ import monix.eval.Task
 import org.json4s.Formats
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class DeviceCreatorMockSuccess @Inject() (conf: Config, aESEncryption: AESEncryption)(implicit formats: Formats)
   extends DeviceCreatorImpl(conf, aESEncryption) {
@@ -18,8 +16,8 @@ class DeviceCreatorMockSuccess @Inject() (conf: Config, aESEncryption: AESEncryp
   override protected def requestDeviceCreation(
     token: DecryptedData,
     status: PocStatus,
-    body: String): Future[StatusAndPW] = {
-    Future(StatusAndPW(status.copy(deviceCreated = true), UUID.randomUUID().toString))
+    body: String): Task[StatusAndPW] = {
+    Task(StatusAndPW(status.copy(deviceCreated = true), UUID.randomUUID().toString))
   }
 
   override protected def decryptToken(tenant: Tenant): Task[DecryptedData] =

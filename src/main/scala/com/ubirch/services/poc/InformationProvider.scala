@@ -49,15 +49,16 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
       Task(statusAndPW)
     } else {
       val body = getGoClientBody(poc, statusAndPW)
-      Task
-        .fromFuture(goClientRequest(statusAndPW, body))
+      goClientRequest(statusAndPW, body)
         .onErrorHandle(ex => throwAndLogError(status, "an error occurred when providing info to go client; ", ex))
     }
   }
 
   @throws[PocCreationError]
-  protected def goClientRequest(statusAndPW: StatusAndPW, body: String): Future[StatusAndPW] = {
-    Future(
+  protected def goClientRequest(statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] =
+    Task.defer(Task.fromFuture {
+      // an error could occur before calls the send() method.
+      // In this case, the defer method is needed because the fromFuture method can't catch such a error.
       basicRequest
         .put(uri"$goClientURL")
         .header(xAuthHeaderKey, goClientToken)
@@ -74,8 +75,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
               throwError(statusAndPW.pocStatus, s"failure when providing device info to goClient, statusCode: $code")
           }
         }
-    ).flatten
-  }
+    })
 
   @throws[PocCreationError]
   override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW): Task[PocStatus] = {
@@ -84,15 +84,16 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
       Task(status)
     } else {
       val body = getCertifyApiBody(poc, statusAndPW)
-      Task
-        .fromFuture(certifyApiRequest(statusAndPW, body))
+      certifyApiRequest(statusAndPW, body)
         .onErrorHandle(ex => throwAndLogError(status, "an error occurred when providing info to certify api; ", ex))
     }
   }
 
   @throws[PocCreationError]
-  protected def certifyApiRequest(statusAndPW: StatusAndPW, body: String): Future[PocStatus] = {
-    Future(
+  protected def certifyApiRequest(statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
+    Task.defer(Task.fromFuture {
+      // an error could occur before calls the send() method.
+      // In this case, the defer method is needed because the fromFuture method can't catch such a error.
       basicRequest
         .put(uri"$certifyApiURL")
         .body(body)
@@ -107,8 +108,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
               throwError(statusAndPW.pocStatus, s"failure when providing device info to certifyAPI, errorCode: $code")
           }
         }
-    ).flatten
-  }
+    })
 
   private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW): String = {
 

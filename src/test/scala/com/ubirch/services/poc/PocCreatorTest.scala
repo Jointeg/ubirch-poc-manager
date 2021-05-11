@@ -1,7 +1,7 @@
 package com.ubirch.services.poc
 import com.ubirch.UnitTestBase
-import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
-import com.ubirch.models.poc.PocStatus
+import com.ubirch.db.tables.{PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock}
+import com.ubirch.models.poc.{Completed, PocStatus}
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.poc.PocTestHelper._
@@ -39,8 +39,12 @@ class PocCreatorTest extends UnitTestBase {
 
         maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
 
-        val status = await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds).get
+        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe().get
         status shouldBe expected
+
+        val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
+        assert(newPoc.isDefined)
+        assert(newPoc.get.status == Completed)
       }
     }
 
@@ -64,7 +68,7 @@ class PocCreatorTest extends UnitTestBase {
         val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
         maybeSuccess.list.head.isLeft shouldBe true
 
-        val status = await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds).get
+        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe().get
         val expected = pocStatus.copy(
           userRoleCreated = true,
           errorMessage = Some("couldn't find parentGroup"))
@@ -72,7 +76,7 @@ class PocCreatorTest extends UnitTestBase {
         status shouldBe expected
 
         val updatedTenant: Tenant = createNeededTenantGroups(tenant, groups)
-        await(tenantTable.updateTenant(updatedTenant), 1.seconds)
+        tenantTable.updateTenant(updatedTenant).runSyncUnsafe()
 
         //start process again
         val result2 = await(loop.createPocs(), 5.seconds)
@@ -81,7 +85,7 @@ class PocCreatorTest extends UnitTestBase {
         val maybeSuccess2 = result2.asInstanceOf[PocCreationMaybeSuccess]
         maybeSuccess2.list.head.isRight shouldBe true
 
-        val status2 = await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds).get
+        val status2 = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe().get
         val expected2 = pocStatus.copy(
           userRoleCreated = true,
           userGroupCreated = true,
@@ -96,6 +100,10 @@ class PocCreatorTest extends UnitTestBase {
         )
 
         status2 shouldBe expected2
+
+        val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
+        assert(newPoc.isDefined)
+        assert(newPoc.get.status == Completed)
       }
     }
   }

@@ -76,7 +76,6 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
   }
 
   private def parsePoC(cols: Array[String], line: String, tenant: Tenant): Either[String, (Poc, String)] = {
-
     PocRow.fromCsv(cols) match {
       case Success(csvPoc) =>
         val pocAddress = validatePocAddress(csvPoc)

@@ -3,7 +3,7 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.{ Completed, Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -52,7 +52,7 @@ class PocCreatorImpl @Inject() (
   }
 
   private def createPoc(poc: Poc): Task[Either[String, PocStatus]] = {
-    retrieveStatusAndTenant(poc).map {
+    retrieveStatusAndTenant(poc).flatMap {
       case (Some(status: PocStatus), Some(tenant: Tenant)) =>
         process(poc, status, tenant)
 
@@ -60,7 +60,13 @@ class PocCreatorImpl @Inject() (
         val errorMsg = s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
         logger.error(errorMsg)
         Task(Left(errorMsg))
-    }.flatten
+    }.onErrorHandle {
+      case e =>
+        val errorMsg =
+          s"cannot create poc with id ${poc.id} as status and tenant couldn't be found. error: ${e.getMessage}"
+        logger.error(errorMsg)
+        Left(errorMsg)
+    }
   }
 
   private def retrieveStatusAndTenant(poc: Poc): Task[(Option[PocStatus], Option[Tenant])] = {
@@ -79,16 +85,16 @@ class PocCreatorImpl @Inject() (
       status2 <- doDeviceRealmRelatedTasks(poc, status1, tenant)
       status3 <- createDevice(poc, status2, tenant)
       status4 <- infoToGoClient(poc, status3)
-      status5 <- infoToCertifyAPI(poc, status4)
-      _ <- pocStatusTable.updatePocStatus(status)
-    } yield status5
+      completeStatus <- infoToCertifyAPI(poc, status4)
+      _ <- pocStatusTable.updatePocStatus(completeStatus)
+    } yield completeStatus
 
     creationResult
-      .map { status =>
-        pocStatusTable
-          .updatePocStatus(status)
-          .map(_ => Right(status))
-      }.onErrorHandle(handlePocCreationError).flatten
+      .flatMap { status =>
+        val completePoc = poc.copy(status = Completed)
+        // transaction is not necessary here with PocStatusTable as this part would be retry again.
+        pocTable.updatePoc(completePoc).map(_ => Right(status))
+      }.onErrorHandleWith(handlePocCreationError)
   }
 
   private def doDeviceRealmRelatedTasks(poc: Poc, status: PocStatus, tenant: Tenant): Task[PocStatus] = {

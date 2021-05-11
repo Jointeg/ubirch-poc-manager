@@ -42,8 +42,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     } else {
       val body = getBody(poc, tenant)
       decryptToken(tenant)
-        .map(token => Task.fromFuture(requestDeviceCreation(token, status, body)))
-        .flatten
+        .flatMap(token => requestDeviceCreation(token, status, body))
         .onErrorHandle(ex => throwAndLogError(status, "an error occurred when creating device via thing api; ", ex))
     }
   }
@@ -51,30 +50,30 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   protected def requestDeviceCreation(
     token: DecryptedData,
     status: PocStatus,
-    body: String): Future[StatusAndPW] = {
-
-    Future(
-      basicRequest
-        .post(uri"$thingUrl")
-        .body(body)
-        .auth
-        .bearer(token.value)
-        .response(asJson[Array[Map[String, DeviceResponse]]])
-        .send()
-        .map {
-          _.body match {
-            case Right(array: Array[Map[String, DeviceResponse]]) =>
-              if (array.length == 1 && array.head.size == 1) {
-                val pw = array.head.head._2.apiConfig.password
-                StatusAndPW(status.copy(deviceCreated = true), pw)
-              } else {
-                throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
-              }
-            case Left(ex: ResponseError[Exception]) =>
-              throwAndLogError(status, "creating device via Thing API failed: ", ex)
-          }
-        }).flatten
-  }
+    body: String): Task[StatusAndPW] = Task.defer(Task.fromFuture {
+    // an error could occur before calls the send() method.
+    // In this case, the defer method is needed because the fromFuture method can't catch such a error.
+    basicRequest
+      .post(uri"$thingUrl")
+      .body(body)
+      .auth
+      .bearer(token.value)
+      .response(asJson[Array[Map[String, DeviceResponse]]])
+      .send()
+      .map {
+        _.body match {
+          case Right(array: Array[Map[String, DeviceResponse]]) =>
+            if (array.length == 1 && array.head.size == 1) {
+              val pw = array.head.head._2.apiConfig.password
+              StatusAndPW(status.copy(deviceCreated = true), pw)
+            } else {
+              throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
+            }
+          case Left(ex: ResponseError[Exception]) =>
+            throwAndLogError(status, "creating device via Thing API failed: ", ex)
+        }
+      }
+  })
 
   private def getBody(poc: Poc, tenant: Tenant): String = {
     val body = DeviceRequestBody(
