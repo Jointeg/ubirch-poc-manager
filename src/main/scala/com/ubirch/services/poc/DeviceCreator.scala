@@ -31,14 +31,18 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
-  private val thingUrl: String = conf.getString(ServicesConfPaths.THING_API_URL)
+  private val thingUrlCreateDevice: String = conf.getString(ServicesConfPaths.THING_API_URL_CREATE_DEVICE)
+  private val thingUrlGetInfo: String = conf.getString(ServicesConfPaths.THING_API_URL_GET_INFO)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc ${poc.pocName}"
 
   @throws[PocCreationError]
   override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW] = {
     if (status.deviceCreated) {
-      throwError(status, "device has been created, but retrieval of password is not implemented yet")
+      decryptToken(tenant)
+        .map(token => Task.fromFuture(requestDeviceInfo(token, poc, status)))
+        .flatten
+        .onErrorHandle(ex => throwAndLogError(status, "an error occurred when creating device via thing api; ", ex))
     } else {
       val body = getBody(poc, tenant)
       decryptToken(tenant)
@@ -55,7 +59,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
 
     Future(
       basicRequest
-        .post(uri"$thingUrl")
+        .post(uri"$thingUrlCreateDevice")
         .body(body)
         .auth
         .bearer(token.value)
@@ -67,6 +71,33 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
               if (array.length == 1 && array.head.size == 1) {
                 val pw = array.head.head._2.apiConfig.password
                 StatusAndPW(status.copy(deviceCreated = true), pw)
+              } else {
+                throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
+              }
+            case Left(ex: ResponseError[Exception]) =>
+              throwAndLogError(status, "creating device via Thing API failed: ", ex)
+          }
+        }).flatten
+  }
+
+  protected def requestDeviceInfo(
+    token: DecryptedData,
+    poc: Poc,
+    status: PocStatus): Future[StatusAndPW] = {
+
+    Future(
+      basicRequest
+        .get(uri"$thingUrlGetInfo/${poc.deviceId}")
+        .auth
+        .bearer(token.value)
+        .response(asJson[Array[Map[String, DeviceResponse]]])
+        .send()
+        .map {
+          _.body match {
+            case Right(array: Array[Map[String, DeviceResponse]]) =>
+              if (array.length == 1 && array.head.size == 1) {
+                val pw = array.head.head._2.apiConfig.password
+                StatusAndPW(status, pw)
               } else {
                 throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
               }
