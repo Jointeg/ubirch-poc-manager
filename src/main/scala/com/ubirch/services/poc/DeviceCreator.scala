@@ -52,7 +52,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     status: PocStatus,
     body: String): Task[StatusAndPW] = Task.defer(Task.fromFuture {
     // an error could occur before calls the send() method.
-    // In this case, the defer method is needed because the fromFuture method can't catch such a error.
+    // In this case, the defer method is needed because the fromFuture method can't catch such an error.
     basicRequest
       .post(uri"$thingUrl")
       .body(body)

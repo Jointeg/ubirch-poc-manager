@@ -1,7 +1,7 @@
 package com.ubirch.services.poc
 import com.ubirch.UnitTestBase
-import com.ubirch.db.tables.{PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock}
-import com.ubirch.models.poc.{Completed, PocStatus}
+import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
+import com.ubirch.models.poc.{ Completed, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.poc.PocTestHelper._

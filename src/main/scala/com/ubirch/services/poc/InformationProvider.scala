@@ -58,7 +58,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   protected def goClientRequest(statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] =
     Task.defer(Task.fromFuture {
       // an error could occur before calls the send() method.
-      // In this case, the defer method is needed because the fromFuture method can't catch such a error.
+      // In this case, the defer method is needed because the fromFuture method can't catch such an error.
       basicRequest
         .put(uri"$goClientURL")
         .header(xAuthHeaderKey, goClientToken)
@@ -93,7 +93,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   protected def certifyApiRequest(statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
     Task.defer(Task.fromFuture {
       // an error could occur before calls the send() method.
-      // In this case, the defer method is needed because the fromFuture method can't catch such a error.
+      // In this case, the defer method is needed because the fromFuture method can't catch such an error.
       basicRequest
         .put(uri"$certifyApiURL")
         .body(body)
