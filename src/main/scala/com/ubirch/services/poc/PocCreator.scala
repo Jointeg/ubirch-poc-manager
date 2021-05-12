@@ -3,8 +3,9 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
+import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.tenant.{ APP, Both, Tenant }
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -33,7 +34,7 @@ object PocCreator {
 }
 
 class PocCreatorImpl @Inject() (
-  //  certHandler: CertHandler,
+  certHandler: CertHandler,
   deviceCreator: DeviceCreator,
   informationProvider: InformationProvider,
   keycloakHelper: KeycloakHelper,
@@ -87,16 +88,47 @@ class PocCreatorImpl @Inject() (
     } yield (status, tenant)
   }
 
-  //Todo: create and provide client certs
+  def doOrganisationUnitCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == APP) {
+      throwPocCreationError(
+        s"Could not create organisational unit certificate because Tenant usageType is set to $APP and clientCertRequires is set to true",
+        pocAndStatus)
+    } else if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
+      createOrganisationalUnitCertificate(tenant, pocAndStatus)
+    } else {
+      Task(pocAndStatus)
+    }
+  }
+
+  private def throwPocCreationError(msg: String, pocAndStatus: PocAndStatus) = {
+    Task.raiseError(PocCreationError(pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg)))))
+  }
+
+  private def createOrganisationalUnitCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) = {
+    certHandler.createOrganisationalUnitCertificate(
+      pocAndStatus.poc.tenantId.value.asJava(),
+      pocAndStatus.poc.id,
+      CertIdentifier.pocOrgUnitCert(tenant.tenantName, pocAndStatus.poc.pocName, pocAndStatus.poc.id)
+    )
+      .map(_ => pocAndStatus.copy(status = pocAndStatus.status.copy(orgUnitCertIdCreated = Some(true))))
+      .onErrorHandleWith {
+        case CertificateCreationError =>
+          Task.raiseError(PocCreationError(pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage =
+            Some(s"Could not create organisational unit certificate with orgUnitId: ${pocAndStatus.poc.id}")))))
+      }
+  }
+
+//Todo: create and provide client certs
   //Todo: download and store logo
   private def process(pocAndStatus: PocAndStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
     logger.info(s"starting to create poc with id ${pocAndStatus.poc.id}")
     val creationResult = for {
       pocAndStatus1 <- doUserRealmRelatedTasks(pocAndStatus, tenant)
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
-      statusAndPW1 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
-      statusAndPW2 <- infoToGoClient(pocAndStatus2.poc, statusAndPW1)
-      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW2)
+      pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, pocAndStatus2)
+      statusAndPW1 <- createDevice(pocAndStatus3.poc, pocAndStatus3.status, tenant)
+      statusAndPW2 <- infoToGoClient(pocAndStatus3.poc, statusAndPW1)
+      completeStatus <- infoToCertifyAPI(pocAndStatus3.poc, statusAndPW2)
     } yield completeStatus
 
     (for {
@@ -135,7 +167,7 @@ class PocCreatorImpl @Inject() (
     } yield pocAndStatusFinal
   }
 
-  private def handlePocCreationError(ex: Throwable): Task[Left[String, Nothing]] = {
+  private def handlePocCreationError[A](ex: Throwable): Task[Either[String, A]] = {
     ex match {
       case pce: PocCreationError =>
         (for {

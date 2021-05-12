@@ -142,6 +142,8 @@ class Binder extends AbstractModule {
 
   def PocCreationLoop: ScopedBindingBuilder = bind(classOf[PocCreationLoop]).to(classOf[PocCreationLoopImpl])
 
+  def CertHandler: ScopedBindingBuilder = bind(classOf[CertHandler]).to(classOf[CertCreatorImpl])
+
   override def configure(): Unit = {
     Config
     KeycloakUsersConfig
@@ -184,6 +186,7 @@ class Binder extends AbstractModule {
     TenantAdminService
     PocCreator
     PocCreationLoop
+    CertHandler
     ()
   }
 }

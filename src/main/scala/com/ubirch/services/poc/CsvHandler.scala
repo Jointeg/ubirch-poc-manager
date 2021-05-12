@@ -138,8 +138,8 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
             extraConfig.map(JsonConfig(_)),
             manager,
             status = Pending,
-            None, // TODO: Replace with real value
-            None // TODO: Replace with real value
+            None,
+            None
           )
         }
 
