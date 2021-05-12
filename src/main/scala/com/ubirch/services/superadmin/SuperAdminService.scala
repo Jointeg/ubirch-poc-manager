@@ -20,9 +20,7 @@ class DefaultSuperAdminService @Inject() (aesEncryption: AESEncryption, tenantRe
     for {
       encryptedDeviceCreationToken <-
         aesEncryption.encrypt(createTenantRequest.deviceCreationToken.value)(EncryptedDeviceCreationToken(_))
-      encryptedCertificationCreationToken <- aesEncryption.encrypt(
-        createTenantRequest.certificationCreationToken.value)(EncryptedCertificationCreationToken(_))
-      tenant = convertToTenant(encryptedDeviceCreationToken, encryptedCertificationCreationToken, createTenantRequest)
+      tenant = convertToTenant(encryptedDeviceCreationToken, createTenantRequest)
       tenantId <- tenantRepository.createTenant(tenant).map(Right.apply).onErrorHandle(ex => {
         logger.error(s"Could not create Tenant in DB because: ${ex.getMessage}")
         Left(DBError(tenant.id))
@@ -32,14 +30,12 @@ class DefaultSuperAdminService @Inject() (aesEncryption: AESEncryption, tenantRe
 
   private def convertToTenant(
     encryptedDeviceCreationToken: EncryptedDeviceCreationToken,
-    encryptedCertificationCreationToken: EncryptedCertificationCreationToken,
     createTenantRequest: CreateTenantRequest): Tenant =
     Tenant(
       TenantId(createTenantRequest.tenantName),
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
       encryptedDeviceCreationToken,
-      encryptedCertificationCreationToken,
       createTenantRequest.idGardIdentifier,
       createTenantRequest.userGroupId,
       createTenantRequest.deviceGroupId,

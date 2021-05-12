@@ -29,7 +29,6 @@ object ModelCreationHelper {
       TenantName(name),
       API,
       deviceCreationToken,
-      certCreationToken,
       IdGardIdentifier("folder-identifier"),
       TenantUserGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
