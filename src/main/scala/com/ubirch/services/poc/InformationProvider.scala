@@ -15,6 +15,7 @@ import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import sttp.client.{ basicRequest, SttpBackend, UriContext }
 import sttp.model.StatusCode.{ Conflict, Ok }
 import PocCreator._
+import com.ubirch.models.tenant.Tenant
 
 import scala.concurrent.Future
 
@@ -22,12 +23,17 @@ trait InformationProvider {
 
   def infoToGoClient(poc: Poc, status: StatusAndPW): Task[StatusAndPW]
 
-  def infoToCertifyAPI(poc: Poc, status: StatusAndPW): Task[PocAndStatus]
+  def infoToCertifyAPI(poc: Poc, status: StatusAndPW, tenant: Tenant): Task[PocAndStatus]
 
 }
 
 case class RegisterDeviceGoClient(uuid: String, password: String)
-case class RegisterDeviceCertifyAPI(name: String, deviceId: String, password: String, role: String, cert: String)
+case class RegisterDeviceCertifyAPI(
+  name: String,
+  deviceId: String,
+  password: String,
+  role: Option[String],
+  cert: Option[String])
 
 class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats)
   extends InformationProvider
@@ -85,13 +91,13 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   }
 
   @throws[PocCreationError]
-  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW): Task[PocAndStatus] = {
+  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): Task[PocAndStatus] = {
     val status = statusAndPW.pocStatus
     if (status.certifyApiProvided) {
       Task(PocAndStatus(poc, status))
     } else {
-      val body = getCertifyApiBody(poc, statusAndPW)
-      certifyApiRequest(poc, statusAndPW, body).map(status => PocAndStatus(poc, status))
+      val body = getCertifyApiBody(poc, statusAndPW, tenant)
+      certifyApiRequest(poc, statusAndPW, body).map(newStatus => PocAndStatus(poc, newStatus))
         .onErrorHandle(ex =>
           throwAndLogError(
             PocAndStatus(poc, status),
@@ -105,7 +111,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   protected def certifyApiRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
     Task.deferFuture {
       basicRequest
-        .put(uri"$certifyApiURL")
+        .post(uri"$certifyApiURL")
         .body(body)
         .header(xAuthHeaderKey, certifyApiToken)
         .header(contentTypeHeaderKey, "application/json")
@@ -122,15 +128,17 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
         }
     }
 
-  private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW): String = {
+  private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): String = {
+
+    val clientCert = if (poc.clientCertRequired) tenant.clientCert.map(_.value.value) else None
 
     val registerDevice =
       RegisterDeviceCertifyAPI(
         poc.pocName,
         poc.getDeviceId,
         statusAndPW.devicePassword,
-        poc.roleName,
-        poc.roleName)
+        Some(poc.roleName),
+        clientCert)
     write[RegisterDeviceCertifyAPI](registerDevice)
   }
 

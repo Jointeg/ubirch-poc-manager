@@ -96,7 +96,7 @@ class PocCreatorImpl @Inject() (
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
       statusAndPW1 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
       statusAndPW2 <- infoToGoClient(pocAndStatus2.poc, statusAndPW1)
-      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW2)
+      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW2, tenant)
     } yield completeStatus
 
     (for {
