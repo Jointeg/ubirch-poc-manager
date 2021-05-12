@@ -55,7 +55,7 @@ class CsvHandlerTest extends TestBase {
     "throw a HeaderCsvException if row length is not enough" in {
       val result = csvHandler.parsePocCreationList(validHeaderButNotEnoughRows, tenant)
       assert(result.size == 1)
-      assert(result(0).left.get == s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;{"vaccines":["vaccine1", "vaccine2"]};the numbers of column 19 is invalid. should be 20.""")
+      assert(result.head.left.get == s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;{"vaccines":["vaccine1", "vaccine2"]};the numbers of column 19 is invalid. should be 20.""")
     }
 
     "return invalid csvRows with errorMsg and validCsvRow as Poc" in {
