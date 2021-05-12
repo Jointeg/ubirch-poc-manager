@@ -5,7 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.models.auth.DecryptedData
-import com.ubirch.models.poc.{Poc, PocStatus}
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.PocCreator._
@@ -17,7 +17,7 @@ import org.json4s.native.Serialization.write
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import sttp.client.json4s.asJson
-import sttp.client.{ResponseError, SttpBackend, UriContext, basicRequest}
+import sttp.client.{ basicRequest, ResponseError, SttpBackend, UriContext }
 
 import scala.concurrent.Future
 
@@ -61,6 +61,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     }
   }
 
+  @throws[PocCreationError]
   protected def requestDeviceCreation(
     token: DecryptedData,
     poc: Poc,
@@ -90,6 +91,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
       }
   }
 
+  @throws[PocCreationError]
   protected def requestDeviceInfo(
     token: DecryptedData,
     poc: Poc,
@@ -114,6 +116,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
         }
       })
 
+  @throws[PocCreationError]
   private def getBody(poc: Poc, status: PocStatus, tenant: Tenant): String = {
     if (poc.deviceGroupId.isEmpty)
       throwError(PocAndStatus(poc, status), "poc.deviceGroupId is missing; cannot create device")
