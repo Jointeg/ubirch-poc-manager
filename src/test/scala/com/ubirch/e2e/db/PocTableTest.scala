@@ -112,7 +112,7 @@ class PocTableTest extends E2ETestBase {
         } yield {
           (status, data)
         }
-        await(res, 5.seconds) match {
+        res.runSyncUnsafe(5.seconds) match {
           case (Some(pocStatusOpt: PocStatus), Some(pocOpt: Poc)) =>
             pocOpt.copy(lastUpdated = poc1.lastUpdated) shouldBe poc1
             pocStatusOpt.copy(lastUpdated = pocStatus1.lastUpdated) shouldBe pocStatus1

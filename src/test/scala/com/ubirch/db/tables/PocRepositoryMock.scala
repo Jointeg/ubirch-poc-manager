@@ -49,15 +49,13 @@ class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) exte
   override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] = {
     Task {
       pocDatastore += ((poc.id, poc))
-      pocStatusTable.createPocStatus(pocStatus)
-    }
+    }.map(_ => pocStatusTable.updatePocStatus(pocStatus))
   }
 
   override def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] = {
     Task {
       pocDatastore.update(poc.id, poc)
-      pocStatusTable.updatePocStatus(pocStatus)
-    }
+    }.map(_ => pocStatusTable.updatePocStatus(pocStatus))
 
   }
 
