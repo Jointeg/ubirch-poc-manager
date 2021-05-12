@@ -44,7 +44,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
         .flatten
         .onErrorHandle(ex => throwAndLogError(status, "an error occurred when creating device via thing api; ", ex))
     } else {
-      val body = getBody(poc, tenant)
+      val body = getBody(poc, status, tenant)
       decryptToken(tenant)
         .map(token => Task.fromFuture(requestDeviceCreation(token, status, body)))
         .flatten
@@ -102,16 +102,19 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
                 throwError(status, s"unexpected size of thing api response array: ${array.length}; ")
               }
             case Left(ex: ResponseError[Exception]) =>
-              throwAndLogError(status, "creating device via Thing API failed: ", ex)
+              throwAndLogError(status, "retrieving api-config via Thing API failed: ", ex)
           }
         }).flatten
   }
 
-  private def getBody(poc: Poc, tenant: Tenant): String = {
+  private def getBody(poc: Poc, status: PocStatus, tenant: Tenant): String = {
+    if (poc.deviceGroupId.isEmpty)
+      throwError(status, "poc.deviceGroupId is missing; cannot create device")
+
     val body = DeviceRequestBody(
       poc.getDeviceId,
       deviceDescription(tenant, poc),
-      List(poc.dataSchemaId, tenant.deviceGroupId.value, poc.roleName)
+      List(poc.dataSchemaId, tenant.deviceGroupId.value, poc.deviceGroupId.get)
     )
     write[DeviceRequestBody](body)
   }
