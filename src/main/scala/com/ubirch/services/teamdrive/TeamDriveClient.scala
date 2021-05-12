@@ -8,11 +8,12 @@ import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 
 import java.io.FileInputStream
-import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-trait TeamDriveClient {}
+trait TeamDriveClient {
+
+}
 
 class SttpTeamDriveClient extends TeamDriveClient {
 
@@ -29,7 +30,7 @@ class SttpTeamDriveClient extends TeamDriveClient {
         .body(
           Map(
             "spaceName" -> "ubrich-test-space-name",
-            "spacePath" -> "ubrich-test-space-name/1",
+            "spacePath" -> "ubrich-test-space-name/123",
             "disableFileSystem" -> "false",
             "webAccess" -> "true"
           )
@@ -51,17 +52,16 @@ class SttpTeamDriveClient extends TeamDriveClient {
       var read: Option[FileInputStream] = None
       var body: Array[Byte] = Array.emptyByteArray
       try {
-        read = Some(new FileInputStream("some_file"))
+        read = Some(new FileInputStream("/Users/gzhk/workspace/ubirch-poc-manager/src/main/resources/db/migration/V1_0__test_migration.sql"))
         body = read.get.readAllBytes()
       } catch {
         case e: Throwable => e.printStackTrace()
       } finally {
         read.get.close()
       }
-      val stringBody = new String(body, StandardCharsets.UTF_8)
 
       authenticatedRequest
-        .put(uri"http://127.0.0.1:4040/files/2/test_image.png")
+        .put(uri"http://127.0.0.1:4040/files/2/V1_0__test_migration.sql")
         .body(body)
         .send()
     }.runSyncUnsafe(5.seconds)
@@ -70,7 +70,7 @@ class SttpTeamDriveClient extends TeamDriveClient {
   def getFile() =
     Task.fromFuture(
       authenticatedRequest
-        .get(uri"http://127.0.0.1:4040/files/2/test_image.png")
+        .get(uri"http://127.0.0.1:4040/files/2/V1_0__test_migration.sql")
         .send()
     ).runSyncUnsafe(5.seconds)
 
@@ -82,8 +82,9 @@ class SttpTeamDriveClient extends TeamDriveClient {
     ).runSyncUnsafe(5.seconds)
 
   def inviteMember() =
-    Task.fromFuture(
+    Task.fromFuture {
       authenticatedRequest
+        .header("Content-Type", "application/json;charset=UTF-8")
         .post(uri"http://127.0.0.1:4040/api/inviteMember")
         .body(
           Map(
@@ -95,7 +96,7 @@ class SttpTeamDriveClient extends TeamDriveClient {
           )
         )
         .send()
-    ).runSyncUnsafe(5.seconds)
+    }.runSyncUnsafe(5.seconds)
 
   def getSpacePermissionLevels() =
     Task.fromFuture(
