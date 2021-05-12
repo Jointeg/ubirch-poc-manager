@@ -126,7 +126,9 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
             dataSchemaId,
             extraConfig.map(JsonConfig(_)),
             manager,
-            status = Pending
+            status = Pending,
+            None, // TODO: Replace with real value
+            None // TODO: Replace with real value
           )
         }
 

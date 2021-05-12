@@ -1,6 +1,6 @@
 package com.ubirch.models.poc
 
-import com.ubirch.models.tenant.TenantId
+import com.ubirch.models.tenant.{ ClientCert, OrgUnitCertId, TenantId }
 import com.ubirch.util.ServiceConstants.POC_GROUP_PREFIX
 import org.joda.time.DateTime
 
@@ -26,7 +26,9 @@ case class Poc(
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
   lastUpdated: Updated = Updated(DateTime.now()),
-  created: Created = Created(DateTime.now())
+  created: Created = Created(DateTime.now()),
+  orgUnitCertId: Option[OrgUnitCertId],
+  clientCert: Option[ClientCert]
 ) {
   def getDeviceId: String = deviceId.value.value.toString
 }
@@ -46,7 +48,9 @@ object Poc {
     dataSchemaId: String,
     extraConfig: Option[JsonConfig],
     manager: PocManager,
-    status: Status): Poc = {
+    status: Status,
+    orgUnitCertId: Option[OrgUnitCertId],
+    clientCert: Option[ClientCert]): Poc = {
 
     val roleName = POC_GROUP_PREFIX + pocName.take(10) + "_" + id
     Poc(
@@ -64,7 +68,9 @@ object Poc {
       manager = manager,
       roleName = roleName,
       deviceId = DeviceId(tenantId, externalId),
-      status = status
+      status = status,
+      orgUnitCertId = orgUnitCertId,
+      clientCert = clientCert
     )
   }
 

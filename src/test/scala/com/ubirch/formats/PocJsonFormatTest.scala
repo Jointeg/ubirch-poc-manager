@@ -79,6 +79,8 @@ class PocJsonFormatTest extends UnitTestBase {
       dataSchemaId = "data-schema-id",
       extraConfig = Some(JsonConfig(parse(""" { "test":"hello" } """))),
       manager = PocManager("surname", "", "", "08023-782137"),
-      status = Pending
+      status = Pending,
+      orgUnitCertId = None,
+      clientCert = None
     )
 }

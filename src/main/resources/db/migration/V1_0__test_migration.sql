@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table
     status               varchar(10) NOT NULL,
     last_updated         text        NOT NULL,
     created              text        NOT NULL,
+    client_cert          text,
+    org_unit_cert_id     UUID,
     PRIMARY KEY (id),
     CONSTRAINT unique_poc UNIQUE (tenant_id, external_id, data_schema_id)
 );
