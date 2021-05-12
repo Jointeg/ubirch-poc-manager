@@ -6,6 +6,7 @@ import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
 import monix.eval.Task
 
+import java.util.UUID
 import javax.inject.Inject
 
 trait SuperAdminService {
@@ -30,17 +31,21 @@ class DefaultSuperAdminService @Inject() (aesEncryption: AESEncryption, tenantRe
 
   private def convertToTenant(
     encryptedDeviceCreationToken: EncryptedDeviceCreationToken,
-    createTenantRequest: CreateTenantRequest): Tenant =
+    createTenantRequest: CreateTenantRequest): Tenant = {
+    val tenantId = TenantId(createTenantRequest.tenantName)
     Tenant(
-      TenantId(createTenantRequest.tenantName),
+      tenantId,
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
       encryptedDeviceCreationToken,
       createTenantRequest.idGardIdentifier,
       createTenantRequest.userGroupId,
       createTenantRequest.deviceGroupId,
+      orgCertId = OrgCertId(tenantId.value),
+      orgUnitCertId = None,
       createTenantRequest.clientCert
     )
+  }
 
 }
 

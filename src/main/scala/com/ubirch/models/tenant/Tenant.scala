@@ -8,5 +8,7 @@ case class Tenant(
   idGardIdentifier: IdGardIdentifier,
   userGroupId: TenantUserGroupId,
   deviceGroupId: TenantDeviceGroupId,
+  orgCertId: OrgCertId,
+  orgUnitCertId: Option[OrgUnitCertId],
   clientCert: Option[ClientCert]
 )

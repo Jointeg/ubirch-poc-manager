@@ -2,6 +2,7 @@ package com.ubirch.models.tenant
 import com.ubirch.models.auth.Base64String
 import io.getquill.MappedEncoding
 
+// By ClientCert we are referring to SharedAuthCert
 case class ClientCert(value: Base64String)
 
 object ClientCert {
