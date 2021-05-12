@@ -1,7 +1,13 @@
 package com.ubirch.services.poc
 import com.ubirch.Awaits
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
-import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
+import com.ubirch.db.tables.{
+  PocRepository,
+  PocRepositoryMock,
+  PocStatusRepository,
+  PocStatusRepositoryMock,
+  TenantRepositoryMock
+}
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantUserGroupId }

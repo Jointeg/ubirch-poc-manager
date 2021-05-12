@@ -58,7 +58,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
       val r = infoProvider.infoToCertifyAPI(poc, statusAndPW).runSyncUnsafe()
       // assert
-      r shouldBe statusProvided
+      r.status shouldBe statusProvided
     }
 
     "should not provide certifyApi if already true" in {
@@ -67,7 +67,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
       val r = infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(pocStatus = statusProvided)).runSyncUnsafe()
       // assert
-      r shouldBe statusProvided
+      r.status shouldBe statusProvided
     }
 
     class WrongURLUnitTestBinder extends DefaultUnitTestBinder {
@@ -88,7 +88,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
         .infoToGoClient(poc, statusAndPW)
         .onErrorHandle {
           case PocCreationError(state) =>
-            state shouldBe errorState
+            state.status shouldBe errorState
         }.runSyncUnsafe()
     }
 
@@ -104,7 +104,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
         .infoToCertifyAPI(poc, statusAndPW)
         .onErrorHandle {
           case PocCreationError(state) =>
-            state shouldBe errorState
+            state.status shouldBe errorState
         }.runSyncUnsafe()
     }
   }
