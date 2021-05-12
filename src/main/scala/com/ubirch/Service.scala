@@ -81,8 +81,7 @@ class Service @Inject() (
 }
 
 object Service extends Boot(List(new Binder)) {
-  def main(args: Array[String]): Unit =
-    * {
+  def main(args: Array[String]): Unit = * {
       get[Service].start()
     }
 }
