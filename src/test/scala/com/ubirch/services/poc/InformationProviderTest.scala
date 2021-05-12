@@ -11,6 +11,7 @@ import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
+import scala.util.Try
 
 class InformationProviderTest extends ScalatraWordSpec with Awaits {
 
@@ -37,7 +38,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusProvided = pocStatus.copy(goClientProvided = true)
-      val r = await(infoProvider.infoToGoClient(poc, statusAndPW), 5.seconds)
+      val r = infoProvider.infoToGoClient(poc, statusAndPW).runSyncUnsafe()
       // assert
       r shouldBe statusAndPW.copy(statusProvided)
     }
@@ -46,7 +47,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusAndPWProvided = statusAndPW.copy(pocStatus = pocStatus.copy(goClientProvided = true))
-      val r = await(infoProvider.infoToGoClient(poc, statusAndPWProvided), 1.seconds)
+      val r = infoProvider.infoToGoClient(poc, statusAndPWProvided).runSyncUnsafe()
       // assert
       r shouldBe statusAndPWProvided
     }
@@ -55,18 +56,18 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
-      val r = await(infoProvider.infoToCertifyAPI(poc, statusAndPW), 5.seconds)
+      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW).runSyncUnsafe()
       // assert
-      r shouldBe statusProvided
+      r.status shouldBe statusProvided
     }
 
     "should not provide certifyApi if already true" in {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
-      val r = await(infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(pocStatus = statusProvided)), 1.seconds)
+      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(pocStatus = statusProvided)).runSyncUnsafe()
       // assert
-      r shouldBe statusProvided
+      r.status shouldBe statusProvided
     }
 
     class WrongURLUnitTestBinder extends DefaultUnitTestBinder {
@@ -81,15 +82,14 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val errorState =
         pocStatus.copy(errorMessage = Some("an error occurred when providing info to go client; missing scheme"))
 
-      assertThrows[PocCreationError](await(infoProvider.infoToGoClient(poc, statusAndPW), 5.seconds))
+      assertThrows[PocCreationError](infoProvider.infoToGoClient(poc, statusAndPW).runSyncUnsafe())
       //test the same in a different way
-      val r = infoProvider
+      infoProvider
         .infoToGoClient(poc, statusAndPW)
         .onErrorHandle {
           case PocCreationError(state) =>
-            state shouldBe errorState
-        }
-      await(r, 5.seconds)
+            state.status shouldBe errorState
+        }.runSyncUnsafe()
     }
 
     "should throw exception when providing certifyApi but url is wrong" in {
@@ -98,15 +98,14 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val errorState =
         pocStatus.copy(errorMessage = Some("an error occurred when providing info to certify api; missing scheme"))
 
-      assertThrows[PocCreationError](await(infoProvider.infoToCertifyAPI(poc, statusAndPW), 5.seconds))
+      assertThrows[PocCreationError](infoProvider.infoToCertifyAPI(poc, statusAndPW).runSyncUnsafe())
       //test the same in a different way
       val r = infoProvider
         .infoToCertifyAPI(poc, statusAndPW)
         .onErrorHandle {
           case PocCreationError(state) =>
-            state shouldBe errorState
-        }
-      await(r, 5.seconds)
+            state.status shouldBe errorState
+        }.runSyncUnsafe()
     }
   }
 

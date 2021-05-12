@@ -14,6 +14,7 @@ import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import sttp.client.{ basicRequest, SttpBackend, UriContext }
 import sttp.model.StatusCode.{ Conflict, Ok }
+import PocCreator._
 
 import scala.concurrent.Future
 
@@ -21,7 +22,7 @@ trait InformationProvider {
 
   def infoToGoClient(poc: Poc, status: StatusAndPW): Task[StatusAndPW]
 
-  def infoToCertifyAPI(poc: Poc, status: StatusAndPW): Task[PocStatus]
+  def infoToCertifyAPI(poc: Poc, status: StatusAndPW): Task[PocAndStatus]
 
 }
 
@@ -49,15 +50,19 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
       Task(statusAndPW)
     } else {
       val body = getGoClientBody(poc, statusAndPW)
-      Task
-        .fromFuture(goClientRequest(statusAndPW, body))
-        .onErrorHandle(ex => throwAndLogError(status, "an error occurred when providing info to go client; ", ex))
+      goClientRequest(poc, statusAndPW, body)
+        .onErrorHandle(ex =>
+          throwAndLogError(
+            PocAndStatus(poc, status),
+            "an error occurred when providing info to go client; ",
+            ex,
+            logger))
     }
   }
 
   @throws[PocCreationError]
-  protected def goClientRequest(statusAndPW: StatusAndPW, body: String): Future[StatusAndPW] = {
-    Future(
+  protected def goClientRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] = {
+    Task.deferFuture {
       basicRequest
         .put(uri"$goClientURL")
         .header(xAuthHeaderKey, goClientToken)
@@ -71,28 +76,34 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
             case Conflict =>
               StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
             case code =>
-              throwError(statusAndPW.pocStatus, s"failure when providing device info to goClient, statusCode: $code")
+              throwError(
+                PocAndStatus(poc, statusAndPW.pocStatus),
+                s"failure when providing device info to goClient, statusCode: $code")
           }
         }
-    ).flatten
-  }
-
-  @throws[PocCreationError]
-  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW): Task[PocStatus] = {
-    val status = statusAndPW.pocStatus
-    if (status.certifyApiProvided) {
-      Task(status)
-    } else {
-      val body = getCertifyApiBody(poc, statusAndPW)
-      Task
-        .fromFuture(certifyApiRequest(statusAndPW, body))
-        .onErrorHandle(ex => throwAndLogError(status, "an error occurred when providing info to certify api; ", ex))
     }
   }
 
   @throws[PocCreationError]
-  protected def certifyApiRequest(statusAndPW: StatusAndPW, body: String): Future[PocStatus] = {
-    Future(
+  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW): Task[PocAndStatus] = {
+    val status = statusAndPW.pocStatus
+    if (status.certifyApiProvided) {
+      Task(PocAndStatus(poc, status))
+    } else {
+      val body = getCertifyApiBody(poc, statusAndPW)
+      certifyApiRequest(poc, statusAndPW, body).map(status => PocAndStatus(poc, status))
+        .onErrorHandle(ex =>
+          throwAndLogError(
+            PocAndStatus(poc, status),
+            "an error occurred when providing info to certify api; ",
+            ex,
+            logger))
+    }
+  }
+
+  @throws[PocCreationError]
+  protected def certifyApiRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
+    Task.deferFuture {
       basicRequest
         .put(uri"$certifyApiURL")
         .body(body)
@@ -102,13 +113,14 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
         .map {
           _.code match {
             case Ok =>
-              statusAndPW.pocStatus.copy(goClientProvided = true)
+              statusAndPW.pocStatus.copy(certifyApiProvided = true)
             case code =>
-              throwError(statusAndPW.pocStatus, s"failure when providing device info to certifyAPI, errorCode: $code")
+              throwError(
+                PocAndStatus(poc, statusAndPW.pocStatus),
+                s"failure when providing device info to certifyAPI, errorCode: $code")
           }
         }
-    ).flatten
-  }
+    }
 
   private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW): String = {
 
@@ -126,15 +138,4 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
     val registerDevice = RegisterDeviceGoClient(poc.getDeviceId, statusAndPW.devicePassword)
     write[RegisterDeviceGoClient](registerDevice)
   }
-
-  @throws[PocCreationError]
-  private def throwError(status: PocStatus, msg: String): Nothing = {
-    throw PocCreationError(status.copy(errorMessage = Some(msg)))
-  }
-
-  private def throwAndLogError(status: PocStatus, msg: String, ex: Throwable): Nothing = {
-    logger.error(msg, ex)
-    throwError(status, msg + ex.getMessage)
-  }
-
 }
