@@ -157,18 +157,12 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
 
         maybeTenant.value.deviceCreationToken shouldNot be(
           EncryptedDeviceCreationToken(EncryptedData(Base64String.toBase64String("1234567890"))))
-        maybeTenant.value.certificationCreationToken shouldNot be(
-          EncryptedCertificationCreationToken(EncryptedData(Base64String.toBase64String("987654321"))))
 
         val aesEncryption = injector.get[AESEncryption]
         val decryptedDeviceCreationToken =
           await(aesEncryption.decrypt(maybeTenant.value.deviceCreationToken.value)(_.value), 1.second)
-        val decryptedCertificationCreationToken =
-          await(aesEncryption.decrypt(maybeTenant.value.certificationCreationToken.value)(_.value), 1.second)
 
         decryptedDeviceCreationToken shouldBe "1234567890"
-        decryptedCertificationCreationToken shouldBe "987654321"
-
       }
     }
 
