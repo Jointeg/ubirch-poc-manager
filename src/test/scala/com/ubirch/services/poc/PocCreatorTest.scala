@@ -115,6 +115,7 @@ class PocCreatorTest extends UnitTestBase {
       clientCertRequired = false,
       None,
       None,
+      None,
       logoRequired = false,
       None,
       None,

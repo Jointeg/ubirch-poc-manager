@@ -69,6 +69,7 @@ object ModelCreationHelper {
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,
+      orgUnitCertIdCreated = None,
       logoRequired = false,
       logoReceived = None,
       logoStored = None

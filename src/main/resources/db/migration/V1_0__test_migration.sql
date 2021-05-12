@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_status_table
     client_cert_required       boolean NOT NULL,
     client_cert_created        boolean,
     client_cert_provided       boolean,
+    org_unit_cert_id_created   boolean,
     logo_required              boolean NOT NULL,
     logo_received              boolean,
     logo_stored                boolean,

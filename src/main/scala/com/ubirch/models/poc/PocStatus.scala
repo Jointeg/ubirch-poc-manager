@@ -20,6 +20,7 @@ case class PocStatus(
   clientCertRequired: Boolean,
   clientCertCreated: Option[Boolean],
   clientCertProvided: Option[Boolean],
+  orgUnitCertIdCreated: Option[Boolean],
   logoRequired: Boolean,
   logoReceived: Option[Boolean],
   logoStored: Option[Boolean],
@@ -42,6 +43,7 @@ case class PocStatus(
       s"clientCertRequired:$clientCertRequired\n" +
       s"clientCertCreated:$clientCertCreated\n" +
       s"clientCertProvided:$clientCertProvided\n" +
+      s"orgUnitCertIdCreated:$orgUnitCertIdCreated\n" +
       s"logoRequired:$logoRequired\n" +
       s"logoReceived:$logoReceived\n" +
       s"logoStored:$logoStored\n" +
