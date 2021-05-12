@@ -66,7 +66,7 @@ sealed trait PocCriteriaValidator {
     }
 
   protected def validateFilterColumnStatus(params: Params): PocCriteriaValidationResult[Seq[Status]] =
-    params.get("filterColumnStatus") match {
+    params.get("filterColumn[status]") match {
       case Some(v) =>
         val (invalidStatuses, validStatuses) = v.split(",")
           .filterNot(_.trim == "")
@@ -84,8 +84,8 @@ sealed trait PocCriteriaValidator {
 
         if (invalidStatuses.nonEmpty)
           (
-            "filterColumnStatus",
-            s"Invalid value for param 'filterColumnStatus': ${invalidStatuses.mkString(", ")}").invalidNec
+            "filterColumn[status]",
+            s"Invalid value for param 'filterColumn[status]': ${invalidStatuses.mkString(", ")}").invalidNec
         else validStatuses.validNec
       case None => Seq.empty.validNec
     }
