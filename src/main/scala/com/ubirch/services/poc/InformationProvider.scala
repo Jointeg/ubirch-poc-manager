@@ -107,10 +107,10 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   protected def certifyApiRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
     Task.deferFuture {
       val request = basicRequest
-        .put(uri"$goClientURL")
-        .header(xAuthHeaderKey, goClientToken)
-        .header(contentTypeHeaderKey, "application/json")
-        .body(body)
+          .post(uri"$certifyApiURL")
+          .header(xAuthHeaderKey, certifyApiToken)
+          .header(contentTypeHeaderKey, "application/json")
+          .body(body)
       SttpResources.backend.send(request)
         .map {
           _.code match {
