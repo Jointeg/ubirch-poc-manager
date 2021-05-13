@@ -37,6 +37,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
+
   protected val goClientURL: String = conf.getString(ServicesConfPaths.GO_CLIENT_URL)
   private val goClientToken: String = conf.getString(ServicesConfPaths.GO_CLIENT_TOKEN)
   protected val certifyApiURL: String = conf.getString(ServicesConfPaths.CERTIFY_API_URL)
@@ -64,24 +65,25 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   @throws[PocCreationError]
   protected def goClientRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] =
-    SttpResources.monixBackend.flatMap { backend =>
+    Task.deferFuture {
       val request = basicRequest
         .put(uri"$goClientURL")
         .header(xAuthHeaderKey, goClientToken)
         .header(contentTypeHeaderKey, "application/json")
         .body(body)
-      backend.send(request).map {
-        _.code match {
-          case Ok =>
-            StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
-          case Conflict =>
-            StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
-          case code =>
-            throwError(
-              PocAndStatus(poc, statusAndPW.pocStatus),
-              s"failure when providing device info to goClient, statusCode: $code")
+      SttpResources.backend.send(request)
+        .map {
+          _.code match {
+            case Ok =>
+              StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
+            case Conflict =>
+              StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
+            case code =>
+              throwError(
+                PocAndStatus(poc, statusAndPW.pocStatus),
+                s"failure when providing device info to goClient, statusCode: $code")
+          }
         }
-      }
     }
 
   @throws[PocCreationError]
@@ -103,13 +105,13 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   @throws[PocCreationError]
   protected def certifyApiRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
-    SttpResources.monixBackend.flatMap { backend =>
+    Task.deferFuture {
       val request = basicRequest
         .post(uri"$certifyApiURL")
-        .body(body)
         .header(xAuthHeaderKey, certifyApiToken)
         .header(contentTypeHeaderKey, "application/json")
-      backend.send(request)
+        .body(body)
+      SttpResources.backend.send(request)
         .map {
           _.code match {
             case Ok =>

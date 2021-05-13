@@ -52,14 +52,15 @@ formats: Formats)
 
   private def getUsersWithoutConfirmationMail(token: String)
     : Task[Response[Either[ResponseError[Exception], List[KeycloakUser]]]] =
-    SttpResources.monixBackend.flatMap { backend =>
+    Task.deferFuture {
       val request = basicRequest
         .get(
           uri"${keycloakUsersConfig.serverUrl}/realms/${keycloakUsersConfig.realm}/user-search/users-without-confirmation-mail")
         .auth
         .bearer(token)
         .response(asJson[List[KeycloakUser]])
-      backend.send(request)
+      SttpResources.backend
+        .send(request)
     }
 
   private def logUsersResponse(usersResponse: Response[Either[ResponseError[Exception], List[KeycloakUser]]])
