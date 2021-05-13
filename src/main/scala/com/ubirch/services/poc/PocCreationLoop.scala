@@ -3,7 +3,6 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths.POC_CREATION_INTERVAL
-import monix.execution.cancelables.BooleanCancelable
 import monix.reactive.Observable
 
 import javax.inject.Singleton

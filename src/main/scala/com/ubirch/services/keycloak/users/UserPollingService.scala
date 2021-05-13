@@ -13,6 +13,7 @@ import org.json4s.native.Serialization
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
+import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import sttp.client.json4s._
 
 import scala.concurrent.Future
@@ -28,6 +29,7 @@ formats: Formats)
   extends UserPollingService
   with LazyLogging {
 
+  private val monixBackend = AsyncHttpClientMonixBackend()
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
 
@@ -54,17 +56,16 @@ formats: Formats)
     }
   }
 
-  private def getUsersWithoutConfirmationMail(token: String) = {
-    Task.fromFuture(
-      basicRequest
+  private def getUsersWithoutConfirmationMail(token: String) =
+    monixBackend.flatMap { backend =>
+      val request = basicRequest
         .get(
           uri"${keycloakUsersConfig.serverUrl}/realms/${keycloakUsersConfig.realm}/user-search/users-without-confirmation-mail")
         .auth
         .bearer(token)
         .response(asJson[List[KeycloakUser]])
-        .send()
-    )
-  }
+      backend.send(request)
+    }
 
   private def logUsersResponse(usersResponse: Response[Either[ResponseError[Exception], List[KeycloakUser]]]) = {
     usersResponse.body match {

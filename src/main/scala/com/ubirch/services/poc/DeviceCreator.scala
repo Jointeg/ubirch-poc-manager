@@ -11,16 +11,12 @@ import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.PocCreator._
 import monix.eval.Task
 import monix.execution.Scheduler
-import org.json4s.Formats
+import org.json4s.{ DefaultFormats, Formats }
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
+import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import sttp.client.json4s.asJson
-import sttp.client.{ basicRequest, ResponseError, SttpBackend, UriContext }
-import sttp.model.StatusCode.Ok
-
-import scala.concurrent.Future
+import sttp.client.{ basicRequest, ResponseError, UriContext }
 
 trait DeviceCreator {
 
@@ -32,7 +28,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
+  private val monixBackend = AsyncHttpClientMonixBackend()
   private val thingUrlCreateDevice: String = conf.getString(ServicesConfPaths.THING_API_URL_CREATE_DEVICE)
   private val thingUrlGetInfo: String = conf.getString(ServicesConfPaths.THING_API_URL_GET_INFO)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
@@ -67,69 +63,58 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     token: DecryptedData,
     poc: Poc,
     status: PocStatus,
-    body: String): Task[StatusAndPW] = Task.deferFuture {
-    // an error could occur before calls the send() method.
-    // In this case, the deferFuture method is needed because the fromFuture method can't catch such an error.
-    basicRequest
-      .post(uri"$thingUrlCreateDevice")
-      .body(body)
-      .auth
-      .bearer(token.value)
-      .response(asJson[Array[Map[String, DeviceResponse]]])
-      .send()
-      .map { er =>
-        er.code match {
-          case Ok =>
-            er.body match {
-              case Right(array: Array[Map[String, DeviceResponse]]) =>
-                if (array.length == 1 && array.head.size == 1) {
-                  val pw = array.head.head._2.apiConfig.password
-                  StatusAndPW(status.copy(deviceCreated = true), pw)
-                } else {
-                  throwError(
-                    PocAndStatus(poc, status),
-                    s"unexpected size of thing api response array: ${array.length}; ")
-                }
-              case Left(ex: ResponseError[Exception]) =>
-                throwAndLogError(PocAndStatus(poc, status), "creating device via Thing API failed: ", ex, logger)
+    body: String): Task[StatusAndPW] =
+    monixBackend.flatMap { backend =>
+      val request = basicRequest
+        .post(uri"$thingUrlCreateDevice")
+        .body(body)
+        .auth
+        .bearer(token.value)
+        .response(asJson[Array[Map[String, DeviceResponse]]])
+      backend.send(request).map {
+        _.body match {
+          case Right(array: Array[Map[String, DeviceResponse]]) =>
+            if (array.length == 1 && array.head.size == 1) {
+              val pw = array.head.head._2.apiConfig.password
+              StatusAndPW(status.copy(deviceCreated = true), pw)
+            } else {
+              throwError(
+                PocAndStatus(poc, status),
+                s"unexpected size of thing api response array: ${array.length}; ")
             }
-          case code =>
-            throwError(PocAndStatus(poc, status), s"retrieving api-config via Thing API, statusCode: $code")
+          case Left(ex) =>
+            throwAndLogError(PocAndStatus(poc, status), "creating device via Thing API failed: ", ex, logger)
         }
       }
-  }
+    }
 
   @throws[PocCreationError]
   protected def requestDeviceInfo(
     token: DecryptedData,
     poc: Poc,
-    status: PocStatus): Task[StatusAndPW] = Task.deferFuture(
-    basicRequest
-      .get(uri"$thingUrlGetInfo/${poc.deviceId}")
-      .auth
-      .bearer(token.value)
-      .response(asJson[Array[Map[String, DeviceResponse]]])
-      .send()
-      .map { er =>
-        er.code match {
-          case Ok =>
-            er.body match {
-              case Right(array: Array[Map[String, DeviceResponse]]) =>
-                if (array.length == 1 && array.head.size == 1) {
-                  val pw = array.head.head._2.apiConfig.password
-                  StatusAndPW(status, pw)
-                } else {
-                  throwError(
-                    PocAndStatus(poc, status),
-                    s"unexpected size of thing api response array: ${array.length}; ")
-                }
-              case Left(ex) =>
-                throwAndLogError(PocAndStatus(poc, status), "retrieving api-config via Thing API failed: ", ex, logger)
+    status: PocStatus): Task[StatusAndPW] =
+    monixBackend.flatMap { backend =>
+      val request = basicRequest
+        .get(uri"$thingUrlGetInfo/${poc.deviceId}")
+        .auth
+        .bearer(token.value)
+        .response(asJson[Array[Map[String, DeviceResponse]]])
+      backend.send(request).map {
+        _.body match {
+          case Right(array: Array[Map[String, DeviceResponse]]) =>
+            if (array.length == 1 && array.head.size == 1) {
+              val pw = array.head.head._2.apiConfig.password
+              StatusAndPW(status, pw)
+            } else {
+              throwError(
+                PocAndStatus(poc, status),
+                s"unexpected size of thing api response array: ${array.length}; ")
             }
-          case code =>
-            throwError(PocAndStatus(poc, status), s"retrieving api-config via Thing API, statusCode: $code")
+          case Left(ex) =>
+            throwAndLogError(PocAndStatus(poc, status), "retrieving api-config via Thing API failed: ", ex, logger)
         }
-      })
+      }
+    }
 
   @throws[PocCreationError]
   private def getBody(poc: Poc, status: PocStatus, tenant: Tenant): String = {
@@ -158,3 +143,4 @@ case class DeviceRequestBody(
 
 case class DeviceResponse(state: String, apiConfig: ApiConfig)
 case class ApiConfig(password: String, keyService: String, niomon: String, data: String)
+

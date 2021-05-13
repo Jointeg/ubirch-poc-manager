@@ -87,7 +87,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       infoProvider
         .infoToGoClient(poc, statusAndPW)
         .onErrorHandle {
-          case PocCreationError(state) =>
+          case PocCreationError(state, _) =>
             state.status shouldBe errorState
         }.runSyncUnsafe()
     }
@@ -103,7 +103,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val r = infoProvider
         .infoToCertifyAPI(poc, statusAndPW, tenant)
         .onErrorHandle {
-          case PocCreationError(state) =>
+          case PocCreationError(state, _) =>
             state.status shouldBe errorState
         }.runSyncUnsafe()
     }
