@@ -9,11 +9,6 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
-import sttp.client._
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
-
-import scala.concurrent.Future
 
 trait PocCreator {
 
@@ -29,7 +24,7 @@ object PocCreator {
 
   @throws[PocCreationError]
   def throwError(pocAndStatus: PocAndStatus, msg: String) =
-    throw PocCreationError(pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg))))
+    throw PocCreationError(pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg))), msg)
 }
 
 class PocCreatorImpl @Inject() (
@@ -44,7 +39,6 @@ class PocCreatorImpl @Inject() (
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   import deviceCreator._
   import informationProvider._
@@ -142,7 +136,7 @@ class PocCreatorImpl @Inject() (
           _ <- pocTable.updatePoc(pce.pocAndStatus.poc)
           _ <- pocStatusTable.updatePocStatus(pce.pocAndStatus.status)
         } yield {
-          val msg = s"updated poc status after poc creation failed; ${pce.pocAndStatus.status}"
+          val msg = s"updated poc status after poc creation failed; ${pce.pocAndStatus.status}, error: ${pce.message}"
           logger.error(msg)
           Left(msg)
         }).onErrorHandle { ex =>
@@ -162,7 +156,7 @@ class PocCreatorImpl @Inject() (
 
 case class StatusAndPW(pocStatus: PocStatus, devicePassword: String)
 
-case class PocCreationError(pocAndStatus: PocAndStatus) extends Exception
+case class PocCreationError(pocAndStatus: PocAndStatus, message: String) extends Exception(message)
 
 trait PocCreationResult
 case object PocCreationFailure extends PocCreationResult
