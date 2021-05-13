@@ -91,7 +91,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
     tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPoc.externalId),
-      validateString(pocName, csvPoc.pocName),
+      validatePocName(pocName, csvPoc.pocName),
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),

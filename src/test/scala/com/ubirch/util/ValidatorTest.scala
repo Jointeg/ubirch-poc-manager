@@ -1,13 +1,16 @@
 package com.ubirch.util
 
+import cats.data.NonEmptyList
+import cats.data.Validated.{ Invalid, Valid }
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.ValidatorConstants.phoneValidationError
 import com.ubirch.services.poc.util.{ CsvConstants, ValidatorConstants }
 import com.ubirch.services.util.Validator
+import org.scalatest.prop.{ TableDrivenPropertyChecks, TableFor1 }
 
-class ValidatorTest extends TestBase {
+class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   "Validator JValue" should {
 
@@ -264,4 +267,61 @@ class ValidatorTest extends TestBase {
     }
   }
 
+  private val validPocName: TableFor1[String] = Table(
+    "name",
+    "Tenant 23",
+    "ubirch GmbH",
+    "übírçh GmbH",
+    "ñÿäñtéç GmbH",
+    "Büñðèşgēsünđhẽïtsmnısteríüm",
+    "Impfzentrum Hintertupfingen-Süd",
+    "prod.ubirch.com",
+    "dev@nyantec.com",
+    "Ministry of Silly Walks",
+    "Maybe-Q",
+    "予防接種センター",
+    "مركز التطعيم",
+    "Κέντρο εμβολιασμού",
+    "Центр вакцинации"
+  )
+
+  private val invalidPocName: TableFor1[String] = Table(
+    "name",
+    "ubirch\tGmbH",
+    raw"ubirch\u00A0GmbH", // non breaking space
+    "ubirch  GmbH",
+    " ubirch GmbH",
+    "ubirch GmbH ",
+    "CN=foo",
+    "foo/bar",
+    "http://",
+    "Warum Thunfische das?",
+    "Nein, danke",
+    "<script>",
+    "\\write18",
+    "ub\0irch GmbH",
+    "u\\x08ubirch GmbH",
+    "❤️"
+  )
+
+  "Validator PocName" must {
+    "not have empty header" in {
+      val validated = Validator.validatePocName("poc_name*", " ")
+      validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column poc_name* cannot be empty")))
+    }
+  }
+
+  forAll(validPocName) { name =>
+    s"valid $name" in {
+      val validated = Validator.validatePocName("poc_name*", name)
+      validated mustBe Valid(name)
+    }
+  }
+
+  forAll(invalidPocName) { name =>
+    s"invalid $name" in {
+      val validated = Validator.validatePocName("poc_name*", name)
+      validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column poc_name* must contain a valid poc name")))
+    }
+  }
 }
