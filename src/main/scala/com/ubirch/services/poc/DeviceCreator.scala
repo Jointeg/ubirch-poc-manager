@@ -8,13 +8,13 @@ import com.ubirch.models.auth.DecryptedData
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.auth.AESEncryption
+import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.poc.PocCreator._
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
-import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import sttp.client.json4s.asJson
 import sttp.client.{ basicRequest, UriContext }
 
@@ -28,7 +28,6 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
-  private val monixBackend = AsyncHttpClientMonixBackend()
   private val thingUrlCreateDevice: String = conf.getString(ServicesConfPaths.THING_API_URL_CREATE_DEVICE)
   private val thingUrlGetInfo: String = conf.getString(ServicesConfPaths.THING_API_URL_GET_INFO)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
@@ -64,7 +63,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     poc: Poc,
     status: PocStatus,
     body: String): Task[StatusAndPW] =
-    monixBackend.flatMap { backend =>
+    SttpResources.monixBackend.flatMap { backend =>
       val request = basicRequest
         .post(uri"$thingUrlCreateDevice")
         .body(body)
@@ -93,7 +92,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     token: DecryptedData,
     poc: Poc,
     status: PocStatus): Task[StatusAndPW] =
-    monixBackend.flatMap { backend =>
+    SttpResources.monixBackend.flatMap { backend =>
       val request = basicRequest
         .get(uri"$thingUrlGetInfo/${poc.deviceId}")
         .auth
@@ -143,4 +142,3 @@ case class DeviceRequestBody(
 
 case class DeviceResponse(state: String, apiConfig: ApiConfig)
 case class ApiConfig(password: String, keyService: String, niomon: String, data: String)
-

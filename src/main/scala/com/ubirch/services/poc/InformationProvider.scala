@@ -14,7 +14,7 @@ import sttp.client.{ basicRequest, UriContext }
 import sttp.model.StatusCode.{ Conflict, Ok }
 import PocCreator._
 import com.ubirch.models.tenant.Tenant
-import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
+import com.ubirch.services.execution.SttpResources
 
 trait InformationProvider {
 
@@ -37,7 +37,6 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
-  private val monixBackend = AsyncHttpClientMonixBackend()
   protected val goClientURL: String = conf.getString(ServicesConfPaths.GO_CLIENT_URL)
   private val goClientToken: String = conf.getString(ServicesConfPaths.GO_CLIENT_TOKEN)
   protected val certifyApiURL: String = conf.getString(ServicesConfPaths.CERTIFY_API_URL)
@@ -65,7 +64,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   @throws[PocCreationError]
   protected def goClientRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] =
-    monixBackend.flatMap { backend =>
+    SttpResources.monixBackend.flatMap { backend =>
       val request = basicRequest
         .put(uri"$goClientURL")
         .header(xAuthHeaderKey, goClientToken)
@@ -104,7 +103,7 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   @throws[PocCreationError]
   protected def certifyApiRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
-    monixBackend.flatMap { backend =>
+    SttpResources.monixBackend.flatMap { backend =>
       val request = basicRequest
         .post(uri"$certifyApiURL")
         .body(body)
