@@ -97,12 +97,12 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
         .post(uri"$thingUrlGetInfo?device_id=${poc.getDeviceId}")
         .auth
         .bearer(token.value)
-        .response(asJson[Array[Map[String, DeviceResponse]]])
+        .response(asJson[Array[Map[String, ApiConfig]]])
       backend.send(request).map {
         _.body match {
-          case Right(array: Array[Map[String, DeviceResponse]]) =>
+          case Right(array: Array[Map[String, ApiConfig]]) =>
             if (array.length == 1 && array.head.size == 1) {
-              val pw = array.head.head._2.apiConfig.password
+              val pw = array.head.head._2.password
               StatusAndPW(status, pw)
             } else {
               throwError(
@@ -139,6 +139,7 @@ case class DeviceRequestBody(
   listGroups: List[String] = Nil,
   attributes: Map[String, List[String]] = Map.empty
 )
+
 
 case class DeviceResponse(state: String, apiConfig: ApiConfig)
 case class ApiConfig(password: String, keyService: String, niomon: String, data: String)
