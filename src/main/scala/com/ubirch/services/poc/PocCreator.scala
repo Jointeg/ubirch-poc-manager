@@ -10,6 +10,8 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
 
+import javax.inject.Singleton
+
 trait PocCreator {
 
   def createPocs(): Task[PocCreationResult]
@@ -27,6 +29,7 @@ object PocCreator {
     throw PocCreationError(pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg))), msg)
 }
 
+
 class PocCreatorImpl @Inject() (
   //  certHandler: CertHandler,
   deviceCreator: DeviceCreator,
@@ -38,8 +41,6 @@ class PocCreatorImpl @Inject() (
   extends PocCreator
   with LazyLogging {
 
-  implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
-  implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   import deviceCreator._
   import informationProvider._
   import keycloakHelper._

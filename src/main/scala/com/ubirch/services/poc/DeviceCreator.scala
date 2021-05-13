@@ -11,7 +11,6 @@ import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.poc.PocCreator._
 import monix.eval.Task
-import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
@@ -27,7 +26,6 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   extends DeviceCreator
   with LazyLogging {
 
-  implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   private val thingUrlCreateDevice: String = conf.getString(ServicesConfPaths.THING_API_URL_CREATE_DEVICE)
   private val thingUrlGetInfo: String = conf.getString(ServicesConfPaths.THING_API_URL_GET_INFO)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization

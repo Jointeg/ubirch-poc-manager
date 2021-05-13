@@ -28,8 +28,6 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
       .split(", ")
       .toList
 
-  implicit val scheduler: Scheduler = monix.execution.Scheduler.global
-
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
 
     Try(csvHandler.parsePocCreationList(csv, tenant)) match {

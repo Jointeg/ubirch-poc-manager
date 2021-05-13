@@ -36,7 +36,6 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   extends InformationProvider
   with LazyLogging {
 
-  implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   protected val goClientURL: String = conf.getString(ServicesConfPaths.GO_CLIENT_URL)
   private val goClientToken: String = conf.getString(ServicesConfPaths.GO_CLIENT_TOKEN)
   protected val certifyApiURL: String = conf.getString(ServicesConfPaths.CERTIFY_API_URL)
