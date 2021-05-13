@@ -94,7 +94,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     status: PocStatus): Task[StatusAndPW] =
     SttpResources.monixBackend.flatMap { backend =>
       val request = basicRequest
-        .get(uri"$thingUrlGetInfo/${poc.deviceId}")
+        .post(uri"$thingUrlGetInfo?device_id=${poc.deviceId}")
         .auth
         .bearer(token.value)
         .response(asJson[Array[Map[String, DeviceResponse]]])
