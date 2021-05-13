@@ -99,6 +99,7 @@ class PocCreatorImpl @Inject() (
       _ <- pocTable.updatePoc(newPoc)
       _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status)
     } yield {
+      logger.info(s"finished to create poc with id ${pocAndStatus.poc.id}")
       Right(completePocAndStatus.status)
     }).onErrorHandleWith(handlePocCreationError)
   }

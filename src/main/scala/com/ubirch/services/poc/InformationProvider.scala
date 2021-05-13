@@ -27,7 +27,7 @@ trait InformationProvider {
 case class RegisterDeviceGoClient(uuid: String, password: String)
 case class RegisterDeviceCertifyAPI(
   name: String,
-  deviceId: String,
+  uuid: String,
   password: String,
   role: Option[String],
   cert: Option[String])
