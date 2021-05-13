@@ -127,7 +127,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         }
       case Left(_) => Left(GroupNotFound(groupName))
     }.onErrorHandle { ex =>
-      logger.error(s"finding group by name ${groupName.value} failed due to, ${ex.getMessage}", ex)
+      logger.error(s"finding group by name ${groupName.value} failed", ex)
       Left(GroupNotFound(groupName))
     }
   }

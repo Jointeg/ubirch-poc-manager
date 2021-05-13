@@ -96,6 +96,8 @@ class PocCreatorTest extends UnitTestBase {
           deviceGroupCreated = true,
           deviceGroupRoleAssigned = true,
           deviceCreated = true,
+          assignedDataSchemaGroup = true,
+          assignedDeviceGroup = true,
           certifyApiProvided = true,
           goClientProvided = true,
           errorMessage = Some("couldn't find parentGroup")
@@ -122,6 +124,8 @@ class PocCreatorTest extends UnitTestBase {
       deviceGroupCreated = true,
       deviceGroupRoleAssigned = true,
       deviceCreated = true,
+      assignedDataSchemaGroup = true,
+      assignedDeviceGroup = true,
       clientCertRequired = false,
       None,
       None,

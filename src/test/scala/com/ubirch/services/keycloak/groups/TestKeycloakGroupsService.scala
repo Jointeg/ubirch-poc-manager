@@ -1,5 +1,6 @@
 package com.ubirch.services.keycloak.groups
 
+import com.ubirch.ModelCreationHelper.dataSchemaGroupId
 import com.ubirch.models.keycloak.group._
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
@@ -15,6 +16,8 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
   private val groupsUsersDatastore = mutable.Map[String, GroupRepresentation]()
   private val groupsDeviceDatastore = mutable.Map[String, GroupRepresentation]()
+  private val dataSchemaGroup = createGroupRepresentation(GroupName(dataSchemaGroupId))
+  groupsDeviceDatastore += ((dataSchemaGroupId, dataSchemaGroup))
 
   override def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
@@ -93,10 +96,13 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     }
     r match {
       case Right(group) =>
-        if (group.getSubGroups == null) {
-          group.setSubGroups(List(childGroup).asJava)
-        } else
-          group.getSubGroups.add(childGroup)
+        group.setSubGroups(List(childGroup).asJava)
+        instance match {
+          case UsersKeycloak =>
+            groupsUsersDatastore += ((childGroup.getId, childGroup))
+          case DeviceKeycloak =>
+            groupsDeviceDatastore += ((childGroup.getId, childGroup))
+        }
         Task(Right(GroupId(childGroup.getId)))
       case _ =>
         Task(Left(GroupCreationError("couldn't find parentGroup")))
@@ -145,6 +151,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     val group = new GroupRepresentation()
     group.setId(id)
     group.setName(name.value)
+    group.setSubGroups(List(group).asJava)
     group
   }
 }
