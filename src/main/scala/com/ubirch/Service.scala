@@ -73,7 +73,7 @@ class Service @Inject() (
     sys.addShutdownHook {
       logger.info("Shutdown of poc creation loop service")
       pocCreation.cancel()
-      //SttpResources.monixBackend.foreach(_.close())
+      SttpResources.backend.close()
     }
 
     val cd = new CountDownLatch(1)

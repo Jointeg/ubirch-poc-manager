@@ -3,6 +3,7 @@ package com.ubirch.services.keycloak.users
 import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.KeycloakUser
+import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.keycloak.KeycloakUsersConfig
 import com.ubirch.services.keycloak.auth.AuthClient
 import monix.eval.Task
@@ -10,11 +11,8 @@ import monix.reactive.Observable
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import sttp.client._
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import sttp.client.json4s._
 
-import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 trait UserPollingService {
@@ -28,7 +26,6 @@ formats: Formats)
   with LazyLogging {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
 
   private val newlyRegisteredUsers: Observable[Either[Exception, List[KeycloakUser]]] = {
     for {
@@ -56,13 +53,14 @@ formats: Formats)
   private def getUsersWithoutConfirmationMail(token: String)
     : Task[Response[Either[ResponseError[Exception], List[KeycloakUser]]]] =
     Task.deferFuture {
-      basicRequest
+      val request = basicRequest
         .get(
           uri"${keycloakUsersConfig.serverUrl}/realms/${keycloakUsersConfig.realm}/user-search/users-without-confirmation-mail")
         .auth
         .bearer(token)
         .response(asJson[List[KeycloakUser]])
-        .send()
+      SttpResources.backend
+        .send(request)
     }
 
   private def logUsersResponse(usersResponse: Response[Either[ResponseError[Exception], List[KeycloakUser]]])

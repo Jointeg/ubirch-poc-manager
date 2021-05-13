@@ -15,13 +15,8 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
-import org.scalatra.Ok
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import sttp.client.json4s.asJson
-import sttp.client.{ basicRequest, ResponseError, SttpBackend, UriContext }
-
-import scala.concurrent.Future
+import sttp.client.{ basicRequest, UriContext }
 
 trait DeviceCreator {
 
@@ -33,7 +28,6 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
 
   private val thingUrlCreateDevice: String = conf.getString(ServicesConfPaths.THING_API_URL_CREATE_DEVICE)
   private val thingUrlGetInfo: String = conf.getString(ServicesConfPaths.THING_API_URL_GET_INFO)
@@ -73,13 +67,14 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     Task.deferFuture {
       // an error could occur before calls the send() method.
       // In this case, the deferFuture method is needed because the fromFuture method can't catch such an error.
-      basicRequest
+      val request = basicRequest
         .post(uri"$thingUrlCreateDevice")
         .body(body)
         .auth
         .bearer(token.value)
         .response(asJson[Array[Map[String, DeviceResponse]]])
-        .send()
+      SttpResources.backend
+        .send(request)
         .map {
           _.body match {
             case Right(array: Array[Map[String, DeviceResponse]]) =>
@@ -107,7 +102,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
       .auth
       .bearer(token.value)
       .response(asJson[Array[Map[String, ApiConfig]]])
-    backend.send(request).map {
+    SttpResources.backend.send(request).map {
       _.body match {
         case Right(array: Array[Map[String, ApiConfig]]) =>
           if (array.length == 1 && array.head.size == 1) {
