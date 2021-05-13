@@ -144,6 +144,5 @@ case class DeviceRequestBody(
   attributes: Map[String, List[String]] = Map.empty
 )
 
-
 case class DeviceResponse(state: String, apiConfig: ApiConfig)
 case class ApiConfig(password: String, keyService: String, niomon: String, data: String)
