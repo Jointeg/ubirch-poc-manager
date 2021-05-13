@@ -11,12 +11,12 @@ import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.PocCreator._
 import monix.eval.Task
 import monix.execution.Scheduler
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import sttp.client.json4s.asJson
-import sttp.client.{ basicRequest, ResponseError, UriContext }
+import sttp.client.{ basicRequest, UriContext }
 
 trait DeviceCreator {
 
