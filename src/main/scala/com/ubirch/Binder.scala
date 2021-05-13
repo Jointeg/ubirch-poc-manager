@@ -39,7 +39,7 @@ class Binder extends AbstractModule {
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
 
   def KeycloakUsersConfig: ScopedBindingBuilder =
-    bind(classOf[KeycloakUsersConfig]).to(classOf[RealKeycloakUsersConfig])
+    bind(classOf[KeycloakCertifyConfig]).to(classOf[RealKeycloakCertifyConfig])
 
   def KeycloakDeviceConfig: ScopedBindingBuilder =
     bind(classOf[KeycloakDeviceConfig]).to(classOf[RealKeycloakDeviceConfig])
@@ -75,7 +75,7 @@ class Binder extends AbstractModule {
     bind(classOf[SuperAdminService]).to(classOf[DefaultSuperAdminService])
 
   def KeycloakUserConnector: ScopedBindingBuilder =
-    bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])
+    bind(classOf[CertifyKeycloakConnector]).to(classOf[CertifyKeycloakConfigConnector])
 
   def KeycloakDeviceConnector: ScopedBindingBuilder =
     bind(classOf[DeviceKeycloakConnector]).to(classOf[DeviceKeycloakConfigConnector])

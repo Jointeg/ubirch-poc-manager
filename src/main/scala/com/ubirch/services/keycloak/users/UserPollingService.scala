@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.KeycloakUser
 import com.ubirch.services.execution.SttpResources
-import com.ubirch.services.keycloak.KeycloakUsersConfig
+import com.ubirch.services.keycloak.KeycloakCertifyConfig
 import com.ubirch.services.keycloak.auth.AuthClient
 import monix.eval.Task
 import monix.reactive.Observable
@@ -20,7 +20,7 @@ trait UserPollingService {
 }
 
 @Singleton
-class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakUsersConfig: KeycloakUsersConfig)(implicit
+class KeycloakUserPollingService @Inject() (authClient: AuthClient, keycloakUsersConfig: KeycloakCertifyConfig)(implicit
 formats: Formats)
   extends UserPollingService
   with LazyLogging {

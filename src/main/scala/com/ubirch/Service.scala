@@ -9,7 +9,7 @@ import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keyhash.KeyHashVerifierService
 import com.ubirch.services.poc.PocCreationLoop
 import com.ubirch.services.rest.RestService
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
@@ -35,7 +35,7 @@ class Service @Inject() (
   def start(): Unit = {
 
     publicKeyPoolService
-      .init(UsersKeycloak, DeviceKeycloak)
+      .init(CertifyKeycloak, DeviceKeycloak)
       .doOnFinish {
         case Some(e) =>
           Task.delay(logger.error("error_loading_keys", e))

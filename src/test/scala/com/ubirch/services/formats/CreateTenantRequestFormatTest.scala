@@ -21,7 +21,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |    "deviceCreationToken": "1234567890",
              |    "certificationCreationToken": "987654321",
              |    "idGardIdentifier": "gard-identifier",
-             |    "userGroupId": "random-user-group",
+             |    "userGroupId": "random-certify-group",
              |    "deviceGroupId": "random-device-group"
              |}
              |""".stripMargin)
@@ -32,7 +32,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           PlainDeviceCreationToken("1234567890"),
           PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
-          TenantUserGroupId("random-user-group"),
+          TenantCertifyGroupId("random-certify-group"),
           TenantDeviceGroupId("random-device-group"),
           None
         )
@@ -50,7 +50,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |    "deviceCreationToken": "1234567890",
              |    "certificationCreationToken": "987654321",
              |    "idGardIdentifier": "gard-identifier",
-             |    "userGroupId": "random-user-group",
+             |    "userGroupId": "random-certify-group",
              |    "deviceGroupId": "random-device-group",
              |    "clientCert": "${base64X509Cert.value}",
              |
@@ -63,7 +63,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           PlainDeviceCreationToken("1234567890"),
           PlainCertificationCreationToken("987654321"),
           IdGardIdentifier("gard-identifier"),
-          TenantUserGroupId("random-user-group"),
+          TenantCertifyGroupId("random-certify-group"),
           TenantDeviceGroupId("random-device-group"),
           Some(ClientCert(base64X509Cert))
         )

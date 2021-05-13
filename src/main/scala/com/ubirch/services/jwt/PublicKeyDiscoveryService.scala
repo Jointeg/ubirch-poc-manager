@@ -5,9 +5,9 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.KeycloakPaths
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.{ Task, TaskApp }
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import monix.eval.{ Task, TaskApp }
@@ -31,8 +31,8 @@ class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterS
 
   def getConfigUrlString(keycloakInstance: KeycloakInstance): String =
     keycloakInstance match {
-      case UsersKeycloak  => config.getString(KeycloakPaths.UsersKeycloak.CONFIG_URL)
-      case DeviceKeycloak => config.getString(KeycloakPaths.DeviceKeycloak.CONFIG_URL)
+      case CertifyKeycloak => config.getString(KeycloakPaths.CertifyKeycloak.CONFIG_URL)
+      case DeviceKeycloak  => config.getString(KeycloakPaths.DeviceKeycloak.CONFIG_URL)
     }
 
   final val JWKS_URI = "jwks_uri"
