@@ -116,4 +116,12 @@ object Validator {
       }
   }
 
+  def validatePocName(header: String, pocName: String): AllErrorsOr[String] = {
+    if (pocName.trim == "") emptyStringError(header).invalidNel
+    else {
+      val matches = pocNameRegex.findAllIn(pocName).toSeq
+      if (matches.nonEmpty) pocName.validNel
+      else pocNameValidationError(header).invalidNel
+    }
+  }
 }

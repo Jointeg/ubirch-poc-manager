@@ -10,31 +10,33 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
-import sttp.client.{ basicRequest, SttpBackend, UriContext }
+import sttp.client.{ basicRequest, UriContext }
 import sttp.model.StatusCode.{ Conflict, Ok }
 import PocCreator._
-
-import scala.concurrent.Future
+import com.ubirch.models.tenant.Tenant
+import com.ubirch.services.execution.SttpResources
 
 trait InformationProvider {
 
   def infoToGoClient(poc: Poc, status: StatusAndPW): Task[StatusAndPW]
 
-  def infoToCertifyAPI(poc: Poc, status: StatusAndPW): Task[PocAndStatus]
+  def infoToCertifyAPI(poc: Poc, status: StatusAndPW, tenant: Tenant): Task[PocAndStatus]
 
 }
 
 case class RegisterDeviceGoClient(uuid: String, password: String)
-case class RegisterDeviceCertifyAPI(name: String, deviceId: String, password: String, role: String, cert: String)
+case class RegisterDeviceCertifyAPI(
+  name: String,
+  deviceId: String,
+  password: String,
+  role: Option[String],
+  cert: Option[String])
 
 class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats)
   extends InformationProvider
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
   protected val goClientURL: String = conf.getString(ServicesConfPaths.GO_CLIENT_URL)
   private val goClientToken: String = conf.getString(ServicesConfPaths.GO_CLIENT_TOKEN)
   protected val certifyApiURL: String = conf.getString(ServicesConfPaths.CERTIFY_API_URL)
@@ -61,37 +63,35 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   }
 
   @throws[PocCreationError]
-  protected def goClientRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] = {
-    Task.deferFuture {
-      basicRequest
+  protected def goClientRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] =
+    SttpResources.monixBackend.flatMap { backend =>
+      val request = basicRequest
         .put(uri"$goClientURL")
         .header(xAuthHeaderKey, goClientToken)
         .header(contentTypeHeaderKey, "application/json")
         .body(body)
-        .send()
-        .map {
-          _.code match {
-            case Ok =>
-              StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
-            case Conflict =>
-              StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
-            case code =>
-              throwError(
-                PocAndStatus(poc, statusAndPW.pocStatus),
-                s"failure when providing device info to goClient, statusCode: $code")
-          }
+      backend.send(request).map {
+        _.code match {
+          case Ok =>
+            StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
+          case Conflict =>
+            StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
+          case code =>
+            throwError(
+              PocAndStatus(poc, statusAndPW.pocStatus),
+              s"failure when providing device info to goClient, statusCode: $code")
         }
+      }
     }
-  }
 
   @throws[PocCreationError]
-  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW): Task[PocAndStatus] = {
+  override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): Task[PocAndStatus] = {
     val status = statusAndPW.pocStatus
     if (status.certifyApiProvided) {
       Task(PocAndStatus(poc, status))
     } else {
-      val body = getCertifyApiBody(poc, statusAndPW)
-      certifyApiRequest(poc, statusAndPW, body).map(status => PocAndStatus(poc, status))
+      val body = getCertifyApiBody(poc, statusAndPW, tenant)
+      certifyApiRequest(poc, statusAndPW, body).map(newStatus => PocAndStatus(poc, newStatus))
         .onErrorHandle(ex =>
           throwAndLogError(
             PocAndStatus(poc, status),
@@ -103,13 +103,13 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   @throws[PocCreationError]
   protected def certifyApiRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
-    Task.deferFuture {
-      basicRequest
-        .put(uri"$certifyApiURL")
+    SttpResources.monixBackend.flatMap { backend =>
+      val request = basicRequest
+        .post(uri"$certifyApiURL")
         .body(body)
         .header(xAuthHeaderKey, certifyApiToken)
         .header(contentTypeHeaderKey, "application/json")
-        .send()
+      backend.send(request)
         .map {
           _.code match {
             case Ok =>
@@ -122,15 +122,17 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
         }
     }
 
-  private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW): String = {
+  private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): String = {
+
+    val clientCert = if (poc.clientCertRequired) tenant.clientCert.map(_.value.value) else None
 
     val registerDevice =
       RegisterDeviceCertifyAPI(
         poc.pocName,
         poc.getDeviceId,
         statusAndPW.devicePassword,
-        poc.roleName,
-        poc.roleName)
+        Some(poc.roleName),
+        clientCert)
     write[RegisterDeviceCertifyAPI](registerDevice)
   }
 

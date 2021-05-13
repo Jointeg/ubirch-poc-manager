@@ -56,7 +56,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
-      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW).runSyncUnsafe()
+      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW, tenant).runSyncUnsafe()
       // assert
       r.status shouldBe statusProvided
     }
@@ -65,7 +65,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
-      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(pocStatus = statusProvided)).runSyncUnsafe()
+      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(pocStatus = statusProvided), tenant).runSyncUnsafe()
       // assert
       r.status shouldBe statusProvided
     }
@@ -87,7 +87,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       infoProvider
         .infoToGoClient(poc, statusAndPW)
         .onErrorHandle {
-          case PocCreationError(state) =>
+          case PocCreationError(state, _) =>
             state.status shouldBe errorState
         }.runSyncUnsafe()
     }
@@ -98,12 +98,12 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val errorState =
         pocStatus.copy(errorMessage = Some("an error occurred when providing info to certify api; missing scheme"))
 
-      assertThrows[PocCreationError](infoProvider.infoToCertifyAPI(poc, statusAndPW).runSyncUnsafe())
+      assertThrows[PocCreationError](infoProvider.infoToCertifyAPI(poc, statusAndPW, tenant).runSyncUnsafe())
       //test the same in a different way
       val r = infoProvider
-        .infoToCertifyAPI(poc, statusAndPW)
+        .infoToCertifyAPI(poc, statusAndPW, tenant)
         .onErrorHandle {
-          case PocCreationError(state) =>
+          case PocCreationError(state, _) =>
             state.status shouldBe errorState
         }.runSyncUnsafe()
     }

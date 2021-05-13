@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.FlywayProvider
 import com.ubirch.models.auth.Base64String
+import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keyhash.KeyHashVerifierService
 import com.ubirch.services.poc.PocCreationLoop
@@ -72,6 +73,7 @@ class Service @Inject() (
     sys.addShutdownHook {
       logger.info("Shutdown of poc creation loop service")
       pocCreation.cancel()
+      SttpResources.monixBackend.foreach(_.close())
     }
 
     val cd = new CountDownLatch(1)
@@ -81,8 +83,7 @@ class Service @Inject() (
 }
 
 object Service extends Boot(List(new Binder)) {
-  def main(args: Array[String]): Unit =
-    * {
-      get[Service].start()
-    }
+  def main(args: Array[String]): Unit = * {
+    get[Service].start()
+  }
 }

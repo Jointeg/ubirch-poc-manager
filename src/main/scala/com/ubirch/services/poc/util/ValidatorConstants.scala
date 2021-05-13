@@ -8,6 +8,12 @@ object ValidatorConstants {
   val phoneRegex: Regex =
     raw"(([+][(]?[0-9]{1,3}[)]?)|([(]?[0-9]{4}[)]?))\s*[)]?[-\s]?[(]?[0-9]{1,3}[)]?([-\s]?[0-9]{3})([-\s]?[0-9]{3,4})".r
 
+  val pocNameRegex: Regex =
+    "^(?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+([ _.@-](?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+)*$".r
+
+  def pocNameValidationError(header: String) =
+    s"column $header must contain a valid poc name"
+
   def phoneValidationError(header: String) =
     s"column $header must contain a valid phone number e.g. +46-498-313789"
 

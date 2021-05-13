@@ -44,7 +44,7 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
         createResponse(r)
 
       case Failure(ex: HeaderCsvException) =>
-        Task(Left(ex.errorMsg))
+        Task(Left(ex.message))
 
       case Failure(ex: Throwable) =>
         Task(Left(s"something unexpected went wrong ${ex.getMessage}"))

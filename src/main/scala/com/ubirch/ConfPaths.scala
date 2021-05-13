@@ -50,7 +50,8 @@ object ConfPaths {
   trait ServicesConfPaths {
     final val DATA_SCHEMA_GROUP_IDS = "system.services.dataSchemaGroupIds"
     //urls and tokens
-    final val THING_API_URL = "system.services.thingApiURL"
+    final val THING_API_URL_CREATE_DEVICE = "system.services.thingApiURLCreateDevice"
+    final val THING_API_URL_GET_INFO = "system.services.thingApiURLGetInfo"
     final val CERT_MANAGER_URL = "system.services.certManagerURL"
     final val CERTIFY_API_URL = "system.services.certifyApiURL"
     final val CERTIFY_API_TOKEN = "system.services.certifyApiToken"

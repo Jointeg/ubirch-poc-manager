@@ -22,10 +22,10 @@ trait CsvPocBatchParserTrait {
 
 }
 
-sealed trait CsvException extends Exception
+abstract class CsvException(message: String) extends Exception(message)
 
-case class HeaderCsvException(errorMsg: String) extends CsvException
-case class EmptyCsvException(errorMsg: String) extends CsvException
+case class HeaderCsvException(message: String) extends CsvException(message)
+case class EmptyCsvException(message: String) extends CsvException(message)
 
 class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
 
@@ -102,7 +102,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
     tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPoc.externalId),
-      validateString(pocName, csvPoc.pocName),
+      validatePocName(pocName, csvPoc.pocName),
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
