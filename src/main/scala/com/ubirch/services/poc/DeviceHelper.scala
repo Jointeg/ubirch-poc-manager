@@ -52,7 +52,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
 
   private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Boolean]] = {
     val deviceId = pocAndStatus.poc.getDeviceId
-    users.getUser(UserName(deviceId))
+    users.getUser(UserName(deviceId), DeviceKeycloak)
       .flatMap {
         case Some(user) =>
           groups.addMemberToGroup(GroupId(groupId), user, DeviceKeycloak)
