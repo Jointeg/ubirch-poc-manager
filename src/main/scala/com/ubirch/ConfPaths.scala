@@ -48,7 +48,6 @@ object ConfPaths {
   }
 
   trait ServicesConfPaths {
-    final val DATA_SCHEMA_GROUP_IDS = "system.services.dataSchemaGroupIds"
     final val DATA_SCHEMA_GROUP_MAP = "system.services.dataSchemaGroupMap"
     //urls and tokens
     final val THING_API_URL_CREATE_DEVICE = "system.services.thingApiURLCreateDevice"

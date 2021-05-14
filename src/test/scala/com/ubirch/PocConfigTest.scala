@@ -12,15 +12,4 @@ class PocConfigTest extends UnitTestBase {
       }
     }
   }
-
-  "dataSchemaGroupIds" should {
-    "success to load as List[String]" in {
-      withInjector { injector =>
-        val pocConfig = injector.get[PocConfig]
-        val expected = List("data-schema-group1", "data-scheme-group2", "certification-vaccination", "data-schema-id")
-        pocConfig.dataSchemaGroupIds shouldBe expected
-      }
-    }
-  }
-
 }
