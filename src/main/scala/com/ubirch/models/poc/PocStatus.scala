@@ -17,6 +17,8 @@ case class PocStatus(
   deviceGroupCreated: Boolean = false,
   deviceGroupRoleAssigned: Boolean = false,
   deviceCreated: Boolean = false,
+  assignedDataSchemaGroup: Boolean = false,
+  assignedDeviceGroup: Boolean = false,
   clientCertRequired: Boolean,
   clientCertCreated: Option[Boolean],
   clientCertProvided: Option[Boolean],

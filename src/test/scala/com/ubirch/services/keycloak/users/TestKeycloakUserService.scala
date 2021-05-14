@@ -1,10 +1,11 @@
 package com.ubirch.services.keycloak.users
-import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists }
-import com.ubirch.models.user.UserName
+import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists, UserCreationError, UserException }
+import com.ubirch.models.user.{ UserId, UserName }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
 import monix.eval.Task
-import org.keycloak.representations.idm.UserRepresentation
+import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
 
+import java.util.UUID
 import javax.inject.Singleton
 import scala.collection.mutable
 
@@ -15,7 +16,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
 
   override def createUser(
     createKeycloakUser: CreateKeycloakUser,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserAlreadyExists, Unit]] =
+    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserException, UserId]] =
     keycloakInstance match {
       case UsersKeycloak  => createIfNotExists(keycloakUserDatastore, createKeycloakUser)
       case DeviceKeycloak => createIfNotExists(keycloakDeviceDatastore, createKeycloakUser)
@@ -27,7 +28,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
         case Some(_) => Left(UserAlreadyExists(createKeycloakUser.userName))
         case None =>
           datastore += createKeycloakUser.userName
-          Right(())
+          Right(UserId(UUID.randomUUID()))
       }
     }
   }
@@ -64,4 +65,11 @@ class TestKeycloakUserService() extends KeycloakUserService {
           userRepresentation
         })
     }
+
+  override def addGroupToUser(
+    id: String,
+    groupRepresentation: GroupRepresentation,
+    keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
+    Task { Right(()) }
+
 }

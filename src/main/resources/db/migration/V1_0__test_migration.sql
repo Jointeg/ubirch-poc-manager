@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_status_table
     device_group_created          boolean         NOT NULL,
     device_group_role_assigned    boolean         NOT NULL,
     device_created                boolean         NOT NULL,
+    assigned_data_schema_group    boolean         NOT NULL,
+    assigned_device_group         boolean         NOT NULL,
     client_cert_required          boolean         NOT NULL,
     client_cert_created           boolean,
     client_cert_provided          boolean,

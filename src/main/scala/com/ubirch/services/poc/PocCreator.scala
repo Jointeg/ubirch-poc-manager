@@ -30,6 +30,7 @@ object PocCreator {
 class PocCreatorImpl @Inject() (
   //  certHandler: CertHandler,
   deviceCreator: DeviceCreator,
+  deviceHelper: DeviceHelper,
   informationProvider: InformationProvider,
   keycloakHelper: KeycloakHelper,
   pocTable: PocRepository,
@@ -41,6 +42,7 @@ class PocCreatorImpl @Inject() (
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   import deviceCreator._
+  import deviceHelper._
   import informationProvider._
   import keycloakHelper._
 
@@ -84,20 +86,21 @@ class PocCreatorImpl @Inject() (
   //Todo: create and provide client certs
   //Todo: download and store logo
   private def process(pocAndStatus: PocAndStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
-    logger.info(s"starting to create poc with id ${pocAndStatus.poc.id}")
+    logger.info(s"starting to process poc with id ${pocAndStatus.poc.id}")
     val creationResult = for {
       pocAndStatus1 <- doUserRealmRelatedTasks(pocAndStatus, tenant)
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
-      statusAndPW1 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
-      statusAndPW2 <- infoToGoClient(pocAndStatus2.poc, statusAndPW1)
-      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW2, tenant)
+      statusAndPW3 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
+      status4 <- addGroupsToDevice(pocAndStatus2.poc, statusAndPW3.pocStatus)
+      statusAndPW5 <- infoToGoClient(pocAndStatus2.poc, statusAndPW3.copy(pocStatus = status4))
+      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW5, tenant)
     } yield completeStatus
 
     (for {
       completePocAndStatus <- creationResult
       newPoc = completePocAndStatus.poc.copy(status = Completed)
       _ <- pocTable.updatePoc(newPoc)
-      _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status)
+      _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status.copy(errorMessage = None))
     } yield {
       logger.info(s"finished to create poc with id ${pocAndStatus.poc.id}")
       Right(completePocAndStatus.status)

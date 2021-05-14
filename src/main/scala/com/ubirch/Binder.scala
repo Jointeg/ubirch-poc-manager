@@ -16,9 +16,9 @@ import com.ubirch.services.keycloak.auth.{ AuthClient, KeycloakAuthzClient }
 import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, KeycloakGroupService }
 import com.ubirch.services.keycloak.roles.{ DefaultKeycloakRolesService, KeycloakRolesService }
 import com.ubirch.services.keycloak.users.{
+  DefaultKeycloakUserService,
   KeycloakUserPollingService,
   KeycloakUserService,
-  KeycloakUserServiceImpl,
   UserPollingService
 }
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
@@ -84,7 +84,7 @@ class Binder extends AbstractModule {
     bind(classOf[KeycloakConnector]).to(classOf[DefaultKeycloakConnector])
 
   def KeycloakUserService: ScopedBindingBuilder =
-    bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
+    bind(classOf[KeycloakUserService]).to(classOf[DefaultKeycloakUserService])
 
   def KeycloakRolesService: ScopedBindingBuilder =
     bind(classOf[KeycloakRolesService]).to(classOf[DefaultKeycloakRolesService])
@@ -133,6 +133,8 @@ class Binder extends AbstractModule {
 
   def DeviceCreator: ScopedBindingBuilder = bind(classOf[DeviceCreator]).to(classOf[DeviceCreatorImpl])
 
+  def DeviceHelper: ScopedBindingBuilder = bind(classOf[DeviceHelper]).to(classOf[DeviceHelperImpl])
+
   def KeycloakHelper: ScopedBindingBuilder = bind(classOf[KeycloakHelper]).to(classOf[KeycloakHelperImpl])
 
   def InformationProvider: ScopedBindingBuilder =
@@ -176,6 +178,7 @@ class Binder extends AbstractModule {
     AESEncryption
     FlywayProvider
     DeviceCreator
+    DeviceHelper
     KeycloakHelper
     InformationProvider
     KeyHashVerifier
