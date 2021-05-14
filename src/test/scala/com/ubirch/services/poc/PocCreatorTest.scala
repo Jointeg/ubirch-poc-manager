@@ -61,10 +61,12 @@ class PocCreatorTest extends UnitTestBase {
         val pocTable = injector.get[PocRepositoryMock]
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
         val groups = injector.get[TestKeycloakGroupsService]
+        val users = injector.get[TestKeycloakUserService]
 
         //creating needed objects
         val (poc, pocStatus, tenant) = createPocTriple()
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, tenant)
+        createNeededDeviceUser(users, poc)
 
         //start process
         val result = await(loop.createPocs(), 5.seconds)
