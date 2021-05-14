@@ -4,9 +4,8 @@ import com.ubirch.ModelCreationHelper.dataSchemaGroupId
 import com.ubirch.models.keycloak.group._
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
-import java.util.UUID
 import javax.inject.Singleton
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.{ collectionAsScalaIterableConverter, seqAsJavaListConverter }
@@ -130,6 +129,13 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
       case _ =>
         Left("role adding error")
     })
+  }
+
+  def addMemberToGroup(
+    groupId: GroupId,
+    user: UserRepresentation,
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Boolean]] = {
+    Task(Right(true))
   }
 
   private def findChildGroupInDatastore(

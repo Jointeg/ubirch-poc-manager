@@ -1,9 +1,13 @@
 package com.ubirch.services.poc
 import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
-import com.ubirch.models.poc.{ Completed, PocStatus, Processing }
+import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Processing }
 import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserName }
+import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
+import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.poc.PocTestHelper._
 
 import java.util.UUID
@@ -21,12 +25,13 @@ class PocCreatorTest extends UnitTestBase {
         val pocTable = injector.get[PocRepositoryMock]
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
         val groups = injector.get[TestKeycloakGroupsService]
+        val users = injector.get[TestKeycloakUserService]
 
         //creating needed objects
         val (poc, pocStatus, tenant) = createPocTriple()
         val updatedTenant = createNeededTenantGroups(tenant, groups)
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, updatedTenant)
-
+        createNeededDeviceUser(users, poc)
         //start process
         val result = await(loop.createPocs(), 5.seconds)
 
@@ -134,6 +139,12 @@ class PocCreatorTest extends UnitTestBase {
       certifyApiProvided = true,
       None
     )
+  }
+
+  private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
+    users.createUser(
+      CreateKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
+      DeviceKeycloak).runSyncUnsafe()
   }
 
 }

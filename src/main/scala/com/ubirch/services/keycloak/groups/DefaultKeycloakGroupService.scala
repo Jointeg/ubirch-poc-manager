@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.group._
 import com.ubirch.services.{ CertifyKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
@@ -148,6 +148,26 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         .add(List(role).asJava)))
       .onErrorHandle { ex: Throwable =>
         val errorMsg = s"adding role ${role.getName} to group with id $groupId failed, due to ${ex.getMessage}"
+        logger.error(errorMsg, ex)
+        Left(errorMsg)
+      }
+  }
+
+  override def addMemberToGroup(
+    groupId: GroupId,
+    user: UserRepresentation,
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Boolean]] = {
+
+    Task(
+      Right(keycloakConnector
+        .getKeycloak(keycloakInstance)
+        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .groups()
+        .group(groupId.value)
+        .members()
+        .add(user)))
+      .onErrorHandle { ex: Throwable =>
+        val errorMsg = s"adding member ${user.getUsername} to group with id $groupId failed, due to ${ex.getMessage}"
         logger.error(errorMsg, ex)
         Left(errorMsg)
       }
