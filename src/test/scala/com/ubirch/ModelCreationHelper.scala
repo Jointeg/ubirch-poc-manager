@@ -62,7 +62,6 @@ object ModelCreationHelper {
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
       pocId,
-      validDataSchemaGroup = true,
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,

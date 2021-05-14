@@ -2,7 +2,10 @@ package com.ubirch.services.poc
 
 import cats.data.Validated.{ Invalid, Valid }
 import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
+import com.google.inject.Inject
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
@@ -15,7 +18,7 @@ import java.util.UUID
 import scala.io.Source
 import scala.util.{ Failure, Success }
 
-trait CsvPocBatchParserTrait {
+trait CsvHandlerTrait {
 
   @throws[HeaderCsvException]
   def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]]
@@ -27,7 +30,14 @@ abstract class CsvException(message: String) extends Exception(message)
 case class HeaderCsvException(message: String) extends CsvException(message)
 case class EmptyCsvException(message: String) extends CsvException(message)
 
-class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
+class CsvHandlerImp @Inject() (conf: Config) extends CsvHandlerTrait with LazyLogging {
+
+  private val dataSchemaGroupIds =
+    conf
+      .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
+      .split(comma)
+      .map(_.trim)
+      .toList
 
   @throws[HeaderCsvException]
   override def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]] = {
@@ -108,7 +118,7 @@ class CsvPocBatchParserImp extends CsvPocBatchParserTrait with LazyLogging {
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
-      validateString(dataSchemaId, csvPoc.dataSchemaId),
+      validateListContainsString(dataSchemaId, csvPoc.dataSchemaId, dataSchemaGroupIds),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
     ).mapN {

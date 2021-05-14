@@ -4,12 +4,8 @@ import org.joda.time.DateTime
 
 import java.util.UUID
 
-/**
-  * @param validDataSchemaGroup MVP1: if dataSchemaGroup is not valid, don't start creating PoC
-  */
 case class PocStatus(
   pocId: UUID,
-  validDataSchemaGroup: Boolean,
   certifyRoleCreated: Boolean = false,
   certifyGroupCreated: Boolean = false,
   certifyGroupRoleAssigned: Boolean = false,
@@ -33,7 +29,6 @@ case class PocStatus(
 ) {
   override def toString: String = {
     s"pocId:$pocId\n" +
-      s"validDataSchemaGroup:$validDataSchemaGroup\n" +
       s"certifyRoleCreated:$certifyRoleCreated\n" +
       s"certifyGroupCreated:$certifyGroupCreated\n" +
       s"certifyGroupRoleAssigned:$certifyGroupRoleAssigned\n" +

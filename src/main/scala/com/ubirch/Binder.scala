@@ -120,7 +120,9 @@ class Binder extends AbstractModule {
   def KeyHashVerifier: ScopedBindingBuilder =
     bind(classOf[KeyHashVerifierService]).to(classOf[DefaultKeyHashVerifier])
 
-  def PocCreatorService: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
+  def PocBatchHandler: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
+
+  def CsvHandler: ScopedBindingBuilder = bind(classOf[CsvHandlerTrait]).to(classOf[CsvHandlerImp])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
 
@@ -170,7 +172,8 @@ class Binder extends AbstractModule {
     UserPollingService
     QuillJdbcContext
     UserRepository
-    PocCreatorService
+    PocBatchHandler
+    CsvHandler
     PocRepository
     PocStatusRepository
     TenantRepository

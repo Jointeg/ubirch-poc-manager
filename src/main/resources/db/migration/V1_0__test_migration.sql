@@ -47,7 +47,6 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table
 CREATE TABLE IF NOT EXISTS poc_manager.poc_status_table
 (
     poc_id                        UUID            NOT NULL,
-    valid_data_schema_group       boolean         NOT NULL,
     certify_role_created          boolean         NOT NULL,
     certify_group_created         boolean         NOT NULL,
     certify_group_role_assigned   boolean         NOT NULL,
