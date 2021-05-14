@@ -4,12 +4,12 @@ import com.google.inject.Inject
 import com.ubirch.PocConfig
 import com.ubirch.models.keycloak.group.{ GroupId, GroupName, GroupNotFound }
 import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.user.UserName
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.PocCreator.throwError
 import monix.eval.Task
-import org.keycloak.representations.idm.GroupRepresentation
 
 trait DeviceHelper {
 
@@ -28,9 +28,11 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
     val status1 =
       addGroupByIdToDevice(groupId, PocAndStatus(poc, status))
         .map {
-          case Right(_) => status.copy(assignedDataSchemaGroup = true)
+          case Right(result) =>
+            if (result) status.copy(assignedDataSchemaGroup = true)
+            else throwError(PocAndStatus(poc, status), s"failed to add device to group $groupId")
           case Left(errorMsg) =>
-            throwError(PocAndStatus(poc, status), s"failed to add group ${poc.dataSchemaId} to device $errorMsg")
+            throwError(PocAndStatus(poc, status), s"failed to add device to group $groupId: $errorMsg")
         }
 
     for {
@@ -48,18 +50,16 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
     }
   }
 
-  private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Unit]] = {
+  private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Boolean]] = {
     val deviceId = pocAndStatus.poc.getDeviceId
-    groups
-      .findGroupById(GroupId(groupId), DeviceKeycloak)
+    users.getUser(UserName(deviceId), DeviceKeycloak)
       .flatMap {
-        case Right(group: GroupRepresentation) =>
-          users
-            .addGroupToUser(deviceId, group, DeviceKeycloak)
-        case Left(errorMsg) =>
+        case Some(user) =>
+          groups.addMemberToGroup(GroupId(groupId), user, DeviceKeycloak)
+        case None =>
           throwError(
             pocAndStatus,
-            s"couldn't find group by id $groupId to be added to device with id $deviceId; $errorMsg ")
+            s"couldn't find device $deviceId to add a group to it;  ")
       }
   }
 
