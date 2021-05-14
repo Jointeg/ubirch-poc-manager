@@ -10,9 +10,9 @@ import java.util.UUID
 case class PocStatus(
   pocId: UUID,
   validDataSchemaGroup: Boolean,
-  userRoleCreated: Boolean = false,
-  userGroupCreated: Boolean = false,
-  userGroupRoleAssigned: Boolean = false,
+  certifyRoleCreated: Boolean = false,
+  certifyGroupCreated: Boolean = false,
+  certifyGroupRoleAssigned: Boolean = false,
   deviceRoleCreated: Boolean = false,
   deviceGroupCreated: Boolean = false,
   deviceGroupRoleAssigned: Boolean = false,
@@ -34,9 +34,9 @@ case class PocStatus(
   override def toString: String = {
     s"pocId:$pocId\n" +
       s"validDataSchemaGroup:$validDataSchemaGroup\n" +
-      s"userRoleCreated:$userRoleCreated\n" +
-      s"userGroupCreated:$userGroupCreated\n" +
-      s"userGroupRoleAssigned:$userGroupRoleAssigned\n" +
+      s"certifyRoleCreated:$certifyRoleCreated\n" +
+      s"certifyGroupCreated:$certifyGroupCreated\n" +
+      s"certifyGroupRoleAssigned:$certifyGroupRoleAssigned\n" +
       s"deviceRoleCreated:$deviceRoleCreated\n" +
       s"deviceGroupCreated:$deviceGroupCreated\n" +
       s"deviceGroupRoleAssigned:$deviceGroupRoleAssigned\n" +

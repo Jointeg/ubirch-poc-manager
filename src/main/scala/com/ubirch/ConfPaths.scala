@@ -20,19 +20,19 @@ object ConfPaths {
   }
 
   trait KeycloakPaths {
-    object UsersKeycloak {
-      final val SERVER_URL = "keycloak-users.server.url"
-      final val SERVER_REALM = "keycloak-users.server.realm"
-      final val USERNAME = "keycloak-users.server.username"
-      final val PASSWORD = "keycloak-users.server.password"
-      final val CLIENT_ID = "keycloak-users.server.clientId"
-      final val REALM = "keycloak-users.realm"
-      final val CLIENT_CONFIG = "keycloak-users.client.config"
-      final val CLIENT_ADMIN_USER = "keycloak-users.client.adminUsername"
-      final val CLIENT_ADMIN_PASSWORD = "keycloak-users.client.adminPassword"
-      final val USER_POLLING_INTERVAL = "keycloak-users.polling.interval"
-      final val CONFIG_URL = "keycloak-users.tokenVerification.configURL"
-      final val KID = "keycloak-users.tokenVerification.kid"
+    object CertifyKeycloak {
+      final val SERVER_URL = "keycloak-certify.server.url"
+      final val SERVER_REALM = "keycloak-certify.server.realm"
+      final val USERNAME = "keycloak-certify.server.username"
+      final val PASSWORD = "keycloak-certify.server.password"
+      final val CLIENT_ID = "keycloak-certify.server.clientId"
+      final val REALM = "keycloak-certify.realm"
+      final val CLIENT_CONFIG = "keycloak-certify.client.config"
+      final val CLIENT_ADMIN_USER = "keycloak-certify.client.adminUsername"
+      final val CLIENT_ADMIN_PASSWORD = "keycloak-certify.client.adminPassword"
+      final val USER_POLLING_INTERVAL = "keycloak-certify.polling.interval"
+      final val CONFIG_URL = "keycloak-certify.tokenVerification.configURL"
+      final val KID = "keycloak-certify.tokenVerification.kid"
     }
 
     object DeviceKeycloak {

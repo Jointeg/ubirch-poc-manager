@@ -21,7 +21,7 @@ case class Poc(
   manager: PocManager,
   roleName: String,
   deviceGroupId: Option[String] = None,
-  userGroupId: Option[String] = None,
+  certifyGroupId: Option[String] = None,
   deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,

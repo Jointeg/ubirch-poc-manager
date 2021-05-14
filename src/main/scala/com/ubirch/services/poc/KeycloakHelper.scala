@@ -8,7 +8,7 @@ import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import PocCreator.throwError
 
@@ -20,11 +20,11 @@ trait KeycloakHelper {
 
   def assignDeviceRealmRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
-  def createUserRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
+  def createCertifyRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
-  def createUserGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+  def createCertifyGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
-  def assignUserRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+  def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
 }
 
@@ -37,47 +37,47 @@ class KeycloakHelperImpl @Inject() (
   with LazyLogging {
 
   @throws[PocCreationError]
-  override def createUserRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
-    if (pocAndStatus.status.userRoleCreated) Task(pocAndStatus)
+  override def createCertifyRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    if (pocAndStatus.status.certifyRoleCreated) Task(pocAndStatus)
     else {
-      roles.createNewRole(CreateKeycloakRole(RoleName(pocAndStatus.poc.roleName)), UsersKeycloak)
+      roles.createNewRole(CreateKeycloakRole(RoleName(pocAndStatus.poc.roleName)), CertifyKeycloak)
         .map {
-          case Right(_) => pocAndStatus.copy(status = pocAndStatus.status.copy(userRoleCreated = true))
+          case Right(_) => pocAndStatus.copy(status = pocAndStatus.status.copy(certifyRoleCreated = true))
           case Left(_: RoleAlreadyExists) =>
-            pocAndStatus.copy(status = pocAndStatus.status.copy(userRoleCreated = true))
+            pocAndStatus.copy(status = pocAndStatus.status.copy(certifyRoleCreated = true))
           case Left(l: RoleCreationException) =>
-            throwError(pocAndStatus, s"userRealmRole already exists :${l.roleName}")
+            throwError(pocAndStatus, s"certifyRealmRole already exists :${l.roleName}")
         }
     }
   }
 
   @throws[PocCreationError]
-  override def createUserGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
-    if (pocAndStatus.status.userGroupCreated) Task(pocAndStatus)
+  override def createCertifyGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+    if (pocAndStatus.status.certifyGroupCreated) Task(pocAndStatus)
     else {
-      addSubGroup(pocAndStatus, tenant.userGroupId.value, UsersKeycloak)
+      addSubGroup(pocAndStatus, tenant.certifyGroupId.value, CertifyKeycloak)
         .map { groupId =>
-          val updatedPoc = pocAndStatus.poc.copy(userGroupId = Some(groupId.value))
-          val updatedStatus = pocAndStatus.status.copy(userGroupCreated = true)
+          val updatedPoc = pocAndStatus.poc.copy(certifyGroupId = Some(groupId.value))
+          val updatedStatus = pocAndStatus.status.copy(certifyGroupCreated = true)
           pocAndStatus.copy(poc = updatedPoc, status = updatedStatus)
         }
     }
   }
 
   @throws[PocCreationError]
-  override def assignUserRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+  override def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     val poc = pocAndStatus.poc
     val status = pocAndStatus.status
 
-    if (status.userGroupRoleAssigned) Task(pocAndStatus)
-    else if (poc.userGroupId.isEmpty)
+    if (status.certifyGroupRoleAssigned) Task(pocAndStatus)
+    else if (poc.certifyGroupId.isEmpty)
       throwError(
         pocAndStatus,
         s"groupId for poc with id ${poc.id} is missing, though poc status says it was already created")
     else {
-      findRoleAndAddToGroup(poc, poc.userGroupId.get, status, UsersKeycloak)
+      findRoleAndAddToGroup(poc, poc.certifyGroupId.get, status, CertifyKeycloak)
         .map {
-          case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(userGroupRoleAssigned = true))
+          case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(certifyGroupRoleAssigned = true))
           case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
         }
     }

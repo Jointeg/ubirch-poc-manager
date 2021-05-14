@@ -13,7 +13,7 @@ import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.{ headerLine, pocName }
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat
@@ -444,7 +444,7 @@ class TenantAdminControllerSpec
     super.beforeAll()
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init(UsersKeycloak, DeviceKeycloak), 2.seconds)
+      await(pool.init(CertifyKeycloak, DeviceKeycloak), 2.seconds)
 
       lazy val tenantAdminController = injector.get[TenantAdminController]
       addServlet(tenantAdminController, "/*")

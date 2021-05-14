@@ -8,13 +8,13 @@ services:
     networks:
       - keycloak_users_network
 
-  keycloak-users:
+  keycloak-certify:
     image: quay.io/keycloak/keycloak:11.0.3
-    container_name: keycloak-users
+    container_name: keycloak-certify
     environment:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: admin
-      KEYCLOAK_IMPORT: '/tmp/users-export.json'
+      KEYCLOAK_IMPORT: '/tmp/certify-export.json'
       JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
     ports:
       - 8080:8080

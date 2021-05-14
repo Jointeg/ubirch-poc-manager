@@ -44,7 +44,7 @@ class PocStatusTableTest extends E2ETestBase {
       withInjector { injector =>
         val repo = injector.get[PocStatusRepository]
         val pocStatus = createPocStatus()
-        val updatedStatus = pocStatus.copy(userRoleCreated = true)
+        val updatedStatus = pocStatus.copy(certifyRoleCreated = true)
 
         val res1 = for {
           _ <- repo.createPocStatus(pocStatus)
