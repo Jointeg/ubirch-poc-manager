@@ -1,17 +1,21 @@
 package com.ubirch.services.poc
 
 import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
+import cats.implicits.{
+  catsSyntaxTuple10Semigroupal,
+  catsSyntaxTuple2Semigroupal,
+  catsSyntaxTuple4Semigroupal,
+  catsSyntaxTuple8Semigroupal
+}
 import com.google.inject.Inject
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.ServicesConfPaths
+import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants._
+import com.ubirch.services.poc.util.CsvConstants.{ dataSchemaId, _ }
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
@@ -30,14 +34,7 @@ abstract class CsvException(message: String) extends Exception(message)
 case class HeaderCsvException(message: String) extends CsvException(message)
 case class EmptyCsvException(message: String) extends CsvException(message)
 
-class CsvHandlerImp @Inject() (conf: Config) extends CsvHandlerTrait with LazyLogging {
-
-  private val dataSchemaGroupIds =
-    conf
-      .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
-      .split(comma)
-      .map(_.trim)
-      .toList
+class CsvHandlerImp @Inject() (pocConfig: PocConfig) extends CsvHandlerTrait with LazyLogging {
 
   @throws[HeaderCsvException]
   override def parsePocCreationList(csv: String, tenant: Tenant): Seq[Either[String, (Poc, String)]] = {
@@ -118,7 +115,7 @@ class CsvHandlerImp @Inject() (conf: Config) extends CsvHandlerTrait with LazyLo
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
-      validateListContainsString(dataSchemaId, csvPoc.dataSchemaId, dataSchemaGroupIds),
+      validateMapContainsStringKey(dataSchemaId, csvPoc.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
     ).mapN {
