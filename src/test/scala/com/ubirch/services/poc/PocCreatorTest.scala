@@ -70,7 +70,7 @@ class PocCreatorTest extends UnitTestBase {
 
         //pocStatus should be updated correctly
         val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
-        val expected = pocStatus.copy(userRoleCreated = true, errorMessage = Some("couldn't find parentGroup"))
+        val expected = pocStatus.copy(certifyRoleCreated = true, errorMessage = Some("couldn't find parentGroup"))
         status shouldBe expected
 
         //poc.status should be set to Processing
@@ -89,9 +89,9 @@ class PocCreatorTest extends UnitTestBase {
 
         val status2 = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         val expected2 = pocStatus.copy(
-          userRoleCreated = true,
-          userGroupCreated = true,
-          userGroupRoleAssigned = true,
+          certifyRoleCreated = true,
+          certifyGroupCreated = true,
+          certifyGroupRoleAssigned = true,
           deviceRoleCreated = true,
           deviceGroupCreated = true,
           deviceGroupRoleAssigned = true,
@@ -115,9 +115,9 @@ class PocCreatorTest extends UnitTestBase {
 
     PocStatus(
       UUID.randomUUID(),
-      userRoleCreated = true,
-      userGroupCreated = true,
-      userGroupRoleAssigned = true,
+      certifyRoleCreated = true,
+      certifyGroupCreated = true,
+      certifyGroupRoleAssigned = true,
       deviceRoleCreated = true,
       deviceGroupCreated = true,
       deviceGroupRoleAssigned = true,

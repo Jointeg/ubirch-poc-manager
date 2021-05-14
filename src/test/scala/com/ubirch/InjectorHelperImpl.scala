@@ -5,7 +5,7 @@ import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
 import com.ubirch.models.tenant.TenantName
 import com.ubirch.services.jwt.{ DefaultPublicKeyPoolService, PublicKeyDiscoveryService, TokenCreationService }
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
 
@@ -18,11 +18,11 @@ class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscov
 
   override def getKeyFromDiscoveryService(keycloakInstance: KeycloakInstance, kid: String): Task[Option[Key]] =
     keycloakInstance match {
-      case UsersKeycloak =>
+      case CertifyKeycloak =>
         Task {
           kid match {
-            case "6dMHOUfu7v6howP2WH5bkp-j9UgUYdyEQbWJp8cb8IY" => Some(UsersKeyPairProvider.privKey.getPublicKey)
-            case _                                             => throw new Exception("Check users keycloak kid!")
+            case "6dMHOUfu7v6howP2WH5bkp-j9UgUYdyEQbWJp8cb8IY" => Some(CertifyKeyPairProvider.privKey.getPublicKey)
+            case _                                             => throw new Exception("Check certify keycloak kid!")
           }
         }
       case DeviceKeycloak =>
@@ -35,7 +35,7 @@ class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscov
     }
 }
 
-object UsersKeyPairProvider extends {
+object CertifyKeyPairProvider extends {
   val privKey: PrivKey = GeneratorKeyFactory.getPrivKey(Curve.PRIME256V1)
 }
 
@@ -49,7 +49,7 @@ case class FakeToken(value: String) {
 
 object FakeToken {
 
-  val usersHeader: String =
+  val certifyHeader: String =
     """
       |{
       |  "alg": "ES256",
@@ -349,8 +349,8 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
 
   def fakeToken(header: String, token: String, keycloakInstance: KeycloakInstance): FakeToken = {
     val privKey = keycloakInstance match {
-      case UsersKeycloak  => UsersKeyPairProvider.privKey
-      case DeviceKeycloak => DeviceKeyPairProvider.privKey
+      case CertifyKeycloak => CertifyKeyPairProvider.privKey
+      case DeviceKeycloak  => DeviceKeyPairProvider.privKey
     }
     FakeToken(
       tokenCreationService
@@ -359,13 +359,14 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
     )
   }
 
-  val user: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.user, UsersKeycloak)
+  val user: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.user, CertifyKeycloak)
   def userOnDevicesKeycloak(tenantName: TenantName): FakeToken =
-    fakeToken(FakeToken.usersHeader, FakeToken.tenantAdmin(tenantName), UsersKeycloak)
-  val superAdmin: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.superAdmin, UsersKeycloak)
+    fakeToken(FakeToken.certifyHeader, FakeToken.tenantAdmin(tenantName), CertifyKeycloak)
+  val superAdmin: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.superAdmin, CertifyKeycloak)
   val superAdminOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
-  val userWithDoubleRoles: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.userWithDoubleRoles, UsersKeycloak)
-  val userNoPrincipal: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.userNoPrincipal, UsersKeycloak)
-  val admin: FakeToken = fakeToken(FakeToken.usersHeader, FakeToken.admin, UsersKeycloak)
+  val userWithDoubleRoles: FakeToken =
+    fakeToken(FakeToken.certifyHeader, FakeToken.userWithDoubleRoles, CertifyKeycloak)
+  val userNoPrincipal: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.userNoPrincipal, CertifyKeycloak)
+  val admin: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.admin, CertifyKeycloak)
 
 }

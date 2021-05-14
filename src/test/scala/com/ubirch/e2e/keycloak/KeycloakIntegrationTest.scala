@@ -10,7 +10,7 @@ import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import org.keycloak.representations.idm.GroupRepresentation
 import org.scalactic.StringNormalizations._
 
@@ -341,7 +341,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
-          res1 <- keycloakUserService.createUser(newKeycloakUser, UsersKeycloak)
+          res1 <- keycloakUserService.createUser(newKeycloakUser, CertifyKeycloak)
           res2 <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
         } yield (res1, res2)
 
@@ -357,10 +357,10 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
-          _ <- keycloakUserService.createUser(newKeycloakUser, UsersKeycloak)
+          _ <- keycloakUserService.createUser(newKeycloakUser, CertifyKeycloak)
           _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
-          _ <- keycloakUserService.deleteUser(newKeycloakUser.userName, UsersKeycloak)
-          deletedUser <- keycloakUserService.getUser(newKeycloakUser.userName, UsersKeycloak)
+          _ <- keycloakUserService.deleteUser(newKeycloakUser.userName, CertifyKeycloak)
+          deletedUser <- keycloakUserService.getUser(newKeycloakUser.userName, CertifyKeycloak)
           existingUser <- keycloakUserService.getUser(newKeycloakUser.userName, DeviceKeycloak)
         } yield (deletedUser, existingUser)
 

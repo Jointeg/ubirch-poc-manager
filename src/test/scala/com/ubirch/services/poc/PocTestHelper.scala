@@ -10,9 +10,9 @@ import com.ubirch.db.tables.{
 }
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantUserGroupId }
+import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.execution.Scheduler.Implicits.global
 import org.scalatest.Assertion
@@ -32,10 +32,10 @@ object PocTestHelper extends Awaits {
   def createNeededTenantGroups(tenant: Tenant, groups: TestKeycloakGroupsService): Tenant = {
     val tenantGroup = CreateKeycloakGroup(GroupName(TENANT_GROUP_PREFIX + tenant.tenantName.value))
     val deviceGroup: GroupId = await(groups.createGroup(tenantGroup, DeviceKeycloak), 1.seconds).right.get
-    val userGroup: GroupId = await(groups.createGroup(tenantGroup, UsersKeycloak), 1.seconds).right.get
+    val userGroup: GroupId = await(groups.createGroup(tenantGroup, CertifyKeycloak), 1.seconds).right.get
     tenant.copy(
       deviceGroupId = TenantDeviceGroupId(deviceGroup.value),
-      userGroupId = TenantUserGroupId(userGroup.value))
+      certifyGroupId = TenantCertifyGroupId(userGroup.value))
   }
 
   def addPocTripleToRepository(

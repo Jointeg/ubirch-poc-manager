@@ -20,7 +20,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 
-    val state1 =
+    val status1 =
       addGroupByNameToDevice(poc.dataSchemaId, PocAndStatus(poc, status))
         .map {
           case Right(_) => status.copy(assignedDataSchemaGroup = true)
@@ -33,13 +33,13 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
     val pocDeviceGroup = poc.deviceGroupId.get
 
     for {
-      state2 <- state1
-      success2 <- addGroupByIdToDevice(pocDeviceGroup, PocAndStatus(poc, state2))
+      status2 <- status1
+      success <- addGroupByIdToDevice(pocDeviceGroup, PocAndStatus(poc, status2))
     } yield {
-      success2 match {
-        case Right(_) => state2.copy(assignedDeviceGroup = true)
+      success match {
+        case Right(_) => status2.copy(assignedDeviceGroup = true)
         case Left(errorMsg) =>
-          throwError(PocAndStatus(poc, state2), s"failed to add group $pocDeviceGroup to device $errorMsg")
+          throwError(PocAndStatus(poc, status2), s"failed to add group $pocDeviceGroup to device $errorMsg")
       }
     }
   }

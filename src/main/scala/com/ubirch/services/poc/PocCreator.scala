@@ -88,7 +88,7 @@ class PocCreatorImpl @Inject() (
   private def process(pocAndStatus: PocAndStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
     logger.info(s"starting to process poc with id ${pocAndStatus.poc.id}")
     val creationResult = for {
-      pocAndStatus1 <- doUserRealmRelatedTasks(pocAndStatus, tenant)
+      pocAndStatus1 <- doCertifyRealmRelatedTasks(pocAndStatus, tenant)
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
       statusAndPW3 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
       status4 <- addGroupsToDevice(pocAndStatus2.poc, statusAndPW3.pocStatus)
@@ -125,11 +125,11 @@ class PocCreatorImpl @Inject() (
     } yield pocAndStatusFinal
   }
 
-  private def doUserRealmRelatedTasks(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+  private def doCertifyRealmRelatedTasks(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     for {
-      pocAndStatus1 <- createUserRole(pocAndStatus)
-      pocAndStatus2 <- createUserGroup(pocAndStatus1, tenant)
-      pocAndStatusFinal <- assignUserRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatus1 <- createCertifyRole(pocAndStatus)
+      pocAndStatus2 <- createCertifyGroup(pocAndStatus1, tenant)
+      pocAndStatusFinal <- assignCertifyRoleToGroup(pocAndStatus2, tenant)
     } yield pocAndStatusFinal
   }
 

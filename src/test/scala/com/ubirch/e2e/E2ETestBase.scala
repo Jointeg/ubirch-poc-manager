@@ -4,10 +4,10 @@ import com.typesafe.scalalogging.StrictLogging
 import com.ubirch._
 import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.{
+  CertifyKeycloakConnector,
   DeviceKeycloakConnector,
-  KeycloakDeviceConfig,
-  KeycloakUsersConfig,
-  UsersKeycloakConnector
+  KeycloakCertifyConfig,
+  KeycloakDeviceConfig
 }
 import org.flywaydb.core.Flyway
 import org.scalatest.{ EitherValues, OptionValues }
@@ -48,22 +48,22 @@ trait E2ETestBase
   }
 
   private def performKeycloakCleanup(injector: E2EInjectorHelperImpl): Unit = {
-    val keycloakUsers = injector.get[UsersKeycloakConnector]
-    val keycloakUsersConfig = injector.get[KeycloakUsersConfig]
+    val keycloakUsers = injector.get[CertifyKeycloakConnector]
+    val keycloakCertifyConfig = injector.get[KeycloakCertifyConfig]
     val keycloakDevice = injector.get[DeviceKeycloakConnector]
     val keycloakDeviceConfig = injector.get[KeycloakDeviceConfig]
 
-    val keycloakUsersRealm = keycloakUsers.keycloak.realm(keycloakUsersConfig.realm)
+    val keycloakCertifyRealm = keycloakUsers.keycloak.realm(keycloakCertifyConfig.realm)
     val keycloakDeviceRealm = keycloakDevice.keycloak.realm(keycloakDeviceConfig.realm)
 
-    keycloakUsersRealm.users().list().asScala.foreach(user => keycloakUsersRealm.users().delete(user.getId))
+    keycloakCertifyRealm.users().list().asScala.foreach(user => keycloakCertifyRealm.users().delete(user.getId))
     keycloakDeviceRealm.users().list().asScala.foreach(user => keycloakDeviceRealm.users().delete(user.getId))
   }
 }
 
-object KeycloakUsersContainer {
+object KeycloakCertifyContainer {
   val container: KeycloakContainer =
-    KeycloakContainer.Def(mountExtension = true, realmExportFile = "users-export.json").start()
+    KeycloakContainer.Def(mountExtension = true, realmExportFile = "certify-export.json").start()
 }
 
 object KeycloakDeviceContainer {
