@@ -87,7 +87,7 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
         .get(id)
 
       if (user.groups().add(group)) {
-        Right()
+        Right(())
       } else {
         Left("adding group to user failed")
       }

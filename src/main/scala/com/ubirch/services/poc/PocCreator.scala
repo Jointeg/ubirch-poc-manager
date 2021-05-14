@@ -100,7 +100,7 @@ class PocCreatorImpl @Inject() (
       completePocAndStatus <- creationResult
       newPoc = completePocAndStatus.poc.copy(status = Completed)
       _ <- pocTable.updatePoc(newPoc)
-      _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status)
+      _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status.copy(errorMessage = None))
     } yield {
       logger.info(s"finished to create poc with id ${pocAndStatus.poc.id}")
       Right(completePocAndStatus.status)

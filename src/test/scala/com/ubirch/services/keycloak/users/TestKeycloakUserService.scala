@@ -70,6 +70,6 @@ class TestKeycloakUserService() extends KeycloakUserService {
     id: String,
     groupRepresentation: GroupRepresentation,
     keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
-    Task { Right() }
+    Task { Right(()) }
 
 }
