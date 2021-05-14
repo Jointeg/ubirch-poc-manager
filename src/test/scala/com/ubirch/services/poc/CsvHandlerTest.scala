@@ -1,7 +1,5 @@
 package com.ubirch.services.poc
 
-import com.typesafe.config.Config
-import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.{ PocConfig, TestBase }
 import com.ubirch.services.poc.util.CsvConstants.headerLine
@@ -13,9 +11,6 @@ import java.util.UUID
 class CsvHandlerTest extends TestBase {
 
   private val pocConfigMock = mock[PocConfig]
-  when(pocConfigMock.dataSchemaGroupIds).thenReturn(
-    List("dataSchemaGroups", "certification-vaccination")
-  )
   when(pocConfigMock.dataSchemaGroupMap).thenReturn(
     Map("dataSchemaGroups" -> "xxx", "certification-vaccination" -> "yyy")
   )
