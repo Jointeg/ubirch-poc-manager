@@ -32,7 +32,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   private val thingUrlCreateDevice: String = conf.getString(ServicesConfPaths.THING_API_URL_CREATE_DEVICE)
   private val thingUrlGetInfo: String = conf.getString(ServicesConfPaths.THING_API_URL_GET_INFO)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
-  private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc ${poc.pocName}"
+  private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc: ${poc.pocName}"
 
   @throws[PocCreationError]
   override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW] = {
@@ -127,7 +127,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     val body = DeviceRequestBody(
       poc.getDeviceId,
       deviceDescription(tenant, poc),
-      List(poc.dataSchemaId, tenant.deviceGroupId.value, poc.deviceGroupId.get)
+      List()
     )
     write[DeviceRequestBody](body)
   }
