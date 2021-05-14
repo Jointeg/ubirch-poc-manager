@@ -115,7 +115,6 @@ class PocCreatorTest extends UnitTestBase {
 
     PocStatus(
       UUID.randomUUID(),
-      validDataSchemaGroup = true,
       userRoleCreated = true,
       userGroupCreated = true,
       userGroupRoleAssigned = true,

@@ -1,14 +1,22 @@
 package com.ubirch.services.poc
 
+import com.typesafe.config.Config
+import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.services.poc.util.CsvConstants.headerLine
+import org.mockito.Mockito.when
+import org.scalatest.mockito.MockitoSugar.mock
 
 import java.util.UUID
 
 class CsvHandlerTest extends TestBase {
 
-  private val csvHandler = new CsvPocBatchParserImp
+  private val configMock = mock[Config]
+  when(configMock.getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)).thenReturn(
+    "dataSchemaGroups,certification-vaccination")
+
+  private val csvHandler = new CsvHandlerImp(configMock)
   private val pocId = UUID.randomUUID()
 
   private val invalidHeader =

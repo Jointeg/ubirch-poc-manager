@@ -35,6 +35,9 @@ object ValidatorConstants {
   def emptyStringError(header: String) =
     s"column $header cannot be empty"
 
+  def listDoesntContainStringError(header: String, list: Seq[String]) =
+    s"column $header must contain a valid value from this list $list"
+
   def zipCodeLengthError(header: String) =
     s"column $header must have the length of 5 digits"
 
