@@ -1,50 +1,52 @@
 package com.ubirch.services.teamdrive
 
+import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
-import monix.execution.Scheduler.Implicits.global
-import org.json4s.Serialization
+import org.json4s.{ Formats, Serialization }
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
+import sttp.client.json4s._
 
 import java.io.FileInputStream
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
-trait TeamDriveClient {
+class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
+  implicit backend: SttpBackend[Future, Nothing, WebSocketHandler],
+  serialization: Serialization,
+  formats: Formats
+) extends TeamDriveClient {
 
-}
-
-class SttpTeamDriveClient extends TeamDriveClient {
-
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
-  implicit private val serialization: Serialization = org.json4s.native.Serialization
+  import SttpTeamDriveClient._
 
   private val authenticatedRequest: RequestT[Empty, Either[String, String], Nothing] =
-    basicRequest.auth.basic("username", "password")
+    basicRequest.auth.basic(config.username, config.password)
 
-  def createSpace() = {
+  override def createSpace(name: String, path: String): Task[CreateSpaceResponse] =
+    callCreateSpace(name, path).flatMap { r =>
+      r.body match {
+        case Left(e)  => Task.raiseError(e)
+        case Right(v) => Task.pure(SpaceCreated(v.spaceId))
+      }
+    }
+
+  private def callCreateSpace(
+    name: String,
+    path: String
+  ): Task[Response[Either[ResponseError[Exception], CreateSpace_OUT]]] =
     Task.fromFuture(
       authenticatedRequest
-        .post(uri"http://127.0.0.1:4040/api/createSpace")
-        .body(
-          Map(
-            "spaceName" -> "ubrich-test-space-name",
-            "spacePath" -> "ubrich-test-space-name/123",
-            "disableFileSystem" -> "false",
-            "webAccess" -> "true"
-          )
-        )
+        .post(uri"${config.url}/api/createSpace")
+        .body(CreateSpace_IN(spaceName = name, spacePath = path, disableFileSystem = false, webAccess = true))
+        .response(asJson[CreateSpace_OUT])
         .send()
-    ).runSyncUnsafe(5.seconds)
-  }
+    )
 
   def getSpaces() = {
     Task.fromFuture(
       authenticatedRequest
         .get(uri"http://127.0.0.1:4040/api/getSpaces")
         .send()
-    ).runSyncUnsafe(5.seconds)
+    )
   }
 
   def putFile() = {
@@ -52,7 +54,8 @@ class SttpTeamDriveClient extends TeamDriveClient {
       var read: Option[FileInputStream] = None
       var body: Array[Byte] = Array.emptyByteArray
       try {
-        read = Some(new FileInputStream("/Users/gzhk/workspace/ubirch-poc-manager/src/main/resources/db/migration/V1_0__test_migration.sql"))
+        read = Some(new FileInputStream(
+          "/Users/gzhk/workspace/ubirch-poc-manager/src/main/resources/db/migration/V1_0__test_migration.sql"))
         body = read.get.readAllBytes()
       } catch {
         case e: Throwable => e.printStackTrace()
@@ -64,7 +67,7 @@ class SttpTeamDriveClient extends TeamDriveClient {
         .put(uri"http://127.0.0.1:4040/files/2/V1_0__test_migration.sql")
         .body(body)
         .send()
-    }.runSyncUnsafe(5.seconds)
+    }
   }
 
   def getFile() =
@@ -72,14 +75,14 @@ class SttpTeamDriveClient extends TeamDriveClient {
       authenticatedRequest
         .get(uri"http://127.0.0.1:4040/files/2/V1_0__test_migration.sql")
         .send()
-    ).runSyncUnsafe(5.seconds)
+    )
 
   def getSpaceIds() =
     Task.fromFuture(
       authenticatedRequest
         .get(uri"http://127.0.0.1:4040/api/getSpaceIds")
         .send()
-    ).runSyncUnsafe(5.seconds)
+    )
 
   def inviteMember() =
     Task.fromFuture {
@@ -96,19 +99,26 @@ class SttpTeamDriveClient extends TeamDriveClient {
           )
         )
         .send()
-    }.runSyncUnsafe(5.seconds)
+    }
 
   def getSpacePermissionLevels() =
     Task.fromFuture(
       authenticatedRequest
         .get(uri"http://127.0.0.1:4040/api/getSpacePermissionLevels")
         .send()
-    ).runSyncUnsafe(5.seconds)
+    )
 
   def getServers() =
     Task.fromFuture(
       authenticatedRequest
         .get(uri"http://127.0.0.1:4040/api/getServers")
         .send()
-    ).runSyncUnsafe(5.seconds)
+    )
+}
+
+object SttpTeamDriveClient {
+  case class Config(url: String, username: String, password: String)
+
+  case class CreateSpace_IN(spaceName: String, spacePath: String, disableFileSystem: Boolean, webAccess: Boolean)
+  case class CreateSpace_OUT(result: Boolean, spaceId: Int)
 }
