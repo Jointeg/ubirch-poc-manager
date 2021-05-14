@@ -38,6 +38,8 @@ class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
 
+  def PocConfig: ScopedBindingBuilder = bind(classOf[PocConfig]).to(classOf[PocConfigImpl])
+
   def KeycloakUsersConfig: ScopedBindingBuilder =
     bind(classOf[KeycloakCertifyConfig]).to(classOf[RealKeycloakCertifyConfig])
 
@@ -148,6 +150,7 @@ class Binder extends AbstractModule {
 
   override def configure(): Unit = {
     Config
+    PocConfig
     KeycloakUsersConfig
     KeycloakDeviceConfig
     ExecutionContext
