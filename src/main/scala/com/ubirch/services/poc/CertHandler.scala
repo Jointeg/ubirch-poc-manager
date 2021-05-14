@@ -5,24 +5,31 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.services.execution.SttpResources
 import monix.eval.Task
 import org.json4s.Formats
+import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client._
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
+import sttp.client.json4s.asJson
 import sttp.model.StatusCode
 
 import java.util.UUID
 import javax.inject.Inject
-import scala.concurrent.Future
+
+case class SharedAuthCertificateResponse(passphrase: String, pkcs12: String)
 
 trait CertHandler {
 
   def createOrganisationalUnitCertificate(
     orgUUID: UUID,
     orgUnitId: UUID,
-    identifier: CertIdentifier): Task[Unit]
+    identifier: CertIdentifier): Task[Either[CertificateCreationError, Unit]]
+
+  def createSharedAuthCertificate(
+    orgUnitId: UUID,
+    groupId: UUID,
+    identifier: CertIdentifier): Task[Either[CertificateCreationError, SharedAuthCertificateResponse]]
 
   def createCert(poc: Poc, status: PocStatus): Task[PocStatus]
 
@@ -32,7 +39,7 @@ trait CertHandler {
 class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extends CertHandler with LazyLogging {
 
   private val certManagerUrl: String = conf.getString(ServicesConfPaths.CERT_MANAGER_URL)
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
+  implicit private val serialization: Serialization.type = org.json4s.native.Serialization
 
   override def createCert(poc: Poc, status: PocStatus): Task[PocStatus] = {
     status.clientCertCreated match {
@@ -54,27 +61,44 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
   override def createOrganisationalUnitCertificate(
     orgUUID: UUID,
     orgUnitId: UUID,
-    identifier: CertIdentifier): Task[Unit] = {
-    val response = Task.fromFuture(basicRequest
-      .post(uri"$certManagerUrl/orgs/${orgUUID.toString}/units/${orgUnitId.toString}")
-      .body(write[CreateOrganisationalUnitCertRequest](CreateOrganisationalUnitCertRequest(identifier.value)))
-      .response(ignore)
-      .send())
+    identifier: CertIdentifier): Task[Either[CertificateCreationError, Unit]] = {
+    SttpResources.monixBackend.flatMap { implicit backend =>
+      val response = basicRequest
+        .post(uri"$certManagerUrl/orgs/${orgUUID.toString}/units/${orgUnitId.toString}")
+        .body(write[CreateOrganisationalUnitCertRequest](CreateOrganisationalUnitCertRequest(identifier.value)))
+        .response(ignore)
+        .send()
 
-    response.flatMap(response =>
-      if (response.code == StatusCode.Created)
-        Task.unit
-      else
-        logAndThrow(
-          s"Could not create organisational unit certificate with orgUnitId: $orgUnitId because received ${response.code} from CertManager"))
+      response.flatMap(response =>
+        if (response.code == StatusCode.Created)
+          Task(Right(()))
+        else
+          Task(Left(CertificateCreationError(
+            s"Could not create organisational unit certificate with orgUnitId: $orgUnitId because received ${response.code} from CertManager"))))
+    }
+
   }
 
-  private def logAndThrow[A](msg: String): Task[A] = {
-    logger.error(msg)
-    Task.raiseError(CertificateCreationError)
-  }
+  override def createSharedAuthCertificate(
+    orgUnitId: UUID,
+    groupId: UUID,
+    identifier: CertIdentifier): Task[Either[
+    CertificateCreationError,
+    SharedAuthCertificateResponse]] = {
+    SttpResources.monixBackend.flatMap { implicit backend =>
+      val response = basicRequest
+        .post(uri"$certManagerUrl/units/${orgUnitId.toString}/groups/${groupId.toString}")
+        .body(write[CreateSharedAuthCertificateRequest](CreateSharedAuthCertificateRequest(identifier.value)))
+        .response(asJson[SharedAuthCertificateResponse])
+        .send()
 
-  case class CreateOrganisationalUnitCertRequest(identifier: String)
+      import cats.syntax.either._
+
+      response.map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage)))
+    }
+  }
 }
 
-case object CertificateCreationError extends Throwable
+case class CreateOrganisationalUnitCertRequest(identifier: String)
+case class CertificateCreationError(msg: String) extends Throwable
+case class CreateSharedAuthCertificateRequest(identifier: String)

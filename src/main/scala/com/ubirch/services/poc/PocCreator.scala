@@ -11,6 +11,8 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
 
+import java.util.UUID
+
 trait PocCreator {
 
   def createPocs(): Task[PocCreationResult]
@@ -95,7 +97,9 @@ class PocCreatorImpl @Inject() (
   }
 
   private def throwPocCreationError(msg: String, pocAndStatus: PocAndStatus) = {
-    Task.raiseError(PocCreationError(pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg)))))
+    Task.raiseError(PocCreationError(
+      pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg))),
+      msg))
   }
 
   private def createOrganisationalUnitCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) = {
@@ -104,12 +108,41 @@ class PocCreatorImpl @Inject() (
       pocAndStatus.poc.id,
       CertIdentifier.pocOrgUnitCert(tenant.tenantName, pocAndStatus.poc.pocName, pocAndStatus.poc.id)
     )
-      .map(_ => pocAndStatus.copy(status = pocAndStatus.status.copy(orgUnitCertIdCreated = Some(true))))
-      .onErrorHandleWith {
-        case CertificateCreationError =>
-          Task.raiseError(PocCreationError(pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage =
-            Some(s"Could not create organisational unit certificate with orgUnitId: ${pocAndStatus.poc.id}")))))
+      .flatMap {
+        case Left(certificationCreationError) =>
+          Task(logger.error(certificationCreationError.msg)) >>
+            throwPocCreationError(
+              s"Could not create organisational unit certificate with orgUnitId: ${pocAndStatus.poc.id}",
+              pocAndStatus)
+        case Right(_) => Task(pocAndStatus.copy(status = pocAndStatus.status.copy(orgUnitCertIdCreated = Some(true))))
       }
+  }
+
+  private def createSharedAuthCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) = {
+    val id = UUID.randomUUID()
+    val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, pocAndStatus.poc.pocName, id)
+    for {
+      result <- certHandler.createSharedAuthCertificate(pocAndStatus.poc.id, id, certIdentifier)
+      pocAndStatus <- result match {
+        case Left(certificationCreationError) =>
+          Task(logger.error(certificationCreationError.msg)) >> throwPocCreationError(
+            s"Could not create shared auth certificate with id: $id",
+            pocAndStatus)
+        case Right(_) => Task(pocAndStatus.copy(status = pocAndStatus.status.copy(orgUnitCertIdCreated = Some(true))))
+      }
+    } yield pocAndStatus
+  }
+
+  private def doSharedAuthCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == APP) {
+      throwPocCreationError(
+        s"Could not create shared auth certificate because Tenant usageType is set to $APP and clientCertRequires is set to true",
+        pocAndStatus)
+    } else if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
+      createSharedAuthCertificate(tenant, pocAndStatus)
+    } else {
+      Task(pocAndStatus)
+    }
   }
 
 //Todo: create and provide client certs
@@ -120,6 +153,7 @@ class PocCreatorImpl @Inject() (
       pocAndStatus1 <- doUserRealmRelatedTasks(pocAndStatus, tenant)
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
       pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, pocAndStatus2)
+      pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus2)
       statusAndPW1 <- createDevice(pocAndStatus3.poc, pocAndStatus3.status, tenant)
       statusAndPW2 <- infoToGoClient(pocAndStatus3.poc, statusAndPW1)
       completeStatus <- infoToCertifyAPI(pocAndStatus3.poc, statusAndPW2, tenant)
