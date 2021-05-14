@@ -147,7 +147,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
   private def createGroupRepresentation(
     name: GroupName,
-    id: String = UUID.randomUUID().toString): GroupRepresentation = {
+    id: String = "c618b7cf-d798-49c8-adb1-c91a122904f6"): GroupRepresentation = {
     val group = new GroupRepresentation()
     group.setId(id)
     group.setName(name.value)

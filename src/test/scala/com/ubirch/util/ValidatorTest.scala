@@ -8,6 +8,7 @@ import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.ValidatorConstants.{
   emptyStringError,
   listDoesntContainStringError,
+  mapDoesntContainStringKeyError,
   phoneValidationError
 }
 import com.ubirch.services.poc.util.ValidatorConstants
@@ -263,6 +264,36 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
           assert(error == listDoesntContainStringError(dataSchemaId, list))
+        }
+    }
+
+  }
+
+  "Validator map contains key string" should {
+
+    val map = Map("test" -> "xxx", "test1" -> "yyy", "123" -> "zzz")
+    "validate valid" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "test1", map)
+      assert(validated.isValid)
+    }
+
+    "validate error if string is empty" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "", map)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
+        }
+    }
+
+    "validate error if map doesn't contain string" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "set1", map)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
         }
     }
 

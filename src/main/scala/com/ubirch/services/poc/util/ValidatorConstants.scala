@@ -38,6 +38,9 @@ object ValidatorConstants {
   def listDoesntContainStringError(header: String, list: Seq[String]) =
     s"column $header must contain a valid value from this list $list"
 
+  def mapDoesntContainStringKeyError(header: String, map: Map[String, String]) =
+    s"column $header must contain a valid value from this map $map"
+
   def zipCodeLengthError(header: String) =
     s"column $header must have the length of 5 digits"
 
