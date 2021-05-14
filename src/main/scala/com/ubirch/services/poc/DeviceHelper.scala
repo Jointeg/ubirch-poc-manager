@@ -30,7 +30,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
         .map {
           case Right(_) => status.copy(assignedDataSchemaGroup = true)
           case Left(errorMsg) =>
-            throwError(PocAndStatus(poc, status), s"failed to add group $poc.dataSchemaId to device $errorMsg")
+            throwError(PocAndStatus(poc, status), s"failed to add group ${poc.dataSchemaId} to device $errorMsg")
         }
 
     for {

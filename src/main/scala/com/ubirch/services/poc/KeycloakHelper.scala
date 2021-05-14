@@ -46,7 +46,7 @@ class KeycloakHelperImpl @Inject() (
           case Left(_: RoleAlreadyExists) =>
             pocAndStatus.copy(status = pocAndStatus.status.copy(certifyRoleCreated = true))
           case Left(l: RoleCreationException) =>
-            throwError(pocAndStatus, s"certifyRealmRole already exists :${l.roleName}")
+            throwError(pocAndStatus, s"certifyRealmRole couldn't be created :${l.roleName}")
         }
     }
   }
