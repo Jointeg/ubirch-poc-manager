@@ -5,6 +5,7 @@ import com.ubirch._
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{ KeycloakDeviceConfig, KeycloakUsersConfig }
+import com.ubirch.services.poc.{ CertHandler, TestCertHandler }
 import io.getquill.{ PostgresJdbcContext, SnakeCase }
 
 import javax.inject.{ Inject, Singleton }
@@ -86,6 +87,9 @@ class E2EInjectorHelperImpl(val superAdmin: SuperAdmin, val tenantAdmin: TenantA
         classOf[TestKeycloakDeviceConfig].getConstructor(classOf[Config])
       )
     }
+
+    override def CertHandler: ScopedBindingBuilder =
+      bind(classOf[CertHandler]).to(classOf[TestCertHandler])
 
     override def configure(): Unit = {
       super.configure()

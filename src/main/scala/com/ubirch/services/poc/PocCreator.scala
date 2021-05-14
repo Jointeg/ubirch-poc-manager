@@ -6,6 +6,7 @@ import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantReposito
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ APP, Both, Tenant }
+import com.ubirch.services.poc.util.PKCS12Operations
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -114,22 +115,32 @@ class PocCreatorImpl @Inject() (
             throwPocCreationError(
               s"Could not create organisational unit certificate with orgUnitId: ${pocAndStatus.poc.id}",
               pocAndStatus)
-        case Right(_) => Task(pocAndStatus.copy(status = pocAndStatus.status.copy(orgUnitCertIdCreated = Some(true))))
+        case Right(_) => Task(pocAndStatus.updateStatus(_.copy(orgUnitCertIdCreated = Some(true))))
       }
   }
 
   private def createSharedAuthCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) = {
     val id = UUID.randomUUID()
     val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, pocAndStatus.poc.pocName, id)
+
     for {
       result <- certHandler.createSharedAuthCertificate(pocAndStatus.poc.id, id, certIdentifier)
-      pocAndStatus <- result match {
+      statusWithResponse <- result match {
         case Left(certificationCreationError) =>
           Task(logger.error(certificationCreationError.msg)) >> throwPocCreationError(
             s"Could not create shared auth certificate with id: $id",
             pocAndStatus)
-        case Right(_) => Task(pocAndStatus.copy(status = pocAndStatus.status.copy(orgUnitCertIdCreated = Some(true))))
+        case Right(sharedAuthResponse) => Task((
+            pocAndStatus.updateStatus(_.copy(orgUnitCertIdCreated = Some(true))),
+            sharedAuthResponse))
       }
+      (pocAndStatus, sharedAuthResponse) = statusWithResponse
+      _ <-
+        Task.pure(
+          PKCS12Operations.recreateFromBase16String(sharedAuthResponse.pkcs12, sharedAuthResponse.passphrase)).flatMap {
+          case Left(_)         => throwPocCreationError("Certificate creation error", pocAndStatus)
+          case Right(keystore) => Task(keystore)
+        } // TODO: store the PKCS12 and passphrase in TeamDrive
     } yield pocAndStatus
   }
 
@@ -153,10 +164,10 @@ class PocCreatorImpl @Inject() (
       pocAndStatus1 <- doUserRealmRelatedTasks(pocAndStatus, tenant)
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
       pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, pocAndStatus2)
-      pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus2)
-      statusAndPW1 <- createDevice(pocAndStatus3.poc, pocAndStatus3.status, tenant)
-      statusAndPW2 <- infoToGoClient(pocAndStatus3.poc, statusAndPW1)
-      completeStatus <- infoToCertifyAPI(pocAndStatus3.poc, statusAndPW2, tenant)
+      pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus3)
+      statusAndPW1 <- createDevice(pocAndStatus4.poc, pocAndStatus4.status, tenant)
+      statusAndPW2 <- infoToGoClient(pocAndStatus4.poc, statusAndPW1)
+      completeStatus <- infoToCertifyAPI(pocAndStatus4.poc, statusAndPW2, tenant)
     } yield completeStatus
 
     (for {

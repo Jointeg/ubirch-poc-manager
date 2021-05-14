@@ -28,7 +28,9 @@ trait KeycloakHelper {
 
 }
 
-case class PocAndStatus(poc: Poc, status: PocStatus)
+case class PocAndStatus(poc: Poc, status: PocStatus) {
+  def updateStatus(update: PocStatus => PocStatus): PocAndStatus = this.copy(status = update(this.status))
+}
 
 class KeycloakHelperImpl @Inject() (
   roles: KeycloakRolesService,
