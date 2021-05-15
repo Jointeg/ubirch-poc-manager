@@ -121,7 +121,8 @@ class PocCreatorImpl @Inject() (
     for {
       pocAndStatus1 <- createDeviceRole(pocAndStatus)
       pocAndStatus2 <- createDeviceGroup(pocAndStatus1, tenant)
-      pocAndStatusFinal <- assignDeviceRealmRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatus3 <- assignDeviceRealmRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatusFinal <- assignTenantRoleToDeviceGroup(pocAndStatus3, tenant)
     } yield pocAndStatusFinal
   }
 
@@ -129,7 +130,8 @@ class PocCreatorImpl @Inject() (
     for {
       pocAndStatus1 <- createCertifyRole(pocAndStatus)
       pocAndStatus2 <- createCertifyGroup(pocAndStatus1, tenant)
-      pocAndStatusFinal <- assignCertifyRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatus3 <- assignCertifyRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatusFinal <- assignTenantRoleToCertifyGroup(pocAndStatus3, tenant)
     } yield pocAndStatusFinal
   }
 
