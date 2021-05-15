@@ -19,7 +19,7 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     try {
       parse(config.getString(ServicesConfPaths.DATA_SCHEMA_GROUP_MAP)).extract[Map[String, String]]
     } catch {
-      case e =>
+      case e: Exception =>
         logger.error(s"can't parse the ${ServicesConfPaths.DATA_SCHEMA_GROUP_MAP} value as Map[String, String]")
         throw e
     }

@@ -6,6 +6,7 @@ import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
+import java.util
 import javax.inject.Singleton
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.{ collectionAsScalaIterableConverter, seqAsJavaListConverter }
@@ -123,8 +124,15 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
       case Right(group) =>
         if (group.getRealmRoles == null)
           group.setRealmRoles(List(role.getName).asJava)
-        else
-          group.getRealmRoles.add(role.getName)
+        else {
+          val roles = group.getRealmRoles
+          if (roles.isEmpty) {
+            group.setRealmRoles(List(role.getName).asJava)
+          } else {
+            val newRoles = roles.asScala ++ List(role.getName)
+            group.setRealmRoles(newRoles.toList.asJava)
+          }
+        }
         Right((): Unit)
       case _ =>
         Left("role adding error")

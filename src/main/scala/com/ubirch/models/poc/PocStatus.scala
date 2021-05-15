@@ -9,9 +9,11 @@ case class PocStatus(
   certifyRoleCreated: Boolean = false,
   certifyGroupCreated: Boolean = false,
   certifyGroupRoleAssigned: Boolean = false,
+  certifyGroupTenantRoleAssigned: Boolean = false,
   deviceRoleCreated: Boolean = false,
   deviceGroupCreated: Boolean = false,
   deviceGroupRoleAssigned: Boolean = false,
+  deviceGroupTenantRoleAssigned: Boolean = false,
   deviceCreated: Boolean = false,
   assignedDataSchemaGroup: Boolean = false,
   assignedDeviceGroup: Boolean = false,
@@ -32,9 +34,11 @@ case class PocStatus(
       s"certifyRoleCreated:$certifyRoleCreated\n" +
       s"certifyGroupCreated:$certifyGroupCreated\n" +
       s"certifyGroupRoleAssigned:$certifyGroupRoleAssigned\n" +
+      s"certifyGroupTenantRoleAssigned:$certifyGroupTenantRoleAssigned\n" +
       s"deviceRoleCreated:$deviceRoleCreated\n" +
       s"deviceGroupCreated:$deviceGroupCreated\n" +
       s"deviceGroupRoleAssigned:$deviceGroupRoleAssigned\n" +
+      s"deviceGroupTenantRoleAssigned:$deviceGroupTenantRoleAssigned\n" +
       s"deviceCreated:$deviceCreated\n" +
       s"clientCertRequired:$clientCertRequired\n" +
       s"clientCertCreated:$clientCertCreated\n" +

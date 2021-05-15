@@ -11,6 +11,9 @@ import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import PocCreator.throwError
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
+
+import javax.inject.Singleton
 
 trait KeycloakHelper {
 
@@ -20,16 +23,20 @@ trait KeycloakHelper {
 
   def assignDeviceRealmRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
+  def assignTenantRoleToDeviceGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+
   def createCertifyRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
   def createCertifyGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
-  def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+  def assignTenantRoleToCertifyGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
+  def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 }
 
 case class PocAndStatus(poc: Poc, status: PocStatus)
 
+@Singleton
 class KeycloakHelperImpl @Inject() (
   roles: KeycloakRolesService,
   groups: KeycloakGroupService)
@@ -84,6 +91,25 @@ class KeycloakHelperImpl @Inject() (
   }
 
   @throws[PocCreationError]
+  override def assignTenantRoleToCertifyGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+    val poc = pocAndStatus.poc
+    val status = pocAndStatus.status
+
+    if (status.certifyGroupTenantRoleAssigned) Task(pocAndStatus)
+    else if (poc.certifyGroupId.isEmpty)
+      throwError(
+        pocAndStatus,
+        s"groupId for poc with id ${poc.id} is missing though poc status says it was already created")
+    else {
+      findTenantRoleAndAddToGroup(poc, tenant, poc.certifyGroupId.get, status, CertifyKeycloak)
+        .map {
+          case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(certifyGroupTenantRoleAssigned = true))
+          case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
+        }
+    }
+  }
+
+  @throws[PocCreationError]
   override def createDeviceRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.status.deviceRoleCreated) Task(pocAndStatus)
     else {
@@ -131,6 +157,25 @@ class KeycloakHelperImpl @Inject() (
   }
 
   @throws[PocCreationError]
+  override def assignTenantRoleToDeviceGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+    val poc = pocAndStatus.poc
+    val status = pocAndStatus.status
+
+    if (status.deviceGroupTenantRoleAssigned) Task(pocAndStatus)
+    else if (poc.deviceGroupId.isEmpty)
+      throwError(
+        pocAndStatus,
+        s"groupId for poc with id ${poc.id} is missing though poc status says it was already created")
+    else {
+      findTenantRoleAndAddToGroup(poc, tenant, poc.deviceGroupId.get, status, DeviceKeycloak)
+        .map {
+          case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(deviceGroupTenantRoleAssigned = true))
+          case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
+        }
+    }
+  }
+
+  @throws[PocCreationError]
   private def addSubGroup(
     pocAndStatus: PocAndStatus,
     tenantId: String,
@@ -156,6 +201,25 @@ class KeycloakHelperImpl @Inject() (
           throwError(
             PocAndStatus(poc, status),
             s"adding role ${poc.roleName} to ${poc.deviceGroupId} failed as role doesn't exist")
+      }
+  }
+
+  @throws[PocCreationError]
+  private def findTenantRoleAndAddToGroup(
+    poc: Poc,
+    tenant: Tenant,
+    groupId: String,
+    status: PocStatus,
+    instance: KeycloakInstance): Task[Either[String, Unit]] = {
+    val tenantRole = TENANT_GROUP_PREFIX + tenant.tenantName.value
+    roles
+      .findRoleRepresentation(RoleName(tenantRole), instance)
+      .flatMap {
+        case Some(role) => groups.addRoleToGroup(GroupId(groupId), role, instance)
+        case None =>
+          throwError(
+            PocAndStatus(poc, status),
+            s"adding role ${tenantRole} to ${groupId} failed as role doesn't exist")
       }
   }
 }
