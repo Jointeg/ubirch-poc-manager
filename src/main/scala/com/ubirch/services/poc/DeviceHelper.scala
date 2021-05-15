@@ -28,9 +28,8 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
     val status1 =
       addGroupByIdToDevice(groupId, PocAndStatus(poc, status))
         .map {
-          case Right(result) =>
-            if (result) status.copy(assignedDataSchemaGroup = true)
-            else throwError(PocAndStatus(poc, status), s"failed to add device to group $groupId")
+          case Right(_) =>
+            status.copy(assignedDataSchemaGroup = true)
           case Left(errorMsg) =>
             throwError(PocAndStatus(poc, status), s"failed to add device to group $groupId: $errorMsg")
         }
@@ -50,17 +49,9 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
     }
   }
 
-  private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Boolean]] = {
+  private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Unit]] = {
     val deviceId = pocAndStatus.poc.getDeviceId
-    users.getUser(UserName(deviceId), DeviceKeycloak)
-      .flatMap {
-        case Some(user) =>
-          groups.addMemberToGroup(GroupId(groupId), user, DeviceKeycloak)
-        case None =>
-          throwError(
-            pocAndStatus,
-            s"couldn't find device $deviceId to add a group to it;  ")
-      }
+    users.addGroupToUser(deviceId, groupId, DeviceKeycloak)
   }
 
 }

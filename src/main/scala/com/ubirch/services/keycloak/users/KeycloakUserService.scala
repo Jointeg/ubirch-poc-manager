@@ -7,7 +7,7 @@ import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists, 
 import com.ubirch.models.user.{ UserId, UserName }
 import com.ubirch.services.{ CertifyKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
-import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
+import org.keycloak.representations.idm.UserRepresentation
 
 import java.util.UUID
 import javax.ws.rs.core.Response
@@ -24,9 +24,9 @@ trait KeycloakUserService {
     instance: KeycloakInstance = CertifyKeycloak): Task[Either[UserException, UserId]]
 
   def addGroupToUser(
-    id: String,
-    groupRepresentation: GroupRepresentation,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
+    userId: String,
+    groupId: String,
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
 
   def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit]
 
@@ -78,24 +78,21 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   }
 
   override def addGroupToUser(
-    id: String,
-    group: GroupRepresentation,
+    userId: String,
+    groupId: String,
     instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] = {
+
     Task {
-      val user = keycloakConnector
+      Right(keycloakConnector
         .getKeycloak(instance)
         .realm(keycloakConnector.getKeycloakRealm(instance))
         .users()
-        .get(id)
+        .get(userId)
+        .joinGroup(groupId))
 
-      if (user.groups().add(group)) {
-        Right(())
-      } else {
-        Left("adding group to user failed")
-      }
     }.onErrorHandle { ex =>
-      logger.error(s"failed to add group ${group.getName} to user $id", ex)
-      Left(s"failed to add group ${group.getName} to user $id")
+      logger.error(s"failed to add group $groupId to user $userId", ex)
+      Left(s"failed to add group $groupId to user $userId")
     }
   }
 
