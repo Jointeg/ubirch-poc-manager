@@ -24,7 +24,7 @@ trait KeycloakUserService {
     instance: KeycloakInstance = CertifyKeycloak): Task[Either[UserException, UserId]]
 
   def addGroupToUser(
-    userId: String,
+    userName: String,
     groupId: String,
     instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
 
@@ -78,11 +78,11 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   }
 
   override def addGroupToUser(
-    userId: String,
+    userName: String,
     groupId: String,
     instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] = {
 
-    getUser(UserName(userId), instance).map {
+    getUser(UserName(userName), instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         Right(
           keycloakConnector
@@ -92,10 +92,10 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
             .get(userRepresentation.getId)
             .joinGroup(groupId))
       case None =>
-        Left(s"user with name $userId wasn't found")
+        Left(s"user with name $userName wasn't found")
     }.onErrorHandle { ex =>
-      logger.error(s"failed to add group $groupId to user $userId", ex)
-      Left(s"failed to add group $groupId to user $userId")
+      logger.error(s"failed to add group $groupId to user $userName", ex)
+      Left(s"failed to add group $groupId to user $userName")
     }
   }
 
