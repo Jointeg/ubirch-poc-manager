@@ -67,8 +67,8 @@ class TestKeycloakUserService() extends KeycloakUserService {
     }
 
   override def addGroupToUser(
-    id: String,
-    groupRepresentation: GroupRepresentation,
+    userName: String,
+    groupId: String,
     keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
     Task { Right(()) }
 
