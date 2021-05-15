@@ -296,8 +296,8 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
           group <- groups.createGroup(createNewKeycloakGroup())
-          user <- users.createUser(newKeycloakUser)
-          success <- users.addGroupToUser(user.right.get.value.toString, group.right.value.value)
+          _ <- users.createUser(newKeycloakUser)
+          success <- users.addGroupToUser(newKeycloakUser.userName.value, group.right.value.value)
         } yield success
 
         result.runSyncUnsafe() shouldBe Right(())
@@ -312,9 +312,9 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val result = for {
           group <- groups.createGroup(createNewKeycloakGroup())
-          user <- users.createUser(newKeycloakUser)
-          _ <- users.addGroupToUser(user.right.get.value.toString, group.right.get.value)
-          success <- users.addGroupToUser(user.right.get.value.toString, group.right.get.value)
+          _ <- users.createUser(newKeycloakUser)
+          _ <- users.addGroupToUser(newKeycloakUser.userName.value, group.right.get.value)
+          success <- users.addGroupToUser(newKeycloakUser.userName.value, group.right.get.value)
         } yield success
         result.runSyncUnsafe() shouldBe Right(())
       }
@@ -324,17 +324,30 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val users = injector.get[KeycloakUserService]
         val groups = injector.get[KeycloakGroupService]
-
         val userId = UUID.randomUUID().toString
         val group = new GroupRepresentation()
         group.setName("testGroup")
         val result = for {
           group <- groups.createGroup(createNewKeycloakGroup())
-
-          success <- users.addGroupToUser(userId, group.right.get.value)
+          success <- users.addGroupToUser("non-existing-user", group.right.get.value)
         } yield (group, success)
         val (g, s) = result.runSyncUnsafe()
-        s shouldBe Left(s"failed to add group ${g.right.get.value} to user $userId")
+        s shouldBe Left(s"user with name non-existing-user wasn't found")
+      }
+    }
+
+    "Assign non-existing group to user should fail" in {
+      withInjector { injector =>
+        val users = injector.get[KeycloakUserService]
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+        val group = new GroupRepresentation()
+        group.setName("testGroup")
+        val result = for {
+          _ <- users.createUser(newKeycloakUser)
+          success <- users.addGroupToUser(newKeycloakUser.userName.value, "non-existing-group")
+        } yield (group, success)
+        val (g, s) = result.runSyncUnsafe()
+        s shouldBe Left(s"failed to add group non-existing-group to user ${newKeycloakUser.userName.value}")
       }
     }
   }

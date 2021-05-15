@@ -82,14 +82,17 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     groupId: String,
     instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] = {
 
-    Task {
-      Right(keycloakConnector
-        .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
-        .users()
-        .get(userId)
-        .joinGroup(groupId))
-
+    getUser(UserName(userId), instance).map {
+      case Some(userRepresentation: UserRepresentation) =>
+        Right(
+          keycloakConnector
+            .getKeycloak(instance)
+            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .users()
+            .get(userRepresentation.getId)
+            .joinGroup(groupId))
+      case None =>
+        Left(s"user with name $userId wasn't found")
     }.onErrorHandle { ex =>
       logger.error(s"failed to add group $groupId to user $userId", ex)
       Left(s"failed to add group $groupId to user $userId")
