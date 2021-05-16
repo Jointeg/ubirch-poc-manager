@@ -77,26 +77,26 @@ class TenantAdminController @Inject() (
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
-      .tags("PoC, Tenant-Admin")
+      .tags("PoC", "Tenant-Admin")
 
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
-      .tags("Tenant-Admin, PocStatus")
+      .tags("Tenant-Admin", "PocStatus")
 
   val getPocs: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve all pocs of the requesting tenant")
       .summary("Get PoCs")
       .description("Retrieve PoCs that belong to the querying tenant.")
-      .tags("Tenant-Admin, PoCs")
+      .tags("Tenant-Admin", "PoCs")
       .authorizations()
 
   val getDevices: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("Retrieve all devices from all PoCs of Tenant")
       .summary("Get devices")
       .description("Retrieves all devices that belongs to PoCs that are managed by querying Tenant.")
-      .tags("Tenant-Admin, Devices")
+      .tags("Tenant-Admin", "Devices")
       .authorizations()
 
   post("/pocs/create", operation(createListOfPocs)) {
