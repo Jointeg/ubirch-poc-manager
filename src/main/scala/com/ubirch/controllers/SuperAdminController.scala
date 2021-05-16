@@ -70,9 +70,9 @@ class SuperAdminController @Inject() (
           .description("Describes channel through which POC will be managed")
           .allowableValues(List(API, APP, Both)),
         bodyParam[String]("deviceCreationToken"),
-        bodyParam[String]("certificationCreationToken"),
         bodyParam[String]("idGardIdentifier"),
-        bodyParam[String]("tenantGroupId"),
+        bodyParam[String]("certifyGroupId"),
+        bodyParam[String]("deviceGroupId"),
         bodyParam[String]("clientCert")
       )
   }
