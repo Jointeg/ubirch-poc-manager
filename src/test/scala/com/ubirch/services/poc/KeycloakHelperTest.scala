@@ -119,7 +119,7 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.certifyGroupCreated shouldBe true
 
         //val updatedPoc = await(pocTable.getPoc(poc.id), 5.seconds)
-        //val groupId = updatedPoc.value.userGroupId.value
+        //val groupId = updatedPoc.value.certifyGroupId.value
         //assert
         groups
           .findGroupById(GroupId(pocAndStatus.poc.certifyGroupId.value))

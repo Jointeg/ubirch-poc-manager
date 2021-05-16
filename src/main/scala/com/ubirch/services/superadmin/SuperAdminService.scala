@@ -37,7 +37,7 @@ class DefaultSuperAdminService @Inject() (aesEncryption: AESEncryption, tenantRe
       createTenantRequest.usageType,
       encryptedDeviceCreationToken,
       createTenantRequest.idGardIdentifier,
-      createTenantRequest.userGroupId,
+      createTenantRequest.certifyGroupId,
       createTenantRequest.deviceGroupId,
       createTenantRequest.clientCert
     )

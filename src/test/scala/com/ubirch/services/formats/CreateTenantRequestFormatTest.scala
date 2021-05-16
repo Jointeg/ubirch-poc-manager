@@ -21,7 +21,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |    "deviceCreationToken": "1234567890",
              |    "certificationCreationToken": "987654321",
              |    "idGardIdentifier": "gard-identifier",
-             |    "userGroupId": "random-certify-group",
+             |    "certifyGroupId": "random-certify-group",
              |    "deviceGroupId": "random-device-group"
              |}
              |""".stripMargin)
@@ -48,7 +48,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |    "usageType": "API",
              |    "deviceCreationToken": "1234567890",
              |    "idGardIdentifier": "gard-identifier",
-             |    "userGroupId": "random-certify-group",
+             |    "certifyGroupId": "random-certify-group",
              |    "deviceGroupId": "random-device-group",
              |    "clientCert": "${base64X509Cert.value}",
              |

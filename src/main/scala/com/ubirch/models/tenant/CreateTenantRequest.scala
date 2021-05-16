@@ -5,7 +5,7 @@ case class CreateTenantRequest(
   usageType: UsageType,
   deviceCreationToken: PlainDeviceCreationToken,
   idGardIdentifier: IdGardIdentifier,
-  userGroupId: TenantCertifyGroupId,
+  certifyGroupId: TenantCertifyGroupId,
   deviceGroupId: TenantDeviceGroupId,
   clientCert: Option[ClientCert]
 )
