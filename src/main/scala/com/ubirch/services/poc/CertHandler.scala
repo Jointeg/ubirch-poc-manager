@@ -7,6 +7,7 @@ import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.auth.cert.SharedAuthCertificateResponse
 import com.ubirch.services.execution.SttpResources
 import monix.eval.Task
+import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
@@ -32,6 +33,9 @@ trait CertHandler {
 
 class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extends CertHandler with LazyLogging {
 
+  implicit val backend = SttpResources.backend
+  implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
+
   private val certManagerUrl: String = conf.getString(ServicesConfPaths.CERT_MANAGER_URL)
   private val certManagerToken: String = conf.getString(ServicesConfPaths.CERT_MANAGER_TOKEN)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
@@ -40,21 +44,19 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
     orgUUID: UUID,
     orgUnitId: UUID,
     identifier: CertIdentifier): Task[Either[CertificateCreationError, Unit]] = {
-    SttpResources.monixBackend.flatMap { implicit backend =>
-      val response = basicRequest
-        .post(uri"$certManagerUrl/orgs/${orgUUID.toString}/units/${orgUnitId.toString}")
-        .body(write[CreateOrganisationalUnitCertRequest](CreateOrganisationalUnitCertRequest(identifier.value)))
-        .auth.bearer(certManagerToken)
-        .response(ignore)
-        .send()
+    val response = basicRequest
+      .post(uri"$certManagerUrl/orgs/${orgUUID.toString}/units/${orgUnitId.toString}")
+      .body(write[CreateOrganisationalUnitCertRequest](CreateOrganisationalUnitCertRequest(identifier.value)))
+      .auth.bearer(certManagerToken)
+      .response(ignore)
+      .send()
 
-      response.flatMap(response =>
-        if (response.code == StatusCode.Created)
-          Task(Right(()))
-        else
-          Task(Left(CertificateCreationError(
-            s"Could not create organisational unit certificate with orgUnitId: $orgUnitId because received ${response.code} from CertManager"))))
-    }
+    Task.fromFuture(response).flatMap(response =>
+      if (response.code == StatusCode.Created)
+        Task(Right(()))
+      else
+        Task(Left(CertificateCreationError(
+          s"Could not create organisational unit certificate with orgUnitId: $orgUnitId because received ${response.code} from CertManager"))))
 
   }
 
@@ -64,18 +66,16 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
     identifier: CertIdentifier): Task[Either[
     CertificateCreationError,
     SharedAuthCertificateResponse]] = {
-    SttpResources.monixBackend.flatMap { implicit backend =>
-      val response = basicRequest
-        .post(uri"$certManagerUrl/units/${orgUnitId.toString}/groups/${groupId.toString}")
-        .body(write[CreateSharedAuthCertificateRequest](CreateSharedAuthCertificateRequest(identifier.value)))
-        .auth.bearer(certManagerToken)
-        .response(asJson[SharedAuthCertificateResponse])
-        .send()
+    val response = basicRequest
+      .post(uri"$certManagerUrl/units/${orgUnitId.toString}/groups/${groupId.toString}")
+      .body(write[CreateSharedAuthCertificateRequest](CreateSharedAuthCertificateRequest(identifier.value)))
+      .auth.bearer(certManagerToken)
+      .response(asJson[SharedAuthCertificateResponse])
+      .send()
 
-      import cats.syntax.either._
+    import cats.syntax.either._
 
-      response.map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage)))
-    }
+    Task.fromFuture(response.map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage))))
   }
 }
 
