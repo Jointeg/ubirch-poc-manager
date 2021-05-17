@@ -48,10 +48,7 @@ class CsvProcessPocTest extends UnitTestBase {
           assert(pocs.length == 1)
           assert(pocStatusOpt.isDefined)
           assert(pocStatusOpt.get.pocId == poc.id)
-        }).onErrorHandle {
-          case e =>
-            fail(e)
-        }.runSyncUnsafe()
+        }).onErrorHandle(e => fail(e)).runSyncUnsafe()
       }
     }
 
@@ -65,11 +62,8 @@ class CsvProcessPocTest extends UnitTestBase {
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
         } yield {
           result.left.get.shouldBe("poc_id* didn't equal expected header external_id*; the right header order would be: external_id*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,data_schema_id*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
-          assert(pocs.length == 0)
-        }).onErrorHandle {
-          case e =>
-            fail(e)
-        }.runSyncUnsafe()
+          assert(pocs.isEmpty)
+        }).onErrorHandle(e => fail(e)).runSyncUnsafe()
       }
     }
 
@@ -84,10 +78,7 @@ class CsvProcessPocTest extends UnitTestBase {
         } yield {
           assert(result.isLeft)
           assert(pocs.length == 2)
-        }).onErrorHandle {
-          case e =>
-            fail(e)
-        }.runSyncUnsafe()
+        }).onErrorHandle(e => fail(e)).runSyncUnsafe()
       }
     }
   }

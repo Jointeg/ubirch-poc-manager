@@ -34,7 +34,9 @@ trait KeycloakHelper {
   def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 }
 
-case class PocAndStatus(poc: Poc, status: PocStatus)
+case class PocAndStatus(poc: Poc, status: PocStatus) {
+  def updateStatus(update: PocStatus => PocStatus): PocAndStatus = this.copy(status = update(this.status))
+}
 
 @Singleton
 class KeycloakHelperImpl @Inject() (

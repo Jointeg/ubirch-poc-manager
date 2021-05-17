@@ -32,6 +32,8 @@ object ModelCreationHelper {
       IdGardIdentifier("folder-identifier"),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
+      OrgCertId(TenantId(TenantName(name)).value),
+      None,
       clientCert
     )
   }
@@ -65,6 +67,7 @@ object ModelCreationHelper {
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,
+      orgUnitCertIdCreated = None,
       logoRequired = false,
       logoReceived = None,
       logoStored = None

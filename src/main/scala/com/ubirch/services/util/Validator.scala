@@ -3,7 +3,7 @@ package com.ubirch.services.util
 import cats.data.Validated.Valid
 import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
-import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.tenant.{ API, APP, Tenant }
 import com.ubirch.services.poc.util.ValidatorConstants._
 import org.joda.time.LocalDate
 import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
@@ -70,6 +70,8 @@ object Validator {
   def validateClientCert(header: String, str: String, tenant: Tenant): AllErrorsOr[Boolean] = {
     validateBoolean(header, str) match {
       case Valid(false) if tenant.clientCert.isEmpty => clientCertError(header).invalidNel
+      case Valid(false) if tenant.usageType == APP   => organisationalUnitCertError.invalidNel
+      case Valid(true) if tenant.usageType == API    => organisationalUnitCertError.invalidNel
       case validOrInvalid                            => validOrInvalid
     }
   }

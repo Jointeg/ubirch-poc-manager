@@ -11,6 +11,8 @@ case class Tenant(
   idGardIdentifier: IdGardIdentifier,
   certifyGroupId: TenantCertifyGroupId,
   deviceGroupId: TenantDeviceGroupId,
+  orgCertId: OrgCertId,
+  orgUnitCertId: Option[OrgUnitCertId],
   clientCert: Option[ClientCert],
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())

@@ -55,7 +55,7 @@ object CsvConstants {
     managerMobilePhone,
     jsonConfig
   )
-  val pocHeaderColOrderLength = pocHeaderColsOrder.length
+  val pocHeaderColOrderLength: Int = pocHeaderColsOrder.length
 
   val pocAdminHeaderColsOrder: Array[String] = Array(
     externalId,
@@ -85,7 +85,7 @@ object CsvConstants {
     technicianDateOfBirth,
     webIdentRequired
   )
-  val pocAdminHeaderColOrderLength = pocAdminHeaderColsOrder.length
+  val pocAdminHeaderColOrderLength: Int = pocAdminHeaderColsOrder.length
 
   val pocHeaderLine: String = pocHeaderColsOrder.mkString(columnSeparator)
   val pocAdminHeaderLine: String = pocAdminHeaderColsOrder.mkString(columnSeparator)

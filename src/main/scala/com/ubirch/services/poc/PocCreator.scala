@@ -3,12 +3,16 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
+import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.tenant.{ API, Tenant }
+import com.ubirch.services.poc.util.PKCS12Operations
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
+
+import java.util.UUID
 
 trait PocCreator {
 
@@ -28,7 +32,7 @@ object PocCreator {
 }
 
 class PocCreatorImpl @Inject() (
-  //  certHandler: CertHandler,
+  certHandler: CertHandler,
   deviceCreator: DeviceCreator,
   deviceHelper: DeviceHelper,
   informationProvider: InformationProvider,
@@ -83,6 +87,28 @@ class PocCreatorImpl @Inject() (
     } yield (status, tenant)
   }
 
+  def doOrganisationUnitCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
+      PoCCertCreator.pocCreationError("a poc shouldn't require client cert if tenant usageType is API", pocAndStatus)
+    else if (pocAndStatus.poc.clientCertRequired) {
+      PoCCertCreator.createPoCOrganisationalUnitCertificate(tenant, pocAndStatus)(certHandler)
+    } else {
+      Task(pocAndStatus)
+    }
+  }
+
+  private def doSharedAuthCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
+      PoCCertCreator.pocCreationError(
+        "a poc shouldn't require shared auth cert if tenant usageType is API",
+        pocAndStatus)
+    else if (pocAndStatus.poc.clientCertRequired) {
+      PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus)(certHandler)
+    } else {
+      Task(pocAndStatus)
+    }
+  }
+
   //Todo: create and provide client certs
   //Todo: download and store logo
   private def process(pocAndStatus: PocAndStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
@@ -92,8 +118,10 @@ class PocCreatorImpl @Inject() (
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
       statusAndPW3 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
       status4 <- addGroupsToDevice(pocAndStatus2.poc, statusAndPW3.pocStatus)
-      statusAndPW5 <- infoToGoClient(pocAndStatus2.poc, statusAndPW3.copy(pocStatus = status4))
-      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW5, tenant)
+      pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, PocAndStatus(pocAndStatus2.poc, status4))
+      pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus3)
+      statusAndPW5 <- infoToGoClient(pocAndStatus4.poc, statusAndPW3.copy(pocStatus = pocAndStatus4.status))
+      completeStatus <- infoToCertifyAPI(pocAndStatus4.poc, statusAndPW5, tenant)
     } yield completeStatus
 
     (for {
@@ -135,7 +163,7 @@ class PocCreatorImpl @Inject() (
     } yield pocAndStatusFinal
   }
 
-  private def handlePocCreationError(ex: Throwable): Task[Left[String, Nothing]] = {
+  private def handlePocCreationError[A](ex: Throwable): Task[Either[String, A]] = {
     ex match {
       case pce: PocCreationError =>
         (for {

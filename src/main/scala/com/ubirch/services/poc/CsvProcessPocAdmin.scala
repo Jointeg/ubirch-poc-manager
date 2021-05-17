@@ -60,10 +60,9 @@ class CsvProcessPocAdminImpl @Inject() (
       } yield {
         None
       }
-    }.onErrorHandle {
-      case e =>
-        logger.error(s"fail to create poc admin and status. poc: $poc, pocAdmin: $pocAdmin, error: ${e.getMessage}")
-        Some(csvRow)
+    }.onErrorHandle { e =>
+      logger.error(s"fail to create poc admin and status. poc: $poc, pocAdmin: $pocAdmin, error: ${e.getMessage}")
+      Some(csvRow)
     }
   }
 

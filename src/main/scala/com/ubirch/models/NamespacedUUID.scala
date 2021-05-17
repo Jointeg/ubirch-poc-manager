@@ -5,7 +5,9 @@ import memeid4s.UUID
 
 import java.util.{ UUID => jUUID }
 
-case class NamespacedUUID(value: UUID)
+case class NamespacedUUID(value: UUID) {
+  def asJava(): jUUID = value.asJava()
+}
 
 object NamespacedUUID {
   private val nullUUID = UUID.fromUUID(jUUID.fromString("00000000-0000-0000-0000-000000000000"))

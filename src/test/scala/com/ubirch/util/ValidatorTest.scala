@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import cats.data.Validated.{ Invalid, Valid }
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
+import com.ubirch.models.tenant.{ API, APP, Both }
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.ValidatorConstants.{
   emptyStringError,
@@ -138,13 +139,19 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
   "Validator Client Cert" should {
 
     val tenant = createTenant()
-    "validate 'TRUE' valid" in {
+    "validate 'TRUE' valid if tenant usageType == APP" in {
       val str = "TRUE"
-      val validated = validateClientCert(clientCert, str, tenant)
+      val validated = validateClientCert(clientCert, str, tenant.copy(usageType = APP))
       assert(validated.isValid)
     }
 
-    "validate 'tryx' valid" in {
+    "validate 'TRUE' valid if tenant usageType == Both" in {
+      val str = "TRUE"
+      val validated = validateClientCert(clientCert, str, tenant.copy(usageType = Both))
+      assert(validated.isValid)
+    }
+
+    "validate 'tryx' invalid" in {
       val str = "tryx"
       val validated = validateClientCert(clientCert, str, tenant)
       assert(validated.isInvalid)
@@ -152,6 +159,17 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
           assert(error == ValidatorConstants.booleanError(clientCert))
+        }
+    }
+
+    "validate 'TRUE' invalid when tenant usageType == API" in {
+      val str = "TRUE"
+      val validated = validateClientCert(clientCert, str, tenant.copy(usageType = API))
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.organisationalUnitCertError)
         }
     }
 
@@ -170,6 +188,17 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
           assert(error == ValidatorConstants.clientCertError(clientCert))
+        }
+    }
+
+    "validate 'False' invalid when tenant usageType == APP" in {
+      val str = "False"
+      val validated = validateClientCert(clientCert, str, tenant.copy(usageType = APP))
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.organisationalUnitCertError)
         }
     }
   }

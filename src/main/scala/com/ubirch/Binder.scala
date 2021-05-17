@@ -8,7 +8,7 @@ import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
 import com.ubirch.services.auth._
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.execution.{ ExecutionProvider, SchedulerBase, SchedulerProvider }
+import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
@@ -105,6 +105,7 @@ class Binder extends AbstractModule {
 
   def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
+
   def TenantRepository: ScopedBindingBuilder =
     bind(classOf[TenantRepository]).to(classOf[TenantTable])
 
@@ -124,9 +125,9 @@ class Binder extends AbstractModule {
 
   def PocBatchHandler: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
-  def CsvProcessPoc: ScopedBindingBuilder = bind(classOf[CsvProcessPoc]) to (classOf[CsvProcessPocImpl])
+  def CsvProcessPoc: ScopedBindingBuilder = bind(classOf[CsvProcessPoc]).to(classOf[CsvProcessPocImpl])
 
-  def CsvProcessPocAdmin: ScopedBindingBuilder = bind(classOf[CsvProcessPocAdmin]) to (classOf[CsvProcessPocAdminImpl])
+  def CsvProcessPocAdmin: ScopedBindingBuilder = bind(classOf[CsvProcessPocAdmin]).to(classOf[CsvProcessPocAdminImpl])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
 
@@ -154,6 +155,8 @@ class Binder extends AbstractModule {
   def PocCreator: ScopedBindingBuilder = bind(classOf[PocCreator]).to(classOf[PocCreatorImpl])
 
   def PocCreationLoop: ScopedBindingBuilder = bind(classOf[PocCreationLoop]).to(classOf[PocCreationLoopImpl])
+
+  def CertHandler: ScopedBindingBuilder = bind(classOf[CertHandler]).to(classOf[CertCreatorImpl])
 
   override def configure(): Unit = {
     Config
@@ -203,6 +206,7 @@ class Binder extends AbstractModule {
     TenantAdminService
     PocCreator
     PocCreationLoop
+    CertHandler
     ()
   }
 }

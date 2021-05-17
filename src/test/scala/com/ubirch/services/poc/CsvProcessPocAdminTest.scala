@@ -1,9 +1,9 @@
 package com.ubirch.services.poc
 
 import com.ubirch.ModelCreationHelper.createTenant
-import com.ubirch.services.poc.util.CsvConstants.pocAdminHeaderLine
 import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
+import com.ubirch.services.poc.util.CsvConstants.pocAdminHeaderLine
 
 import java.util.UUID
 
@@ -55,10 +55,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           assert(pocAdmins.length == 1)
           assert(pocAdminStatusOpt.isDefined)
           assert(pocAdminStatusOpt.get.pocAdminId == pocAdmin.id)
-        }).onErrorHandle {
-          case e =>
-            fail(e)
-        }.runSyncUnsafe()
+        }).onErrorHandle(e => fail(e)).runSyncUnsafe()
       }
     }
 
@@ -74,12 +71,9 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {
           result.left.get.shouldBe("technician_surname didn't equal expected header technician_surname*; the right header order would be: external_id*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,data_schema_id*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
-          assert(pocs.length == 0)
-          assert(pocAdmins.length == 0)
-        }).onErrorHandle {
-          case e =>
-            fail(e)
-        }.runSyncUnsafe()
+          assert(pocs.isEmpty)
+          assert(pocAdmins.isEmpty)
+        }).onErrorHandle(e => fail(e)).runSyncUnsafe()
       }
     }
 
@@ -97,10 +91,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           assert(result.isLeft)
           assert(pocs.length == 1)
           assert(pocAdmins.length == 1)
-        }).onErrorHandle {
-          case e =>
-            fail(e)
-        }.runSyncUnsafe()
+        }).onErrorHandle(e => fail(e)).runSyncUnsafe()
       }
     }
   }

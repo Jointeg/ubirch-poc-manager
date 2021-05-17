@@ -54,10 +54,9 @@ class CsvProcessPocImpl @Inject() (
       } yield {
         None
       }
-    }.onErrorHandle {
-      case e =>
-        logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
-        Some(csvRow)
+    }.onErrorHandle { e =>
+      logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
+      Some(csvRow)
     }
   }
 
