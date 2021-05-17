@@ -87,10 +87,10 @@ CREATE TABLE IF NOT EXISTS poc_manager.tenants
     certify_group_id             text,
     device_group_id              text,
     client_cert                  text,
-    last_updated                 text         NOT NULL,
-    created                      text         NOT NULL,
     org_cert_id                  UUID         NOT NULL,
     org_unit_cert_id             UUID,
+    last_updated                 text         NOT NULL,
+    created                      text         NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT unique_tenant UNIQUE (tenant_name)
 );

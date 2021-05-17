@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.{ APP, Both, Tenant }
+import com.ubirch.models.tenant.{ API, Tenant }
 import com.ubirch.services.poc.util.PKCS12Operations
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -88,7 +88,9 @@ class PocCreatorImpl @Inject() (
   }
 
   def doOrganisationUnitCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
-    if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
+    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
+      throwPocCreationError("a poc shouldn't require client cert if tenant usageType is API", pocAndStatus)
+    if (pocAndStatus.poc.clientCertRequired) {
       createOrganisationalUnitCertificate(tenant, pocAndStatus)
     } else {
       Task(pocAndStatus)
@@ -101,13 +103,13 @@ class PocCreatorImpl @Inject() (
       msg))
   }
 
-  private def createOrganisationalUnitCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) = {
-    certHandler.createOrganisationalUnitCertificate(
-      pocAndStatus.poc.tenantId.value.asJava(),
-      pocAndStatus.poc.id,
-      CertIdentifier.pocOrgUnitCert(tenant.tenantName, pocAndStatus.poc.pocName, pocAndStatus.poc.id)
-    )
-      .flatMap {
+  private def createOrganisationalUnitCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) =
+    certHandler
+      .createOrganisationalUnitCertificate(
+        pocAndStatus.poc.tenantId.value.asJava(),
+        pocAndStatus.poc.id,
+        CertIdentifier.pocOrgUnitCert(tenant.tenantName, pocAndStatus.poc.pocName, pocAndStatus.poc.id)
+      ).flatMap {
         case Left(certificationCreationError) =>
           Task(logger.error(certificationCreationError.msg)) >>
             throwPocCreationError(
@@ -115,8 +117,9 @@ class PocCreatorImpl @Inject() (
               pocAndStatus)
         case Right(_) => Task(pocAndStatus.updateStatus(_.copy(orgUnitCertIdCreated = Some(true))))
       }
-  }
 
+
+  //Todo: store cert uuid from response to poc object and update poc accordingly
   private def createSharedAuthCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) = {
     val id = UUID.randomUUID()
     val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, pocAndStatus.poc.pocName, id)
@@ -129,7 +132,7 @@ class PocCreatorImpl @Inject() (
             s"Could not create shared auth certificate with id: $id",
             pocAndStatus)
         case Right(sharedAuthResponse) => Task((
-            pocAndStatus.updateStatus(_.copy(orgUnitCertIdCreated = Some(true))),
+            pocAndStatus.updateStatus(_.copy(clientCertCreated = Some(true))),
             sharedAuthResponse))
       }
       (pocAndStatus, sharedAuthResponse) = statusWithResponse
@@ -143,14 +146,16 @@ class PocCreatorImpl @Inject() (
   }
 
   private def doSharedAuthCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
-    if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
+    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
+      throwPocCreationError("a poc shouldn't require shared auth cert if tenant usageType is API", pocAndStatus)
+    if (pocAndStatus.poc.clientCertRequired) {
       createSharedAuthCertificate(tenant, pocAndStatus)
     } else {
       Task(pocAndStatus)
     }
   }
 
-//Todo: create and provide client certs
+  //Todo: create and provide client certs
   //Todo: download and store logo
   private def process(pocAndStatus: PocAndStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
     logger.info(s"starting to process poc with id ${pocAndStatus.poc.id}")

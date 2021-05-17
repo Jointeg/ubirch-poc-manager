@@ -12,11 +12,13 @@ import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client._
+import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.json4s.asJson
 import sttp.model.StatusCode
 
 import java.util.UUID
 import javax.inject.Inject
+import scala.concurrent.Future
 
 trait CertHandler {
 
@@ -33,7 +35,7 @@ trait CertHandler {
 
 class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extends CertHandler with LazyLogging {
 
-  implicit val backend = SttpResources.backend
+  implicit val backend: SttpBackend[Future, Nothing, WebSocketHandler] = SttpResources.backend
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
 
   private val certManagerUrl: String = conf.getString(ServicesConfPaths.CERT_MANAGER_URL)
@@ -63,9 +65,8 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
   override def createSharedAuthCertificate(
     orgUnitId: UUID,
     groupId: UUID,
-    identifier: CertIdentifier): Task[Either[
-    CertificateCreationError,
-    SharedAuthCertificateResponse]] = {
+    identifier: CertIdentifier): Task[Either[CertificateCreationError, SharedAuthCertificateResponse]] = {
+
     val response = Task.deferFuture(basicRequest
       .post(uri"$certManagerUrl/units/${orgUnitId.toString}/groups/${groupId.toString}")
       .body(write[CreateSharedAuthCertificateRequest](CreateSharedAuthCertificateRequest(identifier.value)))
