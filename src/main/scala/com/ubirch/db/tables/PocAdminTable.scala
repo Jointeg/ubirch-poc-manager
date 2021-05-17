@@ -1,6 +1,6 @@
 package com.ubirch.db.tables
 
-import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.models.poc.PocAdmin
 import com.ubirch.models.tenant.TenantId
 import io.getquill.{ EntityQuery, Insert }
@@ -17,8 +17,8 @@ trait PocAdminRepository {
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
 }
 
-class PocAdminTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocAdminRepository {
-  import quillJdbcContext.ctx._
+class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminRepository {
+  import QuillMonixJdbcContext.ctx._
 
   private def createPocAdminQuery(pocAdmin: PocAdmin): Quoted[Insert[PocAdmin]] =
     quote {
@@ -36,12 +36,12 @@ class PocAdminTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocAd
     }
 
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] =
-    Task(run(createPocAdminQuery(pocAdmin))).map(_ => pocAdmin.id)
+    run(createPocAdminQuery(pocAdmin)).map(_ => pocAdmin.id)
 
   def getPocAdmin(pocAdminId: UUID): Task[Option[PocAdmin]] =
-    Task(run(getPocAdminQuery(pocAdminId))).map(_.headOption)
+    run(getPocAdminQuery(pocAdminId)).map(_.headOption)
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]] = {
-    Task(run(getAllPocAdminsByTenantIdQuery(tenantId)))
+    run(getAllPocAdminsByTenantIdQuery(tenantId))
   }
 }

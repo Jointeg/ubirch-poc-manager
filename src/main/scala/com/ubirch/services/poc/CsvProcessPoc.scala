@@ -2,7 +2,7 @@ package com.ubirch.services.poc
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
-import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
@@ -20,7 +20,7 @@ trait CsvProcessPoc {
 @Singleton
 class CsvProcessPocImpl @Inject() (
   pocConfig: PocConfig,
-  quillJdbcContext: QuillJdbcContext,
+  QuillMonixJdbcContext: QuillMonixJdbcContext,
   pocRepository: PocRepository,
   pocStatusRepository: PocStatusRepository,
   scheduler: Scheduler)
@@ -49,7 +49,7 @@ class CsvProcessPocImpl @Inject() (
 
   private def storePocAndStatus(poc: Poc, csvRow: String): Task[Option[String]] = {
     val status = PocStatus.init(poc)
-    quillJdbcContext.withTransaction {
+    QuillMonixJdbcContext.withTransaction {
       for {
         _ <- pocRepository.createPoc(poc)
         _ <- pocStatusRepository.createPocStatus(status)

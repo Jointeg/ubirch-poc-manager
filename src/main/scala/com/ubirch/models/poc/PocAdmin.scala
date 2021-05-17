@@ -15,7 +15,7 @@ case class PocAdmin(
   mobilePhone: String,
   webIdentRequired: Boolean,
   webIdentIdentifier: Option[String],
-  keyCloakUserId: UUID,
+  certifierUserId: UUID,
   dateOfBirth: BirthDate,
   status: Status = Pending,
   lastUpdated: Updated = Updated(DateTime.now()),
@@ -33,7 +33,7 @@ object PocAdmin {
     email: String,
     mobilePhone: String,
     webIdentRequired: Boolean,
-    keyCloakUserId: UUID,
+    certifierUserId: UUID,
     dateOfBirth: LocalDate): PocAdmin = {
     PocAdmin(
       id,
@@ -45,7 +45,7 @@ object PocAdmin {
       mobilePhone,
       webIdentRequired,
       None,
-      keyCloakUserId,
+      certifierUserId,
       BirthDate(dateOfBirth)
     )
   }

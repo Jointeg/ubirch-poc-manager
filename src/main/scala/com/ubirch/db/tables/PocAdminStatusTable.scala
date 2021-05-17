@@ -1,6 +1,6 @@
 package com.ubirch.db.tables
 
-import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.models.poc.PocAdminStatus
 import io.getquill.{ EntityQuery, Insert }
 import monix.eval.Task
@@ -14,8 +14,8 @@ trait PocAdminStatusRepository {
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]]
 }
 
-class PocAdminStatusTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocAdminStatusRepository {
-  import quillJdbcContext.ctx._
+class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminStatusRepository {
+  import QuillMonixJdbcContext.ctx._
 
   private def createPocAdminStatusQuery(pocAdminStatus: PocAdminStatus): Quoted[Insert[PocAdminStatus]] =
     quote {
@@ -28,8 +28,8 @@ class PocAdminStatusTable @Inject() (quillJdbcContext: QuillJdbcContext) extends
     }
 
   def createStatus(pocAdminStatus: PocAdminStatus): Task[UUID] =
-    Task(run(createPocAdminStatusQuery(pocAdminStatus))).map(_ => pocAdminStatus.pocAdminId)
+    run(createPocAdminStatusQuery(pocAdminStatus)).map(_ => pocAdminStatus.pocAdminId)
 
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]] =
-    Task(run(getStatusQuery(pocAdminId))).map(_.headOption)
+    run(getStatusQuery(pocAdminId)).map(_.headOption)
 }

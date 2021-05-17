@@ -8,13 +8,15 @@ case class PocAdminStatus(
   pocAdminId: UUID,
   webIdentRequired: Boolean,
   webIdentIdentified: Option[Boolean],
+  webIdentTriggered: Option[Boolean],
   keycloakUserCreated: Boolean = false,
   emailActionRequired: Boolean = false,
   verifyEmailSet: Boolean = false,
   updatePasswordSet: Boolean = false,
   twoFactorAuthSet: Boolean = false,
-  pocGroupAdded: Boolean = false,
-  pocAdminGroupAdded: Boolean = false,
+  pocCertifyGroupAssigned: Boolean = false,
+  pocTenantGroupAssigned: Boolean = false,
+  certifyPocGroupAssigned: Boolean = false,
   errorMessage: Option[String] = None,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())
@@ -23,10 +25,12 @@ case class PocAdminStatus(
 object PocAdminStatus {
   def init(podAdmin: PocAdmin): PocAdminStatus = {
     val webIdentIdentifier = if (podAdmin.webIdentRequired) Some(false) else None
+    val webIdentTriggered = if (podAdmin.webIdentRequired) Some(false) else None
     PocAdminStatus(
       podAdmin.id,
       podAdmin.webIdentRequired,
-      webIdentIdentifier
+      webIdentIdentifier,
+      webIdentTriggered
     )
   }
 }

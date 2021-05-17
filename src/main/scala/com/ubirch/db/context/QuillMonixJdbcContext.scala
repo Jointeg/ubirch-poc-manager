@@ -1,27 +1,27 @@
 package com.ubirch.db.context
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.services.lifeCycle.Lifecycle
-import io.getquill.{PostgresJdbcContext, SnakeCase}
+import io.getquill.{ PostgresMonixJdbcContext, SnakeCase }
 import monix.eval.Task
 import monix.execution.Scheduler
 
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
-trait QuillJdbcContext {
-  val ctx: PostgresJdbcContext[SnakeCase]
+trait QuillMonixJdbcContext {
+  val ctx: PostgresMonixJdbcContext[SnakeCase]
 
   def withTransaction[T](f: => Task[T]): Task[T]
 }
 
 @Singleton
-case class PostgresQuillJdbcContext @Inject() (lifecycle: Lifecycle)(implicit scheduler: Scheduler)
-  extends QuillJdbcContext with LazyLogging {
-  val ctx: PostgresJdbcContext[SnakeCase] =
+case class PostgresQuillMonixJdbcContext @Inject() (lifecycle: Lifecycle)(implicit scheduler: Scheduler)
+  extends QuillMonixJdbcContext
+  with LazyLogging {
+  val ctx: PostgresMonixJdbcContext[SnakeCase] =
     try {
-      new PostgresJdbcContext(SnakeCase, "database")
+      new PostgresMonixJdbcContext(SnakeCase, "database")
     } catch {
       case _: IllegalStateException =>
         //This error will contain otherwise password information, which we wouldn't want to log.
@@ -32,11 +32,8 @@ case class PostgresQuillJdbcContext @Inject() (lifecycle: Lifecycle)(implicit sc
     }
 
   def withTransaction[T](f: => Task[T]): Task[T] = {
-    Task {
-      ctx.transaction {
-        // @TODO consider using PostgresMonixJdbcContext because here blocks the thread.
-        f.runSyncUnsafe(10.seconds)
-      }
+    ctx.transaction {
+      f
     }
   }
 

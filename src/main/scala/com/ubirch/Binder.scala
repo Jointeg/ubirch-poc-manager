@@ -3,7 +3,7 @@ package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
 import com.google.inject.{ AbstractModule, Module }
 import com.typesafe.config.Config
-import com.ubirch.db.context.{ PostgresQuillJdbcContext, QuillJdbcContext }
+import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
 import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
 import com.ubirch.services.auth._
@@ -100,8 +100,8 @@ class Binder extends AbstractModule {
   def UserPollingService: ScopedBindingBuilder =
     bind(classOf[UserPollingService]).to(classOf[KeycloakUserPollingService])
 
-  def QuillJdbcContext: ScopedBindingBuilder =
-    bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
+  def QuillMonixJdbcContext: ScopedBindingBuilder =
+    bind(classOf[QuillMonixJdbcContext]).to(classOf[PostgresQuillMonixJdbcContext])
 
   def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
@@ -180,7 +180,7 @@ class Binder extends AbstractModule {
     TenantService
     AuthClient
     UserPollingService
-    QuillJdbcContext
+    QuillMonixJdbcContext
     UserRepository
     PocBatchHandler
     CsvProcessPoc

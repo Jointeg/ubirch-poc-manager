@@ -2,10 +2,11 @@ package com.ubirch.e2e
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.ubirch._
-import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{ KeycloakCertifyConfig, KeycloakDeviceConfig }
-import io.getquill.{ PostgresJdbcContext, SnakeCase }
+import io.getquill.context.monix.MonixJdbcContext.Runner
+import io.getquill.{ PostgresJdbcContext, PostgresMonixJdbcContext, SnakeCase }
 import monix.eval.Task
 
 import javax.inject.{ Inject, Singleton }
@@ -48,14 +49,14 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
 }
 
 @Singleton
-class TestPostgresQuillJdbcContext @Inject() () extends QuillJdbcContext {
-  override val ctx: PostgresJdbcContext[SnakeCase] = StaticTestPostgresJdbcContext.ctx
+class TestPostgresQuillMonixJdbcContext @Inject() () extends QuillMonixJdbcContext {
+  override val ctx: PostgresMonixJdbcContext[SnakeCase] = StaticTestPostgresJdbcContext.ctx
 
   override def withTransaction[T](f: => Task[T]): Task[T] = f
 }
 
 object StaticTestPostgresJdbcContext {
-  val ctx: PostgresJdbcContext[SnakeCase] = new PostgresJdbcContext(
+  val ctx: PostgresMonixJdbcContext[SnakeCase] = new PostgresMonixJdbcContext(
     SnakeCase,
     ConfigFactory.parseString(s"""
                                  |    dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
@@ -65,7 +66,8 @@ object StaticTestPostgresJdbcContext {
                                  |    dataSource.portNumber = ${PostgresDbContainer.container.container.getFirstMappedPort}
                                  |    dataSource.serverName = ${PostgresDbContainer.container.container.getContainerIpAddress}
                                  |    connectionTimeout = 30000
-                                 |""".stripMargin))
+                                 |""".stripMargin),
+    Runner.default)
 }
 
 class E2EInjectorHelperImpl(val superAdmin: SuperAdmin, val tenantAdmin: TenantAdmin)
@@ -75,8 +77,8 @@ class E2EInjectorHelperImpl(val superAdmin: SuperAdmin, val tenantAdmin: TenantA
       bind(classOf[PublicKeyPoolService]).to(classOf[FakeDefaultPublicKeyPoolService])
     }
 
-    override def QuillJdbcContext: ScopedBindingBuilder =
-      bind(classOf[QuillJdbcContext]).to(classOf[TestPostgresQuillJdbcContext])
+    override def QuillMonixJdbcContext: ScopedBindingBuilder =
+      bind(classOf[QuillMonixJdbcContext]).to(classOf[TestPostgresQuillMonixJdbcContext])
 
     override def KeycloakUsersConfig: ScopedBindingBuilder = {
       bind(classOf[KeycloakCertifyConfig]).toConstructor(

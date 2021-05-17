@@ -446,7 +446,7 @@
         <!-- Quill -->
         <dependency>
             <groupId>io.getquill</groupId>
-            <artifactId>quill-jdbc_${scala.compat.version}</artifactId>
+            <artifactId>quill-jdbc-monix_${scala.compat.version}</artifactId>
             <version>3.7.0</version>
         </dependency>
         <dependency>
