@@ -12,10 +12,12 @@ import com.ubirch.services.keycloak.users.{
   UserPollingService
 }
 import com.ubirch.services.poc.{
+  CertHandler,
   DeviceCreator,
   DeviceCreatorMockSuccess,
   InformationProvider,
-  InformationProviderMockSuccess
+  InformationProviderMockSuccess,
+  TestCertHandler
 }
 import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec
@@ -71,6 +73,9 @@ class DefaultUnitTestBinder extends Binder {
 
   override def InformationProvider: ScopedBindingBuilder =
     bind(classOf[InformationProvider]).to(classOf[InformationProviderMockSuccess])
+
+  override def CertHandler: ScopedBindingBuilder =
+    bind(classOf[CertHandler]).to(classOf[TestCertHandler])
 
   override def configure(): Unit = {
     super.configure()

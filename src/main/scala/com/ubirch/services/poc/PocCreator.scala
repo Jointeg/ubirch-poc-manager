@@ -89,67 +89,21 @@ class PocCreatorImpl @Inject() (
 
   def doOrganisationUnitCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
-      throwPocCreationError("a poc shouldn't require client cert if tenant usageType is API", pocAndStatus)
-    if (pocAndStatus.poc.clientCertRequired) {
-      createOrganisationalUnitCertificate(tenant, pocAndStatus)
+      PoCCertCreator.pocCreationError("a poc shouldn't require client cert if tenant usageType is API", pocAndStatus)
+    else if (pocAndStatus.poc.clientCertRequired) {
+      PoCCertCreator.createPoCOrganisationalUnitCertificate(tenant, pocAndStatus)(certHandler)
     } else {
       Task(pocAndStatus)
     }
   }
 
-  private def throwPocCreationError(msg: String, pocAndStatus: PocAndStatus) = {
-    Task.raiseError(PocCreationError(
-      pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg))),
-      msg))
-  }
-
-  private def createOrganisationalUnitCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) =
-    certHandler
-      .createOrganisationalUnitCertificate(
-        pocAndStatus.poc.tenantId.value.asJava(),
-        pocAndStatus.poc.id,
-        CertIdentifier.pocOrgUnitCert(tenant.tenantName, pocAndStatus.poc.pocName, pocAndStatus.poc.id)
-      ).flatMap {
-        case Left(certificationCreationError) =>
-          Task(logger.error(certificationCreationError.msg)) >>
-            throwPocCreationError(
-              s"Could not create organisational unit certificate with orgUnitId: ${pocAndStatus.poc.id}",
-              pocAndStatus)
-        case Right(_) => Task(pocAndStatus.updateStatus(_.copy(orgUnitCertIdCreated = Some(true))))
-      }
-
-
-  //Todo: store cert uuid from response to poc object and update poc accordingly
-  private def createSharedAuthCertificate(tenant: Tenant, pocAndStatus: PocAndStatus) = {
-    val id = UUID.randomUUID()
-    val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, pocAndStatus.poc.pocName, id)
-
-    for {
-      result <- certHandler.createSharedAuthCertificate(pocAndStatus.poc.id, id, certIdentifier)
-      statusWithResponse <- result match {
-        case Left(certificationCreationError) =>
-          Task(logger.error(certificationCreationError.msg)) >> throwPocCreationError(
-            s"Could not create shared auth certificate with id: $id",
-            pocAndStatus)
-        case Right(sharedAuthResponse) => Task((
-            pocAndStatus.updateStatus(_.copy(clientCertCreated = Some(true))),
-            sharedAuthResponse))
-      }
-      (pocAndStatus, sharedAuthResponse) = statusWithResponse
-      _ <-
-        Task.pure(
-          PKCS12Operations.recreateFromBase16String(sharedAuthResponse.pkcs12, sharedAuthResponse.passphrase)).flatMap {
-          case Left(_)         => throwPocCreationError("Certificate creation error", pocAndStatus)
-          case Right(keystore) => Task(keystore)
-        } // TODO: store the PKCS12 and passphrase in TeamDrive
-    } yield pocAndStatus
-  }
-
   private def doSharedAuthCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
-      throwPocCreationError("a poc shouldn't require shared auth cert if tenant usageType is API", pocAndStatus)
-    if (pocAndStatus.poc.clientCertRequired) {
-      createSharedAuthCertificate(tenant, pocAndStatus)
+      PoCCertCreator.pocCreationError(
+        "a poc shouldn't require shared auth cert if tenant usageType is API",
+        pocAndStatus)
+    else if (pocAndStatus.poc.clientCertRequired) {
+      PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus)(certHandler)
     } else {
       Task(pocAndStatus)
     }

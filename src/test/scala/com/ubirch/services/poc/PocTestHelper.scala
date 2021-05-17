@@ -9,15 +9,17 @@ import com.ubirch.db.tables.{
   TenantRepositoryMock
 }
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
+import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserException }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId }
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserId, UserName }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
+import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.execution.Scheduler.Implicits.global
-import org.scalatest.Assertion
-import org.scalatest.Matchers.convertToAnyShouldWrapper
 
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
 object PocTestHelper extends Awaits {
@@ -49,6 +51,39 @@ object PocTestHelper extends Awaits {
     await(tenantTable.createTenant(updatedTenant), 1.seconds)
     await(pocTable.createPoc(poc), 1.seconds)
     await(pocStatusTable.createPocStatus(pocStatus), 1.seconds)
+  }
+
+  def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc): Either[UserException, UserId] = {
+    users.createUser(
+      CreateKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
+      DeviceKeycloak).runSyncUnsafe()
+  }
+
+  def createPocStatusAllTrue(): PocStatus = {
+    PocStatus(
+      UUID.randomUUID(),
+      certifyRoleCreated = true,
+      certifyGroupCreated = true,
+      certifyGroupRoleAssigned = true,
+      certifyGroupTenantRoleAssigned = true,
+      deviceRoleCreated = true,
+      deviceGroupCreated = true,
+      deviceGroupRoleAssigned = true,
+      deviceGroupTenantRoleAssigned = true,
+      deviceCreated = true,
+      assignedDataSchemaGroup = true,
+      assignedDeviceGroup = true,
+      clientCertRequired = false,
+      None,
+      None,
+      None,
+      logoRequired = false,
+      None,
+      None,
+      goClientProvided = true,
+      certifyApiProvided = true,
+      None
+    )
   }
 
 }

@@ -140,38 +140,4 @@ class PocCreatorTest extends UnitTestBase {
     }
   }
 
-  private def createPocStatusAllTrue() = {
-
-    PocStatus(
-      UUID.randomUUID(),
-      certifyRoleCreated = true,
-      certifyGroupCreated = true,
-      certifyGroupRoleAssigned = true,
-      certifyGroupTenantRoleAssigned = true,
-      deviceRoleCreated = true,
-      deviceGroupCreated = true,
-      deviceGroupRoleAssigned = true,
-      deviceGroupTenantRoleAssigned = true,
-      deviceCreated = true,
-      assignedDataSchemaGroup = true,
-      assignedDeviceGroup = true,
-      clientCertRequired = false,
-      None,
-      None,
-      None,
-      logoRequired = false,
-      None,
-      None,
-      goClientProvided = true,
-      certifyApiProvided = true,
-      None
-    )
-  }
-
-  private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
-    users.createUser(
-      CreateKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
-      DeviceKeycloak).runSyncUnsafe()
-  }
-
 }
