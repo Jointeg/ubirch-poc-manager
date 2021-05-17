@@ -20,6 +20,7 @@ class TestCertHandler extends CertHandler {
     CertificateCreationError,
     SharedAuthCertificateResponse]] = {
     Task(Right(SharedAuthCertificateResponse(
+      UUID.randomUUID(),
       TestCertHandler.passphrase,
       TestCertHandler.validPkcs12
     )))
