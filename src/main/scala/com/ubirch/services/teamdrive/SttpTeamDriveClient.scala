@@ -3,7 +3,7 @@ package com.ubirch.services.teamdrive
 import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
 import org.json4s.native.Serialization.read
-import org.json4s.{ Formats, Serialization }
+import org.json4s.{Formats, Serialization}
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.json4s._
@@ -12,6 +12,7 @@ import sttp.model.MediaType
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
   implicit backend: SttpBackend[Future, Nothing, WebSocketHandler],
@@ -23,6 +24,7 @@ class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
 
   private val authenticatedRequest: RequestT[Empty, Either[String, String], Nothing] =
     basicRequest.auth.basic(config.username, config.password)
+      .readTimeout(config.readTimeout)
 
   override def createSpace(name: String, path: String): Task[SpaceId] =
     callCreateSpace(name, path).flatMap { r =>
@@ -99,7 +101,7 @@ class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
 }
 
 object SttpTeamDriveClient {
-  case class Config(url: String, username: String, password: String)
+  case class Config(url: String, username: String, password: String, readTimeout: Duration)
 
   case class TeamDriveError_OUT(error: Int, error_message: String, result: Boolean, status_code: Int)
 

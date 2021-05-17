@@ -5,13 +5,15 @@ import com.ubirch.services.teamdrive.model.Read
 import com.ubirch.test.TaskSupport._
 import com.ubirch.test.TestData._
 import com.ubirch.test._
+import monix.eval.Task
 import org.json4s.{ Formats, Serialization }
-import sttp.client.SttpBackend
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
+import sttp.client.{ SttpBackend, SttpClientException }
 
 import java.nio.ByteBuffer
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class SttpTeamDriveClientTest extends HttpTest {
 
@@ -21,7 +23,7 @@ class SttpTeamDriveClientTest extends HttpTest {
 
   import SttpTeamDriveClientTest._
 
-  "SttpTeamDriveClient.createSpace" should {
+  "SttpTeamDriveClient.createSpace" must {
     "create one for given name and path" in httpTest { httpStub =>
       // given
       val client = new SttpTeamDriveClient(config(httpStub.url))
@@ -47,7 +49,7 @@ class SttpTeamDriveClientTest extends HttpTest {
     }
   }
 
-  "SttpTeamDriveClient.putFile" should {
+  "SttpTeamDriveClient.putFile" must {
     "send file to given space" in httpTest { httpStub =>
       // given
       val client = new SttpTeamDriveClient(config(httpStub.url))
@@ -79,7 +81,7 @@ class SttpTeamDriveClientTest extends HttpTest {
     }
   }
 
-  "SttpTeamDriveClient.inviteMember" should {
+  "SttpTeamDriveClient.inviteMember" must {
     "send invitation" in httpTest { httpStub =>
       // given
       val client = new SttpTeamDriveClient(config(httpStub.url))
@@ -110,9 +112,34 @@ class SttpTeamDriveClientTest extends HttpTest {
       response mustBe model.TeamDriveError(30, "some error")
     }
   }
+
+  "SttpTeamDriveClient" must {
+    "get timeout on each endpoint, for configured value" in httpTest { httpStub =>
+      // given
+      val client = new SttpTeamDriveClient(config(url = httpStub.url, readTimeout = 1.second))
+      httpStub.anyRequestWillTimeout(delay = 2.seconds)
+
+      val matchTimeout: PartialFunction[Throwable, String] = {
+        case _: SttpClientException.ReadException => "read timeout"
+      }
+      val response1 = client.createSpace(spaceName, spacePath).onErrorRecover(matchTimeout)
+      val response2 = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).onErrorRecover(matchTimeout)
+      val response3 = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)
+
+      // when
+      val a = Task.gather(Seq(response1, response2, response3)).runSyncUnsafe()
+
+      // then
+      a mustBe Seq("read timeout", "read timeout", "read timeout")
+    }
+  }
 }
 
 object SttpTeamDriveClientTest {
-  def config(url: String, username: String = "username", password: String = "password"): SttpTeamDriveClient.Config =
-    SttpTeamDriveClient.Config(url, username, password)
+  def config(
+    url: String,
+    username: String = "username",
+    password: String = "password",
+    readTimeout: Duration = 5.seconds): SttpTeamDriveClient.Config =
+    SttpTeamDriveClient.Config(url, username, password, readTimeout)
 }

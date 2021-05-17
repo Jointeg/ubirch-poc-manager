@@ -3,7 +3,9 @@ package com.ubirch.test
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock._
 import sttp.model.MediaType.ApplicationOctetStream
-import sttp.model.{ HeaderNames, MediaType }
+import sttp.model.{HeaderNames, MediaType}
+
+import scala.concurrent.duration.Duration
 
 class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF-8") { self =>
 
@@ -40,7 +42,7 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
     username: String = TestData.username,
     password: String = TestData.password,
     spaceId: Int = TestData.spaceId,
-    fileBody: Array[Byte], // TODO match body
+    fileBody: Array[Byte],
     fileName: String,
     fileId: Int
   ): HttpStub = {
@@ -48,6 +50,7 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
       put(urlEqualTo(s"/files/$spaceId/$fileName"))
         .withBasicAuth(username, password)
         .withHeader(HeaderNames.ContentType, equalTo(ApplicationOctetStream.toString()))
+        .withRequestBody(binaryEqualTo(fileBody))
         .willReturn(
           aResponse()
             .withHeader(HeaderNames.ContentType, ApplicationJson)
@@ -152,6 +155,18 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
             .withBody(errorResponse(message = errorMessage, statusCode = statusCode, errorCode = errorCode))
         )
     )
+    self
+  }
+
+  def anyRequestWillTimeout(delay: Duration): HttpStub = {
+    val response =  aResponse()
+        .withFixedDelay(delay.toMillis.toInt)
+        .withStatus(400)
+      .withBody(errorResponse(message = "errorMessage", statusCode = 400, errorCode = 31))
+
+    wiremock.stubFor(post(anyUrl()).willReturn(response))
+    wiremock.stubFor(put(anyUrl()).willReturn(response))
+    wiremock.stubFor(get(anyUrl()).willReturn(response))
     self
   }
 
