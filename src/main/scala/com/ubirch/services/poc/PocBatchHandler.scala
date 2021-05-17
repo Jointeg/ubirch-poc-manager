@@ -7,7 +7,6 @@ import com.ubirch.services.poc.util.CsvConstants.{
   pocAdminHeaderColOrderLength,
   pocHeaderColOrderLength
 }
-import com.ubirch.services.poc.util.HeaderCsvException
 import com.ubirch.services.util.CsvHelper
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -19,30 +18,29 @@ trait PocBatchHandlerTrait {
 }
 
 @Singleton
-class PocBatchHandlerImpl @Inject() (processPoc: CsvProcessPoc, processPocAdmin: CsvProcessPocAdmin)
+class PocBatchHandlerImpl @Inject() (processPoc: CsvProcessPoc, processPocAdmin: CsvProcessPocAdmin)(implicit
+scheduler: Scheduler)
   extends PocBatchHandlerTrait {
 
-  implicit val scheduler: Scheduler = monix.execution.Scheduler.global
-
   /**
-    * This method dispatches processes for a Poc csv file and a PocAdmin csv file.
+    * This method dispatches processes for a Poc csv file and a PocAdmin csv file based on the number of csv header.
     */
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] =
     CsvHelper.openFile(csv).use { source =>
       val lines = source.getLines()
 
       if (lines.hasNext) {
-        val colNum = lines.next().split(columnSeparator).map(_.trim).length
-        colNum match {
-          case `pocHeaderColOrderLength` =>
-            processPoc.createListOfPoCs(csv, tenant)
-          case `pocAdminHeaderColOrderLength` =>
-            processPocAdmin.createListOfPoCsAndAdmin(csv, tenant)
-          case _ =>
-            throw HeaderCsvException(s"the number of column is incorrect. $colNum")
+        val header = lines.next()
+        val colNum = header.split(columnSeparator).map(_.trim).length
+        if (colNum >= pocAdminHeaderColOrderLength) {
+          processPocAdmin.createListOfPoCsAndAdmin(csv, tenant)
+        } else if (colNum >= pocHeaderColOrderLength) {
+          processPoc.createListOfPoCs(csv, tenant)
+        } else {
+          Task(Left(s"$header; the number of header($colNum) is not enough."))
         }
       } else {
-        throw HeaderCsvException("the csv is empty.")
+        Task(Left("the csv is empty."))
       }
     }
 }
