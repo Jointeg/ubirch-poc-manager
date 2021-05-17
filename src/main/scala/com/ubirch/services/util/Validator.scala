@@ -3,7 +3,7 @@ package com.ubirch.services.util
 import cats.data.Validated.Valid
 import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
-import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.tenant.{ APP, Tenant }
 import com.ubirch.services.poc.util.ValidatorConstants._
 import org.json4s.JValue
 import org.json4s.native.JsonMethods._
@@ -68,6 +68,7 @@ object Validator {
   def validateClientCert(header: String, str: String, tenant: Tenant): AllErrorsOr[Boolean] = {
     validateBoolean(header, str) match {
       case Valid(false) if tenant.clientCert.isEmpty => clientCertError(header).invalidNel
+      case Valid(false) if tenant.usageType == APP   => organisationalUnitCertError.invalidNel
       case validOrInvalid                            => validOrInvalid
     }
   }

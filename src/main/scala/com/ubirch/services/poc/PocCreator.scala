@@ -88,11 +88,7 @@ class PocCreatorImpl @Inject() (
   }
 
   def doOrganisationUnitCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
-    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == APP) {
-      throwPocCreationError(
-        s"Could not create organisational unit certificate because Tenant usageType is set to $APP and clientCertRequires is set to true",
-        pocAndStatus)
-    } else if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
+    if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
       createOrganisationalUnitCertificate(tenant, pocAndStatus)
     } else {
       Task(pocAndStatus)
@@ -147,11 +143,7 @@ class PocCreatorImpl @Inject() (
   }
 
   private def doSharedAuthCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
-    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == APP) {
-      throwPocCreationError(
-        s"Could not create shared auth certificate because Tenant usageType is set to $APP and clientCertRequires is set to true",
-        pocAndStatus)
-    } else if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
+    if (tenant.usageType == APP || (pocAndStatus.poc.clientCertRequired && tenant.usageType == Both)) {
       createSharedAuthCertificate(tenant, pocAndStatus)
     } else {
       Task(pocAndStatus)

@@ -44,14 +44,14 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
     orgUUID: UUID,
     orgUnitId: UUID,
     identifier: CertIdentifier): Task[Either[CertificateCreationError, Unit]] = {
-    val response = basicRequest
+    val response = Task.deferFuture(basicRequest
       .post(uri"$certManagerUrl/orgs/${orgUUID.toString}/units/${orgUnitId.toString}")
       .body(write[CreateOrganisationalUnitCertRequest](CreateOrganisationalUnitCertRequest(identifier.value)))
       .auth.bearer(certManagerToken)
       .response(ignore)
-      .send()
+      .send())
 
-    Task.fromFuture(response).flatMap(response =>
+    response.flatMap(response =>
       if (response.code == StatusCode.Created)
         Task(Right(()))
       else
@@ -66,16 +66,16 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
     identifier: CertIdentifier): Task[Either[
     CertificateCreationError,
     SharedAuthCertificateResponse]] = {
-    val response = basicRequest
+    val response = Task.deferFuture(basicRequest
       .post(uri"$certManagerUrl/units/${orgUnitId.toString}/groups/${groupId.toString}")
       .body(write[CreateSharedAuthCertificateRequest](CreateSharedAuthCertificateRequest(identifier.value)))
       .auth.bearer(certManagerToken)
       .response(asJson[SharedAuthCertificateResponse])
-      .send()
+      .send())
 
     import cats.syntax.either._
 
-    Task.fromFuture(response.map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage))))
+    response.map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage)))
   }
 }
 

@@ -18,9 +18,9 @@ case class PocStatus(
   assignedDataSchemaGroup: Boolean = false,
   assignedDeviceGroup: Boolean = false,
   clientCertRequired: Boolean,
+  orgUnitCertIdCreated: Option[Boolean],
   clientCertCreated: Option[Boolean],
   clientCertProvided: Option[Boolean],
-  orgUnitCertIdCreated: Option[Boolean],
   logoRequired: Boolean,
   logoReceived: Option[Boolean],
   logoStored: Option[Boolean],
@@ -42,9 +42,9 @@ case class PocStatus(
       s"deviceGroupTenantRoleAssigned:$deviceGroupTenantRoleAssigned\n" +
       s"deviceCreated:$deviceCreated\n" +
       s"clientCertRequired:$clientCertRequired\n" +
+      s"orgUnitCertIdCreated:$orgUnitCertIdCreated\n" +
       s"clientCertCreated:$clientCertCreated\n" +
       s"clientCertProvided:$clientCertProvided\n" +
-      s"orgUnitCertIdCreated:$orgUnitCertIdCreated\n" +
       s"logoRequired:$logoRequired\n" +
       s"logoReceived:$logoReceived\n" +
       s"logoStored:$logoStored\n" +

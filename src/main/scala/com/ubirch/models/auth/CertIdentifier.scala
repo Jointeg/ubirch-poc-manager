@@ -16,7 +16,7 @@ object CertIdentifier {
     new CertIdentifier(s"${tenantName.value} $pocName ${randomId.toString.take(5)}")
   }
 
-  def orgCert(tenantName: TenantName): CertIdentifier = new CertIdentifier(tenantName.value)
+  def tenantOrgCert(tenantName: TenantName): CertIdentifier = new CertIdentifier(tenantName.value)
 
   def tenantOrgUnitCert(tenantName: TenantName) = new CertIdentifier(s"${tenantName.value} default")
 

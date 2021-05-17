@@ -25,10 +25,10 @@ case class Poc(
   deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
+  orgUnitCertId: Option[OrgUnitCertId] = None,
+  clientCert: Option[ClientCert] = None,
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
-  created: Created = Created(DateTime.now()),
-  orgUnitCertId: Option[OrgUnitCertId],
-  clientCert: Option[ClientCert]
+  created: Created = Created(DateTime.now())
 ) {
   def getDeviceId: String = deviceId.value.value.toString
 }
