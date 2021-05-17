@@ -33,7 +33,7 @@ object PKCS12Operations extends LazyLogging {
       Right(store)
     } catch {
       case ex: Exception =>
-        logger.error(s"Could not create PKCS12 because of ${ex.getMessage}")
+        logger.error(s"Could not create PKCS12 because of: ${ex.getMessage}")
         Left(PKCS12RecreationError)
     }
   }

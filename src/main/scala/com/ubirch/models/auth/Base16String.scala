@@ -6,7 +6,7 @@ case class Base16String(value: String) extends AnyVal
 object Base16String {
   def toISO8859String(base16String: Base16String): Either[Base16ParsingError, String] = {
     try {
-      val byteRepresentation = base16String.value.sliding(2).foldLeft(Array.empty[Byte])((acc, str) => {
+      val byteRepresentation = base16String.value.sliding(2, 2).foldLeft(Array.empty[Byte])((acc, str) => {
         val byteValue = Integer.parseInt(str, 16)
         acc :+ byteValue.toByte
       })
