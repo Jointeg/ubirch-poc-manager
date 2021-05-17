@@ -1,15 +1,14 @@
 package com.ubirch.teamdrive
 
 import com.ubirch.services.teamdrive._
-import com.ubirch.teamdrive.SttpTeamDriveClientTest.config
+import com.ubirch.services.teamdrive.model.Read
+import com.ubirch.test.TaskSupport._
+import com.ubirch.test.TestData._
 import com.ubirch.test._
-import org.json4s.{Formats, Serialization}
+import org.json4s.{ Formats, Serialization }
 import sttp.client.SttpBackend
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
-import TaskSupport._
-import TestData._
-import com.ubirch.services.teamdrive.model.Read
 
 import java.nio.ByteBuffer
 import scala.concurrent.Future
@@ -52,7 +51,7 @@ class SttpTeamDriveClientTest extends HttpTest {
     "send file to given space" in httpTest { httpStub =>
       // given
       val client = new SttpTeamDriveClient(config(httpStub.url))
-      val content = """bla bla bla""".getBytes
+      val content = "content".getBytes
       httpStub.fileWillBeSent(spaceId = 8, fileBody = content, fileName = "cert.txt", fileId = 16)
 
       // when
@@ -60,6 +59,23 @@ class SttpTeamDriveClientTest extends HttpTest {
 
       // then
       response mustBe model.FileId(16)
+    }
+
+    "fail when TeamDrive responds with an error" in httpTest { httpStub =>
+      // given
+      val client = new SttpTeamDriveClient(config(httpStub.url))
+      httpStub.putFileWillFail(
+        errorCode = 30,
+        errorMessage = "some error",
+        statusCode = 400,
+        fileName = "cert.txt",
+        spaceId = 8)
+
+      // when
+      val response = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).catchError
+
+      // then
+      response mustBe model.TeamDriveError(30, "some error")
     }
   }
 
@@ -74,6 +90,24 @@ class SttpTeamDriveClientTest extends HttpTest {
 
       // then
       response mustBe true
+    }
+
+    "fail when TeamDrive responds with an error" in httpTest { httpStub =>
+      // given
+      val client = new SttpTeamDriveClient(config(httpStub.url))
+      httpStub.invitationWillFail(
+        errorCode = 30,
+        errorMessage = "some error",
+        statusCode = 400,
+        spaceId = 8,
+        permissionLevel = "read",
+        email = "admin@ubirch.com")
+
+      // when
+      val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).catchError
+
+      // then
+      response mustBe model.TeamDriveError(30, "some error")
     }
   }
 }

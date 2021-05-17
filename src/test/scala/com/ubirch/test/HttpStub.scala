@@ -40,7 +40,7 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
     username: String = TestData.username,
     password: String = TestData.password,
     spaceId: Int = TestData.spaceId,
-    fileBody: Array[Byte],
+    fileBody: Array[Byte], // TODO match body
     fileName: String,
     fileId: Int
   ): HttpStub = {
@@ -94,6 +94,57 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
       post(urlEqualTo("/api/createSpace"))
         .withBasicAuth(username, password)
         .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(statusCode)
+            .withBody(errorResponse(message = errorMessage, statusCode = statusCode, errorCode = errorCode))
+        )
+    )
+    self
+  }
+
+  def putFileWillFail(
+    username: String = TestData.username,
+    password: String = TestData.password,
+    spaceId: Int = TestData.spaceId,
+    fileName: String,
+    errorCode: Int,
+    errorMessage: String,
+    statusCode: Int
+  ): HttpStub = {
+    wiremock.stubFor(
+      put(urlEqualTo(s"/files/$spaceId/$fileName"))
+        .withBasicAuth(username, password)
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationOctetStream.toString()))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(statusCode)
+            .withBody(errorResponse(message = errorMessage, statusCode = statusCode, errorCode = errorCode))
+        )
+    )
+    self
+  }
+
+  def invitationWillFail(
+    username: String = TestData.username,
+    password: String = TestData.password,
+    spaceId: Int = TestData.spaceId,
+    email: String = TestData.email,
+    permissionLevel: String = TestData.defaultPermissionLevel,
+    errorCode: Int,
+    errorMessage: String,
+    statusCode: Int
+  ): HttpStub = {
+    wiremock.stubFor(
+      post(urlEqualTo("/api/inviteMember"))
+        .withBasicAuth(username, password)
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .withRequestBody(matchingJsonPath("spaceId", equalTo(s"$spaceId")))
+        .withRequestBody(matchingJsonPath("permissionLevel", equalTo(permissionLevel)))
+        .withRequestBody(matchingJsonPath("sendEmail", equalTo("true")))
+        .withRequestBody(matchingJsonPath("name", equalTo(email)))
         .willReturn(
           aResponse()
             .withHeader(HeaderNames.ContentType, ApplicationJson)
