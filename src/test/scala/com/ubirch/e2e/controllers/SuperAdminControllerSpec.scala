@@ -27,7 +27,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "deviceCreationToken": "1234567890",
        |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
-       |    "userGroupId": "random-certify-group",
+       |    "certifyGroupId": "random-certify-group",
        |    "deviceGroupId": "random-device-group",
        |    "clientCert": "${ModelCreationHelper.base64X509Cert.value}"
        |}
@@ -42,7 +42,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "deviceCreationToken": "1234567890",
        |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
-       |    "userGroupId": "random-certify-group",
+       |    "certifyGroupId": "random-certify-group",
        |    "deviceGroupId": "random-device-group"
        |}
        |""".stripMargin
@@ -54,7 +54,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "tenantName": "$tenantName",
        |    "deviceCreationToken": "1234567890",
        |    "idGardIdentifier": "gard-identifier",
-       |    "userGroupId": "random-certify-group",
+       |    "certifyGroupId": "random-certify-group",
        |    "deviceGroupId": "random-device-group"
        |}
        |""".stripMargin

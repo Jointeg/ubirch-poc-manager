@@ -26,7 +26,7 @@ case class PocStatus(
   goClientProvided: Boolean = false,
   certifyApiProvided: Boolean = false,
   errorMessage: Option[String] = None,
-  lastUpdated: Updated = Updated(DateTime.now()),
+  lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
   override def toString: String = {
