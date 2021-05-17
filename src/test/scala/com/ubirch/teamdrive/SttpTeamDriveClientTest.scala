@@ -114,7 +114,7 @@ class SttpTeamDriveClientTest extends HttpTest {
   }
 
   "SttpTeamDriveClient" must {
-    "get timeout on each endpoint, for configured value" in httpTest { httpStub =>
+    "get request timeout on each endpoint, for configured value" in httpTest { httpStub =>
       // given
       val client = new SttpTeamDriveClient(config(url = httpStub.url, readTimeout = 1.second))
       httpStub.anyRequestWillTimeout(delay = 2.seconds)
@@ -124,13 +124,34 @@ class SttpTeamDriveClientTest extends HttpTest {
       }
       val response1 = client.createSpace(spaceName, spacePath).onErrorRecover(matchTimeout)
       val response2 = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).onErrorRecover(matchTimeout)
-      val response3 = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)
+      val response3 =
+        client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)
 
       // when
       val a = Task.gather(Seq(response1, response2, response3)).runSyncUnsafe()
 
       // then
-      a mustBe Seq("read timeout", "read timeout", "read timeout")
+      a.size mustBe a.count(_ == "read timeout")
+    }
+
+    "get connection timeout on each endpoint, for configured value" in httpTest { httpStub =>
+      // given
+      httpStub.kill()
+      val client = new SttpTeamDriveClient(config(url = httpStub.url))
+
+      val matchTimeout: PartialFunction[Throwable, String] = {
+        case _: SttpClientException.ConnectException => "connection timeout"
+      }
+      val response1 = client.createSpace(spaceName, spacePath).onErrorRecover(matchTimeout)
+      val response2 = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).onErrorRecover(matchTimeout)
+      val response3 =
+        client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)
+
+      // when
+      val a = Task.gather(Seq(response1, response2, response3)).runSyncUnsafe()
+
+      // then
+      a.size mustBe a.count(_ == "connection timeout")
     }
   }
 }

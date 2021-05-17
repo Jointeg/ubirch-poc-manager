@@ -1,6 +1,6 @@
 package com.ubirch.test
 
-import cats.effect.{IO, Resource}
+import cats.effect.{ IO, Resource }
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.ubirch.TestBase

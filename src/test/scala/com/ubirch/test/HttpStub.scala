@@ -3,7 +3,7 @@ package com.ubirch.test
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock._
 import sttp.model.MediaType.ApplicationOctetStream
-import sttp.model.{HeaderNames, MediaType}
+import sttp.model.{ HeaderNames, MediaType }
 
 import scala.concurrent.duration.Duration
 
@@ -12,6 +12,8 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
   import HttpStub._
 
   private val ApplicationJson: String = MediaType.ApplicationJson.charset(charset).toString()
+
+  def kill(): Unit = wiremock.stop()
 
   def spaceWillBeCreated(
     username: String = TestData.username,
@@ -159,9 +161,9 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
   }
 
   def anyRequestWillTimeout(delay: Duration): HttpStub = {
-    val response =  aResponse()
-        .withFixedDelay(delay.toMillis.toInt)
-        .withStatus(400)
+    val response = aResponse()
+      .withFixedDelay(delay.toMillis.toInt)
+      .withStatus(400)
       .withBody(errorResponse(message = "errorMessage", statusCode = 400, errorCode = 31))
 
     wiremock.stubFor(post(anyUrl()).willReturn(response))

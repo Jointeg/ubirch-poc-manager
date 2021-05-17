@@ -3,7 +3,7 @@ package com.ubirch.services.teamdrive
 import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
 import org.json4s.native.Serialization.read
-import org.json4s.{Formats, Serialization}
+import org.json4s.{ Formats, Serialization }
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.json4s._
