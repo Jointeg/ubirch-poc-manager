@@ -24,13 +24,11 @@ class CsvProcessPocAdminImpl @Inject() (
   pocRepository: PocRepository,
   pocAdminRepository: PocAdminRepository,
   pocStatusRepository: PocStatusRepository,
-  pocAdminStatusRepository: PocAdminStatusRepository,
-  scheduler: Scheduler)
+  pocAdminStatusRepository: PocAdminStatusRepository)(implicit val scheduler: Scheduler)
   extends CsvProcessPocAdmin
   with LazyLogging {
 
   private val pocAdminCsvParser = new PocAdminCsvParser(pocConfig)
-  implicit val sc = scheduler
 
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
     pocAdminCsvParser.parseList(csv, tenant).flatMap { parsingResult =>

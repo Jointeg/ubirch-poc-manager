@@ -22,11 +22,9 @@ class CsvProcessPocImpl @Inject() (
   pocConfig: PocConfig,
   QuillMonixJdbcContext: QuillMonixJdbcContext,
   pocRepository: PocRepository,
-  pocStatusRepository: PocStatusRepository,
-  scheduler: Scheduler)
+  pocStatusRepository: PocStatusRepository)(implicit val scheduler: Scheduler)
   extends CsvProcessPoc
   with LazyLogging {
-  implicit val sc = scheduler
 
   private val pocCsvParser = new PocCsvParser(pocConfig)
 

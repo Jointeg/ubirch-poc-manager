@@ -16,7 +16,7 @@ trait QuillMonixJdbcContext {
 }
 
 @Singleton
-case class PostgresQuillMonixJdbcContext @Inject() (lifecycle: Lifecycle)(implicit scheduler: Scheduler)
+case class PostgresQuillMonixJdbcContext @Inject() (lifecycle: Lifecycle)(implicit val scheduler: Scheduler)
   extends QuillMonixJdbcContext
   with LazyLogging {
   val ctx: PostgresMonixJdbcContext[SnakeCase] =
