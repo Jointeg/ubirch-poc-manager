@@ -24,6 +24,13 @@ import com.ubirch.services.keycloak.users.{
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
+import com.ubirch.services.poc.parsers.{
+  CsvParser,
+  PocAdminCsvParser,
+  PocAdminParseResult,
+  PocCsvParser,
+  PocParseResult
+}
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.tenantadmin.{ DefaultTenantAdminService, TenantAdminService }
@@ -124,8 +131,6 @@ class Binder extends AbstractModule {
 
   def PocBatchHandler: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
-  def CsvHandler: ScopedBindingBuilder = bind(classOf[CsvHandlerTrait]).to(classOf[CsvHandlerImp])
-
   def ProcessPoc: ScopedBindingBuilder = bind(classOf[ProcessPoc]) to (classOf[ProcessPocImpl])
 
   def ProcessPocAdmin: ScopedBindingBuilder = bind(classOf[ProcessPocAdmin]) to (classOf[ProcessPocAdminImpl])
@@ -185,7 +190,6 @@ class Binder extends AbstractModule {
     QuillJdbcContext
     UserRepository
     PocBatchHandler
-    CsvHandler
     ProcessPoc
     ProcessPocAdmin
     PocRepository

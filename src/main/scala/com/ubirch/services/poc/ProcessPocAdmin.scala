@@ -1,8 +1,7 @@
 package com.ubirch.services.poc
 
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.ServicesConfPaths
+import com.ubirch.PocConfig
 import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
 import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus, PocStatus }
@@ -19,7 +18,7 @@ trait ProcessPocAdmin {
 
 @Singleton
 class ProcessPocAdminImpl @Inject() (
-  conf: Config,
+  pocConfig: PocConfig,
   quillJdbcContext: QuillJdbcContext,
   pocRepository: PocRepository,
   pocAdminRepository: PocAdminRepository,
@@ -29,13 +28,7 @@ class ProcessPocAdminImpl @Inject() (
   with LazyLogging {
   import quillJdbcContext.ctx._
 
-  private val pocAdminCsvParser = new PocAdminCsvParser
-  private val dataSchemaGroupIds =
-    conf
-      .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
-      .split(",")
-      .map(_.trim)
-      .toList
+  private val pocAdminCsvParser = new PocAdminCsvParser(pocConfig)
 
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
     pocAdminCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
@@ -56,7 +49,7 @@ class ProcessPocAdminImpl @Inject() (
   }
 
   private def storePocAndStatus(poc: Poc, pocAdmin: PocAdmin, csvRow: String): Task[Option[String]] = {
-    val pocStatus = PocStatus.init(poc, dataSchemaGroupIds)
+    val pocStatus = PocStatus.init(poc)
     val pocAdminStatus = PocAdminStatus.init(pocAdmin)
     // @TODO check it works properly
     transaction {

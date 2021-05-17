@@ -55,10 +55,9 @@ case class PocStatus(
 }
 
 object PocStatus {
-  def init(poc: Poc, dataSchemaGroupIds: List[String]): PocStatus =
+  def init(poc: Poc): PocStatus =
     PocStatus(
       pocId = poc.id,
-      validDataSchemaGroup = dataSchemaGroupIds.contains(poc.dataSchemaId),
       clientCertRequired = poc.clientCertRequired,
       clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
       clientCertProvided = if (poc.clientCertRequired) Some(false) else None,

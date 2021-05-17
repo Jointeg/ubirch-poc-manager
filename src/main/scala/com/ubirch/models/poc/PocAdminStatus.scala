@@ -14,6 +14,7 @@ case class PocAdminStatus(
   updatePasswordSet: Boolean = false,
   twoFactorAuthSet: Boolean = false,
   pocGroupAdded: Boolean = false,
+  pocAdminGroupAdded: Boolean = false,
   errorMessage: Option[String] = None,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())

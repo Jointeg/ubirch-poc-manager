@@ -1,14 +1,21 @@
 package com.ubirch.services.poc.parsers
 
 import com.ubirch.ModelCreationHelper.createTenant
-import com.ubirch.TestBase
+import com.ubirch.{ PocConfig, TestBase }
 import com.ubirch.services.poc.util.CsvConstants.pocAdminHeaderLine
 import com.ubirch.services.poc.util.HeaderCsvException
+import org.mockito.Mockito.when
+import org.scalatest.mockito.MockitoSugar.mock
 
 import java.util.UUID
 
 class PocAdminCsvParserTest extends TestBase {
-  private val pocAdminCsvParser = new PocAdminCsvParser
+  private val pocConfigMock = mock[PocConfig]
+  when(pocConfigMock.dataSchemaGroupMap).thenReturn(
+    Map("dataSchemaGroups" -> "xxx", "certification-vaccination" -> "yyy")
+  )
+
+  private val pocAdminCsvParser = new PocAdminCsvParser(pocConfigMock)
   private val pocId = UUID.randomUUID()
 
   private val invalidHeader =

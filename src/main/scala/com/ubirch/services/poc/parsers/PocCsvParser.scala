@@ -19,8 +19,7 @@ import scala.util.{ Failure, Success }
 
 case class PocParseResult(poc: Poc, csvRow: String) extends ParseRowResult
 
-@Singleton
-class PocCsvParser @Inject() (pocConfig: PocConfig) extends CsvParser[PocParseResult] with LazyLogging {
+class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with LazyLogging {
   protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, PocParseResult] = {
     PocRow.fromCsv(cols) match {
       case Success(csvPoc) =>

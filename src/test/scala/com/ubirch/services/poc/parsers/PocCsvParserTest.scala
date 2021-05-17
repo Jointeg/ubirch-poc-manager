@@ -73,7 +73,7 @@ class PocCsvParserTest extends TestBase {
     "return invalid csvRows with errorMsg and validCsvRow as Poc" in {
       val resultT = pocCsvParser.parseList(validHeaderButBadCsvRows, tenant)
       val result = resultT.runSyncUnsafe()
-      assert(result.size == 5)
+      assert(result.size == 6)
       assert(result.head.isRight)
       assert(result(
         1).left.get == s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;Xfalse;certification-vaccination;Musterfrau;Frau;frau.musterfraumail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]};column client_cert* must be either 'TRUE' or 'FALSE',column manager_email* must contain a proper mail address""")

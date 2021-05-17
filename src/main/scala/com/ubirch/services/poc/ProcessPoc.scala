@@ -1,8 +1,7 @@
 package com.ubirch.services.poc
 
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.ServicesConfPaths
+import com.ubirch.PocConfig
 import com.ubirch.db.tables.PocRepository
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
@@ -17,13 +16,10 @@ trait ProcessPoc {
 }
 
 @Singleton
-class ProcessPocImpl @Inject() (conf: Config, pocRepository: PocRepository) extends ProcessPoc with LazyLogging {
-  private val pocCsvParser = new PocCsvParser
-  private val dataSchemaGroupIds =
-    conf
-      .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
-      .split(", ")
-      .toList
+class ProcessPocImpl @Inject() (pocConfig: PocConfig, pocRepository: PocRepository)
+  extends ProcessPoc
+  with LazyLogging {
+  private val pocCsvParser = new PocCsvParser(pocConfig)
 
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] =
     pocCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
@@ -43,7 +39,7 @@ class ProcessPocImpl @Inject() (conf: Config, pocRepository: PocRepository) exte
     }
 
   private def storePocAndStatus(poc: Poc, csvRow: String): Task[Option[String]] = {
-    val status = PocStatus.init(poc, dataSchemaGroupIds)
+    val status = PocStatus.init(poc)
     (for {
       _ <- pocRepository.createPocAndStatus(poc, status)
     } yield {

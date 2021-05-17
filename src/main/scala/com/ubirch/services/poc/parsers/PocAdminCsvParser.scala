@@ -1,20 +1,22 @@
 package com.ubirch.services.poc.parsers
 
 import cats.syntax.apply._
+import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocAdminRow
 import com.ubirch.models.poc
-import com.ubirch.models.poc.{ Address, JsonConfig, LogoURL, Poc, PocAdmin, PocManager }
+import com.ubirch.models.poc.{ Address, JsonConfig, LogoURL, Pending, Poc, PocAdmin, PocManager }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
+import javax.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Success }
 
 case class PocAdminParseResult(poc: Poc, pocAdmin: PocAdmin, csvRow: String) extends ParseRowResult
 
-class PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
+class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseResult] {
   protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, PocAdminParseResult] = {
     PocAdminRow.fromCsv(cols) match {
       case Success(csvPocAdmin) =>
@@ -89,8 +91,8 @@ class PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
       validatePhone(phone, csvPocAdmin.pocPhone),
       validateBoolean(certifyApp, csvPocAdmin.pocCertifyApp),
       validateURL(logoUrl, csvPocAdmin.logoUrl, csvPocAdmin.logoUrl),
-      validateBoolean(clientCert, csvPocAdmin.clientCert),
-      validateString(dataSchemaId, csvPocAdmin.dataSchemaId),
+      validateClientCert(clientCert, csvPocAdmin.clientCert, tenant),
+      validateMapContainsStringKey(dataSchemaId, csvPocAdmin.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPocAdmin.extraConfig),
       pocManager
     ).mapN {
@@ -118,7 +120,8 @@ class PocAdminCsvParser extends CsvParser[PocAdminParseResult] {
             clientCert,
             dataSchemaId,
             extraConfig.map(JsonConfig(_)),
-            manager
+            manager,
+            status = Pending
           )
         }
 
