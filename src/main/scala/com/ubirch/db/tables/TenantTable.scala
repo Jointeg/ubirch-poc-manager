@@ -1,5 +1,5 @@
 package com.ubirch.db.tables
-import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId, TenantId, TenantName }
 import monix.eval.Task
 
@@ -22,8 +22,8 @@ trait TenantRepository {
 
 }
 
-class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantRepository {
-  import quillJdbcContext.ctx._
+class TenantTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends TenantRepository {
+  import QuillMonixJdbcContext.ctx._
 
   private def createTenantQuery(tenant: Tenant) =
     quote {
@@ -60,21 +60,21 @@ class TenantTable @Inject() (quillJdbcContext: QuillJdbcContext) extends TenantR
       querySchema[Tenant]("poc_manager.tenants").filter(_.id == lift(id)).delete
     }
 
-  def createTenant(tenant: Tenant): Task[TenantId] = Task(run(createTenantQuery(tenant))).map(_ => tenant.id)
+  def createTenant(tenant: Tenant): Task[TenantId] = run(createTenantQuery(tenant)).map(_ => tenant.id)
 
   def getTenant(tenantId: TenantId): Task[Option[Tenant]] =
-    Task(run(getTenantQuery(tenantId))).map(_.headOption)
+    run(getTenantQuery(tenantId)).map(_.headOption)
 
   def getTenantByName(tenantName: TenantName): Task[Option[Tenant]] =
-    Task(run(getTenantByNameQuery(tenantName))).map(_.headOption)
+    run(getTenantByNameQuery(tenantName)).map(_.headOption)
 
   def getTenantByDeviceGroupId(groupId: TenantDeviceGroupId): Task[Option[Tenant]] =
-    Task(run(getTenantByDeviceGroupIdQuery(groupId))).map(_.headOption)
+    run(getTenantByDeviceGroupIdQuery(groupId)).map(_.headOption)
 
   def getTenantByCertifyGroupId(groupId: TenantCertifyGroupId): Task[Option[Tenant]] =
-    Task(run(getTenantByUserGroupIdQuery(groupId))).map(_.headOption)
+    run(getTenantByUserGroupIdQuery(groupId)).map(_.headOption)
 
-  def updateTenant(tenant: Tenant): Task[Unit] = Task(run(updateTenantQuery(tenant)))
+  def updateTenant(tenant: Tenant): Task[Unit] = run(updateTenantQuery(tenant)).void
 
-  def deleteTenantById(id: TenantId): Task[Unit] = Task(run(deleteTenantByIdQuery(id)))
+  def deleteTenantById(id: TenantId): Task[Unit] = run(deleteTenantByIdQuery(id)).void
 }

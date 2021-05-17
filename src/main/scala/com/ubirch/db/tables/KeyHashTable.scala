@@ -1,5 +1,5 @@
 package com.ubirch.db.tables
-import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.models.auth.HashedData
 import monix.eval.Task
 
@@ -10,9 +10,9 @@ trait KeyHashRepository {
   def getFirst: Task[Option[HashedData]]
 }
 
-class KeyHashTable @Inject() (quillJdbcContext: QuillJdbcContext) extends KeyHashRepository {
+class KeyHashTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends KeyHashRepository {
 
-  import quillJdbcContext.ctx._
+  import QuillMonixJdbcContext.ctx._
 
   private def insertNewKeyHashQuery(hashedData: HashedData) =
     quote {
@@ -25,8 +25,8 @@ class KeyHashTable @Inject() (quillJdbcContext: QuillJdbcContext) extends KeyHas
     }
 
   override def insertNewKeyHash(hashedData: HashedData): Task[Unit] =
-    Task(run(insertNewKeyHashQuery(hashedData)))
+    run(insertNewKeyHashQuery(hashedData)).void
 
   override def getFirst: Task[Option[HashedData]] =
-    Task(run(getFirstQuery).headOption)
+    run(getFirstQuery).map(_.headOption)
 }

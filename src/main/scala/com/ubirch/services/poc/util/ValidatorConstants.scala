@@ -47,4 +47,7 @@ object ValidatorConstants {
   def zipCodeDigitError(header: String) =
     s"column $header must have the length of 5 digits"
 
+  def birthOfDateError(header: String) =
+    s"column $header must contain a valid date e.g. 01.01.1970"
+
 }

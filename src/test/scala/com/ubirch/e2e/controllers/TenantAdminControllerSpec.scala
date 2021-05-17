@@ -12,13 +12,12 @@ import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.{ headerLine, pocName }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
-import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{ DateTime, DateTimeZone }
-import org.json4s.ext.{ DateParser, JavaTypesSerializers, JodaTimeSerializers }
+import org.joda.time.DateTime
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -48,7 +47,7 @@ class TenantAdminControllerSpec
       "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12A636;Wunschstadt;;;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}"
 
   private val goodCsv =
-    s"""$headerLine
+    s"""$pocHeaderLine
        |${poc1id.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   "Endpoint POST pocs/create" must {
