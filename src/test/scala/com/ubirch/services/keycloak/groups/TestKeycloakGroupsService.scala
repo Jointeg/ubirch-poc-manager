@@ -1,11 +1,12 @@
 package com.ubirch.services.keycloak.groups
 
+import com.ubirch.ModelCreationHelper.dataSchemaGroupId
 import com.ubirch.models.keycloak.group._
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
-import java.util.UUID
+import java.util
 import javax.inject.Singleton
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.{ collectionAsScalaIterableConverter, seqAsJavaListConverter }
@@ -13,15 +14,17 @@ import scala.jdk.CollectionConverters.{ collectionAsScalaIterableConverter, seqA
 @Singleton
 class TestKeycloakGroupsService() extends KeycloakGroupService {
 
-  private val groupsUsersDatastore = mutable.Map[String, GroupRepresentation]()
+  private val groupsCertifyDatastore = mutable.Map[String, GroupRepresentation]()
   private val groupsDeviceDatastore = mutable.Map[String, GroupRepresentation]()
+  private val dataSchemaGroup = createGroupRepresentation(GroupName(dataSchemaGroupId))
+  groupsDeviceDatastore += ((dataSchemaGroupId, dataSchemaGroup))
 
   override def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]] =
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]] =
     keycloakInstance match {
-      case UsersKeycloak  => insertIfNotExists(groupsUsersDatastore, createKeycloakGroup)
-      case DeviceKeycloak => insertIfNotExists(groupsDeviceDatastore, createKeycloakGroup)
+      case CertifyKeycloak => insertIfNotExists(groupsCertifyDatastore, createKeycloakGroup)
+      case DeviceKeycloak  => insertIfNotExists(groupsDeviceDatastore, createKeycloakGroup)
     }
 
   private def insertIfNotExists(
@@ -40,10 +43,10 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
   override def findGroupByName(
     groupName: GroupName,
-    instance: KeycloakInstance = UsersKeycloak): Task[Either[GroupNotFound, GroupRepresentation]] =
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupNotFound, GroupRepresentation]] =
     instance match {
-      case UsersKeycloak  => findInDatastore(groupsUsersDatastore, groupName)
-      case DeviceKeycloak => findInDatastore(groupsDeviceDatastore, groupName)
+      case CertifyKeycloak => findInDatastore(groupsCertifyDatastore, groupName)
+      case DeviceKeycloak  => findInDatastore(groupsDeviceDatastore, groupName)
     }
 
   private def findInDatastore(datastore: mutable.Map[String, GroupRepresentation], groupName: GroupName) = {
@@ -57,8 +60,8 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
   override def findGroupById(groupId: GroupId, instance: KeycloakInstance): Task[Either[String, GroupRepresentation]] =
     Task(instance match {
-      case UsersKeycloak  => findIdInDatastore(groupsUsersDatastore, groupId)
-      case DeviceKeycloak => findIdInDatastore(groupsDeviceDatastore, groupId)
+      case CertifyKeycloak => findIdInDatastore(groupsCertifyDatastore, groupId)
+      case DeviceKeycloak  => findIdInDatastore(groupsDeviceDatastore, groupId)
     })
 
   private def findIdInDatastore(
@@ -70,10 +73,10 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     }
   }
 
-  override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] =
+  override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
     keycloakInstance match {
-      case UsersKeycloak =>
-        Task(groupsUsersDatastore -= groupName.value)
+      case CertifyKeycloak =>
+        Task(groupsCertifyDatastore -= groupName.value)
       case DeviceKeycloak =>
         Task(groupsDeviceDatastore -= groupName.value)
     }
@@ -86,17 +89,20 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     val childGroup = createGroupRepresentation(childGroupName)
 
     val r = instance match {
-      case UsersKeycloak =>
-        findIdInDatastore(groupsUsersDatastore, parentGroupId)
+      case CertifyKeycloak =>
+        findIdInDatastore(groupsCertifyDatastore, parentGroupId)
       case DeviceKeycloak =>
         findIdInDatastore(groupsDeviceDatastore, parentGroupId)
     }
     r match {
       case Right(group) =>
-        if (group.getSubGroups == null) {
-          group.setSubGroups(List(childGroup).asJava)
-        } else
-          group.getSubGroups.add(childGroup)
+        group.setSubGroups(List(childGroup).asJava)
+        instance match {
+          case CertifyKeycloak =>
+            groupsCertifyDatastore += ((childGroup.getId, childGroup))
+          case DeviceKeycloak =>
+            groupsDeviceDatastore += ((childGroup.getId, childGroup))
+        }
         Task(Right(GroupId(childGroup.getId)))
       case _ =>
         Task(Left(GroupCreationError("couldn't find parentGroup")))
@@ -109,8 +115,8 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     instance: KeycloakInstance): Task[Either[String, Unit]] = {
 
     val r = instance match {
-      case UsersKeycloak =>
-        findChildGroupInDatastore(groupsUsersDatastore, groupId)
+      case CertifyKeycloak =>
+        findChildGroupInDatastore(groupsCertifyDatastore, groupId)
       case DeviceKeycloak =>
         findChildGroupInDatastore(groupsDeviceDatastore, groupId)
     }
@@ -118,12 +124,26 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
       case Right(group) =>
         if (group.getRealmRoles == null)
           group.setRealmRoles(List(role.getName).asJava)
-        else
-          group.getRealmRoles.add(role.getName)
+        else {
+          val roles = group.getRealmRoles
+          if (roles.isEmpty) {
+            group.setRealmRoles(List(role.getName).asJava)
+          } else {
+            val newRoles = roles.asScala ++ List(role.getName)
+            group.setRealmRoles(newRoles.toList.asJava)
+          }
+        }
         Right((): Unit)
       case _ =>
         Left("role adding error")
     })
+  }
+
+  def addMemberToGroup(
+    groupId: GroupId,
+    user: UserRepresentation,
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Boolean]] = {
+    Task(Right(true))
   }
 
   private def findChildGroupInDatastore(
@@ -141,10 +161,11 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
 
   private def createGroupRepresentation(
     name: GroupName,
-    id: String = UUID.randomUUID().toString): GroupRepresentation = {
+    id: String = "c618b7cf-d798-49c8-adb1-c91a122904f6"): GroupRepresentation = {
     val group = new GroupRepresentation()
     group.setId(id)
     group.setName(name.value)
+    group.setSubGroups(List(group).asJava)
     group
   }
 }

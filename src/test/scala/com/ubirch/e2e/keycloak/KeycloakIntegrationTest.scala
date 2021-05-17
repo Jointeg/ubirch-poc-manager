@@ -10,9 +10,11 @@ import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import org.keycloak.representations.idm.GroupRepresentation
 import org.scalactic.StringNormalizations._
 
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters._
 
@@ -286,6 +288,68 @@ class KeycloakIntegrationTest extends E2ETestBase {
         maybeUser shouldBe defined
       }
     }
+
+    "Assign group to user successfully" in {
+      withInjector { injector =>
+        val users = injector.get[KeycloakUserService]
+        val groups = injector.get[KeycloakGroupService]
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+        val result = for {
+          group <- groups.createGroup(createNewKeycloakGroup())
+          _ <- users.createUser(newKeycloakUser)
+          success <- users.addGroupToUser(newKeycloakUser.userName.value, group.right.value.value)
+        } yield success
+
+        result.runSyncUnsafe() shouldBe Right(())
+      }
+    }
+
+    "Assign group to user twice succeeds" in {
+      withInjector { injector =>
+        val users = injector.get[KeycloakUserService]
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+        val groups = injector.get[KeycloakGroupService]
+
+        val result = for {
+          group <- groups.createGroup(createNewKeycloakGroup())
+          _ <- users.createUser(newKeycloakUser)
+          _ <- users.addGroupToUser(newKeycloakUser.userName.value, group.right.get.value)
+          success <- users.addGroupToUser(newKeycloakUser.userName.value, group.right.get.value)
+        } yield success
+        result.runSyncUnsafe() shouldBe Right(())
+      }
+    }
+
+    "Assign group to non existing user should fail" in {
+      withInjector { injector =>
+        val users = injector.get[KeycloakUserService]
+        val groups = injector.get[KeycloakGroupService]
+        val userId = UUID.randomUUID().toString
+        val group = new GroupRepresentation()
+        group.setName("testGroup")
+        val result = for {
+          group <- groups.createGroup(createNewKeycloakGroup())
+          success <- users.addGroupToUser("non-existing-user", group.right.get.value)
+        } yield (group, success)
+        val (g, s) = result.runSyncUnsafe()
+        s shouldBe Left(s"user with name non-existing-user wasn't found")
+      }
+    }
+
+    "Assign non-existing group to user should fail" in {
+      withInjector { injector =>
+        val users = injector.get[KeycloakUserService]
+        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+        val group = new GroupRepresentation()
+        group.setName("testGroup")
+        val result = for {
+          _ <- users.createUser(newKeycloakUser)
+          success <- users.addGroupToUser(newKeycloakUser.userName.value, "non-existing-group")
+        } yield (group, success)
+        val (g, s) = result.runSyncUnsafe()
+        s shouldBe Left(s"failed to add group non-existing-group to user ${newKeycloakUser.userName.value}")
+      }
+    }
   }
 
   "Double Keycloak integration" should {
@@ -295,13 +359,13 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
-          res1 <- keycloakUserService.createUser(newKeycloakUser, UsersKeycloak)
+          res1 <- keycloakUserService.createUser(newKeycloakUser, CertifyKeycloak)
           res2 <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
         } yield (res1, res2)
 
         val (usr1, usr2) = await(result, 5.seconds)
-        usr1 shouldBe Right(())
-        usr2 shouldBe Right(())
+        usr1.isRight shouldBe true
+        usr2.isRight shouldBe true
       }
     }
 
@@ -311,10 +375,10 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
         val result = for {
-          _ <- keycloakUserService.createUser(newKeycloakUser, UsersKeycloak)
+          _ <- keycloakUserService.createUser(newKeycloakUser, CertifyKeycloak)
           _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
-          _ <- keycloakUserService.deleteUser(newKeycloakUser.userName, UsersKeycloak)
-          deletedUser <- keycloakUserService.getUser(newKeycloakUser.userName, UsersKeycloak)
+          _ <- keycloakUserService.deleteUser(newKeycloakUser.userName, CertifyKeycloak)
+          deletedUser <- keycloakUserService.getUser(newKeycloakUser.userName, CertifyKeycloak)
           existingUser <- keycloakUserService.getUser(newKeycloakUser.userName, DeviceKeycloak)
         } yield (deletedUser, existingUser)
 

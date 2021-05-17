@@ -34,6 +34,7 @@ object PocCreator {
 class PocCreatorImpl @Inject() (
   certHandler: CertHandler,
   deviceCreator: DeviceCreator,
+  deviceHelper: DeviceHelper,
   informationProvider: InformationProvider,
   keycloakHelper: KeycloakHelper,
   pocTable: PocRepository,
@@ -45,6 +46,7 @@ class PocCreatorImpl @Inject() (
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   import deviceCreator._
+  import deviceHelper._
   import informationProvider._
   import keycloakHelper._
 
@@ -159,23 +161,25 @@ class PocCreatorImpl @Inject() (
 //Todo: create and provide client certs
   //Todo: download and store logo
   private def process(pocAndStatus: PocAndStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
-    logger.info(s"starting to create poc with id ${pocAndStatus.poc.id}")
+    logger.info(s"starting to process poc with id ${pocAndStatus.poc.id}")
     val creationResult = for {
-      pocAndStatus1 <- doUserRealmRelatedTasks(pocAndStatus, tenant)
+      pocAndStatus1 <- doCertifyRealmRelatedTasks(pocAndStatus, tenant)
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
+      statusAndPW3 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
+      status4 <- addGroupsToDevice(pocAndStatus2.poc, statusAndPW3.pocStatus)
       pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, pocAndStatus2)
       pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus3)
-      statusAndPW1 <- createDevice(pocAndStatus4.poc, pocAndStatus4.status, tenant)
-      statusAndPW2 <- infoToGoClient(pocAndStatus4.poc, statusAndPW1)
-      completeStatus <- infoToCertifyAPI(pocAndStatus4.poc, statusAndPW2, tenant)
+      statusAndPW5 <- infoToGoClient(pocAndStatus4.poc, statusAndPW3.copy(pocStatus = status4))
+      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW5, tenant)
     } yield completeStatus
 
     (for {
       completePocAndStatus <- creationResult
       newPoc = completePocAndStatus.poc.copy(status = Completed)
       _ <- pocTable.updatePoc(newPoc)
-      _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status)
+      _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status.copy(errorMessage = None))
     } yield {
+      logger.info(s"finished to create poc with id ${pocAndStatus.poc.id}")
       Right(completePocAndStatus.status)
     }).onErrorHandleWith(handlePocCreationError)
   }
@@ -194,15 +198,17 @@ class PocCreatorImpl @Inject() (
     for {
       pocAndStatus1 <- createDeviceRole(pocAndStatus)
       pocAndStatus2 <- createDeviceGroup(pocAndStatus1, tenant)
-      pocAndStatusFinal <- assignDeviceRealmRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatus3 <- assignDeviceRealmRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatusFinal <- assignTenantRoleToDeviceGroup(pocAndStatus3, tenant)
     } yield pocAndStatusFinal
   }
 
-  private def doUserRealmRelatedTasks(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+  private def doCertifyRealmRelatedTasks(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     for {
-      pocAndStatus1 <- createUserRole(pocAndStatus)
-      pocAndStatus2 <- createUserGroup(pocAndStatus1, tenant)
-      pocAndStatusFinal <- assignUserRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatus1 <- createCertifyRole(pocAndStatus)
+      pocAndStatus2 <- createCertifyGroup(pocAndStatus1, tenant)
+      pocAndStatus3 <- assignCertifyRoleToGroup(pocAndStatus2, tenant)
+      pocAndStatusFinal <- assignTenantRoleToCertifyGroup(pocAndStatus3, tenant)
     } yield pocAndStatusFinal
   }
 

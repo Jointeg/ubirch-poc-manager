@@ -2,9 +2,9 @@ package com.ubirch.services.keycloak.groups
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.group._
-import com.ubirch.services.{ KeycloakConnector, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
@@ -20,7 +20,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     */
   override def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
-    instance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]] = {
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]] = {
 
     val groupName = createKeycloakGroup.groupName.value
     Task {
@@ -45,7 +45,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findGroupById(
     groupId: GroupId,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[String, GroupRepresentation]] = {
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, GroupRepresentation]] = {
     Task(
       Right(keycloakConnector
         .getKeycloak(keycloakInstance)
@@ -62,7 +62,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findGroupByName(
     groupName: GroupName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[GroupNotFound, GroupRepresentation]] = {
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupNotFound, GroupRepresentation]] = {
     getGroupIdByName(groupName, keycloakInstance).flatMap {
       case Some(groupId) =>
         Task(
@@ -88,7 +88,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
   override def addSubGroup(
     parentGroupId: GroupId,
     childGroupName: GroupName,
-    instance: KeycloakInstance = UsersKeycloak): Task[Either[GroupCreationError, GroupId]] = {
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]] = {
 
     Task {
       val group = CreateKeycloakGroup(childGroupName).toKeycloakRepresentation
@@ -127,7 +127,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         }
       case Left(_) => Left(GroupNotFound(groupName))
     }.onErrorHandle { ex =>
-      logger.error(s"finding group by name ${groupName.value} failed due to, ${ex.getMessage}", ex)
+      logger.error(s"finding group by name ${groupName.value} failed", ex)
       Left(GroupNotFound(groupName))
     }
   }
@@ -135,8 +135,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
   override def addRoleToGroup(
     groupId: GroupId,
     role: RoleRepresentation,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[String, Unit]] = {
-
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] =
     Task(
       Right(keycloakConnector
         .getKeycloak(keycloakInstance)
@@ -151,9 +150,28 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         logger.error(errorMsg, ex)
         Left(errorMsg)
       }
+
+  override def addMemberToGroup(
+    groupId: GroupId,
+    user: UserRepresentation,
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Boolean]] = {
+
+    Task(
+      Right(keycloakConnector
+        .getKeycloak(keycloakInstance)
+        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .groups()
+        .group(groupId.value)
+        .members()
+        .add(user)))
+      .onErrorHandle { ex: Throwable =>
+        val errorMsg = s"adding member ${user.getUsername} to group with id $groupId failed, due to ${ex.getMessage}"
+        logger.error(errorMsg, ex)
+        Left(errorMsg)
+      }
   }
 
-  override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] =
+  override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
     getGroupIdByName(groupName, keycloakInstance).flatMap {
       case Some(groupId: GroupId) =>
         Task {
@@ -179,7 +197,8 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
       logger.info(s"group with name ${groupName.value} already existed")
       Left(GroupAlreadyExists(groupName))
     } else {
-      Left(GroupCreationError(s"failed to create group ${groupName.value}; response has status ${response.getStatus}"))
+      logger.error(s"failed to create group ${groupName.value}; response has status ${response.getStatus}")
+      Left(GroupCreationError(s"failed to create group ${groupName.value}"))
     }
   }
 

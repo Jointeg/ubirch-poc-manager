@@ -3,7 +3,7 @@ package com.ubirch.services.jwt
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.KeycloakPaths
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 
 import java.security.Key
@@ -25,8 +25,8 @@ class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryS
 
   private def acceptedKids(keycloakInstance: KeycloakInstance): List[String] =
     keycloakInstance match {
-      case UsersKeycloak  => List(config.getString(KeycloakPaths.UsersKeycloak.KID))
-      case DeviceKeycloak => List(config.getString(KeycloakPaths.DeviceKeycloak.KID))
+      case CertifyKeycloak => List(config.getString(KeycloakPaths.CertifyKeycloak.KID))
+      case DeviceKeycloak  => List(config.getString(KeycloakPaths.DeviceKeycloak.KID))
     }
 
   final private val cache = new TrieMap[String, Key]()

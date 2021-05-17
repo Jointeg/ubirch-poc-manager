@@ -1,5 +1,5 @@
 package com.ubirch.db.tables
-import com.ubirch.models.tenant.{ Tenant, TenantDeviceGroupId, TenantId, TenantName, TenantUserGroupId }
+import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId, TenantId, TenantName }
 import monix.eval.Task
 
 import javax.inject.Singleton
@@ -31,10 +31,10 @@ class TenantRepositoryMock extends TenantRepository {
       }
     }
 
-  def getTenantByUserGroupId(groupId: TenantUserGroupId): Task[Option[Tenant]] =
+  def getTenantByCertifyGroupId(groupId: TenantCertifyGroupId): Task[Option[Tenant]] =
     Task {
       tenantDatastore.collectFirst {
-        case (_, tenant) if tenant.userGroupId == groupId => tenant
+        case (_, tenant) if tenant.certifyGroupId == groupId => tenant
       }
     }
 

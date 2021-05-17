@@ -13,7 +13,7 @@ import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc.Poc
 import com.ubirch.models.tenant.{ Tenant, TenantName }
-import com.ubirch.services.UsersKeycloak
+import com.ubirch.services.CertifyKeycloak
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
@@ -55,7 +55,7 @@ class TenantAdminController @Inject() (
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, UsersKeycloak, tokenVerificationService, publicKeyPoolService)
+    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
 
   override val successCounter: Counter =
     Counter
@@ -77,26 +77,26 @@ class TenantAdminController @Inject() (
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
-      .tags("PoC, Tenant-Admin")
+      .tags("PoC", "Tenant-Admin")
 
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
-      .tags("Tenant-Admin, PocStatus")
+      .tags("Tenant-Admin", "PocStatus")
 
   val getPocs: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve all pocs of the requesting tenant")
       .summary("Get PoCs")
       .description("Retrieve PoCs that belong to the querying tenant.")
-      .tags("Tenant-Admin, PoCs")
+      .tags("Tenant-Admin", "PoCs")
       .authorizations()
 
   val getDevices: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("Retrieve all devices from all PoCs of Tenant")
       .summary("Get devices")
       .description("Retrieves all devices that belongs to PoCs that are managed by querying Tenant.")
-      .tags("Tenant-Admin, Devices")
+      .tags("Tenant-Admin", "Devices")
       .authorizations()
 
   post("/pocs/create", operation(createListOfPocs)) {

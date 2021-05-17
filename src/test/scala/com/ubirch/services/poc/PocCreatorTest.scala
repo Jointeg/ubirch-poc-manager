@@ -1,10 +1,17 @@
 package com.ubirch.services.poc
 import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
-import com.ubirch.models.poc.{ Completed, PocStatus, Processing }
+import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
+import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.poc.{ Completed, Poc, PocStatus, Processing }
 import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserName }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
+import com.ubirch.services.keycloak.roles.KeycloakRolesService
+import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.poc.PocTestHelper._
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -21,12 +28,22 @@ class PocCreatorTest extends UnitTestBase {
         val pocTable = injector.get[PocRepositoryMock]
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
         val groups = injector.get[TestKeycloakGroupsService]
+        val users = injector.get[TestKeycloakUserService]
+        val keyCloakRoleService = injector.get[KeycloakRolesService]
 
         //creating needed objects
         val (poc, pocStatus, tenant) = createPocTriple()
         val updatedTenant = createNeededTenantGroups(tenant, groups)
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, updatedTenant)
 
+        keyCloakRoleService.createNewRole(
+          CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
+          DeviceKeycloak).runSyncUnsafe(3.seconds)
+        keyCloakRoleService.createNewRole(
+          CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
+          CertifyKeycloak).runSyncUnsafe(3.seconds)
+
+        createNeededDeviceUser(users, poc)
         //start process
         val result = await(loop.createPocs(), 5.seconds)
 
@@ -56,10 +73,20 @@ class PocCreatorTest extends UnitTestBase {
         val pocTable = injector.get[PocRepositoryMock]
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
         val groups = injector.get[TestKeycloakGroupsService]
+        val users = injector.get[TestKeycloakUserService]
+        val keyCloakRoleService = injector.get[KeycloakRolesService]
 
         //creating needed objects
         val (poc, pocStatus, tenant) = createPocTriple()
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, tenant)
+        createNeededDeviceUser(users, poc)
+
+        keyCloakRoleService.createNewRole(
+          CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
+          DeviceKeycloak).runSyncUnsafe()
+        keyCloakRoleService.createNewRole(
+          CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
+          CertifyKeycloak).runSyncUnsafe()
 
         //start process
         val result = await(loop.createPocs(), 5.seconds)
@@ -70,7 +97,7 @@ class PocCreatorTest extends UnitTestBase {
 
         //pocStatus should be updated correctly
         val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
-        val expected = pocStatus.copy(userRoleCreated = true, errorMessage = Some("couldn't find parentGroup"))
+        val expected = pocStatus.copy(certifyRoleCreated = true, errorMessage = Some("couldn't find parentGroup"))
         status shouldBe expected
 
         //poc.status should be set to Processing
@@ -89,16 +116,19 @@ class PocCreatorTest extends UnitTestBase {
 
         val status2 = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         val expected2 = pocStatus.copy(
-          userRoleCreated = true,
-          userGroupCreated = true,
-          userGroupRoleAssigned = true,
+          certifyRoleCreated = true,
+          certifyGroupCreated = true,
+          certifyGroupRoleAssigned = true,
+          certifyGroupTenantRoleAssigned = true,
           deviceRoleCreated = true,
           deviceGroupCreated = true,
           deviceGroupRoleAssigned = true,
+          deviceGroupTenantRoleAssigned = true,
           deviceCreated = true,
+          assignedDataSchemaGroup = true,
+          assignedDeviceGroup = true,
           certifyApiProvided = true,
-          goClientProvided = true,
-          errorMessage = Some("couldn't find parentGroup")
+          goClientProvided = true
         )
 
         status2 shouldBe expected2
@@ -114,14 +144,17 @@ class PocCreatorTest extends UnitTestBase {
 
     PocStatus(
       UUID.randomUUID(),
-      validDataSchemaGroup = true,
-      userRoleCreated = true,
-      userGroupCreated = true,
-      userGroupRoleAssigned = true,
+      certifyRoleCreated = true,
+      certifyGroupCreated = true,
+      certifyGroupRoleAssigned = true,
+      certifyGroupTenantRoleAssigned = true,
       deviceRoleCreated = true,
       deviceGroupCreated = true,
       deviceGroupRoleAssigned = true,
+      deviceGroupTenantRoleAssigned = true,
       deviceCreated = true,
+      assignedDataSchemaGroup = true,
+      assignedDeviceGroup = true,
       clientCertRequired = false,
       None,
       None,
@@ -133,6 +166,12 @@ class PocCreatorTest extends UnitTestBase {
       certifyApiProvided = true,
       None
     )
+  }
+
+  private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
+    users.createUser(
+      CreateKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
+      DeviceKeycloak).runSyncUnsafe()
   }
 
 }

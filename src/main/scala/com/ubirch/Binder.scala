@@ -16,9 +16,9 @@ import com.ubirch.services.keycloak.auth.{ AuthClient, KeycloakAuthzClient }
 import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, KeycloakGroupService }
 import com.ubirch.services.keycloak.roles.{ DefaultKeycloakRolesService, KeycloakRolesService }
 import com.ubirch.services.keycloak.users.{
+  DefaultKeycloakUserService,
   KeycloakUserPollingService,
   KeycloakUserService,
-  KeycloakUserServiceImpl,
   UserPollingService
 }
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
@@ -38,8 +38,10 @@ class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
 
+  def PocConfig: ScopedBindingBuilder = bind(classOf[PocConfig]).to(classOf[PocConfigImpl])
+
   def KeycloakUsersConfig: ScopedBindingBuilder =
-    bind(classOf[KeycloakUsersConfig]).to(classOf[RealKeycloakUsersConfig])
+    bind(classOf[KeycloakCertifyConfig]).to(classOf[RealKeycloakCertifyConfig])
 
   def KeycloakDeviceConfig: ScopedBindingBuilder =
     bind(classOf[KeycloakDeviceConfig]).to(classOf[RealKeycloakDeviceConfig])
@@ -75,7 +77,7 @@ class Binder extends AbstractModule {
     bind(classOf[SuperAdminService]).to(classOf[DefaultSuperAdminService])
 
   def KeycloakUserConnector: ScopedBindingBuilder =
-    bind(classOf[UsersKeycloakConnector]).to(classOf[UsersKeycloakConfigConnector])
+    bind(classOf[CertifyKeycloakConnector]).to(classOf[CertifyKeycloakConfigConnector])
 
   def KeycloakDeviceConnector: ScopedBindingBuilder =
     bind(classOf[DeviceKeycloakConnector]).to(classOf[DeviceKeycloakConfigConnector])
@@ -84,7 +86,7 @@ class Binder extends AbstractModule {
     bind(classOf[KeycloakConnector]).to(classOf[DefaultKeycloakConnector])
 
   def KeycloakUserService: ScopedBindingBuilder =
-    bind(classOf[KeycloakUserService]).to(classOf[KeycloakUserServiceImpl])
+    bind(classOf[KeycloakUserService]).to(classOf[DefaultKeycloakUserService])
 
   def KeycloakRolesService: ScopedBindingBuilder =
     bind(classOf[KeycloakRolesService]).to(classOf[DefaultKeycloakRolesService])
@@ -120,7 +122,9 @@ class Binder extends AbstractModule {
   def KeyHashVerifier: ScopedBindingBuilder =
     bind(classOf[KeyHashVerifierService]).to(classOf[DefaultKeyHashVerifier])
 
-  def PocCreatorService: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
+  def PocBatchHandler: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
+
+  def CsvHandler: ScopedBindingBuilder = bind(classOf[CsvHandlerTrait]).to(classOf[CsvHandlerImp])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
 
@@ -132,6 +136,8 @@ class Binder extends AbstractModule {
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
   def DeviceCreator: ScopedBindingBuilder = bind(classOf[DeviceCreator]).to(classOf[DeviceCreatorImpl])
+
+  def DeviceHelper: ScopedBindingBuilder = bind(classOf[DeviceHelper]).to(classOf[DeviceHelperImpl])
 
   def KeycloakHelper: ScopedBindingBuilder = bind(classOf[KeycloakHelper]).to(classOf[KeycloakHelperImpl])
 
@@ -146,6 +152,7 @@ class Binder extends AbstractModule {
 
   override def configure(): Unit = {
     Config
+    PocConfig
     KeycloakUsersConfig
     KeycloakDeviceConfig
     ExecutionContext
@@ -170,7 +177,8 @@ class Binder extends AbstractModule {
     UserPollingService
     QuillJdbcContext
     UserRepository
-    PocCreatorService
+    PocBatchHandler
+    CsvHandler
     PocRepository
     PocStatusRepository
     TenantRepository
@@ -178,6 +186,7 @@ class Binder extends AbstractModule {
     AESEncryption
     FlywayProvider
     DeviceCreator
+    DeviceHelper
     KeycloakHelper
     InformationProvider
     KeyHashVerifier

@@ -8,7 +8,7 @@ import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.{ DeviceKeycloak, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
@@ -27,7 +27,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "deviceCreationToken": "1234567890",
        |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
-       |    "userGroupId": "random-user-group",
+       |    "certifyGroupId": "random-certify-group",
        |    "deviceGroupId": "random-device-group",
        |    "clientCert": "${ModelCreationHelper.base64X509Cert.value}"
        |}
@@ -42,7 +42,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "deviceCreationToken": "1234567890",
        |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
-       |    "userGroupId": "random-user-group",
+       |    "certifyGroupId": "random-certify-group",
        |    "deviceGroupId": "random-device-group"
        |}
        |""".stripMargin
@@ -54,7 +54,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "tenantName": "$tenantName",
        |    "deviceCreationToken": "1234567890",
        |    "idGardIdentifier": "gard-identifier",
-       |    "userGroupId": "random-user-group",
+       |    "certifyGroupId": "random-certify-group",
        |    "deviceGroupId": "random-device-group"
        |}
        |""".stripMargin
@@ -81,7 +81,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.tenantName shouldBe TenantName(tenantName)
         maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
-        maybeTenant.value.userGroupId shouldBe TenantUserGroupId("random-user-group")
+        maybeTenant.value.certifyGroupId shouldBe TenantCertifyGroupId("random-certify-group")
         maybeTenant.value.deviceGroupId shouldBe TenantDeviceGroupId("random-device-group")
         maybeTenant.value.clientCert shouldBe Some(ClientCert(ModelCreationHelper.base64X509Cert))
       }
@@ -107,7 +107,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.tenantName shouldBe TenantName(tenantName)
         maybeTenant.value.usageType shouldBe API
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
-        maybeTenant.value.userGroupId shouldBe TenantUserGroupId("random-user-group")
+        maybeTenant.value.certifyGroupId shouldBe TenantCertifyGroupId("random-certify-group")
         maybeTenant.value.deviceGroupId shouldBe TenantDeviceGroupId("random-device-group")
         maybeTenant.value.clientCert shouldBe None
       }
@@ -215,7 +215,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     super.beforeAll()
     withInjector { injector =>
       lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init(DeviceKeycloak, UsersKeycloak), 2 seconds)
+      await(pool.init(DeviceKeycloak, CertifyKeycloak), 2 seconds)
 
       lazy val superAdminController = injector.get[SuperAdminController]
       addServlet(superAdminController, "/*")
