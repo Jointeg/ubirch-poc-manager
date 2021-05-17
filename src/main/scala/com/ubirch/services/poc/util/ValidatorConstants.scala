@@ -1,6 +1,6 @@
 package com.ubirch.services.poc.util
 
-import com.ubirch.models.tenant.APP
+import com.ubirch.models.tenant.{ APP, UsageType }
 
 import scala.util.matching.Regex
 
@@ -25,8 +25,8 @@ object ValidatorConstants {
   def clientCertError(header: String) =
     s"column $header can only be false, if tenant has client cert"
 
-  val organisationalUnitCertError =
-    s"Could not create organisational unit because Tenant usage type is set to $APP but clientCertRequired is set to false"
+  def organisationalUnitCertError(userType: UsageType, clientCertRequired: Boolean) =
+    s"Could not create organisational unit because Tenant usage type is set to $userType but clientCertRequired is set to $clientCertRequired"
 
   def urlError(header: String) =
     s"column $header must contain a proper url"

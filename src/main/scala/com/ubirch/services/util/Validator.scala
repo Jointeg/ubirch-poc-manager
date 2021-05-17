@@ -70,8 +70,8 @@ object Validator {
   def validateClientCert(header: String, str: String, tenant: Tenant): AllErrorsOr[Boolean] = {
     validateBoolean(header, str) match {
       case Valid(false) if tenant.clientCert.isEmpty => clientCertError(header).invalidNel
-      case Valid(false) if tenant.usageType == APP   => organisationalUnitCertError.invalidNel
-      case Valid(true) if tenant.usageType == API    => organisationalUnitCertError.invalidNel
+      case Valid(false) if tenant.usageType == APP   => organisationalUnitCertError(APP, false).invalidNel
+      case Valid(true) if tenant.usageType == API    => organisationalUnitCertError(API, true).invalidNel
       case validOrInvalid                            => validOrInvalid
     }
   }
