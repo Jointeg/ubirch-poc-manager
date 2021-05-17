@@ -96,6 +96,26 @@ object Validator {
   }
 
   /**
+    * string exists in list
+    */
+  def validateListContainsString(header: String, str: String, list: Seq[String]): AllErrorsOr[String] = {
+    if (list.contains(str)) {
+      str.validNel
+    } else
+      listDoesntContainStringError(header, list).invalidNel
+  }
+
+  /**
+    * string key exists in map
+    */
+  def validateMapContainsStringKey(header: String, str: String, map: Map[String, String]): AllErrorsOr[String] = {
+    if (map.contains(str)) {
+      str.validNel
+    } else
+      mapDoesntContainStringKeyError(header, map).invalidNel
+  }
+
+  /**
     * None if string empty
     */
   def validateStringOption(str: String): AllErrorsOr[Option[String]] = {

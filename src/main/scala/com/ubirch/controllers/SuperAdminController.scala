@@ -11,7 +11,7 @@ import com.ubirch.controllers.concerns.{
 }
 import com.ubirch.models.NOK
 import com.ubirch.models.tenant.{ API, APP, Both, CreateTenantRequest }
-import com.ubirch.services.UsersKeycloak
+import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.superadmin.SuperAdminService
 import io.prometheus.client.Counter
@@ -41,7 +41,7 @@ class SuperAdminController @Inject() (
   override val service: String = config.getString(GenericConfPaths.NAME)
 
   override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, UsersKeycloak, tokenVerificationService, publicKeyPoolService)
+    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
 
   override val successCounter: Counter =
     Counter
@@ -70,9 +70,9 @@ class SuperAdminController @Inject() (
           .description("Describes channel through which POC will be managed")
           .allowableValues(List(API, APP, Both)),
         bodyParam[String]("deviceCreationToken"),
-        bodyParam[String]("certificationCreationToken"),
         bodyParam[String]("idGardIdentifier"),
-        bodyParam[String]("tenantGroupId"),
+        bodyParam[String]("certifyGroupId"),
+        bodyParam[String]("deviceGroupId"),
         bodyParam[String]("clientCert")
       )
   }

@@ -1,11 +1,15 @@
 package com.ubirch.services.execution
 
-import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
+import sttp.client.SttpBackend
+import sttp.client.asynchttpclient.WebSocketHandler
+import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
+
+import scala.concurrent.Future
 
 object SttpResources {
   /**
-    * This is one single sttp backend with Monix.Task
-    * @Important: when you call a http request with Task, this backend object has to be used.
+    * This is one single sttp backend with Future
+    * @Important: when you call a http request with Future, this backend object has to be used.
     */
-  val monixBackend = AsyncHttpClientMonixBackend()
+  val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()
 }

@@ -28,10 +28,11 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   with LazyLogging {
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
+
   private val thingUrlCreateDevice: String = conf.getString(ServicesConfPaths.THING_API_URL_CREATE_DEVICE)
   private val thingUrlGetInfo: String = conf.getString(ServicesConfPaths.THING_API_URL_GET_INFO)
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
-  private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc ${poc.pocName}"
+  private def deviceDescription(tenant: Tenant, poc: Poc) = s"device of ${tenant.tenantName}'s poc: ${poc.pocName}"
 
   @throws[PocCreationError]
   override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW] = {
@@ -63,57 +64,60 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     poc: Poc,
     status: PocStatus,
     body: String): Task[StatusAndPW] =
-    SttpResources.monixBackend.flatMap { backend =>
+    Task.deferFuture {
+      // an error could occur before calls the send() method.
+      // In this case, the deferFuture method is needed because the fromFuture method can't catch such an error.
       val request = basicRequest
         .post(uri"$thingUrlCreateDevice")
         .body(body)
         .auth
         .bearer(token.value)
         .response(asJson[Array[Map[String, DeviceResponse]]])
-      backend.send(request).map {
-        _.body match {
-          case Right(array: Array[Map[String, DeviceResponse]]) =>
-            if (array.length == 1 && array.head.size == 1) {
-              val pw = array.head.head._2.apiConfig.password
-              StatusAndPW(status.copy(deviceCreated = true), pw)
-            } else {
-              throwError(
-                PocAndStatus(poc, status),
-                s"unexpected size of thing api response array: ${array.length}; ")
-            }
-          case Left(ex) =>
-            throwAndLogError(PocAndStatus(poc, status), "creating device via Thing API failed: ", ex, logger)
+      SttpResources.backend
+        .send(request)
+        .map {
+          _.body match {
+            case Right(array: Array[Map[String, DeviceResponse]]) =>
+              if (array.length == 1 && array.head.size == 1) {
+                val pw = array.head.head._2.apiConfig.password
+                StatusAndPW(status.copy(deviceCreated = true), pw)
+              } else {
+                throwError(
+                  PocAndStatus(poc, status),
+                  s"unexpected size of thing api response array: ${array.length}; ")
+              }
+            case Left(ex) =>
+              throwAndLogError(PocAndStatus(poc, status), "creating device via Thing API failed: ", ex, logger)
+          }
         }
-      }
     }
 
   @throws[PocCreationError]
   protected def requestDeviceInfo(
     token: DecryptedData,
     poc: Poc,
-    status: PocStatus): Task[StatusAndPW] =
-    SttpResources.monixBackend.flatMap { backend =>
-      val request = basicRequest
-        .get(uri"$thingUrlGetInfo/${poc.deviceId}")
-        .auth
-        .bearer(token.value)
-        .response(asJson[Array[Map[String, DeviceResponse]]])
-      backend.send(request).map {
-        _.body match {
-          case Right(array: Array[Map[String, DeviceResponse]]) =>
-            if (array.length == 1 && array.head.size == 1) {
-              val pw = array.head.head._2.apiConfig.password
-              StatusAndPW(status, pw)
-            } else {
-              throwError(
-                PocAndStatus(poc, status),
-                s"unexpected size of thing api response array: ${array.length}; ")
-            }
-          case Left(ex) =>
-            throwAndLogError(PocAndStatus(poc, status), "retrieving api-config via Thing API failed: ", ex, logger)
-        }
+    status: PocStatus): Task[StatusAndPW] = Task.deferFuture {
+    val request = basicRequest
+      .post(uri"$thingUrlGetInfo?device_id=${poc.getDeviceId}")
+      .auth
+      .bearer(token.value)
+      .response(asJson[Array[Map[String, ApiConfig]]])
+    SttpResources.backend.send(request).map {
+      _.body match {
+        case Right(array: Array[Map[String, ApiConfig]]) =>
+          if (array.length == 1 && array.head.size == 1) {
+            val pw = array.head.head._2.password
+            StatusAndPW(status, pw)
+          } else {
+            throwError(
+              PocAndStatus(poc, status),
+              s"unexpected size of thing api response array: ${array.length}; ")
+          }
+        case Left(ex) =>
+          throwAndLogError(PocAndStatus(poc, status), "retrieving api-config via Thing API failed: ", ex, logger)
       }
     }
+  }
 
   @throws[PocCreationError]
   private def getBody(poc: Poc, status: PocStatus, tenant: Tenant): String = {
@@ -123,7 +127,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     val body = DeviceRequestBody(
       poc.getDeviceId,
       deviceDescription(tenant, poc),
-      List(poc.dataSchemaId, tenant.deviceGroupId.value, poc.deviceGroupId.get)
+      List()
     )
     write[DeviceRequestBody](body)
   }

@@ -1,14 +1,21 @@
 package com.ubirch.services.poc
 
 import com.ubirch.ModelCreationHelper.createTenant
-import com.ubirch.TestBase
+import com.ubirch.{ PocConfig, TestBase }
 import com.ubirch.services.poc.util.CsvConstants.headerLine
+import org.mockito.Mockito.when
+import org.scalatest.mockito.MockitoSugar.mock
 
 import java.util.UUID
 
 class CsvHandlerTest extends TestBase {
 
-  private val csvHandler = new CsvPocBatchParserImp
+  private val pocConfigMock = mock[PocConfig]
+  when(pocConfigMock.dataSchemaGroupMap).thenReturn(
+    Map("dataSchemaGroups" -> "xxx", "certification-vaccination" -> "yyy")
+  )
+
+  private val csvHandler = new CsvHandlerImp(pocConfigMock)
   private val pocId = UUID.randomUUID()
 
   private val invalidHeader =
@@ -33,6 +40,7 @@ class CsvHandlerTest extends TestBase {
        |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}
        |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;Xfalse;certification-vaccination;Musterfrau;Frau;frau.musterfraumail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}
        |${pocId.toString};pocName;pocStreet;;;;;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}
+       |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}
        |${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   private val tenant = createTenant()
@@ -60,12 +68,14 @@ class CsvHandlerTest extends TestBase {
 
     "return invalid csvRows with errorMsg and validCsvRow as Poc" in {
       val result = csvHandler.parsePocCreationList(validHeaderButBadCsvRows, tenant)
-      assert(result.size == 4)
+      assert(result.size == 5)
       assert(result.head.isRight)
       assert(result(
         1).left.get == s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;Xfalse;certification-vaccination;Musterfrau;Frau;frau.musterfraumail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]};column client_cert* must be either 'TRUE' or 'FALSE',column manager_email* must contain a proper mail address""")
       assert(result(
         2).left.get == s"""${pocId.toString};pocName;pocStreet;;;;;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]};column street_number* cannot be empty,column zipcode* must have the length of 5 digits,column city* cannot be empty""")
+      assert(result(
+        3).left.get == s"""${pocId.toString};pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]};column data_schema_id* must contain a valid value from this map Map(dataSchemaGroups -> xxx, certification-vaccination -> yyy)""")
       assert(result.last.isRight)
     }
   }

@@ -16,7 +16,7 @@ object ModelCreationHelper {
     "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MoOiJodHRwczovL3Rva2VuLmRldi51YmlyY2guY29tIiwic3ViIjoiMmQ1OGUwYTYtYmI4Ny00Y2YxLTllNWYtZWFmYTU5MmM4YmM1IiwiYXVkIjoiaHR0cHM6Ly9hcGkuY29uc29sZS5kZXYudWJpcmNoLmNvbSIsImV4cCI6MTYyMzEzNjExNiwibmJmIjoxNjIwNDU3NzE3LCJpYXQiOjE2MjA0NTc3NjAsImp0aSI6IjFjNzExMjM0LWVhYWUtNGJmOS1hM2JhLTViYjgxN2VkZDExZSIsInNjcCI6WyJ0aGluZzpjcmVhdGUiXSwicHVyIjoiVEVOX3RlbmFudE5hbWUiLCJ0Z3AiOlsiNDQyYjkyM2QtNTM0NS00Mjk4LWE5NTgtNmIwYjVlZWM3YzdhIl0sInRpZCI6WyIqIl0sIm9yZCI6W119.Zj7YhxqM1MIfWiN00v7SFQdi4WQb6gd-gZmG7d3ccxG5lJNUYnOIN5oZm-WzLGBgYVlvHLZm6OKoO02cl-LC1Q")
   private val encryptedData = EncryptedData(base64String)
   private val deviceCreationToken = EncryptedDeviceCreationToken(encryptedData)
-  private val certCreationToken = EncryptedCertificationCreationToken(encryptedData)
+  val dataSchemaGroupId = "data-schema-id"
 
   private val tenantName = "tenantName"
 
@@ -30,7 +30,7 @@ object ModelCreationHelper {
       API,
       deviceCreationToken,
       IdGardIdentifier("folder-identifier"),
-      TenantUserGroupId(TENANT_GROUP_PREFIX + tenantName),
+      TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
       clientCert
     )
@@ -53,7 +53,7 @@ object ModelCreationHelper {
       certifyApp = true,
       None,
       clientCertRequired = false,
-      "data-schema-id",
+      dataSchemaGroupId,
       Some(JsonConfig(parse("""{"test":"hello"}"""))),
       PocManager("surname", "", "", "08023-782137"),
       status
@@ -62,7 +62,6 @@ object ModelCreationHelper {
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
       pocId,
-      validDataSchemaGroup = true,
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,

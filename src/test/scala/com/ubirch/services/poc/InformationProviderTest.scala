@@ -100,7 +100,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
 
       assertThrows[PocCreationError](infoProvider.infoToCertifyAPI(poc, statusAndPW, tenant).runSyncUnsafe())
       //test the same in a different way
-      val r = infoProvider
+      infoProvider
         .infoToCertifyAPI(poc, statusAndPW, tenant)
         .onErrorHandle {
           case PocCreationError(state, _) =>

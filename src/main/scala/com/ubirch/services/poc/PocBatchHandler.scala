@@ -1,8 +1,6 @@
 package com.ubirch.services.poc
 
 import com.google.inject.Inject
-import com.typesafe.config.Config
-import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.db.tables.{ PocStatusTable, PocTable }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
@@ -18,15 +16,8 @@ trait PocBatchHandlerTrait {
 }
 
 @Singleton
-class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatusTable: PocStatusTable)
+class PocBatchHandlerImpl @Inject() (csvHandler: CsvHandlerTrait, pocTable: PocTable, pocStatusTable: PocStatusTable)
   extends PocBatchHandlerTrait {
-
-  private val csvHandler = new CsvPocBatchParserImp
-  private val dataSchemaGroupIds =
-    conf
-      .getString(ServicesConfPaths.DATA_SCHEMA_GROUP_IDS)
-      .split(", ")
-      .toList
 
   implicit val scheduler: Scheduler = monix.execution.Scheduler.global
 
@@ -79,7 +70,6 @@ class PocBatchHandlerImpl @Inject() (conf: Config, pocTable: PocTable, pocStatus
   def createInitialPocCreationState(poc: Poc): PocStatus =
     PocStatus(
       pocId = poc.id,
-      validDataSchemaGroup = dataSchemaGroupIds.contains(poc.dataSchemaId),
       clientCertRequired = poc.clientCertRequired,
       clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
       clientCertProvided = if (poc.clientCertRequired) Some(false) else None,

@@ -5,9 +5,14 @@ import cats.data.Validated.{ Invalid, Valid }
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.services.poc.util.CsvConstants._
-import com.ubirch.services.poc.util.ValidatorConstants.phoneValidationError
-import com.ubirch.services.poc.util.{ CsvConstants, ValidatorConstants }
-import com.ubirch.services.util.Validator
+import com.ubirch.services.poc.util.ValidatorConstants.{
+  emptyStringError,
+  listDoesntContainStringError,
+  mapDoesntContainStringKeyError,
+  phoneValidationError
+}
+import com.ubirch.services.poc.util.ValidatorConstants
+import com.ubirch.services.util.Validator._
 import org.scalatest.prop.{ TableDrivenPropertyChecks, TableFor1 }
 
 class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
@@ -16,13 +21,13 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate JValue valid" in {
       val json = """{"test": "1", "testArray": ["entry1", "entry2"]}"""
-      val jvalue = Validator.validateJson(jsonConfig, json)
+      val jvalue = validateJson(jsonConfig, json)
       assert(jvalue.isValid)
     }
 
     "validate None if emtpy string" in {
       val json = ""
-      val validated = Validator.validateJson(jsonConfig, json)
+      val validated = validateJson(jsonConfig, json)
       assert(validated.isValid)
       validated
         .map(v => assert(v.isEmpty))
@@ -30,7 +35,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate broken json invalid" in {
       val json = """{"test": "1", "testArray: ["entry1", "entry2"]}"""
-      val validated = Validator.validateJson(jsonConfig, json)
+      val validated = validateJson(jsonConfig, json)
 
       assert(validated.isInvalid)
       validated
@@ -45,13 +50,13 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate Email valid" in {
       val str = "test@test.de"
-      val validated = Validator.validateEmail(managerEmail, str)
+      val validated = validateEmail(managerEmail, str)
       assert(validated.isValid)
     }
 
     "validate broken Email invalid" in {
       val str = "test@test@.de"
-      val validated = Validator.validateEmail(managerEmail, str)
+      val validated = validateEmail(managerEmail, str)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -65,13 +70,13 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate URL valid" in {
       val str = "http://www.ubirch.com"
-      val validated = Validator.validateURL(logoUrl, str, "true")
+      val validated = validateURL(logoUrl, str, "true")
       assert(validated.isValid)
     }
 
     "validate broken URL invalid" in {
       val str = "www.ubirch.comX"
-      val validated = Validator.validateURL(logoUrl, str, "true")
+      val validated = validateURL(logoUrl, str, "true")
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -82,7 +87,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate URL valid, if certifyApp column contains errors " in {
       val str = "www.ubirch.com"
-      val validated = Validator.validateURL(logoUrl, str, "CtrueX")
+      val validated = validateURL(logoUrl, str, "CtrueX")
       assert(validated.isValid)
     }
   }
@@ -91,25 +96,25 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate 'TRUE' valid" in {
       val str = "TRUE"
-      val validated = Validator.validateBoolean(certifyApp, str)
+      val validated = validateBoolean(certifyApp, str)
       assert(validated.isValid)
     }
 
     "validate 'TRue' valid" in {
       val str = "TRue"
-      val validated = Validator.validateBoolean(certifyApp, str)
+      val validated = validateBoolean(certifyApp, str)
       assert(validated.isValid)
     }
 
     "validate 'false' valid" in {
       val str = "false"
-      val validated = Validator.validateBoolean(certifyApp, str)
+      val validated = validateBoolean(certifyApp, str)
       assert(validated.isValid)
     }
 
     "validate 'XTrue' invalid" in {
       val str = "XTrue"
-      val validated = Validator.validateBoolean(certifyApp, str)
+      val validated = validateBoolean(certifyApp, str)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -120,7 +125,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate 'false_' invalid" in {
       val str = "false_"
-      val validated = Validator.validateBoolean(certifyApp, str)
+      val validated = validateBoolean(certifyApp, str)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -135,13 +140,13 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     val tenant = createTenant()
     "validate 'TRUE' valid" in {
       val str = "TRUE"
-      val validated = Validator.validateClientCert(clientCert, str, tenant)
+      val validated = validateClientCert(clientCert, str, tenant)
       assert(validated.isValid)
     }
 
     "validate 'tryx' valid" in {
       val str = "tryx"
-      val validated = Validator.validateClientCert(clientCert, str, tenant)
+      val validated = validateClientCert(clientCert, str, tenant)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -152,14 +157,14 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate 'False' valid" in {
       val str = "False"
-      val validated = Validator.validateClientCert(clientCert, str, tenant)
+      val validated = validateClientCert(clientCert, str, tenant)
       assert(validated.isValid)
     }
 
     val tenantWithoutCert = createTenant(clientCert = None)
     "validate 'False' invalid when tenant does not have a client cert" in {
       val str = "False"
-      val validated = Validator.validateClientCert(clientCert, str, tenantWithoutCert)
+      val validated = validateClientCert(clientCert, str, tenantWithoutCert)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -173,42 +178,42 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate phone number example 1 valid" in {
       val str = "+49327387862"
-      val validated = Validator.validatePhone(phone, str)
+      val validated = validatePhone(phone, str)
       assert(validated.isValid)
     }
 
     "validate phone number  example 2 valid" in {
       val str = "+4930-7387862"
-      val validated = Validator.validatePhone(phone, str)
+      val validated = validatePhone(phone, str)
       assert(validated.isValid)
     }
 
     "validate phone number 0187-73878989 valid" in {
       val str = "0187-73878989"
-      val validated = Validator.validatePhone(phone, str)
+      val validated = validatePhone(phone, str)
       assert(validated.isValid)
     }
 
     "validate phone number +49-301267863 valid" in {
       val str = "+49-301267863"
-      val validated = Validator.validatePhone(phone, str)
+      val validated = validatePhone(phone, str)
       assert(validated.isValid)
     }
 
     "validate phone number  example 5 valid" in {
       val str = "030786862834"
-      val validated = Validator.validatePhone(phone, str)
+      val validated = validatePhone(phone, str)
       assert(validated.isValid)
     }
 
     "validate phone number example 1 invalid" in {
       val str = "+4932738x7862"
-      val validated = Validator.validatePhone(phone, str)
+      val validated = validatePhone(phone, str)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == phoneValidationError(CsvConstants.phone))
+          assert(error == phoneValidationError(phone))
         }
     }
   }
@@ -217,29 +222,95 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate String valid if not empty" in {
       val str = "t"
-      val validated = Validator.validateString(pocName, str)
+      val validated = validateString(pocName, str)
       assert(validated.isValid)
     }
 
     "validate empty string invalid" in {
       val str = ""
-      val validated = Validator.validateString(pocName, str)
+      val validated = validateString(pocName, str)
       assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == emptyStringError(pocName))
+        }
     }
+  }
+
+  "Validator list contains string" should {
+
+    val list = Seq("test", "test1", "123")
+
+    "validate valid" in {
+      val validated = validateListContainsString(dataSchemaId, "test1", list)
+      assert(validated.isValid)
+    }
+
+    "validate error if string is empty" in {
+      val validated = validateListContainsString(dataSchemaId, "", list)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == listDoesntContainStringError(dataSchemaId, list))
+        }
+    }
+
+    "validate error if list doesn't contain string" in {
+      val validated = validateListContainsString(dataSchemaId, "set1", list)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == listDoesntContainStringError(dataSchemaId, list))
+        }
+    }
+
+  }
+
+  "Validator map contains key string" should {
+
+    val map = Map("test" -> "xxx", "test1" -> "yyy", "123" -> "zzz")
+    "validate valid" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "test1", map)
+      assert(validated.isValid)
+    }
+
+    "validate error if string is empty" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "", map)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
+        }
+    }
+
+    "validate error if map doesn't contain string" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "set1", map)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
+        }
+    }
+
   }
 
   "Validator StringOption" should {
 
     "validate String Option valid if not empty" in {
       val str = "t"
-      val validated = Validator.validateStringOption(str)
+      val validated = validateStringOption(str)
       assert(validated.isValid)
       validated.map(stringOpt => assert(stringOpt.contains(str)))
     }
 
     "validate String Option valid if empty" in {
       val str = ""
-      val validated = Validator.validateStringOption(str)
+      val validated = validateStringOption(str)
       assert(validated.isValid)
       validated.map(stringOpt => assert(stringOpt.isEmpty))
     }
@@ -249,7 +320,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate zipcode valid if not empty" in {
       val str = "98707"
-      val validated = Validator.validateZipCode(zipcode, str)
+      val validated = validateZipCode(zipcode, str)
       assert(validated.isValid)
       validated.map(zipcode => assert(zipcode.isInstanceOf[Int]))
     }
@@ -257,7 +328,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     "validate empty zipcode invalid" in {
       val str = ""
 
-      val validated = Validator.validateZipCode(zipcode, str)
+      val validated = validateZipCode(zipcode, str)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -306,21 +377,21 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   "Validator PocName" must {
     "not have empty header" in {
-      val validated = Validator.validatePocName("poc_name*", " ")
+      val validated = validatePocName("poc_name*", " ")
       validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column poc_name* cannot be empty")))
     }
   }
 
   forAll(validPocName) { name =>
     s"valid $name" in {
-      val validated = Validator.validatePocName("poc_name*", name)
+      val validated = validatePocName("poc_name*", name)
       validated mustBe Valid(name)
     }
   }
 
   forAll(invalidPocName) { name =>
     s"invalid $name" in {
-      val validated = Validator.validatePocName("poc_name*", name)
+      val validated = validatePocName("poc_name*", name)
       validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column poc_name* must contain a valid poc name")))
     }
   }

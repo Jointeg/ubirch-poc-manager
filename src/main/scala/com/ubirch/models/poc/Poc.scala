@@ -21,11 +21,11 @@ case class Poc(
   manager: PocManager,
   roleName: String,
   deviceGroupId: Option[String] = None,
-  userGroupId: Option[String] = None,
+  certifyGroupId: Option[String] = None,
   deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
-  lastUpdated: Updated = Updated(DateTime.now()),
+  lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
   def getDeviceId: String = deviceId.value.value.toString

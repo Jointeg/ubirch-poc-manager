@@ -3,7 +3,7 @@ package com.ubirch.services.keycloak.roles
 import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.roles._
-import com.ubirch.services.{ KeycloakConnector, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.RoleRepresentation
 
@@ -12,15 +12,15 @@ import javax.ws.rs.{ ClientErrorException, NotFoundException }
 trait KeycloakRolesService {
   def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RolesException, Unit]]
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[RolesException, Unit]]
 
-  def findRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]]
+  def findRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[KeycloakRole]]
 
-  def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit]
+  def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit]
 
   def findRoleRepresentation(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[RoleRepresentation]]
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]]
 }
 
 @Singleton
@@ -30,7 +30,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RolesException, Unit]] = {
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[RolesException, Unit]] = {
     val roleRepresentation = createKeycloakRole.toKeycloakRepresentation
 
     Task(
@@ -51,7 +51,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
     }
   }
 
-  override def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] = {
+  override def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] = {
     Task(
       keycloakConnector
         .getKeycloak(keycloakInstance)
@@ -69,7 +69,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findRole(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]] = {
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[KeycloakRole]] = {
     Task {
       val keycloakRoleRepresentation = keycloakConnector
         .getKeycloak(keycloakInstance)
@@ -90,7 +90,7 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findRoleRepresentation(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[RoleRepresentation]] = {
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]] = {
     Task {
       val keycloakRoleRepresentation = keycloakConnector
         .getKeycloak(keycloakInstance)

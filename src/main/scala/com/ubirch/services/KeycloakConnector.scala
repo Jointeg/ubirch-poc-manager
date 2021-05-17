@@ -1,10 +1,10 @@
 package com.ubirch.services
 
 import com.ubirch.services.keycloak.{
+  CertifyKeycloakConnector,
   DeviceKeycloakConnector,
-  KeycloakDeviceConfig,
-  KeycloakUsersConfig,
-  UsersKeycloakConnector
+  KeycloakCertifyConfig,
+  KeycloakDeviceConfig
 }
 import org.keycloak.admin.client.Keycloak
 
@@ -17,26 +17,26 @@ trait KeycloakConnector {
 }
 
 class DefaultKeycloakConnector @Inject() (
-  usersKeycloakConnector: UsersKeycloakConnector,
+  certifyKeycloakConnector: CertifyKeycloakConnector,
   deviceKeycloakConnector: DeviceKeycloakConnector,
-  keycloakUsersConfig: KeycloakUsersConfig,
+  keycloakCertifyConfig: KeycloakCertifyConfig,
   keycloakDeviceConfig: KeycloakDeviceConfig)
   extends KeycloakConnector {
   override def getKeycloak(keycloakInstance: KeycloakInstance): Keycloak =
     keycloakInstance match {
-      case UsersKeycloak  => usersKeycloakConnector.keycloak
-      case DeviceKeycloak => deviceKeycloakConnector.keycloak
+      case CertifyKeycloak => certifyKeycloakConnector.keycloak
+      case DeviceKeycloak  => deviceKeycloakConnector.keycloak
     }
 
   override def getKeycloakRealm(keycloakInstance: KeycloakInstance): String =
     keycloakInstance match {
-      case UsersKeycloak  => keycloakUsersConfig.realm
-      case DeviceKeycloak => keycloakDeviceConfig.realm
+      case CertifyKeycloak => keycloakCertifyConfig.realm
+      case DeviceKeycloak  => keycloakDeviceConfig.realm
     }
 }
 
 sealed trait KeycloakInstance
 
-case object UsersKeycloak extends KeycloakInstance
+case object CertifyKeycloak extends KeycloakInstance
 
 case object DeviceKeycloak extends KeycloakInstance

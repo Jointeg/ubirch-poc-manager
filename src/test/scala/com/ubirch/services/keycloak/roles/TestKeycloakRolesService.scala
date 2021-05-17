@@ -1,7 +1,7 @@
 package com.ubirch.services.keycloak.roles
 
 import com.ubirch.models.keycloak.roles._
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.RoleRepresentation
 
@@ -11,15 +11,15 @@ import scala.collection.mutable
 
 @Singleton
 class TestKeycloakRolesService() extends KeycloakRolesService {
-  private val rolesUserDatastore = mutable.Map[RoleName, KeycloakRole]()
+  private val rolesCertifyDatastore = mutable.Map[RoleName, KeycloakRole]()
   private val rolesDeviceDatastore = mutable.Map[RoleName, KeycloakRole]()
 
   override def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[RoleAlreadyExists, Unit]] =
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[RoleAlreadyExists, Unit]] =
     keycloakInstance match {
-      case UsersKeycloak  => insertIfNotExists(rolesUserDatastore, createKeycloakRole)
-      case DeviceKeycloak => insertIfNotExists(rolesDeviceDatastore, createKeycloakRole)
+      case CertifyKeycloak => insertIfNotExists(rolesCertifyDatastore, createKeycloakRole)
+      case DeviceKeycloak  => insertIfNotExists(rolesDeviceDatastore, createKeycloakRole)
     }
 
   private def insertIfNotExists(
@@ -39,17 +39,17 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
 
   override def findRole(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[KeycloakRole]] =
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[KeycloakRole]] =
     keycloakInstance match {
-      case UsersKeycloak  => Task(rolesUserDatastore.get(roleName))
-      case DeviceKeycloak => Task(rolesDeviceDatastore.get(roleName))
+      case CertifyKeycloak => Task(rolesCertifyDatastore.get(roleName))
+      case DeviceKeycloak  => Task(rolesDeviceDatastore.get(roleName))
     }
 
-  override def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] =
+  override def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
     keycloakInstance match {
-      case UsersKeycloak =>
+      case CertifyKeycloak =>
         Task {
-          rolesUserDatastore -= roleName
+          rolesCertifyDatastore -= roleName
           ()
         }
       case DeviceKeycloak =>
@@ -61,10 +61,10 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
 
   override def findRoleRepresentation(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[RoleRepresentation]] = {
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]] = {
     val opt: Option[KeycloakRole] = keycloakInstance match {
-      case UsersKeycloak =>
-        val r = rolesUserDatastore.get(roleName)
+      case CertifyKeycloak =>
+        val r = rolesCertifyDatastore.get(roleName)
         r
       case DeviceKeycloak =>
         rolesDeviceDatastore.get(roleName)

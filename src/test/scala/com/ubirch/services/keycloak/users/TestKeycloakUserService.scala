@@ -1,24 +1,25 @@
 package com.ubirch.services.keycloak.users
-import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists }
-import com.ubirch.models.user.UserName
-import com.ubirch.services.{ DeviceKeycloak, KeycloakInstance, UsersKeycloak }
+import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists, UserCreationError, UserException }
+import com.ubirch.models.user.{ UserId, UserName }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
-import org.keycloak.representations.idm.UserRepresentation
+import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
 
+import java.util.UUID
 import javax.inject.Singleton
 import scala.collection.mutable
 
 @Singleton
 class TestKeycloakUserService() extends KeycloakUserService {
-  private val keycloakUserDatastore = mutable.ListBuffer[UserName]()
+  private val keycloakCertifyDatastore = mutable.ListBuffer[UserName]()
   private val keycloakDeviceDatastore = mutable.ListBuffer[UserName]()
 
   override def createUser(
     createKeycloakUser: CreateKeycloakUser,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Either[UserAlreadyExists, Unit]] =
-    keycloakInstance match {
-      case UsersKeycloak  => createIfNotExists(keycloakUserDatastore, createKeycloakUser)
-      case DeviceKeycloak => createIfNotExists(keycloakDeviceDatastore, createKeycloakUser)
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[UserException, UserId]] =
+    instance match {
+      case CertifyKeycloak => createIfNotExists(keycloakCertifyDatastore, createKeycloakUser)
+      case DeviceKeycloak  => createIfNotExists(keycloakDeviceDatastore, createKeycloakUser)
     }
 
   private def createIfNotExists(datastore: mutable.ListBuffer[UserName], createKeycloakUser: CreateKeycloakUser) = {
@@ -27,16 +28,16 @@ class TestKeycloakUserService() extends KeycloakUserService {
         case Some(_) => Left(UserAlreadyExists(createKeycloakUser.userName))
         case None =>
           datastore += createKeycloakUser.userName
-          Right(())
+          Right(UserId(UUID.randomUUID()))
       }
     }
   }
 
-  override def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Unit] =
+  override def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
     keycloakInstance match {
-      case UsersKeycloak =>
+      case CertifyKeycloak =>
         Task {
-          keycloakUserDatastore -= username
+          keycloakCertifyDatastore -= username
           ()
         }
       case DeviceKeycloak =>
@@ -48,10 +49,10 @@ class TestKeycloakUserService() extends KeycloakUserService {
 
   override def getUser(
     username: UserName,
-    keycloakInstance: KeycloakInstance = UsersKeycloak): Task[Option[UserRepresentation]] =
+    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]] =
     keycloakInstance match {
-      case UsersKeycloak  => findInDatastore(keycloakUserDatastore, username)
-      case DeviceKeycloak => findInDatastore(keycloakDeviceDatastore, username)
+      case CertifyKeycloak => findInDatastore(keycloakCertifyDatastore, username)
+      case DeviceKeycloak  => findInDatastore(keycloakDeviceDatastore, username)
     }
 
   private def findInDatastore(datastore: mutable.ListBuffer[UserName], username: UserName) =
@@ -64,4 +65,11 @@ class TestKeycloakUserService() extends KeycloakUserService {
           userRepresentation
         })
     }
+
+  override def addGroupToUser(
+    userName: String,
+    groupId: String,
+    keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
+    Task { Right(()) }
+
 }

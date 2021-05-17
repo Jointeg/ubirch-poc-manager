@@ -4,19 +4,19 @@ import org.joda.time.DateTime
 
 import java.util.UUID
 
-/**
-  * @param validDataSchemaGroup MVP1: if dataSchemaGroup is not valid, don't start creating PoC
-  */
 case class PocStatus(
   pocId: UUID,
-  validDataSchemaGroup: Boolean,
-  userRoleCreated: Boolean = false,
-  userGroupCreated: Boolean = false,
-  userGroupRoleAssigned: Boolean = false,
+  certifyRoleCreated: Boolean = false,
+  certifyGroupCreated: Boolean = false,
+  certifyGroupRoleAssigned: Boolean = false,
+  certifyGroupTenantRoleAssigned: Boolean = false,
   deviceRoleCreated: Boolean = false,
   deviceGroupCreated: Boolean = false,
   deviceGroupRoleAssigned: Boolean = false,
+  deviceGroupTenantRoleAssigned: Boolean = false,
   deviceCreated: Boolean = false,
+  assignedDataSchemaGroup: Boolean = false,
+  assignedDeviceGroup: Boolean = false,
   clientCertRequired: Boolean,
   clientCertCreated: Option[Boolean],
   clientCertProvided: Option[Boolean],
@@ -26,18 +26,19 @@ case class PocStatus(
   goClientProvided: Boolean = false,
   certifyApiProvided: Boolean = false,
   errorMessage: Option[String] = None,
-  lastUpdated: Updated = Updated(DateTime.now()),
+  lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
   override def toString: String = {
     s"pocId:$pocId\n" +
-      s"validDataSchemaGroup:$validDataSchemaGroup\n" +
-      s"userRoleCreated:$userRoleCreated\n" +
-      s"userGroupCreated:$userGroupCreated\n" +
-      s"userGroupRoleAssigned:$userGroupRoleAssigned\n" +
+      s"certifyRoleCreated:$certifyRoleCreated\n" +
+      s"certifyGroupCreated:$certifyGroupCreated\n" +
+      s"certifyGroupRoleAssigned:$certifyGroupRoleAssigned\n" +
+      s"certifyGroupTenantRoleAssigned:$certifyGroupTenantRoleAssigned\n" +
       s"deviceRoleCreated:$deviceRoleCreated\n" +
       s"deviceGroupCreated:$deviceGroupCreated\n" +
       s"deviceGroupRoleAssigned:$deviceGroupRoleAssigned\n" +
+      s"deviceGroupTenantRoleAssigned:$deviceGroupTenantRoleAssigned\n" +
       s"deviceCreated:$deviceCreated\n" +
       s"clientCertRequired:$clientCertRequired\n" +
       s"clientCertCreated:$clientCertCreated\n" +

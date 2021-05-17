@@ -1,9 +1,16 @@
 package com.ubirch.services.poc
 import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.UnitTestBase
-import com.ubirch.models.poc.PocStatus
+import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
+import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserName }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
+import com.ubirch.services.keycloak.roles.KeycloakRolesService
+import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.poc.PocTestHelper._
+import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.reactive.Observable
 import org.scalatest.Assertion
 
@@ -20,10 +27,21 @@ class PocCreationLoopTest extends UnitTestBase {
         val pocTable = injector.get[PocRepositoryMock]
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
         val groups = injector.get[TestKeycloakGroupsService]
+        val keyCloakRoleService = injector.get[KeycloakRolesService]
+
+        val users = injector.get[TestKeycloakUserService]
 
         //creating needed objects
         val (poc, pocStatus, tenant) = createPocTriple()
         val updatedTenant = createNeededTenantGroups(tenant, groups)
+        createNeededDeviceUser(users, poc)
+
+        keyCloakRoleService.createNewRole(
+          CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
+          DeviceKeycloak).runSyncUnsafe(3.seconds)
+        keyCloakRoleService.createNewRole(
+          CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
+          CertifyKeycloak).runSyncUnsafe(3.seconds)
 
         //start process
         val pocCreation = loop.startPocCreationLoop(resp => Observable(resp)).subscribe()
@@ -38,14 +56,22 @@ class PocCreationLoopTest extends UnitTestBase {
     }
   }
 
+  private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
+    users.createUser(
+      CreateKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
+      DeviceKeycloak).runSyncUnsafe()
+  }
+
   private def assertStatusAllTrue(status: PocStatus): Assertion = {
     status.deviceRoleCreated shouldBe true
     status.deviceGroupCreated shouldBe true
     status.deviceGroupRoleAssigned shouldBe true
+    status.deviceGroupTenantRoleAssigned shouldBe true
 
-    status.userRoleCreated shouldBe true
-    status.userGroupCreated shouldBe true
-    status.userGroupRoleAssigned shouldBe true
+    status.certifyRoleCreated shouldBe true
+    status.certifyGroupCreated shouldBe true
+    status.certifyGroupRoleAssigned shouldBe true
+    status.certifyGroupTenantRoleAssigned shouldBe true
     status.deviceCreated shouldBe true
     status.goClientProvided shouldBe true
     status.certifyApiProvided shouldBe true
