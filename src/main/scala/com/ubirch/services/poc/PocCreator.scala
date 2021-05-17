@@ -167,10 +167,10 @@ class PocCreatorImpl @Inject() (
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
       statusAndPW3 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
       status4 <- addGroupsToDevice(pocAndStatus2.poc, statusAndPW3.pocStatus)
-      pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, pocAndStatus2)
+      pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, PocAndStatus(pocAndStatus2.poc, status4))
       pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus3)
-      statusAndPW5 <- infoToGoClient(pocAndStatus4.poc, statusAndPW3.copy(pocStatus = status4))
-      completeStatus <- infoToCertifyAPI(pocAndStatus2.poc, statusAndPW5, tenant)
+      statusAndPW5 <- infoToGoClient(pocAndStatus4.poc, statusAndPW3.copy(pocStatus = pocAndStatus4.status))
+      completeStatus <- infoToCertifyAPI(pocAndStatus4.poc, statusAndPW5, tenant)
     } yield completeStatus
 
     (for {
