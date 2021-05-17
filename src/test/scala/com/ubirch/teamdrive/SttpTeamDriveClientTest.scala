@@ -9,6 +9,7 @@ import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import TaskSupport._
 import TestData._
+import com.ubirch.services.teamdrive.model.Read
 
 import java.nio.ByteBuffer
 import scala.concurrent.Future
@@ -20,21 +21,6 @@ class SttpTeamDriveClientTest extends HttpTest {
   implicit private val formats: Formats = org.json4s.DefaultFormats
 
   import SttpTeamDriveClientTest._
-
-  "SttpTeamDriveClient.putFile" should {
-    "send file to given space" in httpTest { httpStub =>
-      // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
-      val content = """bla bla bla""".getBytes
-      httpStub.fileWillBeSent(spaceId = 8, fileBody = content, fileName = "cert.txt", fileId = 16)
-
-      // when
-      val response = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap(content)).unwrap
-
-      // then
-      response mustBe model.FileId(16)
-    }
-  }
 
   "SttpTeamDriveClient.createSpace" should {
     "create one for given name and path" in httpTest { httpStub =>
@@ -59,6 +45,35 @@ class SttpTeamDriveClientTest extends HttpTest {
 
       // then
       response mustBe model.TeamDriveError(30, "some error")
+    }
+  }
+
+  "SttpTeamDriveClient.putFile" should {
+    "send file to given space" in httpTest { httpStub =>
+      // given
+      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val content = """bla bla bla""".getBytes
+      httpStub.fileWillBeSent(spaceId = 8, fileBody = content, fileName = "cert.txt", fileId = 16)
+
+      // when
+      val response = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap(content)).unwrap
+
+      // then
+      response mustBe model.FileId(16)
+    }
+  }
+
+  "SttpTeamDriveClient.inviteMember" should {
+    "send invitation" in httpTest { httpStub =>
+      // given
+      val client = new SttpTeamDriveClient(config(httpStub.url))
+      httpStub.invitationWillBeAccepted(spaceId = 8, permissionLevel = "read", email = "admin@ubirch.com")
+
+      // when
+      val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).unwrap
+
+      // then
+      response mustBe true
     }
   }
 }

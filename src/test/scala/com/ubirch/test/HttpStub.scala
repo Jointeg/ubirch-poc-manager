@@ -58,6 +58,31 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
     self
   }
 
+  def invitationWillBeAccepted(
+    username: String = TestData.username,
+    password: String = TestData.password,
+    spaceId: Int = TestData.spaceId,
+    email: String = TestData.email,
+    permissionLevel: String = TestData.defaultPermissionLevel
+  ): HttpStub = {
+    wiremock.stubFor(
+      post(urlEqualTo("/api/inviteMember"))
+        .withBasicAuth(username, password)
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .withRequestBody(matchingJsonPath("spaceId", equalTo(s"$spaceId")))
+        .withRequestBody(matchingJsonPath("permissionLevel", equalTo(permissionLevel)))
+        .withRequestBody(matchingJsonPath("sendEmail", equalTo("true")))
+        .withRequestBody(matchingJsonPath("name", equalTo(email)))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(200)
+            .withBody(inviteMemberOkResponse)
+        )
+    )
+    self
+  }
+
   def createSpaceWillFail(
     username: String = TestData.username,
     password: String = TestData.password,
@@ -150,4 +175,6 @@ object HttpStub {
        | "newVersionId": 2,
        | "result": true
        |}""".stripMargin
+
+  def inviteMemberOkResponse: String = """{ "result": true }"""
 }
