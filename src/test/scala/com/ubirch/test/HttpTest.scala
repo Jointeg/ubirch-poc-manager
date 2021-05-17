@@ -8,7 +8,7 @@ import com.ubirch.TestBase
 import java.net.ServerSocket
 
 trait HttpTest extends TestBase {
-  def testWithHttp(test: HttpStub => Unit): Unit = {
+  def httpTest(test: HttpStub => Unit): Unit = {
     val port: Int = randomPort().unsafeRunSync()
     val wiremockUrl = s"http://localhost:$port"
     val wireMockServer = new WireMockServer(wireMockConfig().port(port))

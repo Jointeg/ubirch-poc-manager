@@ -1,14 +1,17 @@
 package com.ubirch.teamdrive
 
 import com.ubirch.services.teamdrive._
+import com.ubirch.teamdrive.SttpTeamDriveClientTest.config
 import com.ubirch.test._
 import org.json4s.{Formats, Serialization}
 import sttp.client.SttpBackend
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
+import TaskSupport._
+import TestData._
 
+import java.nio.ByteBuffer
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class SttpTeamDriveClientTest extends HttpTest {
 
@@ -18,17 +21,44 @@ class SttpTeamDriveClientTest extends HttpTest {
 
   import SttpTeamDriveClientTest._
 
-  "SttpTeamDriveClient" should {
-    "create space for given name and path" in testWithHttp { httpStub =>
+  "SttpTeamDriveClient.putFile" should {
+    "send file to given space" in httpTest { httpStub =>
       // given
       val client = new SttpTeamDriveClient(config(httpStub.url))
-      httpStub.spaceWillBeCreated(spaceId = 1410, spaceName = "test-space", spacePath = "test/space")
+      val content = """bla bla bla""".getBytes
+      httpStub.fileWillBeSent(spaceId = 8, fileBody = content, fileName = "cert.txt", fileId = 16)
 
       // when
-      val response = client.createSpace("test-space", "test/space").runSyncUnsafe(2.seconds)
+      val response = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap(content)).unwrap
 
       // then
-      response mustBe model.SpaceCreated(spaceId = 1410)
+      response mustBe model.FileId(16)
+    }
+  }
+
+  "SttpTeamDriveClient.createSpace" should {
+    "create one for given name and path" in httpTest { httpStub =>
+      // given
+      val client = new SttpTeamDriveClient(config(httpStub.url))
+      httpStub.spaceWillBeCreated(spaceId = 8, spaceName = spaceName, spacePath = spacePath)
+
+      // when
+      val response = client.createSpace(spaceName, spacePath).unwrap
+
+      // then
+      response mustBe model.SpaceId(8)
+    }
+
+    "fail when TeamDrive responds with an error" in httpTest { httpStub =>
+      // given
+      val client = new SttpTeamDriveClient(config(httpStub.url))
+      httpStub.createSpaceWillFail(errorCode = 30, errorMessage = "some error", statusCode = 400)
+
+      // when
+      val response = client.createSpace(spaceName, spacePath).catchError
+
+      // then
+      response mustBe model.TeamDriveError(30, "some error")
     }
   }
 }

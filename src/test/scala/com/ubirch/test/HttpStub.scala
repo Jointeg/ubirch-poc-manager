@@ -2,9 +2,11 @@ package com.ubirch.test
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock._
+import sttp.model.MediaType.ApplicationOctetStream
 import sttp.model.{ HeaderNames, MediaType }
 
 class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF-8") { self =>
+
   import HttpStub._
 
   private val ApplicationJson: String = MediaType.ApplicationJson.charset(charset).toString()
@@ -33,6 +35,50 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
     )
     self
   }
+
+  def fileWillBeSent(
+    username: String = TestData.username,
+    password: String = TestData.password,
+    spaceId: Int = TestData.spaceId,
+    fileBody: Array[Byte],
+    fileName: String,
+    fileId: Int
+  ): HttpStub = {
+    wiremock.stubFor(
+      put(urlEqualTo(s"/files/$spaceId/$fileName"))
+        .withBasicAuth(username, password)
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationOctetStream.toString()))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(200)
+            .withBody(putFileOkResponse(spaceId = spaceId, fileId = fileId, fileName = fileName))
+        )
+    )
+    self
+  }
+
+  def createSpaceWillFail(
+    username: String = TestData.username,
+    password: String = TestData.password,
+    errorCode: Int,
+    errorMessage: String,
+    statusCode: Int
+  ): HttpStub = {
+    wiremock.stubFor(
+      post(urlEqualTo("/api/createSpace"))
+        .withBasicAuth(username, password)
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(statusCode)
+            .withBody(errorResponse(message = errorMessage, statusCode = statusCode, errorCode = errorCode))
+        )
+    )
+    self
+  }
+
 }
 
 object HttpStub {
@@ -65,11 +111,43 @@ object HttpStub {
        | "spaceId": $spaceId
        |}""".stripMargin
 
-  def errorResponse(message: String = "some error message", statusCode: Int = 400): String =
+  def errorResponse(message: String, statusCode: Int, errorCode: Int): String =
     s"""{
-       | "error" : 3,
-       | "error_message" : "$message"
-       | "result" : false,
-       | "status_code" : $statusCode
+       | "error": $errorCode,
+       | "error_message": "$message"
+       | "result": false,
+       | "status_code": $statusCode
+       |}""".stripMargin
+
+  def putFileOkResponse(spaceId: Int, fileId: Int, fileName: String): String =
+    s"""{
+       | "file": {
+       |   "confirmed": false,
+       |   "created": "2021-05-17T08:44:25.272Z",
+       |   "creator": "username",
+       |   "currentVersionId": 0,
+       |   "hasComments": false,
+       |   "hasNameConflict": false,
+       |   "hasPublishedVersions": false,
+       |   "hasVersionConflict": false,
+       |   "icon": "default",
+       |   "id": $fileId,
+       |   "isDir": false,
+       |   "isLockedByMe": false,
+       |   "isLockedByOther": false,
+       |   "isOfflineArchived": false,
+       |   "isTemporaryPinned": false,
+       |   "lastModified": "2021-05-17T08:44:25.272Z",
+       |   "name": "$fileName",
+       |   "path": "/",
+       |   "permissions": "rw-r--r--",
+       |   "progress": -2.0,
+       |   "size": 11,
+       |   "spaceId": $spaceId,
+       |   "time": "2021-05-17T08:44:25.272Z",
+       |   "type": "application/octet-stream"
+       | },
+       | "newVersionId": 2,
+       | "result": true
        |}""".stripMargin
 }

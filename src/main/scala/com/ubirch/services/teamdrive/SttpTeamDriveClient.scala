@@ -2,12 +2,14 @@ package com.ubirch.services.teamdrive
 
 import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
+import org.json4s.native.Serialization.read
 import org.json4s.{ Formats, Serialization }
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.json4s._
 
-import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.time.Instant
 import scala.concurrent.Future
 
 class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
@@ -21,11 +23,31 @@ class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
   private val authenticatedRequest: RequestT[Empty, Either[String, String], Nothing] =
     basicRequest.auth.basic(config.username, config.password)
 
-  override def createSpace(name: String, path: String): Task[CreateSpaceResponse] =
+  override def createSpace(name: String, path: String): Task[SpaceId] =
     callCreateSpace(name, path).flatMap { r =>
       r.body match {
-        case Left(e)  => Task.raiseError(e)
-        case Right(v) => Task.pure(SpaceCreated(v.spaceId))
+        case Left(e) =>
+          e match {
+            case HttpError(body, _) =>
+              Task(read[TeamDriveError_OUT](body)).flatMap(e =>
+                Task.raiseError(TeamDriveError(e.error, e.error_message)))
+            case a @ DeserializationError(_, _) => Task.raiseError(a)
+          }
+        case Right(v) => Task.pure(SpaceId(v.spaceId))
+      }
+    }
+
+  override def putFile(spaceId: SpaceId, fileName: String, file: ByteBuffer): Task[FileId] =
+    callPutFile(spaceId, fileName, file).flatMap { r =>
+      r.body match {
+        case Left(e) =>
+          e match {
+            case HttpError(body, _) =>
+              Task(read[TeamDriveError_OUT](body)).flatMap(e =>
+                Task.raiseError(TeamDriveError(e.error, e.error_message)))
+            case a @ DeserializationError(_, _) => Task.raiseError(a)
+          }
+        case Right(v) => Task.pure(FileId(v.file.id))
       }
     }
 
@@ -41,46 +63,23 @@ class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
         .send()
     )
 
-  def getSpaces() = {
-    Task.fromFuture(
-      authenticatedRequest
-        .get(uri"http://127.0.0.1:4040/api/getSpaces")
-        .send()
-    )
-  }
-
-  def putFile() = {
+  private def callPutFile(
+    spaceId: SpaceId,
+    fileName: String,
+    file: ByteBuffer
+  ): Task[Response[Either[ResponseError[Exception], PutFile_OUT]]] =
     Task.fromFuture {
-      var read: Option[FileInputStream] = None
-      var body: Array[Byte] = Array.emptyByteArray
-      try {
-        read = Some(new FileInputStream(
-          "/Users/gzhk/workspace/ubirch-poc-manager/src/main/resources/db/migration/V1_0__test_migration.sql"))
-        body = read.get.readAllBytes()
-      } catch {
-        case e: Throwable => e.printStackTrace()
-      } finally {
-        read.get.close()
-      }
-
       authenticatedRequest
-        .put(uri"http://127.0.0.1:4040/files/2/V1_0__test_migration.sql")
-        .body(body)
+        .put(uri"${config.url}/files/${spaceId.v}/$fileName")
+        .body(file)
+        .response(asJson[PutFile_OUT])
         .send()
     }
-  }
 
   def getFile() =
     Task.fromFuture(
       authenticatedRequest
         .get(uri"http://127.0.0.1:4040/files/2/V1_0__test_migration.sql")
-        .send()
-    )
-
-  def getSpaceIds() =
-    Task.fromFuture(
-      authenticatedRequest
-        .get(uri"http://127.0.0.1:4040/api/getSpaceIds")
         .send()
     )
 
@@ -100,25 +99,16 @@ class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
         )
         .send()
     }
-
-  def getSpacePermissionLevels() =
-    Task.fromFuture(
-      authenticatedRequest
-        .get(uri"http://127.0.0.1:4040/api/getSpacePermissionLevels")
-        .send()
-    )
-
-  def getServers() =
-    Task.fromFuture(
-      authenticatedRequest
-        .get(uri"http://127.0.0.1:4040/api/getServers")
-        .send()
-    )
 }
 
 object SttpTeamDriveClient {
   case class Config(url: String, username: String, password: String)
 
+  case class TeamDriveError_OUT(error: Int, error_message: String, result: Boolean, status_code: Int)
+
   case class CreateSpace_IN(spaceName: String, spacePath: String, disableFileSystem: Boolean, webAccess: Boolean)
   case class CreateSpace_OUT(result: Boolean, spaceId: Int)
+
+  case class PutFile_OUT(file: File, newVersionId: Int, result: Boolean)
+  case class File(id: Int, confirmed: Boolean, creator: String, spaceId: Int, permissions: String)
 }
