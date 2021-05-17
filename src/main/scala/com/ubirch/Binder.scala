@@ -3,7 +3,7 @@ package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
 import com.google.inject.{ AbstractModule, Module }
 import com.typesafe.config.Config
-import com.ubirch.db.context.{ PostgresQuillJdbcContext, QuillJdbcContext }
+import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
 import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
 import com.ubirch.services.auth._
@@ -100,11 +100,12 @@ class Binder extends AbstractModule {
   def UserPollingService: ScopedBindingBuilder =
     bind(classOf[UserPollingService]).to(classOf[KeycloakUserPollingService])
 
-  def QuillJdbcContext: ScopedBindingBuilder =
-    bind(classOf[QuillJdbcContext]).to(classOf[PostgresQuillJdbcContext])
+  def QuillMonixJdbcContext: ScopedBindingBuilder =
+    bind(classOf[QuillMonixJdbcContext]).to(classOf[PostgresQuillMonixJdbcContext])
 
   def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserTable])
+
   def TenantRepository: ScopedBindingBuilder =
     bind(classOf[TenantRepository]).to(classOf[TenantTable])
 
@@ -124,7 +125,9 @@ class Binder extends AbstractModule {
 
   def PocBatchHandler: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
-  def CsvHandler: ScopedBindingBuilder = bind(classOf[CsvHandlerTrait]).to(classOf[CsvHandlerImp])
+  def CsvProcessPoc: ScopedBindingBuilder = bind(classOf[CsvProcessPoc]).to(classOf[CsvProcessPocImpl])
+
+  def CsvProcessPocAdmin: ScopedBindingBuilder = bind(classOf[CsvProcessPocAdmin]).to(classOf[CsvProcessPocAdminImpl])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
 
@@ -132,6 +135,11 @@ class Binder extends AbstractModule {
 
   def TenantAdminService: ScopedBindingBuilder =
     bind(classOf[TenantAdminService]).to(classOf[DefaultTenantAdminService])
+
+  def PocAdminRepository: ScopedBindingBuilder = bind(classOf[PocAdminRepository]).to(classOf[PocAdminTable])
+
+  def PocAdminStatusRepository: ScopedBindingBuilder =
+    bind(classOf[PocAdminStatusRepository]).to(classOf[PocAdminStatusTable])
 
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
@@ -175,12 +183,15 @@ class Binder extends AbstractModule {
     TenantService
     AuthClient
     UserPollingService
-    QuillJdbcContext
+    QuillMonixJdbcContext
     UserRepository
     PocBatchHandler
-    CsvHandler
+    CsvProcessPoc
+    CsvProcessPocAdmin
     PocRepository
     PocStatusRepository
+    PocAdminRepository
+    PocAdminStatusRepository
     TenantRepository
     AESKeyProvider
     AESEncryption

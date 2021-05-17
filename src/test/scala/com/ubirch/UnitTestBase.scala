@@ -1,6 +1,8 @@
 package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
+import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
 import com.ubirch.db.tables._
+import com.ubirch.e2e.TestPostgresQuillMonixJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
 import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
@@ -44,11 +46,20 @@ class DefaultUnitTestBinder extends Binder {
   override def UserRepository: ScopedBindingBuilder =
     bind(classOf[UserRepository]).to(classOf[UserRepositoryMock])
 
+  override def QuillMonixJdbcContext: ScopedBindingBuilder =
+    bind(classOf[QuillMonixJdbcContext]).to(classOf[TestPostgresQuillMonixJdbcContext])
+
   override def PocRepository: ScopedBindingBuilder =
     bind(classOf[PocRepository]).to(classOf[PocRepositoryMock])
 
   override def PocStatusRepository: ScopedBindingBuilder =
     bind(classOf[PocStatusRepository]).to(classOf[PocStatusRepositoryMock])
+
+  override def PocAdminRepository: ScopedBindingBuilder =
+    bind(classOf[PocAdminRepository]).to(classOf[PocAdminRepositoryMock])
+
+  override def PocAdminStatusRepository: ScopedBindingBuilder =
+    bind(classOf[PocAdminStatusRepository]).to(classOf[PocAdminStatusRepositoryMock])
 
   override def TenantRepository: ScopedBindingBuilder =
     bind(classOf[TenantRepository]).to(classOf[TenantRepositoryMock])

@@ -5,6 +5,8 @@ import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
 import com.ubirch.models.tenant.{ API, APP, Tenant }
 import com.ubirch.services.poc.util.ValidatorConstants._
+import org.joda.time.LocalDate
+import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
 import org.json4s.JValue
 import org.json4s.native.JsonMethods._
 
@@ -146,4 +148,16 @@ object Validator {
       else pocNameValidationError(header).invalidNel
     }
   }
+
+  /**
+    * Valid Date format
+    */
+  def validateDate(header: String, str: String): AllErrorsOr[LocalDate] = {
+    Try(LocalDate.parse(str, `dd.MM.yyyy`)) match {
+      case Success(date) => date.valid
+      case Failure(_)    => birthOfDateError(header).invalidNel
+    }
+  }
+
+  val `dd.MM.yyyy`: DateTimeFormatter = DateTimeFormat.forPattern("dd.MM.yyyy")
 }

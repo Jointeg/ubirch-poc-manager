@@ -54,5 +54,18 @@ case class PocStatus(
       s"lastUpdated:$lastUpdated\n" +
       s"created:$created"
   }
+}
 
+object PocStatus {
+  def init(poc: Poc): PocStatus =
+    PocStatus(
+      pocId = poc.id,
+      clientCertRequired = poc.clientCertRequired,
+      orgUnitCertIdCreated = if (poc.clientCertRequired) Some(false) else None,
+      clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
+      clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
+      logoRequired = poc.certifyApp,
+      logoReceived = if (poc.certifyApp) Some(false) else None,
+      logoStored = if (poc.certifyApp) Some(false) else None
+    )
 }

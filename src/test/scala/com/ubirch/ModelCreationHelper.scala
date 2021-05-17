@@ -58,9 +58,7 @@ object ModelCreationHelper {
       dataSchemaGroupId,
       Some(JsonConfig(parse("""{"test":"hello"}"""))),
       PocManager("surname", "", "", "08023-782137"),
-      status,
-      None,
-      None
+      status
     )
 
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =

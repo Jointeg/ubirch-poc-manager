@@ -16,6 +16,8 @@ case class Poc(
   certifyApp: Boolean,
   logoUrl: Option[LogoURL],
   clientCertRequired: Boolean,
+  orgUnitCertId: Option[OrgUnitCertId] = None,
+  clientCert: Option[ClientCert] = None,
   dataSchemaId: String,
   extraConfig: Option[JsonConfig],
   manager: PocManager,
@@ -25,8 +27,6 @@ case class Poc(
   deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
-  orgUnitCertId: Option[OrgUnitCertId] = None,
-  clientCert: Option[ClientCert] = None,
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
@@ -48,9 +48,8 @@ object Poc {
     dataSchemaId: String,
     extraConfig: Option[JsonConfig],
     manager: PocManager,
-    status: Status,
-    orgUnitCertId: Option[OrgUnitCertId],
-    clientCert: Option[ClientCert]): Poc = {
+    status: Status
+  ): Poc = {
 
     val roleName = POC_GROUP_PREFIX + pocName.take(10) + "_" + id
     Poc(
@@ -68,9 +67,7 @@ object Poc {
       manager = manager,
       roleName = roleName,
       deviceId = DeviceId(tenantId, externalId),
-      status = status,
-      orgUnitCertId = orgUnitCertId,
-      clientCert = clientCert
+      status = status
     )
   }
 

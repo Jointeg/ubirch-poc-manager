@@ -1,7 +1,7 @@
 package com.ubirch.db.tables
 
 import com.google.inject.Inject
-import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.PocRepository.{ PaginatedPocs, PocCriteria }
 import com.ubirch.models.common
 import com.ubirch.models.common.{ Page, Sort }
@@ -11,6 +11,7 @@ import io.getquill.{ Insert, Ord, Query, Update }
 import monix.eval.Task
 
 import java.util.UUID
+import javax.inject.Singleton
 
 trait PocRepository {
   def createPoc(poc: Poc): Task[UUID]
@@ -41,9 +42,10 @@ object PocRepository {
   case class PaginatedPocs(total: Long, pocs: Seq[Poc])
 }
 
-class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocRepository {
+@Singleton
+class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocRepository {
 
-  import quillJdbcContext.ctx._
+  import QuillMonixJdbcContext.ctx._
 
   private def createPocQuery(poc: Poc): Quoted[Insert[Poc]] =
     quote {
@@ -93,46 +95,51 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
       querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
     }
 
-  override def createPoc(poc: Poc): Task[UUID] = Task(run(createPocQuery(poc))).map(_ => poc.id)
+  override def createPoc(poc: Poc): Task[UUID] = run(createPocQuery(poc)).map(_ => poc.id)
 
   override def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] =
-    Task {
-      transaction {
-        run(createPocQuery(poc))
-        run(createPocStatusQuery(pocStatus))
+    transaction {
+      for {
+        _ <- run(createPocQuery(poc))
+        _ <- run(createPocStatusQuery(pocStatus))
+      } yield {
+        ()
       }
     }
 
   def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] =
-    Task {
-      transaction {
-        run(updatePocQuery(poc))
-        run(updatePocStatusQuery(pocStatus))
+    transaction {
+      for {
+        _ <- run(updatePocQuery(poc))
+        _ <- run(updatePocStatusQuery(pocStatus))
+      } yield {
+        ()
       }
     }
 
-  override def updatePoc(poc: Poc): Task[UUID] = Task(run(updatePocQuery(poc))).map(_ => poc.id)
+  override def updatePoc(poc: Poc): Task[UUID] = run(updatePocQuery(poc)).map(_ => poc.id)
 
-  override def deletePoc(pocId: UUID): Task[Unit] = Task(run(removePocQuery(pocId)))
+  override def deletePoc(pocId: UUID): Task[Unit] = run(removePocQuery(pocId)).void
 
-  override def getPoc(pocId: UUID): Task[Option[Poc]] = Task(run(getPocQuery(pocId))).map(_.headOption)
+  override def getPoc(pocId: UUID): Task[Option[Poc]] = run(getPocQuery(pocId)).map(_.headOption)
 
   override def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]] =
-    Task(run(getAllPocsByTenantIdQuery(tenantId)))
+    run(getAllPocsByTenantIdQuery(tenantId))
 
-  def getAllUncompletedPocs(): Task[List[Poc]] = Task(run(getAllPocsWithoutStatusQuery(Completed)))
+  def getAllUncompletedPocs(): Task[List[Poc]] = run(getAllPocsWithoutStatusQuery(Completed))
 
   override def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs] =
-    Task {
-      transaction {
-        val pocsByCriteria = filterByStatuses(getAllPocsByCriteriaQuery(pocCriteria), pocCriteria.filter.status)
-        val sortedPocs = sortPocs(pocsByCriteria, pocCriteria.sort)
-        val total = run(pocsByCriteria.size)
-        val pocs = run {
+    transaction {
+      val pocsByCriteria = filterByStatuses(getAllPocsByCriteriaQuery(pocCriteria), pocCriteria.filter.status)
+      val sortedPocs = sortPocs(pocsByCriteria, pocCriteria.sort)
+      for {
+        total <- run(pocsByCriteria.size)
+        pocs <- run {
           sortedPocs
             .drop(quote(lift(pocCriteria.page.index * pocCriteria.page.size)))
             .take(quote(lift(pocCriteria.page.size)))
         }
+      } yield {
         PaginatedPocs(total, pocs)
       }
     }
@@ -185,5 +192,5 @@ class PocTable @Inject() (quillJdbcContext: QuillJdbcContext) extends PocReposit
     }
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]] =
-    Task(run(getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId)))
+    run(getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId))
 }
