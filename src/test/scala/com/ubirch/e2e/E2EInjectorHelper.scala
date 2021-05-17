@@ -6,6 +6,7 @@ import com.ubirch.db.context.QuillJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{ KeycloakCertifyConfig, KeycloakDeviceConfig }
 import io.getquill.{ PostgresJdbcContext, SnakeCase }
+import monix.eval.Task
 
 import javax.inject.{ Inject, Singleton }
 
@@ -49,6 +50,8 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
 @Singleton
 class TestPostgresQuillJdbcContext @Inject() () extends QuillJdbcContext {
   override val ctx: PostgresJdbcContext[SnakeCase] = StaticTestPostgresJdbcContext.ctx
+
+  override def withTransaction[T](f: => Task[T]): Task[T] = f
 }
 
 object StaticTestPostgresJdbcContext {

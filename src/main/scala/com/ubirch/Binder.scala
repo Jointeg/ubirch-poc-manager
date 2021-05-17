@@ -8,7 +8,7 @@ import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
 import com.ubirch.services.auth._
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
+import com.ubirch.services.execution.{ ExecutionProvider, SchedulerBase, SchedulerProvider }
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
@@ -24,13 +24,6 @@ import com.ubirch.services.keycloak.users.{
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
-import com.ubirch.services.poc.parsers.{
-  CsvParser,
-  PocAdminCsvParser,
-  PocAdminParseResult,
-  PocCsvParser,
-  PocParseResult
-}
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.tenantadmin.{ DefaultTenantAdminService, TenantAdminService }
@@ -131,9 +124,9 @@ class Binder extends AbstractModule {
 
   def PocBatchHandler: ScopedBindingBuilder = bind(classOf[PocBatchHandlerTrait]).to(classOf[PocBatchHandlerImpl])
 
-  def ProcessPoc: ScopedBindingBuilder = bind(classOf[ProcessPoc]) to (classOf[ProcessPocImpl])
+  def CsvProcessPoc: ScopedBindingBuilder = bind(classOf[CsvProcessPoc]) to (classOf[CsvProcessPocImpl])
 
-  def ProcessPocAdmin: ScopedBindingBuilder = bind(classOf[ProcessPocAdmin]) to (classOf[ProcessPocAdminImpl])
+  def CsvProcessPocAdmin: ScopedBindingBuilder = bind(classOf[CsvProcessPocAdmin]) to (classOf[CsvProcessPocAdminImpl])
 
   def PocRepository: ScopedBindingBuilder = bind(classOf[PocRepository]).to(classOf[PocTable])
 
@@ -190,8 +183,8 @@ class Binder extends AbstractModule {
     QuillJdbcContext
     UserRepository
     PocBatchHandler
-    ProcessPoc
-    ProcessPocAdmin
+    CsvProcessPoc
+    CsvProcessPocAdmin
     PocRepository
     PocStatusRepository
     PocAdminRepository

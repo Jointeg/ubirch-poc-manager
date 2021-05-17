@@ -2,23 +2,32 @@ package com.ubirch.services.poc
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
-import com.ubirch.db.tables.PocRepository
+import com.ubirch.db.context.QuillJdbcContext
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocCsvParser
 import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import monix.eval.Task
+import monix.execution.Scheduler
 
 import javax.inject.{ Inject, Singleton }
 
-trait ProcessPoc {
+trait CsvProcessPoc {
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]]
 }
 
 @Singleton
-class ProcessPocImpl @Inject() (pocConfig: PocConfig, pocRepository: PocRepository)
-  extends ProcessPoc
+class CsvProcessPocImpl @Inject() (
+  pocConfig: PocConfig,
+  quillJdbcContext: QuillJdbcContext,
+  pocRepository: PocRepository,
+  pocStatusRepository: PocStatusRepository,
+  scheduler: Scheduler)
+  extends CsvProcessPoc
   with LazyLogging {
+  implicit val sc = scheduler
+
   private val pocCsvParser = new PocCsvParser(pocConfig)
 
   def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] =
@@ -40,11 +49,14 @@ class ProcessPocImpl @Inject() (pocConfig: PocConfig, pocRepository: PocReposito
 
   private def storePocAndStatus(poc: Poc, csvRow: String): Task[Option[String]] = {
     val status = PocStatus.init(poc)
-    (for {
-      _ <- pocRepository.createPocAndStatus(poc, status)
-    } yield {
-      None
-    }).onErrorHandle {
+    quillJdbcContext.withTransaction {
+      for {
+        _ <- pocRepository.createPoc(poc)
+        _ <- pocStatusRepository.createPocStatus(status)
+      } yield {
+        None
+      }
+    }.onErrorHandle {
       case e =>
         logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
         Some(csvRow)

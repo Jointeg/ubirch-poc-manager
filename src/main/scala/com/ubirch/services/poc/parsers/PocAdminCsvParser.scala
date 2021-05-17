@@ -11,7 +11,6 @@ import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
-import javax.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Success }
 
 case class PocAdminParseResult(poc: Poc, pocAdmin: PocAdmin, csvRow: String) extends ParseRowResult
@@ -33,7 +32,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
           result => Right(result)
         )
       case Failure(_) =>
-        Left(line + columnSeparator + s"the numbers of columns ${cols.length} is invalid. should be ${pocAdminHeaderColOrderLength}.")
+        Left(line + columnSeparator + s"the number of columns ${cols.length} is invalid. should be ${pocAdminHeaderColOrderLength}.")
     }
   }
 

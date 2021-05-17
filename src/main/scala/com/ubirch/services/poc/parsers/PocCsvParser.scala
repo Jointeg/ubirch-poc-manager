@@ -1,6 +1,5 @@
 package com.ubirch.services.poc.parsers
 
-import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import cats.data.Validated.{ Invalid, Valid }
@@ -14,7 +13,6 @@ import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
-import javax.inject.Singleton
 import scala.util.{ Failure, Success }
 
 case class PocParseResult(poc: Poc, csvRow: String) extends ParseRowResult
@@ -35,7 +33,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         }
       case Failure(_) =>
         Left(line + columnSeparator +
-          s"the numbers of column ${cols.length} is invalid. should be ${pocHeaderColsOrder.length}.")
+          s"the number of column ${cols.length} is invalid. should be ${pocHeaderColsOrder.length}.")
     }
 
   }

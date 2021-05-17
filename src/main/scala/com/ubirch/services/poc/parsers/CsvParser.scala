@@ -45,9 +45,9 @@ trait CsvParser[T <: ParseRowResult] extends LazyLogging {
 
   @throws[HeaderCsvException]
   protected def validateHeaders(cols: Array[String]): Try[Unit] = Try {
-    if (cols.length != headerColOrder.length) {
+    if (cols.length < headerColOrder.length) {
       throw HeaderCsvException(
-        s"the numbers of columns ${cols.length} is invalid. should be ${headerColOrder.length}.")
+        s"the number of headers ${cols.length} is invalid. should be ${headerColOrder.length}.")
     } else {
       headerColOrder.zip(cols.toSeq).foreach {
         case (header, col) =>

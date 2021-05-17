@@ -19,7 +19,7 @@ trait PocBatchHandlerTrait {
 }
 
 @Singleton
-class PocBatchHandlerImpl @Inject() (processPoc: ProcessPoc, processPocAdmin: ProcessPocAdmin)
+class PocBatchHandlerImpl @Inject() (processPoc: CsvProcessPoc, processPocAdmin: CsvProcessPocAdmin)
   extends PocBatchHandlerTrait {
 
   implicit val scheduler: Scheduler = monix.execution.Scheduler.global

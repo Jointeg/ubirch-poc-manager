@@ -9,26 +9,28 @@ import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocAdminCsvParser
 import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import monix.eval.Task
+import monix.execution.Scheduler
 
 import javax.inject.{ Inject, Singleton }
 
-trait ProcessPocAdmin {
+trait CsvProcessPocAdmin {
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]]
 }
 
 @Singleton
-class ProcessPocAdminImpl @Inject() (
+class CsvProcessPocAdminImpl @Inject() (
   pocConfig: PocConfig,
   quillJdbcContext: QuillJdbcContext,
   pocRepository: PocRepository,
   pocAdminRepository: PocAdminRepository,
   pocStatusRepository: PocStatusRepository,
-  pocAdminStatusRepository: PocAdminStatusRepository)
-  extends ProcessPocAdmin
+  pocAdminStatusRepository: PocAdminStatusRepository,
+  scheduler: Scheduler)
+  extends CsvProcessPocAdmin
   with LazyLogging {
-  import quillJdbcContext.ctx._
 
   private val pocAdminCsvParser = new PocAdminCsvParser(pocConfig)
+  implicit val sc = scheduler
 
   def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
     pocAdminCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
@@ -51,8 +53,7 @@ class ProcessPocAdminImpl @Inject() (
   private def storePocAndStatus(poc: Poc, pocAdmin: PocAdmin, csvRow: String): Task[Option[String]] = {
     val pocStatus = PocStatus.init(poc)
     val pocAdminStatus = PocAdminStatus.init(pocAdmin)
-    // @TODO check it works properly
-    transaction {
+    quillJdbcContext.withTransaction {
       for {
         _ <- pocRepository.createPoc(poc)
         _ <- pocStatusRepository.createPocStatus(pocStatus)

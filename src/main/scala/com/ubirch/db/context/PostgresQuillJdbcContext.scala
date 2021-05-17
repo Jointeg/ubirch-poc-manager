@@ -3,15 +3,21 @@ package com.ubirch.db.context
 import com.google.inject.{ Inject, Singleton }
 import com.ubirch.services.lifeCycle.Lifecycle
 import io.getquill.{ PostgresJdbcContext, SnakeCase }
+import monix.eval.Task
+import monix.execution.Scheduler
 
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 trait QuillJdbcContext {
   val ctx: PostgresJdbcContext[SnakeCase]
+
+  def withTransaction[T](f: => Task[T]): Task[T]
 }
 
 @Singleton
-case class PostgresQuillJdbcContext @Inject() (lifecycle: Lifecycle) extends QuillJdbcContext {
+case class PostgresQuillJdbcContext @Inject() (lifecycle: Lifecycle)(implicit scheduler: Scheduler)
+  extends QuillJdbcContext {
   val ctx: PostgresJdbcContext[SnakeCase] =
     try {
       new PostgresJdbcContext(SnakeCase, "database")
@@ -23,6 +29,14 @@ case class PostgresQuillJdbcContext @Inject() (lifecycle: Lifecycle) extends Qui
             " so no password will be shown. You might want to activate the error and change the password afterwards.")
       case ex: Throwable => throw ex
     }
+
+  def withTransaction[T](f: => Task[T]): Task[T] = {
+    Task {
+      ctx.transaction {
+        f.runSyncUnsafe(10.seconds)
+      }
+    }
+  }
 
   lifecycle.addStopHook(() => Future.successful(ctx.close()))
 }
