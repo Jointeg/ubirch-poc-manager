@@ -1,6 +1,7 @@
 package com.ubirch.services.poc
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.auth.CertIdentifier
+import com.ubirch.models.auth.cert.SharedAuthCertificateResponse
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.PKCS12Operations
 import monix.eval.Task
@@ -12,6 +13,7 @@ object PoCCertCreator extends LazyLogging {
   def createPoCSharedAuthCertificate(
     tenant: Tenant,
     pocAndStatus: PocAndStatus)(certHandler: CertHandler): Task[PocAndStatus] = {
+
     val id = UUID.randomUUID()
     val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, pocAndStatus.poc.pocName, id)
 
@@ -50,7 +52,7 @@ object PoCCertCreator extends LazyLogging {
             pocCreationError(
               s"Could not create organisational unit certificate with orgUnitId: ${pocAndStatus.poc.id}",
               pocAndStatus)
-        case Right(_) => Task(pocAndStatus.updateStatus(_.copy(orgUnitCertIdCreated = Some(true))))
+        case Right(_) => Task(pocAndStatus.updateStatus(_.copy(orgUnitCertCreated = Some(true))))
       }
 
   def pocCreationError[A](msg: String, pocAndStatus: PocAndStatus): Task[A] = {

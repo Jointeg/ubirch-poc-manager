@@ -18,7 +18,7 @@ case class PocStatus(
   assignedDataSchemaGroup: Boolean = false,
   assignedDeviceGroup: Boolean = false,
   clientCertRequired: Boolean,
-  orgUnitCertIdCreated: Option[Boolean],
+  orgUnitCertCreated: Option[Boolean],
   clientCertCreated: Option[Boolean],
   clientCertProvided: Option[Boolean],
   logoRequired: Boolean,
@@ -42,7 +42,7 @@ case class PocStatus(
       s"deviceGroupTenantRoleAssigned:$deviceGroupTenantRoleAssigned\n" +
       s"deviceCreated:$deviceCreated\n" +
       s"clientCertRequired:$clientCertRequired\n" +
-      s"orgUnitCertIdCreated:$orgUnitCertIdCreated\n" +
+      s"orgUnitCertIdCreated:$orgUnitCertCreated\n" +
       s"clientCertCreated:$clientCertCreated\n" +
       s"clientCertProvided:$clientCertProvided\n" +
       s"logoRequired:$logoRequired\n" +
@@ -61,7 +61,7 @@ object PocStatus {
     PocStatus(
       pocId = poc.id,
       clientCertRequired = poc.clientCertRequired,
-      orgUnitCertIdCreated = if (poc.clientCertRequired) Some(false) else None,
+      orgUnitCertCreated = if (poc.clientCertRequired) Some(false) else None,
       clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
       clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
       logoRequired = poc.certifyApp,

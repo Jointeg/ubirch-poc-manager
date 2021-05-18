@@ -1,6 +1,6 @@
 package com.ubirch.services.poc.util
 
-import com.ubirch.models.tenant.{ APP, UsageType }
+import com.ubirch.models.tenant.UsageType
 
 import scala.util.matching.Regex
 

@@ -169,7 +169,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == ValidatorConstants.organisationalUnitCertError(API, true))
+          assert(error == ValidatorConstants.organisationalUnitCertError(API, clientCertRequired = true))
         }
     }
 
@@ -179,7 +179,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
       assert(validated.isValid)
     }
 
-    val tenantWithoutCert = createTenant(clientCert = None)
+    val tenantWithoutCert = createTenant(sharedAuthCert = None)
     "validate 'False' invalid when tenant does not have a client cert" in {
       val str = "False"
       val validated = validateClientCert(clientCert, str, tenantWithoutCert)
@@ -198,7 +198,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == ValidatorConstants.organisationalUnitCertError(APP, false))
+          assert(error == ValidatorConstants.organisationalUnitCertError(APP, clientCertRequired = false))
         }
     }
   }

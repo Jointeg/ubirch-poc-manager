@@ -11,7 +11,7 @@ import com.ubirch.controllers.concerns.{
 }
 import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
-import com.ubirch.models.poc.Poc
+import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
@@ -73,14 +73,14 @@ class TenantAdminController @Inject() (
     .register()
 
   val createListOfPocs: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("create list of PoCs")
+    apiOperation[PoC_OUT]("create list of PoCs")
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC", "Tenant-Admin")
 
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("retrieve PoC Status via pocId")
+    apiOperation[PocStatus]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin", "PocStatus")
