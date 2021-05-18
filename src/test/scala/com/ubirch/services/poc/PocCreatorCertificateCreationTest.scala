@@ -17,7 +17,7 @@ import scala.concurrent.duration.DurationInt
 class PocCreatorCertificateCreationTest extends UnitTestBase {
 
   "PocCreator" should {
-    "Retrieve certificates from CertManager and mark this information in PocStatus when tenant UsageType == APP and clientCertRequired == true" in {
+    "Retrieve certificates from CertManager and mark this information in PocStatus and PoC table when tenant UsageType == APP and clientCertRequired == true" in {
       withInjector { injector =>
         //services
         val loop = injector.get[PocCreator]
@@ -49,8 +49,8 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-        assert(newPoc.isDefined)
-        assert(newPoc.get.status == Completed)
+        newPoc.value.status shouldBe Completed
+        newPoc.value.sharedAuthCertId shouldBe defined
       }
     }
 
@@ -86,8 +86,8 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-        assert(newPoc.isDefined)
-        assert(newPoc.get.status == Completed)
+        newPoc.value.status shouldBe Completed
+        newPoc.value.sharedAuthCertId shouldBe defined
       }
     }
 
@@ -124,8 +124,8 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
           status shouldBe expected
 
           val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-          assert(newPoc.isDefined)
-          assert(newPoc.get.status == Completed)
+          newPoc.value.status shouldBe Completed
+          newPoc.value.sharedAuthCertId shouldNot be(defined)
         }
       }
     })
@@ -152,8 +152,8 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         status.errorMessage shouldBe Some("a poc shouldn't require client cert if tenant usageType is API")
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-        assert(newPoc.isDefined)
-        assert(newPoc.get.status == Processing)
+        newPoc.value.status shouldBe Processing
+        newPoc.value.sharedAuthCertId shouldNot be(defined)
       }
     }
   }
