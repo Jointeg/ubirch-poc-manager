@@ -27,6 +27,7 @@ trait InformationProvider {
 case class RegisterDeviceGoClient(uuid: String, password: String)
 case class RegisterDeviceCertifyAPI(
   name: String,
+  endpoint: String,
   uuid: String,
   password: String,
   role: Option[String],
@@ -159,6 +160,7 @@ class InformationProviderImpl @Inject() (conf: Config, certHandler: CertHandler)
       val registerDevice =
         RegisterDeviceCertifyAPI(
           poc.pocName,
+          "/api/v1/x509/anchor",
           poc.getDeviceId,
           statusAndPW.devicePassword,
           Some(poc.roleName),
