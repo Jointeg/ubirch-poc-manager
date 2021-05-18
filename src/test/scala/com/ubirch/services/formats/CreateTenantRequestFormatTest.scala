@@ -1,6 +1,5 @@
 package com.ubirch.services.formats
 
-import com.ubirch.ModelCreationHelper.base64X509Cert
 import com.ubirch.UnitTestBase
 import com.ubirch.models.tenant._
 import org.json4s._
@@ -19,10 +18,10 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
              |    "deviceCreationToken": "1234567890",
-             |    "certificationCreationToken": "987654321",
              |    "idGardIdentifier": "gard-identifier",
              |    "certifyGroupId": "random-certify-group",
-             |    "deviceGroupId": "random-device-group"
+             |    "deviceGroupId": "random-device-group",
+             |    "sharedAuthCertRequired": false
              |}
              |""".stripMargin)
 
@@ -33,7 +32,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           IdGardIdentifier("gard-identifier"),
           TenantCertifyGroupId("random-certify-group"),
           TenantDeviceGroupId("random-device-group"),
-          None
+          sharedAuthCertRequired = false
         )
       }
     }
@@ -50,8 +49,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |    "idGardIdentifier": "gard-identifier",
              |    "certifyGroupId": "random-certify-group",
              |    "deviceGroupId": "random-device-group",
-             |    "clientCert": "${base64X509Cert.value}",
-             |
+             |    "sharedAuthCertRequired": true,
              |}
              |""".stripMargin)
 
@@ -62,7 +60,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
           IdGardIdentifier("gard-identifier"),
           TenantCertifyGroupId("random-certify-group"),
           TenantDeviceGroupId("random-device-group"),
-          Some(ClientCert(base64X509Cert))
+          sharedAuthCertRequired = true
         )
       }
     }
