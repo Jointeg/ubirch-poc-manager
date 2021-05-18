@@ -5,6 +5,7 @@ import scala.util.Try
 case class PocRow(
   externalId: String,
   pocName: String,
+  pocType: String,
   pocStreet: String,
   pocHouseNumber: String,
   pocAdditionalAddress: String,
@@ -14,10 +15,8 @@ case class PocRow(
   pocFederalState: String,
   pocCountry: String,
   pocPhone: String,
-  pocCertifyApp: String,
   logoUrl: String,
   clientCert: String,
-  dataSchemaId: String,
   managerSurname: String,
   managerName: String,
   managerEmail: String,
@@ -46,8 +45,7 @@ object PocRow {
       columns(15),
       columns(16),
       columns(17),
-      columns(18),
-      columns(19)
+      columns(18)
     )
   }
 }

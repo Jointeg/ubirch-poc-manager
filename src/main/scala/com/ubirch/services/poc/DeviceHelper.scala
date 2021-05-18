@@ -2,9 +2,7 @@ package com.ubirch.services.poc
 
 import com.google.inject.Inject
 import com.ubirch.PocConfig
-import com.ubirch.models.keycloak.group.{ GroupId, GroupName, GroupNotFound }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.user.UserName
 import com.ubirch.services.DeviceKeycloak
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -22,9 +20,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 
-    val groupId = pocConfig.dataSchemaGroupMap.get(poc.dataSchemaId).getOrElse {
-      throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}")
-    }
+    val groupId = getDataSchemaGroupID(poc, status)
     val status1 =
       addGroupByIdToDevice(groupId, PocAndStatus(poc, status))
         .map {
@@ -47,6 +43,18 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
           throwError(PocAndStatus(poc, status2), s"failed to add group $pocDeviceGroup to device $errorMsg")
       }
     }
+  }
+
+  private def getDataSchemaGroupID(poc: Poc, status: PocStatus): String = {
+    val dataSchemaGroupName = pocConfig.dataSchemaGroupMap.getOrElse(
+      poc.pocType,
+      throwError(PocAndStatus(poc, status), s"can't find the corresponding dataSchemaName for pocType: ${poc.pocType}"))
+
+    pocConfig.dataSchemaGroupIdMap.getOrElse(
+      dataSchemaGroupName,
+      throwError(
+        PocAndStatus(poc, status),
+        s"can't find the uuid corresponding the dataSchemaName: $dataSchemaGroupName"))
   }
 
   private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Unit]] = {

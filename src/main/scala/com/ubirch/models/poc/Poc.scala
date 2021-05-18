@@ -11,12 +11,11 @@ case class Poc(
   tenantId: TenantId,
   externalId: String,
   pocName: String,
+  pocType: String,
   address: Address,
   phone: String,
-  certifyApp: Boolean,
   logoUrl: Option[LogoURL],
   clientCertRequired: Boolean,
-  dataSchemaId: String,
   extraConfig: Option[JsonConfig],
   manager: PocManager,
   roleName: String,
@@ -29,6 +28,11 @@ case class Poc(
   created: Created = Created(DateTime.now())
 ) {
   def getDeviceId: String = deviceId.value.value.toString
+  def isUsingApp: Boolean =
+    pocType.split("_").last match {
+      case "app" => true
+      case _     => false
+    }
 }
 
 object Poc {
@@ -38,12 +42,11 @@ object Poc {
     tenantId: TenantId,
     externalId: String,
     pocName: String,
+    pocType: String,
     address: Address,
     phone: String,
-    certifyApp: Boolean,
     logoUrl: Option[LogoURL],
     clientCertRequired: Boolean,
-    dataSchemaId: String,
     extraConfig: Option[JsonConfig],
     manager: PocManager,
     status: Status): Poc = {
@@ -54,12 +57,11 @@ object Poc {
       tenantId = tenantId,
       externalId = externalId,
       pocName = pocName,
+      pocType = pocType,
       address = address,
       phone = phone,
-      certifyApp = certifyApp,
       logoUrl = logoUrl,
       clientCertRequired = clientCertRequired,
-      dataSchemaId = dataSchemaId,
       extraConfig = extraConfig,
       manager = manager,
       roleName = roleName,

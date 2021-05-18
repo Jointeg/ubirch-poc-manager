@@ -73,9 +73,9 @@ class PocBatchHandlerImpl @Inject() (csvHandler: CsvHandlerTrait, pocTable: PocT
       clientCertRequired = poc.clientCertRequired,
       clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
       clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
-      logoRequired = poc.certifyApp,
-      logoReceived = if (poc.certifyApp) Some(false) else None,
-      logoStored = if (poc.certifyApp) Some(false) else None
+      logoRequired = poc.isUsingApp,
+      logoReceived = if (poc.isUsingApp) Some(false) else None,
+      logoStored = if (poc.isUsingApp) Some(false) else None
     )
 
 }

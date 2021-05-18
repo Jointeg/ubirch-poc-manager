@@ -47,7 +47,7 @@ class PocTableTest extends E2ETestBase {
         val poc = createPoc(tenantName = TenantName("tenant"))
         val res = for {
           _ <- repo.createPoc(poc)
-          _ <- repo.createPoc(poc.copy(dataSchemaId = "x"))
+          _ <- repo.createPoc(poc.copy(pocType = "ub_test_app"))
           data <- repo.getPoc(poc.id)
         } yield {
           data
@@ -60,7 +60,7 @@ class PocTableTest extends E2ETestBase {
       withInjector { injector =>
         val repo = injector.get[PocRepository]
         val poc = createPoc(tenantName = TenantName("tenant"))
-        val updatedPoc = poc.copy(dataSchemaId = "xxx")
+        val updatedPoc = poc.copy(pocType = "ub_test_app")
 
         val res1 = for {
           _ <- repo.createPoc(poc)

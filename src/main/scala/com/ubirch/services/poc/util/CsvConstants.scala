@@ -4,6 +4,7 @@ object CsvConstants {
 
   val externalId = "external_id*"
   val pocName = "poc_name*"
+  val pocType = "poc_type*"
   val street = "street*"
   val streetNumber = "street_number*"
   val additionalAddress = "additional_address"
@@ -13,10 +14,8 @@ object CsvConstants {
   val federalState = "federal_state"
   val country = "country*"
   val phone = "phone*"
-  val certifyApp = "certify_app*"
   val logoUrl = "logo_url"
   val clientCert = "client_cert*"
-  val dataSchemaId = "data_schema_id*"
   val managerSurname = "manager_surname*"
   val managerName = "manager_name*"
   val managerEmail = "manager_email*"
@@ -30,6 +29,7 @@ object CsvConstants {
   val headerColsOrder: Array[String] = Array(
     externalId,
     pocName,
+    pocType,
     street,
     streetNumber,
     additionalAddress,
@@ -39,10 +39,8 @@ object CsvConstants {
     federalState,
     country,
     phone,
-    certifyApp,
     logoUrl,
     clientCert,
-    dataSchemaId,
     managerSurname,
     managerName,
     managerEmail,

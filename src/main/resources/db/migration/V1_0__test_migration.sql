@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table
     tenant_id                   UUID            NOT NULL,
     external_id                 varchar(40)     NOT NULL,
     poc_name                    text            NOT NULL,
+    poc_type                    text            NOT NULL,
     street                      text            NOT NULL,
     house_number                text            NOT NULL,
     additional_address          text,
@@ -22,10 +23,8 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table
     federal_state               text,
     country                     text,
     phone                       text            NOT NULL,
-    certify_app                 boolean         NOT NULL,
     logo_url                    text,
     client_cert_required        boolean         NOT NULL,
-    data_schema_id              text            NOT NULL,
     extra_config                text,
     manager_surname             text            NOT NULL,
     manager_name                text            NOT NULL,
@@ -40,7 +39,7 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table
     last_updated                text            NOT NULL,
     created                     text            NOT NULL,
     PRIMARY KEY(id),
-    CONSTRAINT unique_poc UNIQUE (tenant_id, external_id, data_schema_id)
+    CONSTRAINT unique_poc UNIQUE (tenant_id, external_id, poc_Type)
 );
 
 

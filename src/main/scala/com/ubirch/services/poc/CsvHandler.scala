@@ -1,12 +1,7 @@
 package com.ubirch.services.poc
 
 import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{
-  catsSyntaxTuple10Semigroupal,
-  catsSyntaxTuple2Semigroupal,
-  catsSyntaxTuple4Semigroupal,
-  catsSyntaxTuple8Semigroupal
-}
+import cats.implicits.{ catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal, catsSyntaxTuple9Semigroupal }
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
@@ -15,7 +10,7 @@ import com.ubirch.models.poc
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.{ dataSchemaId, _ }
+import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
@@ -110,24 +105,22 @@ class CsvHandlerImp @Inject() (pocConfig: PocConfig) extends CsvHandlerTrait wit
     (
       validateString(externalId, csvPoc.externalId),
       validatePocName(pocName, csvPoc.pocName),
+      validateMapContainsStringKey(pocType, csvPoc.pocType, pocConfig.dataSchemaGroupMap),
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
-      validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
-      validateMapContainsStringKey(dataSchemaId, csvPoc.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
     ).mapN {
       (
         externalId,
         pocName,
+        pocType,
         address,
         pocPhone,
-        pocCertifyApp,
         logoUrl,
         clientCert,
-        dataSchemaId,
         extraConfig,
         manager) =>
         {
@@ -136,12 +129,11 @@ class CsvHandlerImp @Inject() (pocConfig: PocConfig) extends CsvHandlerTrait wit
             tenant.id,
             externalId,
             pocName,
+            pocType,
             address,
             pocPhone,
-            pocCertifyApp,
             logoUrl.map(LogoURL(_)),
             clientCert,
-            dataSchemaId,
             extraConfig.map(JsonConfig(_)),
             manager,
             status = Pending

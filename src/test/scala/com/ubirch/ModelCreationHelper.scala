@@ -40,6 +40,7 @@ object ModelCreationHelper {
     id: UUID = UUID.randomUUID(),
     tenantName: TenantName,
     externalId: String = UUID.randomUUID().toString,
+    pocType: String = "ub_vac_app",
     name: String = "pocName",
     status: Status = Pending
   ): Poc =
@@ -48,12 +49,11 @@ object ModelCreationHelper {
       TenantId(tenantName),
       externalId,
       name,
-      Address("", "", None, 67832, "", None, None, "France"),
+      pocType = pocType,
+      Address("street", "123", None, 67832, "", None, None, "France"),
       "pocPhone",
-      certifyApp = true,
       None,
       clientCertRequired = false,
-      dataSchemaGroupId,
       Some(JsonConfig(parse("""{"test":"hello"}"""))),
       PocManager("surname", "", "", "08023-782137"),
       status

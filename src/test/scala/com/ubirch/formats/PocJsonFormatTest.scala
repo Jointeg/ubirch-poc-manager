@@ -34,6 +34,7 @@ class PocJsonFormatTest extends UnitTestBase {
           |  "tenantId":"cdc1e27c-ff79-5bd8-38a1-bf918d618b2b",
           |  "externalId":"64ccc885-b512-413c-8155-4320e34e4ce7",
           |  "pocName":"pocName",
+          |  "pocType":"ub_vac_app",
           |  "address":{
           |    "street":"",
           |    "houseNumber":"",
@@ -42,9 +43,7 @@ class PocJsonFormatTest extends UnitTestBase {
           |    "country":"France"
           |  },
           |  "phone":"pocPhone",
-          |  "certifyApp":true,
           |  "clientCertRequired":false,
-          |  "dataSchemaId":"data-schema-id",
           |  "extraConfig":{
           |    "test":"hello"
           |  },
@@ -71,12 +70,11 @@ class PocJsonFormatTest extends UnitTestBase {
       tenantId = TenantId(tenantName),
       externalId = externalId,
       pocName = "pocName",
+      pocType = "ub_vac_app",
       address = Address("", "", None, 67832, "", None, None, "France"),
       phone = "pocPhone",
-      certifyApp = true,
       logoUrl = None,
       clientCertRequired = false,
-      dataSchemaId = "data-schema-id",
       extraConfig = Some(JsonConfig(parse(""" { "test":"hello" } """))),
       manager = PocManager("surname", "", "", "08023-782137"),
       status = Pending

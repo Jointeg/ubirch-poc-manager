@@ -4,7 +4,11 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
+import com.ubirch.PocConfig
 import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.tenant.Tenant
+import com.ubirch.services.execution.SttpResources
+import com.ubirch.services.poc.PocCreator._
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -12,9 +16,6 @@ import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client.{ basicRequest, UriContext }
 import sttp.model.StatusCode.{ Conflict, Ok }
-import PocCreator._
-import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.execution.SttpResources
 
 trait InformationProvider {
 
@@ -27,12 +28,13 @@ trait InformationProvider {
 case class RegisterDeviceGoClient(uuid: String, password: String)
 case class RegisterDeviceCertifyAPI(
   name: String,
+  endpoint: String,
   uuid: String,
   password: String,
   role: Option[String],
   cert: Option[String])
 
-class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats)
+class InformationProviderImpl @Inject() (conf: Config, pocConfig: PocConfig)(implicit formats: Formats)
   extends InformationProvider
   with LazyLogging {
 
@@ -127,15 +129,24 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
   private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): String = {
 
     val clientCert = if (poc.clientCertRequired) tenant.clientCert.map(_.value.value) else None
-
+    val endpoint = getEndpoint(poc, statusAndPW)
     val registerDevice =
       RegisterDeviceCertifyAPI(
         poc.pocName,
+        endpoint,
         poc.getDeviceId,
         statusAndPW.devicePassword,
         Some(poc.roleName),
         clientCert)
     write[RegisterDeviceCertifyAPI](registerDevice)
+  }
+
+  private def getEndpoint(poc: Poc, statusAndPW: StatusAndPW): String = {
+    pocConfig.endpointMap.getOrElse(
+      poc.pocType,
+      throwError(
+        PocAndStatus(poc, statusAndPW.pocStatus),
+        s"failure when creating body of certifyAPI request, as endpoint couldn't be found"))
   }
 
   private def getGoClientBody(poc: Poc, statusAndPW: StatusAndPW): String = {
