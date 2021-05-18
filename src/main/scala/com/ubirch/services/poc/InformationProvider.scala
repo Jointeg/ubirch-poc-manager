@@ -5,6 +5,9 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.ConfPaths.ServicesConfPaths
 import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.tenant.Tenant
+import com.ubirch.services.execution.SttpResources
+import com.ubirch.services.poc.PocCreator._
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -12,9 +15,6 @@ import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client.{ basicRequest, UriContext }
 import sttp.model.StatusCode.{ Conflict, Ok }
-import PocCreator._
-import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.execution.SttpResources
 
 trait InformationProvider {
 
@@ -32,7 +32,7 @@ case class RegisterDeviceCertifyAPI(
   role: Option[String],
   cert: Option[String])
 
-class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats)
+class InformationProviderImpl @Inject() (conf: Config, certHandler: CertHandler)(implicit formats: Formats)
   extends InformationProvider
   with LazyLogging {
 
@@ -92,14 +92,16 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
     if (status.certifyApiProvided) {
       Task(PocAndStatus(poc, status))
     } else {
-      val body = getCertifyApiBody(poc, statusAndPW, tenant)
-      certifyApiRequest(poc, statusAndPW, body).map(newStatus => PocAndStatus(poc, newStatus))
-        .onErrorHandle(ex =>
-          throwAndLogError(
-            PocAndStatus(poc, status),
-            "an error occurred when providing info to certify api; ",
-            ex,
-            logger))
+      for {
+        body <- getCertifyApiBody(poc, statusAndPW, tenant)
+        response <- certifyApiRequest(poc, statusAndPW, body).map(newStatus => PocAndStatus(poc, newStatus))
+          .onErrorHandle(ex =>
+            throwAndLogError(
+              PocAndStatus(poc, status),
+              "an error occurred when providing info to certify api; ",
+              ex,
+              logger))
+      } yield response
     }
   }
 
@@ -124,21 +126,45 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
         }
     }
 
-  private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): String = {
+  private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): Task[String] = {
 
-    //@TODO
-    //if poc.clientCertRequired true get from cert manager public part of cert by /certs/<shared auth cert uuid>
-    //else we take tenant.clientCert
-    val clientCert = tenant.clientCert.map(_.value.value)
+    def getSharedAuthCertIdOrThrowError = Task(poc.sharedAuthCertId.getOrElse(throwError(
+      PocAndStatus(poc, statusAndPW.pocStatus),
+      "Tried to obtain shared auth cert ID from PoC but it was not defined")))
 
-    val registerDevice =
-      RegisterDeviceCertifyAPI(
-        poc.pocName,
-        poc.getDeviceId,
-        statusAndPW.devicePassword,
-        Some(poc.roleName),
-        clientCert)
-    write[RegisterDeviceCertifyAPI](registerDevice)
+    def getSharedAuthCertFromResponse(maybeCert: Either[CertificateCreationError, String]): Task[Option[String]] = {
+      maybeCert match {
+        case Left(error) =>
+          Task(throwAndLogError(
+            PocAndStatus(poc, statusAndPW.pocStatus),
+            "Requested CertManager for shared auth cert but it responded with error ",
+            error,
+            logger))
+        case Right(value) => Task(Some(value))
+      }
+    }
+
+    def clientCert: Task[Option[String]] =
+      if (poc.clientCertRequired) {
+        for {
+          certId <- getSharedAuthCertIdOrThrowError
+          maybeCert <- certHandler.getCert(certId)
+          cert <- getSharedAuthCertFromResponse(maybeCert)
+        } yield cert
+      } else {
+        Task(tenant.sharedAuthCert.map(_.value))
+      }
+
+    clientCert.map(cert => {
+      val registerDevice =
+        RegisterDeviceCertifyAPI(
+          poc.pocName,
+          poc.getDeviceId,
+          statusAndPW.devicePassword,
+          Some(poc.roleName),
+          cert)
+      write[RegisterDeviceCertifyAPI](registerDevice)
+    })
   }
 
   private def getGoClientBody(poc: Poc, statusAndPW: StatusAndPW): String = {

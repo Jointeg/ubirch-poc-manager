@@ -1,6 +1,6 @@
 package com.ubirch.models.poc
 
-import com.ubirch.models.tenant.{ ClientCert, OrgUnitCertId, TenantId }
+import com.ubirch.models.tenant.{ ClientCert, OrgUnitId, TenantId }
 import com.ubirch.util.ServiceConstants.POC_GROUP_PREFIX
 import org.joda.time.DateTime
 
@@ -16,7 +16,7 @@ case class Poc(
   certifyApp: Boolean,
   logoUrl: Option[LogoURL],
   clientCertRequired: Boolean,
-  orgUnitCertId: Option[OrgUnitCertId] = None,
+  orgUnitId: Option[OrgUnitId] = None,
   clientCert: Option[ClientCert] = None,
   dataSchemaId: String,
   extraConfig: Option[JsonConfig],
@@ -27,6 +27,7 @@ case class Poc(
   deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
+  sharedAuthCertId: Option[UUID] = None,
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {

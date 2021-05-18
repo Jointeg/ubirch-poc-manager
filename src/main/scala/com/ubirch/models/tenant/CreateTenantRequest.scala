@@ -7,5 +7,5 @@ case class CreateTenantRequest(
   idGardIdentifier: IdGardIdentifier,
   certifyGroupId: TenantCertifyGroupId,
   deviceGroupId: TenantDeviceGroupId,
-  clientCert: Option[ClientCert]
+  sharedAuthCertRequired: Boolean
 )

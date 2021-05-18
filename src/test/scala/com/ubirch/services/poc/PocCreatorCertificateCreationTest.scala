@@ -17,7 +17,7 @@ import scala.concurrent.duration.DurationInt
 class PocCreatorCertificateCreationTest extends UnitTestBase {
 
   "PocCreator" should {
-    "Retrieve certificates from CertManager and mark this information in PocStatus when tenant UsageType == APP and clientCertRequired == true" in {
+    "Retrieve certificates from CertManager and mark this information in PocStatus and PoC table when tenant UsageType == APP and clientCertRequired == true" in {
       withInjector { injector =>
         //services
         val loop = injector.get[PocCreator]
@@ -26,7 +26,9 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
           pocChange = poc => poc.copy(clientCertRequired = true),
-          tenantChange = tenant => tenant.copy(usageType = APP))
+          pocStatusChange = pocStatus => pocStatus.copy(clientCertRequired = true, clientCertCreated = Some(false)),
+          tenantChange = tenant => tenant.copy(usageType = APP)
+        )
         //start process
         val result = await(loop.createPocs(), 5.seconds)
 
@@ -39,8 +41,9 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
             pocId = poc.id,
             lastUpdated = resultStatus.lastUpdated,
             created = resultStatus.created,
+            clientCertRequired = true,
             clientCertCreated = Some(true),
-            orgUnitCertIdCreated = Some(true)
+            orgUnitCertCreated = Some(true)
           )
 
         maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
@@ -49,8 +52,8 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-        assert(newPoc.isDefined)
-        assert(newPoc.get.status == Completed)
+        newPoc.value.status shouldBe Completed
+        newPoc.value.sharedAuthCertId shouldBe defined
       }
     }
 
@@ -63,7 +66,9 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
           pocChange = poc => poc.copy(clientCertRequired = true),
-          tenantChange = tenant => tenant.copy(usageType = Both))
+          pocStatusChange = pocStatus => pocStatus.copy(clientCertRequired = true, clientCertCreated = Some(false)),
+          tenantChange = tenant => tenant.copy(usageType = Both)
+        )
         //start process
         val result = await(loop.createPocs(), 5.seconds)
 
@@ -76,8 +81,9 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
             pocId = poc.id,
             lastUpdated = resultStatus.lastUpdated,
             created = resultStatus.created,
+            clientCertRequired = true,
             clientCertCreated = Some(true),
-            orgUnitCertIdCreated = Some(true)
+            orgUnitCertCreated = Some(true)
           )
 
         maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
@@ -86,8 +92,8 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-        assert(newPoc.isDefined)
-        assert(newPoc.get.status == Completed)
+        newPoc.value.status shouldBe Completed
+        newPoc.value.sharedAuthCertId shouldBe defined
       }
     }
 
@@ -115,7 +121,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
               lastUpdated = resultStatus.lastUpdated,
               created = resultStatus.created,
               clientCertCreated = None,
-              orgUnitCertIdCreated = None
+              orgUnitCertCreated = None
             )
 
           maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
@@ -124,8 +130,8 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
           status shouldBe expected
 
           val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-          assert(newPoc.isDefined)
-          assert(newPoc.get.status == Completed)
+          newPoc.value.status shouldBe Completed
+          newPoc.value.sharedAuthCertId shouldNot be(defined)
         }
       }
     })
@@ -146,14 +152,14 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         //validate result
         val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
         val resultStatus = maybeSuccess.list.head.left.get
-        assert(resultStatus.contains("error: a poc shouldn't require client cert if tenant usageType is API"))
+        assert(resultStatus.contains("a poc shouldn't require client cert if tenant usageType is API"))
 
         val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         status.errorMessage shouldBe Some("a poc shouldn't require client cert if tenant usageType is API")
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
-        assert(newPoc.isDefined)
-        assert(newPoc.get.status == Processing)
+        newPoc.value.status shouldBe Processing
+        newPoc.value.sharedAuthCertId shouldNot be(defined)
       }
     }
   }

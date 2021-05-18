@@ -13,7 +13,7 @@ import com.ubirch.models.NOK
 import com.ubirch.models.tenant.{ API, APP, Both, CreateTenantRequest }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.superadmin.SuperAdminService
+import com.ubirch.services.superadmin.{ SuperAdminService, TenantCreationException }
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -88,10 +88,14 @@ class SuperAdminController @Inject() (
               InternalServerError(NOK.serverError("Failure during tenant creation"))
             case Right(_) => Ok()
           }
-          .onErrorHandle { ex: Throwable =>
-            val errorMsg = s"failure on tenant creation"
-            logger.error(errorMsg, ex)
-            InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+          .onErrorHandle {
+            case TenantCreationException(errorMsg) =>
+              InternalServerError(NOK.serverError(s"Failure during tenant creation: $errorMsg"))
+
+            case ex: Throwable =>
+              val errorMsg = s"failure on tenant creation"
+              logger.error(errorMsg, ex)
+              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
           }
       }
     }

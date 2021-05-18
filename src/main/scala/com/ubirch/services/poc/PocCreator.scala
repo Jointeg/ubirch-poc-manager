@@ -111,7 +111,7 @@ class PocCreatorImpl @Inject() (
       PoCCertCreator.pocCreationError(
         "a poc shouldn't require shared auth cert if tenant usageType is API",
         pocAndStatus)
-    else if (pocAndStatus.poc.clientCertRequired) {
+    else if (pocAndStatus.poc.clientCertRequired && pocAndStatus.status.clientCertCreated.isDefined && !pocAndStatus.status.clientCertCreated.get) {
       PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus, ubirchAdminsEmails, stage)(
         certHandler,
         teamDriveService)
