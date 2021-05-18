@@ -3,6 +3,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.PKCS12Operations
+import com.ubirch.services.teamdrive.TeamDriveService
 import monix.eval.Task
 
 import java.util.UUID
@@ -11,12 +12,13 @@ object PoCCertCreator extends LazyLogging {
 
   def createPoCSharedAuthCertificate(
     tenant: Tenant,
-    pocAndStatus: PocAndStatus)(certHandler: CertHandler): Task[PocAndStatus] = {
+    pocAndStatus: PocAndStatus)(certHandler: CertHandler/*, teamDriveService: TeamDriveService*/): Task[PocAndStatus] = {
     val id = UUID.randomUUID()
-    val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, pocAndStatus.poc.pocName, id)
+    val poc = pocAndStatus.poc
+    val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, poc.pocName, id)
 
     for {
-      result <- certHandler.createSharedAuthCertificate(pocAndStatus.poc.id, id, certIdentifier)
+      result <- certHandler.createSharedAuthCertificate(poc.id, id, certIdentifier)
       statusWithResponse <- result match {
         case Left(certificationCreationError) =>
           Task(logger.error(certificationCreationError.msg)) >> pocCreationError(
@@ -33,6 +35,13 @@ object PoCCertCreator extends LazyLogging {
           case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
           case Right(keystore) => Task(keystore)
         } // TODO: store the PKCS12 and passphrase in TeamDrive
+      name = s"tenantName_${poc.pocName}_${poc.externalId}"
+//      _ <- teamDriveService.shareCert(
+//        name,
+//        poc.manager.managerEmail,
+//        sharedAuthResponse.passphrase,
+//        sharedAuthResponse.pkcs12
+//      )
     } yield pocAndStatus
   }
 
