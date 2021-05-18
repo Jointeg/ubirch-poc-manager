@@ -21,6 +21,8 @@ import com.ubirch.services.poc.{
   InformationProviderMockSuccess,
   TestCertHandler
 }
+import com.ubirch.services.teamdrive.model.TeamDriveClient
+import com.ubirch.test.FakeTeamDriveClient
 import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
@@ -87,6 +89,8 @@ class DefaultUnitTestBinder extends Binder {
 
   override def CertHandler: ScopedBindingBuilder =
     bind(classOf[CertHandler]).to(classOf[TestCertHandler])
+
+  override def TeamDriveClient: ScopedBindingBuilder = bind(classOf[TeamDriveClient]).to(classOf[FakeTeamDriveClient])
 
   override def configure(): Unit = {
     super.configure()

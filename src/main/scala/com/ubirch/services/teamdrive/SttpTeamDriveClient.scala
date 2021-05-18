@@ -1,9 +1,11 @@
 package com.ubirch.services.teamdrive
 
+import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
+import org.json4s.Formats
+import org.json4s.native.Serialization
 import org.json4s.native.Serialization.read
-import org.json4s.{ Formats, Serialization }
 import sttp.client._
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.json4s._
@@ -11,14 +13,17 @@ import sttp.model.MediaType
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import javax.inject.{ Inject, Singleton }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
-class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
-  implicit backend: SttpBackend[Future, Nothing, WebSocketHandler],
-  serialization: Serialization,
-  formats: Formats
+@Singleton
+class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
+  implicit formats: Formats
 ) extends TeamDriveClient {
+
+  implicit private val serialization: Serialization.type = org.json4s.native.Serialization
+  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = SttpResources.backend
 
   import SttpTeamDriveClient._
 
@@ -42,6 +47,17 @@ class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
         .response(asJson[CreateSpace_OUT])
         .send()
     )
+
+  private def handleResponse[T, R](r: Response[Either[ResponseError[Exception], T]])(onSuccess: T => Task[R]): Task[R] =
+    r.body match {
+      case Left(e) =>
+        e match {
+          case HttpError(body, _) =>
+            Task(read[TeamDriveError_OUT](body)).flatMap(e => Task.raiseError(TeamDriveError(e.error, e.error_message)))
+          case a @ DeserializationError(_, _) => Task.raiseError(a)
+        }
+      case Right(v) => onSuccess(v)
+    }
 
   override def putFile(spaceId: SpaceId, fileName: String, file: ByteBuffer): Task[FileId] =
     callPutFile(spaceId, fileName, file).flatMap { r =>
@@ -87,21 +103,11 @@ class SttpTeamDriveClient(config: SttpTeamDriveClient.Config)(
         .response(asJson[InviteMember_OUT])
         .send()
     }
-
-  private def handleResponse[T, R](r: Response[Either[ResponseError[Exception], T]])(onSuccess: T => Task[R]): Task[R] =
-    r.body match {
-      case Left(e) =>
-        e match {
-          case HttpError(body, _) =>
-            Task(read[TeamDriveError_OUT](body)).flatMap(e => Task.raiseError(TeamDriveError(e.error, e.error_message)))
-          case a @ DeserializationError(_, _) => Task.raiseError(a)
-        }
-      case Right(v) => onSuccess(v)
-    }
 }
 
 object SttpTeamDriveClient {
   case class Config(url: String, username: String, password: String, readTimeout: Duration)
+    extends TeamDriveClientConfig
 
   case class TeamDriveError_OUT(error: Int, error_message: String, result: Boolean, status_code: Int)
 
