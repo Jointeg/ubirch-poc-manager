@@ -7,16 +7,19 @@ import com.ubirch.services.teamdrive.model.{ FileId, Read, SpaceId, TeamDriveCli
 import monix.eval.Task
 
 import java.nio.ByteBuffer
+import javax.inject.{ Inject, Singleton }
 
-class TeamDriveService(client: TeamDriveClient) {
+@Singleton
+class TeamDriveService @Inject() (client: TeamDriveClient) {
   def shareCert(
     spaceName: String,
-    email: String,
+    emails: Seq[String],
     passphrase: Passphrase,
-    certificate: Base16String): Task[SharedCertificate] =
+    certificate: Base16String
+  ): Task[SharedCertificate] =
     for {
       spaceId <- client.createSpace(spaceName, spaceName)
-      _ <- client.inviteMember(spaceId, email, Read)
+      _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, Read)))
       certByteArray <- toByteArray(certificate)
       certFileId <- client.putFile(spaceId, "cert.pfx", ByteBuffer.wrap(certByteArray))
       passphraseFileId <- client.putFile(spaceId, "passphrase.txt", ByteBuffer.wrap(passphrase.value.getBytes))

@@ -12,7 +12,9 @@ object PoCCertCreator extends LazyLogging {
 
   def createPoCSharedAuthCertificate(
     tenant: Tenant,
-    pocAndStatus: PocAndStatus)(certHandler: CertHandler/*, teamDriveService: TeamDriveService*/): Task[PocAndStatus] = {
+    pocAndStatus: PocAndStatus,
+    ubirchAdmins: Seq[String],
+    stage: String)(certHandler: CertHandler, teamDriveService: TeamDriveService): Task[PocAndStatus] = {
     val id = UUID.randomUUID()
     val poc = pocAndStatus.poc
     val certIdentifier = CertIdentifier.pocClientCert(tenant.tenantName, poc.pocName, id)
@@ -35,14 +37,20 @@ object PoCCertCreator extends LazyLogging {
           case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
           case Right(keystore) => Task(keystore)
         } // TODO: store the PKCS12 and passphrase in TeamDrive
-      name = s"tenantName_${poc.pocName}_${poc.externalId}"
-//      _ <- teamDriveService.shareCert(
-//        name,
-//        poc.manager.managerEmail,
-//        sharedAuthResponse.passphrase,
-//        sharedAuthResponse.pkcs12
-//      )
+      name = s"${stage}_tenantName_${poc.pocName}_${poc.externalId}" // TODO missing tenantName
+      _ <- teamDriveService.shareCert(
+        name,
+        ubirchAdmins :+ poc.manager.managerEmail,
+        sharedAuthResponse.passphrase,
+        sharedAuthResponse.pkcs12
+      )
     } yield pocAndStatus
+  }
+
+  def pocCreationError[A](msg: String, pocAndStatus: PocAndStatus): Task[A] = {
+    Task.raiseError(PocCreationError(
+      pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg))),
+      msg))
   }
 
   def createPoCOrganisationalUnitCertificate(
@@ -61,10 +69,4 @@ object PoCCertCreator extends LazyLogging {
               pocAndStatus)
         case Right(_) => Task(pocAndStatus.updateStatus(_.copy(orgUnitCertIdCreated = Some(true))))
       }
-
-  def pocCreationError[A](msg: String, pocAndStatus: PocAndStatus): Task[A] = {
-    Task.raiseError(PocCreationError(
-      pocAndStatus.copy(status = pocAndStatus.status.copy(errorMessage = Some(msg))),
-      msg))
-  }
 }

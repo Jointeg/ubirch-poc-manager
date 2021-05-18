@@ -26,6 +26,8 @@ import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook
 import com.ubirch.services.poc._
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
+import com.ubirch.services.teamdrive.{ SttpTeamDriveClient, TeamDriveClientConfig, TypesafeTeamDriveClientConfig }
+import com.ubirch.services.teamdrive.model.TeamDriveClient
 import com.ubirch.services.tenantadmin.{ DefaultTenantAdminService, TenantAdminService }
 import com.ubirch.services.{ DefaultKeycloakConnector, KeycloakConnector }
 import monix.execution.Scheduler
@@ -158,6 +160,11 @@ class Binder extends AbstractModule {
 
   def CertHandler: ScopedBindingBuilder = bind(classOf[CertHandler]).to(classOf[CertCreatorImpl])
 
+  def TeamDriveClient: ScopedBindingBuilder = bind(classOf[TeamDriveClient]).to(classOf[SttpTeamDriveClient])
+
+  def TeamDriveClientConfig: ScopedBindingBuilder =
+    bind(classOf[TeamDriveClientConfig]).to(classOf[TypesafeTeamDriveClientConfig])
+
   override def configure(): Unit = {
     Config
     PocConfig
@@ -207,6 +214,8 @@ class Binder extends AbstractModule {
     PocCreator
     PocCreationLoop
     CertHandler
+    TeamDriveClient
+    TeamDriveClientConfig
     ()
   }
 }

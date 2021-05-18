@@ -78,6 +78,8 @@ object ConfPaths {
     val USERNAME = "system.teamdrive.username"
     val PASSWORD = "system.teamdrive.password"
     val READ_TIMEOUT = "system.teamdrive.readTimeout"
+    val STAGE = "system.teamdrive.stage"
+    val UBIRCH_ADMINS = "system.teamdrive.ubirchAdmins"
   }
 
   object GenericConfPaths extends GenericConfPaths
