@@ -49,21 +49,21 @@ class DefaultSuperAdminService @Inject() (
   private def createOrgCert(tenant: Tenant): Task[Unit] = {
     val orgCertIdentifier = CertIdentifier.tenantOrgCert(tenant.tenantName)
     certHandler
-      .createOrganisationalCertificate(tenant.getOrgCertId, orgCertIdentifier)
+      .createOrganisationalCertificate(tenant.getOrgId, orgCertIdentifier)
       .map {
         case Right(_)                            =>
         case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
       }
   }
 
-  private def createOrgUnitCert(tenant: Tenant): Task[Option[OrgUnitId]] = {
+  private[superadmin] def createOrgUnitCert(tenant: Tenant): Task[Option[OrgUnitId]] = {
     if (!tenant.sharedAuthCertRequired)
       Task(None)
     else {
       val orgUnitCertId = UUID.randomUUID()
       val identifier = CertIdentifier.tenantOrgUnitCert(tenant.tenantName)
       certHandler
-        .createOrganisationalUnitCertificate(tenant.getOrgCertId, orgUnitCertId, identifier)
+        .createOrganisationalUnitCertificate(tenant.getOrgId, orgUnitCertId, identifier)
         .map {
           case Right(_)                            => Some(OrgUnitId(orgUnitCertId))
           case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
@@ -72,16 +72,16 @@ class DefaultSuperAdminService @Inject() (
   }
 
   //Todo: provide sharedAuthCert to Teamdrive
-  private def createSharedAuthCert(
+  private[superadmin] def createSharedAuthCert(
     tenant: Tenant,
-    orgUnitCertId: Option[OrgUnitId]): Task[Option[SharedAuthResult]] = {
+    orgUnitId: Option[OrgUnitId]): Task[Option[SharedAuthResult]] = {
     if (!tenant.sharedAuthCertRequired)
       Task(None)
     else {
       val groupId = UUID.randomUUID()
       val identifier = CertIdentifier.tenantClientCert(tenant.tenantName)
       certHandler
-        .createSharedAuthCertificate(orgUnitCertId.get.value, groupId, identifier)
+        .createSharedAuthCertificate(orgUnitId.get.value, groupId, identifier)
         .map {
           case Right(SharedAuthCertificateResponse(certUuid, _, _)) => Some(SharedAuthResult(groupId, certUuid))
           case Left(CertificateCreationError(msg))                  => throw TenantCreationException(msg)
@@ -89,7 +89,7 @@ class DefaultSuperAdminService @Inject() (
     }
   }
 
-  private def getCert(tenant: Tenant, sharedAuthResult: Option[SharedAuthResult]): Task[Option[String]] = {
+  private[superadmin] def getCert(tenant: Tenant, sharedAuthResult: Option[SharedAuthResult]): Task[Option[String]] = {
     if (!tenant.sharedAuthCertRequired)
       Task(None)
     else if (sharedAuthResult.isEmpty)
@@ -104,7 +104,7 @@ class DefaultSuperAdminService @Inject() (
     }
   }
 
-  private def updateTenant(
+  private[superadmin] def updateTenant(
     tenant: Tenant,
     orgUnitId: Option[OrgUnitId],
     sharedAuthResult: Option[SharedAuthResult],

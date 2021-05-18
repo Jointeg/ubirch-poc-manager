@@ -70,9 +70,11 @@ object Validator {
   def validateClientCert(header: String, str: String, tenant: Tenant): AllErrorsOr[Boolean] = {
     validateBoolean(header, str) match {
       case Valid(false) if tenant.sharedAuthCert.isEmpty => clientCertError(header).invalidNel
-      case Valid(false) if tenant.usageType == APP       => organisationalUnitCertError(APP, clientCertRequired = false).invalidNel
-      case Valid(true) if tenant.usageType == API        => organisationalUnitCertError(API, clientCertRequired = true).invalidNel
-      case validOrInvalid                                => validOrInvalid
+      case Valid(false) if tenant.usageType == APP =>
+        organisationalUnitCertError(APP, clientCertRequired = false).invalidNel
+      case Valid(true) if tenant.usageType == API =>
+        organisationalUnitCertError(API, clientCertRequired = true).invalidNel
+      case validOrInvalid => validOrInvalid
     }
   }
 

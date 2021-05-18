@@ -21,5 +21,5 @@ case class Tenant(
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
-  def getOrgCertId: UUID = orgId.value.value.asJava()
+  def getOrgId: UUID = orgId.value.value.asJava()
 }
