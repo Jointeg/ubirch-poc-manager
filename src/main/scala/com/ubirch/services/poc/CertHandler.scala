@@ -122,5 +122,5 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
 
 case class CreateOrganisationalCertRequest(identifier: String)
 case class CreateOrganisationalUnitCertRequest(identifier: String)
-case class CertificateCreationError(msg: String) extends Throwable
+case class CertificateCreationError(msg: String) extends Throwable(msg)
 case class CreateSharedAuthCertificateRequest(identifier: String)
