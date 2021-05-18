@@ -89,7 +89,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits with TryValue
         Some("Tried to obtain shared auth cert ID from PoC but it was not defined"))
     }
 
-    "should not provide certifyApi if clientCertRequired == true2 but sharedAuthCertId is not set up on PoC level" in {
+    "should not provide certifyApi if clientCertRequired == true but CertManager responds with error" in {
       val injector = testInjector(new CertHandlerReturnErrorBinder)
       val infoProvider = injector.get[InformationProvider]
       val pocWithoutSharedAuthCertId = poc.copy(sharedAuthCertId = Some(UUID.randomUUID()), clientCertRequired = true)
