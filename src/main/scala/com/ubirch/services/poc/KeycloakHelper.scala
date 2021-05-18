@@ -36,6 +36,7 @@ trait KeycloakHelper {
 
 case class PocAndStatus(poc: Poc, status: PocStatus) {
   def updateStatus(update: PocStatus => PocStatus): PocAndStatus = this.copy(status = update(this.status))
+  def updatePoc(update: Poc => Poc): PocAndStatus = this.copy(poc = update(this.poc))
 }
 
 @Singleton

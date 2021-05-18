@@ -35,7 +35,7 @@ object PoCCertCreator extends LazyLogging {
           case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
           case Right(keystore) => Task(keystore)
         } // TODO: store the PKCS12 and passphrase in TeamDrive
-    } yield pocAndStatus
+    } yield pocAndStatus.updatePoc(_.copy(sharedAuthCertId = Some(sharedAuthResponse.certUuid)))
   }
 
   def createPoCOrganisationalUnitCertificate(

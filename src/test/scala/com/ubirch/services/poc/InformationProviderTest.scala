@@ -7,13 +7,14 @@ import com.ubirch.models.NamespacedUUID
 import com.ubirch.models.poc.{ DeviceId, Poc, PocStatus }
 import com.ubirch.{ Awaits, DefaultUnitTestBinder, InjectorHelper }
 import monix.execution.Scheduler
+import org.scalatest.TryValues
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
-import scala.util.Try
+import scala.util.{ Failure, Try }
 
-class InformationProviderTest extends ScalatraWordSpec with Awaits {
+class InformationProviderTest extends ScalatraWordSpec with Awaits with TryValues {
 
   def testInjector(binder: AbstractModule): InjectorHelper = new InjectorHelper(List(binder)) {}
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
@@ -29,6 +30,14 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
   "InformationProvider" should {
 
     class SuccessUnitTestBinder extends DefaultUnitTestBinder {
+      override def InformationProvider: ScopedBindingBuilder =
+        bind(classOf[InformationProvider]).to(classOf[InformationProviderMockSuccess])
+      override def configure(): Unit = super.configure()
+    }
+
+    class CertHandlerReturnErrorBinder extends DefaultUnitTestBinder {
+      override def CertHandler: ScopedBindingBuilder =
+        bind(classOf[CertHandler]).to(classOf[ErrorReturningCertHandler])
       override def InformationProvider: ScopedBindingBuilder =
         bind(classOf[InformationProvider]).to(classOf[InformationProviderMockSuccess])
       override def configure(): Unit = super.configure()
@@ -68,6 +77,26 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits {
       val r = infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(pocStatus = statusProvided), tenant).runSyncUnsafe()
       // assert
       r.status shouldBe statusProvided
+    }
+
+    "should not provide certifyApi if clientCertRequired == true but sharedAuthCertId is not set up on PoC level" in {
+      val injector = testInjector(new SuccessUnitTestBinder)
+      val infoProvider = injector.get[InformationProvider]
+      val pocWithoutSharedAuthCertId = poc.copy(sharedAuthCertId = None, clientCertRequired = true)
+      val r = Try(infoProvider.infoToCertifyAPI(pocWithoutSharedAuthCertId, statusAndPW, tenant).runSyncUnsafe())
+      r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status.certifyApiProvided shouldBe false
+      r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status shouldBe pocStatus.copy(errorMessage =
+        Some("Tried to obtain shared auth cert ID from PoC but it was not defined"))
+    }
+
+    "should not provide certifyApi if clientCertRequired == true but CertManager responds with error" in {
+      val injector = testInjector(new CertHandlerReturnErrorBinder)
+      val infoProvider = injector.get[InformationProvider]
+      val pocWithoutSharedAuthCertId = poc.copy(sharedAuthCertId = Some(UUID.randomUUID()), clientCertRequired = true)
+      val r = Try(infoProvider.infoToCertifyAPI(pocWithoutSharedAuthCertId, statusAndPW, tenant).runSyncUnsafe())
+      r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status.certifyApiProvided shouldBe false
+      r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status shouldBe pocStatus.copy(errorMessage =
+        Some("Requested CertManager for shared auth cert but it responded with error get certificate error"))
     }
 
     class WrongURLUnitTestBinder extends DefaultUnitTestBinder {
