@@ -57,10 +57,11 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
         .post(uri"$certManagerUrl/orgs/${orgUUID.toString}")
         .body(write[CreateOrganisationalCertRequest](CreateOrganisationalCertRequest(identifier.value)))
         .auth.bearer(certManagerToken)
+        .header("Content-Type", "application/json")
         .response(ignore)
         .send())
       .map(response =>
-        if (response.code == StatusCode.Created)
+        if (response.code == StatusCode.Created || response.code == StatusCode.Conflict)
           Right(())
         else
           Left(CertificateCreationError(
@@ -74,12 +75,13 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
     val response = Task.deferFuture(basicRequest
       .post(uri"$certManagerUrl/orgs/${orgUUID.toString}/units/${orgUnitId.toString}")
       .body(write[CreateOrganisationalUnitCertRequest](CreateOrganisationalUnitCertRequest(identifier.value)))
+      .header("Content-Type", "application/json")
       .auth.bearer(certManagerToken)
       .response(ignore)
       .send())
 
     response.flatMap(response =>
-      if (response.code == StatusCode.Created)
+      if (response.code == StatusCode.Created || response.code == StatusCode.Conflict)
         Task(Right(()))
       else
         Task(Left(CertificateCreationError(
@@ -95,6 +97,7 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
     val response = Task.deferFuture(basicRequest
       .post(uri"$certManagerUrl/units/${orgUnitId.toString}/groups/${groupId.toString}")
       .body(write[CreateSharedAuthCertificateRequest](CreateSharedAuthCertificateRequest(identifier.value)))
+      .header("Content-Type", "application/json")
       .auth.bearer(certManagerToken)
       .response(asJson[SharedAuthCertificateResponse])
       .send())
