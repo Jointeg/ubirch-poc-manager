@@ -73,6 +73,13 @@ object ConfPaths {
     final val DATABASE_NAME = "database.dataSource.databaseName"
   }
 
+  sealed trait TeamDrivePaths {
+    val URL = "system.teamdrive.url"
+    val USERNAME = "system.teamdrive.username"
+    val PASSWORD = "system.teamdrive.password"
+    val READ_TIMEOUT = "system.teamdrive.readTimeout"
+  }
+
   object GenericConfPaths extends GenericConfPaths
 
   object HttpServerConfPaths extends HttpServerConfPaths
@@ -84,4 +91,6 @@ object ConfPaths {
   object AESEncryptionPaths extends AESEncryption
 
   object PostgresPaths extends PostgresPaths
+
+  object TeamDrivePaths extends TeamDrivePaths
 }
