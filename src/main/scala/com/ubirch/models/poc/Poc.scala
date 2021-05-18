@@ -27,6 +27,7 @@ case class Poc(
   deviceId: DeviceId,
   clientCertFolder: Option[String] = None,
   status: Status = Pending,
+  sharedAuthCertId: Option[UUID] = None,
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
