@@ -126,9 +126,10 @@ class InformationProviderImpl @Inject() (conf: Config)(implicit formats: Formats
 
   private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): String = {
 
+    //@TODO
     //if poc.clientCertRequired true get from cert manager public part of cert by /certs/<shared auth cert uuid>
     //else we take tenant.clientCert
-    val clientCert = if (poc.clientCertRequired) tenant.sharedAuthCert.map(_.value) else None
+    val clientCert = tenant.sharedAuthCert.map(_.value)
 
     val registerDevice =
       RegisterDeviceCertifyAPI(

@@ -169,7 +169,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == ValidatorConstants.organisationalUnitCertError)
+          assert(error == ValidatorConstants.organisationalUnitCertError(API, clientCertRequired = true))
         }
     }
 
@@ -198,7 +198,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == ValidatorConstants.organisationalUnitCertError)
+          assert(error == ValidatorConstants.organisationalUnitCertError(APP, clientCertRequired = false))
         }
     }
   }

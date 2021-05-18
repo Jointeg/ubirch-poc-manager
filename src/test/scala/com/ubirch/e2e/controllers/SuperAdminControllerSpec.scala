@@ -1,7 +1,5 @@
 package com.ubirch.e2e.controllers
 
-import com.ubirch.ModelCreationHelper.cert
-import com.ubirch.{ FakeTokenCreator, ModelCreationHelper }
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
@@ -10,6 +8,7 @@ import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.{ FakeTokenCreator, ModelCreationHelper }
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
