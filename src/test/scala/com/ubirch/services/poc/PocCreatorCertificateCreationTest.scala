@@ -40,7 +40,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
             lastUpdated = resultStatus.lastUpdated,
             created = resultStatus.created,
             clientCertCreated = Some(true),
-            orgUnitCertIdCreated = Some(true)
+            orgUnitCertCreated = Some(true)
           )
 
         maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
@@ -77,7 +77,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
             lastUpdated = resultStatus.lastUpdated,
             created = resultStatus.created,
             clientCertCreated = Some(true),
-            orgUnitCertIdCreated = Some(true)
+            orgUnitCertCreated = Some(true)
           )
 
         maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
@@ -115,7 +115,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
               lastUpdated = resultStatus.lastUpdated,
               created = resultStatus.created,
               clientCertCreated = None,
-              orgUnitCertIdCreated = None
+              orgUnitCertCreated = None
             )
 
           maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))

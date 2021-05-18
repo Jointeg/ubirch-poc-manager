@@ -1,5 +1,6 @@
 package com.ubirch.e2e.controllers
 
+import com.ubirch.ModelCreationHelper.cert
 import com.ubirch.{ FakeTokenCreator, ModelCreationHelper }
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
@@ -25,11 +26,10 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "tenantName": "$tenantName",
        |    "usageType": "API",
        |    "deviceCreationToken": "1234567890",
-       |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
        |    "certifyGroupId": "random-certify-group",
        |    "deviceGroupId": "random-device-group",
-       |    "clientCert": "${ModelCreationHelper.base64X509Cert.value}"
+       |    "sharedAuthCertRequired": true
        |}
        |""".stripMargin
   }
@@ -40,10 +40,10 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "tenantName": "$tenantName",
        |    "usageType": "API",
        |    "deviceCreationToken": "1234567890",
-       |    "certificationCreationToken": "987654321",
        |    "idGardIdentifier": "gard-identifier",
        |    "certifyGroupId": "random-certify-group",
-       |    "deviceGroupId": "random-device-group"
+       |    "deviceGroupId": "random-device-group",
+       |    "sharedAuthCertRequired": false
        |}
        |""".stripMargin
   }
@@ -61,7 +61,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
   }
 
   "Super Admin Controller" must {
-    "be able to successfully create a Tenant" in {
+    "be able to successfully create a Tenant with sharedAuthCert required" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
 
@@ -83,11 +83,11 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
         maybeTenant.value.certifyGroupId shouldBe TenantCertifyGroupId("random-certify-group")
         maybeTenant.value.deviceGroupId shouldBe TenantDeviceGroupId("random-device-group")
-        maybeTenant.value.clientCert shouldBe Some(ClientCert(ModelCreationHelper.base64X509Cert))
+        maybeTenant.value.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
       }
     }
 
-    "be able to successfully create a Tenant without a client cert" in {
+    "be able to successfully create a Tenant without a sharedAuthCert required" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
 
@@ -109,7 +109,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
         maybeTenant.value.certifyGroupId shouldBe TenantCertifyGroupId("random-certify-group")
         maybeTenant.value.deviceGroupId shouldBe TenantDeviceGroupId("random-device-group")
-        maybeTenant.value.clientCert shouldBe None
+        maybeTenant.value.sharedAuthCert shouldBe None
       }
     }
 
@@ -138,7 +138,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    "create tenant with encrypted DeviceCreationToken and CertificationCreationToken" in {
+    "create tenant with encrypted DeviceCreationToken " in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val tenantName = Random.alphanumeric.take(10).mkString
@@ -182,7 +182,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    "authenticate users related to users keycloak only" in {
+    "authenticate users related to certify keycloak only" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val tenantName = Random.alphanumeric.take(10).mkString

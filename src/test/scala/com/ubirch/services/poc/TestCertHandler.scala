@@ -1,4 +1,5 @@
 package com.ubirch.services.poc
+import com.ubirch.ModelCreationHelper.cert
 import com.ubirch.models.auth.{ Base16String, CertIdentifier }
 import com.ubirch.models.auth.cert.{ Passphrase, SharedAuthCertificateResponse }
 import monix.eval.Task
@@ -24,6 +25,16 @@ class TestCertHandler extends CertHandler {
       TestCertHandler.passphrase,
       TestCertHandler.validPkcs12
     )))
+  }
+
+  override def createOrganisationalCertificate(
+    orgUUID: UUID,
+    identifier: CertIdentifier): Task[Either[CertificateCreationError, Unit]] = {
+    Task(Right(()))
+  }
+
+  override def getCert(certId: UUID): Task[Either[CertificateCreationError, String]] = {
+    Task(Right(cert))
   }
 }
 

@@ -179,7 +179,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
       assert(validated.isValid)
     }
 
-    val tenantWithoutCert = createTenant(clientCert = None)
+    val tenantWithoutCert = createTenant(sharedAuthCert = None)
     "validate 'False' invalid when tenant does not have a client cert" in {
       val str = "False"
       val validated = validateClientCert(clientCert, str, tenantWithoutCert)
