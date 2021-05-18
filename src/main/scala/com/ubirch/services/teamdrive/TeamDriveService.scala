@@ -9,8 +9,17 @@ import monix.eval.Task
 import java.nio.ByteBuffer
 import javax.inject.{ Inject, Singleton }
 
+trait TeamDriveService {
+  def shareCert(
+    spaceName: String,
+    emails: Seq[String],
+    passphrase: Passphrase,
+    certificate: Base16String
+  ): Task[SharedCertificate]
+}
+
 @Singleton
-class TeamDriveService @Inject() (client: TeamDriveClient) {
+class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDriveService {
   def shareCert(
     spaceName: String,
     emails: Seq[String],

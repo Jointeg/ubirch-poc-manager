@@ -59,6 +59,7 @@ object ConfPaths {
     final val GO_CLIENT_URL = "system.services.goClientURL"
     final val GO_CLIENT_TOKEN = "system.services.goClientToken"
     final val POC_CREATION_INTERVAL = "system.services.pocCreationInterval"
+    final val TEAM_DRIVE_ADMIN_EMAILS = "system.services.teamDriveAdminEmails"
   }
 
   trait AESEncryption {

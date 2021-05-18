@@ -2,7 +2,7 @@ package com.ubirch.teamdrive
 
 import com.ubirch.TestBase
 import com.ubirch.services.poc.TestCertHandler
-import com.ubirch.services.teamdrive.TeamDriveService
+import com.ubirch.services.teamdrive.{ TeamDriveService, TeamDriveServiceImpl }
 import com.ubirch.test.{ FakeTeamDriveClient, TestData }
 
 class TeamDriveServiceTest extends TestBase {
@@ -28,7 +28,7 @@ class TeamDriveServiceTest extends TestBase {
 
   def testTeamDriveService(test: (TeamDriveService, FakeTeamDriveClient) => Unit): Unit = {
     val client = new FakeTeamDriveClient()
-    val service = new TeamDriveService(client)
+    val service = new TeamDriveServiceImpl(client)
     test(service, client)
     ()
   }
