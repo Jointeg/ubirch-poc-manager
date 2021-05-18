@@ -1,5 +1,11 @@
 package com.ubirch.services.keycloak.users
-import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserAlreadyExists, UserCreationError, UserException }
+import com.ubirch.models.keycloak.user.{
+  CreateKeycloakUser,
+  UserAlreadyExists,
+  UserCreationError,
+  UserException,
+  UserRequiredAction
+}
 import com.ubirch.models.user.{ UserId, UserName }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
@@ -16,11 +22,13 @@ class TestKeycloakUserService() extends KeycloakUserService {
 
   override def createUser(
     createKeycloakUser: CreateKeycloakUser,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[UserException, UserId]] =
+    instance: KeycloakInstance = CertifyKeycloak,
+    userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
     instance match {
       case CertifyKeycloak => createIfNotExists(keycloakCertifyDatastore, createKeycloakUser)
       case DeviceKeycloak  => createIfNotExists(keycloakDeviceDatastore, createKeycloakUser)
     }
+  }
 
   private def createIfNotExists(datastore: mutable.ListBuffer[UserName], createKeycloakUser: CreateKeycloakUser) = {
     Task {
@@ -72,4 +80,8 @@ class TestKeycloakUserService() extends KeycloakUserService {
     keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
     Task { Right(()) }
 
+  override def sendRequiredActionsEmail(
+    userName: UserName,
+    instance: KeycloakInstance): Task[Either[String, Unit]] =
+    Task(Right(()))
 }

@@ -16,6 +16,7 @@ trait PocConfig {
 
   val teamDriveAdminEmails: Seq[String]
   val teamDriveStage: String
+  val pocAdminGroupId: String
 }
 
 @Singleton
@@ -44,4 +45,5 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     config.getString(TeamDrivePaths.UBIRCH_ADMINS).split(",").map(_.trim)
 
   val teamDriveStage: String = config.getString(TeamDrivePaths.STAGE)
+  val pocAdminGroupId: String = config.getString(ServicesConfPaths.POC_ADMIN_GROUP_ID)
 }

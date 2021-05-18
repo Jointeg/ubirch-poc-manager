@@ -3,19 +3,15 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
-import com.ubirch.ConfPaths.{ PostgresPaths, TeamDrivePaths }
+import com.ubirch.ConfPaths.TeamDrivePaths
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
-import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
-import com.ubirch.services.poc.util.PKCS12Operations
 import com.ubirch.services.teamdrive.TeamDriveService
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
-
-import java.util.UUID
 
 trait PocCreator {
 

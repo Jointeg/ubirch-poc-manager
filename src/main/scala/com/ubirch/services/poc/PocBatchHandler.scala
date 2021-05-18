@@ -32,11 +32,9 @@ scheduler: Scheduler)
       if (lines.hasNext) {
         val header = lines.next()
         val colNum = header.split(columnSeparator).map(_.trim).length
-        // @todo enables this part later
-        /*if (colNum >= pocAdminHeaderColOrderLength) {
+        if (colNum >= pocAdminHeaderColOrderLength) {
           processPocAdmin.createListOfPoCsAndAdmin(csv, tenant)
-        } else*/
-        if (colNum >= pocHeaderColOrderLength) {
+        } else if (colNum >= pocHeaderColOrderLength) {
           processPoc.createListOfPoCs(csv, tenant)
         } else {
           Task(Left(s"$header; the number of header($colNum) is not enough."))

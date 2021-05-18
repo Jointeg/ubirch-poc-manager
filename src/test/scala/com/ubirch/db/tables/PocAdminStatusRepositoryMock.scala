@@ -11,12 +11,15 @@ import scala.collection.mutable
 class PocAdminStatusRepositoryMock extends PocAdminStatusRepository {
   private val pocAdminDatastore = mutable.Map[UUID, PocAdminStatus]()
 
-  def createStatus(pocAdminStatus: PocAdminStatus): Task[UUID] = Task {
+  def createStatus(pocAdminStatus: PocAdminStatus): Task[Unit] = Task {
     pocAdminDatastore += pocAdminStatus.pocAdminId -> pocAdminStatus
-    pocAdminStatus.pocAdminId
   }
 
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]] = {
     Task(pocAdminDatastore.get(pocAdminId))
+  }
+
+  def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] = Task {
+    pocAdminDatastore.update(pocAdminStatus.pocAdminId, pocAdminStatus)
   }
 }

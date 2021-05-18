@@ -17,8 +17,7 @@ trait DeviceHelper {
 
 }
 
-class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGroupService, pocConfig: PocConfig)
-  extends DeviceHelper {
+class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConfig) extends DeviceHelper {
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 

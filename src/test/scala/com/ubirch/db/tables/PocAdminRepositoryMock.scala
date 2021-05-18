@@ -1,6 +1,6 @@
 package com.ubirch.db.tables
 
-import com.ubirch.models.poc.PocAdmin
+import com.ubirch.models.poc.{ Completed, PocAdmin }
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
@@ -19,6 +19,13 @@ class PocAdminRepositoryMock extends PocAdminRepository {
     }
   }
 
+  def updatePocAdmin(pocAdmin: PocAdmin): Task[UUID] = {
+    Task {
+      pocAdminDatastore.update(pocAdmin.id, pocAdmin)
+      pocAdmin.id
+    }
+  }
+
   def getPocAdmin(pocAdminId: UUID): Task[Option[PocAdmin]] = {
     Task(pocAdminDatastore.get(pocAdminId))
   }
@@ -27,6 +34,14 @@ class PocAdminRepositoryMock extends PocAdminRepository {
     Task {
       pocAdminDatastore.collect {
         case (_, pocAdmin: PocAdmin) if pocAdmin.tenantId == tenantId => pocAdmin
+      }.toList
+    }
+  }
+
+  def getAllUncompletedPocs(): Task[List[PocAdmin]] = {
+    Task {
+      pocAdminDatastore.collect {
+        case (_, pocAdmin: PocAdmin) if pocAdmin.status != Completed => pocAdmin
       }.toList
     }
   }
