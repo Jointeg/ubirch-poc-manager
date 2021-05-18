@@ -27,7 +27,7 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     }
 
   val teamDriveAdminEmails: Seq[String] =
-    config.getString(ServicesConfPaths.TEAM_DRIVE_ADMIN_EMAILS).split(",").map(_.trim)
+    config.getString(TeamDrivePaths.UBIRCH_ADMINS).split(",").map(_.trim)
 
   val teamDriveStage: String = config.getString(TeamDrivePaths.STAGE)
 }
