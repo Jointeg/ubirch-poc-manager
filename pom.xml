@@ -252,6 +252,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Wiremock -->
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock-jre8-standalone</artifactId>
+            <version>2.28.0</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Prometheus -->
         <dependency>
             <groupId>io.prometheus</groupId>
@@ -443,6 +451,12 @@
             <version>2.2.9</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>slf4j-backend_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
         <!-- Quill -->
         <dependency>
             <groupId>io.getquill</groupId>
@@ -482,7 +496,6 @@
             <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
-
 
     </dependencies>
 
