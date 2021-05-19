@@ -109,7 +109,7 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
 
         case Left(ex: HttpError) if ex.statusCode == sttp.model.StatusCode.Conflict =>
           logger.info("shared auth creation for responded with conflict; will be updated instead")
-          updateSharedAuthCertificate(orgUnitId, groupId, identifier)
+          updateSharedAuthCertificate(groupId)
 
         case Left(responseError: ResponseError[Exception]) =>
           logger.error("unexpected exception during shared auth cert creation", responseError)
@@ -118,10 +118,9 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
     }
   }
 
-  private def updateSharedAuthCertificate(
-    orgUnitId: UUID,
-    groupId: UUID,
-    identifier: CertIdentifier): Task[Either[CertificateCreationError, SharedAuthCertificateResponse]] = {
+  private def updateSharedAuthCertificate(groupId: UUID)
+    : Task[Either[CertificateCreationError, SharedAuthCertificateResponse]] = {
+
     val response = Task.deferFuture(basicRequest
       .put(uri"$certManagerUrl/groups/${groupId.toString}")
       .auth.bearer(certManagerToken)
