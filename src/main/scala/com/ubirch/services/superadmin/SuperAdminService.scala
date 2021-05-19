@@ -9,6 +9,7 @@ import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
 import com.ubirch.services.teamdrive.TeamDriveService
+import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
 import com.ubirch.util.TaskHelpers
 import monix.eval.Task
 
@@ -41,11 +42,7 @@ class DefaultSuperAdminService @Inject() (
           for {
             orgUnitID <- createOrgUnitCert(tenant)
             response <- createSharedAuthCert(tenant, orgUnitID)
-            _ <- teamDriveService.shareCert(
-              s"${pocConfig.teamDriveStage}_${tenant.tenantName.value}",
-              pocConfig.teamDriveAdminEmails,
-              response.passphrase,
-              response.pkcs12)
+            _ <- createShareCertIntoTD(tenant, response)
             cert <- getCert(tenant, response)
             updated = updateTenant(tenant, orgUnitID, response, cert)
             tenantId <- persistTenant(updated)
@@ -56,6 +53,19 @@ class DefaultSuperAdminService @Inject() (
           persistTenant(tenant)
         }
     } yield tenantId
+  }
+
+  private def createShareCertIntoTD(tenant: Tenant, sharedAuthResult: SharedAuthResult): Task[SharedCertificate] = {
+    teamDriveService.shareCert(
+      s"${pocConfig.teamDriveStage}_${tenant.tenantName.value}",
+      pocConfig.teamDriveAdminEmails,
+      sharedAuthResult.passphrase,
+      sharedAuthResult.pkcs12).onErrorHandleWith {
+      case ex: Exception =>
+        val msg = s"Could not persist shared cert in TenantDrive because: ${ex.getMessage}"
+        logger.error(msg)
+        Task.raiseError(TenantCreationException(msg))
+    }
   }
 
   private def persistTenant(updatedTenant: Tenant): Task[Either[DBError, TenantId]] = {
