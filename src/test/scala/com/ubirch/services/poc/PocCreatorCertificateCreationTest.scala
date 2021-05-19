@@ -43,6 +43,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
             created = resultStatus.created,
             clientCertRequired = true,
             clientCertCreated = Some(true),
+            clientCertProvided = Some(true),
             orgUnitCertCreated = Some(true)
           )
 
@@ -83,6 +84,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
             created = resultStatus.created,
             clientCertRequired = true,
             clientCertCreated = Some(true),
+            clientCertProvided = Some(true),
             orgUnitCertCreated = Some(true)
           )
 
