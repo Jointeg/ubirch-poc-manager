@@ -1,12 +1,15 @@
 package com.ubirch.services.poc
 
 import com.google.inject.Inject
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
+import com.ubirch.ConfPaths.{ PostgresPaths, TeamDrivePaths }
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
 import com.ubirch.services.poc.util.PKCS12Operations
+import com.ubirch.services.teamdrive.TeamDriveService
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -39,9 +42,15 @@ class PocCreatorImpl @Inject() (
   keycloakHelper: KeycloakHelper,
   pocTable: PocRepository,
   pocStatusTable: PocStatusRepository,
-  tenantTable: TenantRepository)(implicit formats: Formats)
+  tenantTable: TenantRepository,
+  teamDriveService: TeamDriveService,
+  config: Config)(implicit formats: Formats)
   extends PocCreator
   with LazyLogging {
+
+  private val ubirchAdminsEmails: Seq[String] =
+    config.getString(TeamDrivePaths.UBIRCH_ADMINS).trim.split(",").map(_.trim)
+  private val stage: String = config.getString(TeamDrivePaths.STAGE)
 
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
@@ -103,7 +112,9 @@ class PocCreatorImpl @Inject() (
         "a poc shouldn't require shared auth cert if tenant usageType is API",
         pocAndStatus)
     else if (pocAndStatus.poc.clientCertRequired && pocAndStatus.status.clientCertCreated.isDefined && !pocAndStatus.status.clientCertCreated.get) {
-      PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus)(certHandler)
+      PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus, ubirchAdminsEmails, stage)(
+        certHandler,
+        teamDriveService)
     } else {
       Task(pocAndStatus)
     }

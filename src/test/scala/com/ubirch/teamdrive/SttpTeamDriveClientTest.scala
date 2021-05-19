@@ -6,19 +6,14 @@ import com.ubirch.test.TaskSupport._
 import com.ubirch.test.TestData._
 import com.ubirch.test._
 import monix.eval.Task
-import org.json4s.{ Formats, Serialization }
-import sttp.client.asynchttpclient.WebSocketHandler
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
-import sttp.client.{ SttpBackend, SttpClientException }
+import org.json4s.Formats
+import sttp.client.SttpClientException
 
 import java.nio.ByteBuffer
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class SttpTeamDriveClientTest extends HttpTest {
 
-  implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend()(ec)
-  implicit private val serialization: Serialization = org.json4s.native.Serialization
   implicit private val formats: Formats = org.json4s.DefaultFormats
 
   import SttpTeamDriveClientTest._

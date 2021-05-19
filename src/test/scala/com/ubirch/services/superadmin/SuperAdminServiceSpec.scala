@@ -1,12 +1,15 @@
 package com.ubirch.services.superadmin
 
 import com.ubirch.ModelCreationHelper.{ createTenant, createTenantRequest }
-import com.ubirch.UnitTestBase
+import com.ubirch.{ PocConfig, UnitTestBase }
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.tenant.{ OrgId, OrgUnitId, TenantId }
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
+import com.ubirch.services.teamdrive.{ model, TeamDriveService }
+import com.ubirch.services.teamdrive.model.TeamDriveClient
+import com.ubirch.test.FakeTeamDriveClient
 import monix.eval.Task
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
@@ -56,11 +59,14 @@ class SuperAdminServiceSpec extends UnitTestBase {
         val aesEncryption = injector.get[AESEncryption]
         val repo = injector.get[TenantRepository]
         val certHandlerMock = mock[CertHandler]
+        val teamDriveServiceMock = mock[TeamDriveService]
+        val pocConfigMock = mock[PocConfig]
         val orgIdentifier = CertIdentifier.tenantOrgCert(tenantRequest.tenantName)
         val orgId = OrgId(TenantId(tenantRequest.tenantName).value)
         when(certHandlerMock.createOrganisationalCertificate(orgId.value.asJava(), orgIdentifier))
           .thenReturn(Task(Left(CertificateCreationError("error"))))
-        val superAdminSvc = new DefaultSuperAdminService(aesEncryption, repo, certHandlerMock)
+        val superAdminSvc =
+          new DefaultSuperAdminService(aesEncryption, repo, certHandlerMock, teamDriveServiceMock, pocConfigMock)
         assertThrows[TenantCreationException](superAdminSvc.createTenant(tenantRequest).runSyncUnsafe())
       }
     }
@@ -70,13 +76,15 @@ class SuperAdminServiceSpec extends UnitTestBase {
         val aesEncryption = injector.get[AESEncryption]
         val repo = injector.get[TenantRepository]
         val certHandlerMock = mock[CertHandler]
-
+        val teamDriveServiceMock = mock[TeamDriveService]
+        val pocConfigMock = mock[PocConfig]
         val tenant = createTenant()
 
         when(certHandlerMock.createOrganisationalUnitCertificate(any[UUID], any[UUID], any[CertIdentifier]))
           .thenReturn(Task(Left(CertificateCreationError("error"))))
 
-        val superAdminSvc = new DefaultSuperAdminService(aesEncryption, repo, certHandlerMock)
+        val superAdminSvc =
+          new DefaultSuperAdminService(aesEncryption, repo, certHandlerMock, teamDriveServiceMock, pocConfigMock)
         assertThrows[TenantCreationException](superAdminSvc.createOrgUnitCert(tenant).runSyncUnsafe())
       }
     }
@@ -86,6 +94,8 @@ class SuperAdminServiceSpec extends UnitTestBase {
         val aesEncryption = injector.get[AESEncryption]
         val repo = injector.get[TenantRepository]
         val certHandlerMock = mock[CertHandler]
+        val teamDriveServiceMock = mock[TeamDriveService]
+        val pocConfigMock = mock[PocConfig]
 
         val tenant = createTenant()
         val orgUnitCertId = UUID.randomUUID()
@@ -93,10 +103,11 @@ class SuperAdminServiceSpec extends UnitTestBase {
         when(certHandlerMock.createSharedAuthCertificate(any[UUID], any[UUID], any[CertIdentifier]))
           .thenReturn(Task(Left(CertificateCreationError("error"))))
 
-        val superAdminSvc = new DefaultSuperAdminService(aesEncryption, repo, certHandlerMock)
+        val superAdminSvc =
+          new DefaultSuperAdminService(aesEncryption, repo, certHandlerMock, teamDriveServiceMock, pocConfigMock)
 
         assertThrows[TenantCreationException](superAdminSvc
-          .createSharedAuthCert(tenant, Some(OrgUnitId(orgUnitCertId))).runSyncUnsafe())
+          .createSharedAuthCert(tenant, OrgUnitId(orgUnitCertId)).runSyncUnsafe())
       }
     }
 

@@ -60,6 +60,7 @@ object ConfPaths {
     final val GO_CLIENT_URL = "system.services.goClientURL"
     final val GO_CLIENT_TOKEN = "system.services.goClientToken"
     final val POC_CREATION_INTERVAL = "system.services.pocCreationInterval"
+    final val TEAM_DRIVE_ADMIN_EMAILS = "system.services.teamDriveAdminEmails"
   }
 
   trait AESEncryption {
@@ -74,6 +75,15 @@ object ConfPaths {
     final val DATABASE_NAME = "database.dataSource.databaseName"
   }
 
+  sealed trait TeamDrivePaths {
+    val URL = "system.teamdrive.url"
+    val USERNAME = "system.teamdrive.username"
+    val PASSWORD = "system.teamdrive.password"
+    val READ_TIMEOUT = "system.teamdrive.readTimeout"
+    val STAGE = "system.teamdrive.stage"
+    val UBIRCH_ADMINS = "system.teamdrive.ubirchAdmins"
+  }
+
   object GenericConfPaths extends GenericConfPaths
 
   object HttpServerConfPaths extends HttpServerConfPaths
@@ -85,4 +95,6 @@ object ConfPaths {
   object AESEncryptionPaths extends AESEncryption
 
   object PostgresPaths extends PostgresPaths
+
+  object TeamDrivePaths extends TeamDrivePaths
 }

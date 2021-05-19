@@ -6,6 +6,8 @@ import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{ KeycloakCertifyConfig, KeycloakDeviceConfig }
 import com.ubirch.services.poc.{ CertHandler, TestCertHandler }
+import com.ubirch.services.teamdrive.model.TeamDriveClient
+import com.ubirch.test.FakeTeamDriveClient
 import io.getquill.{ PostgresJdbcContext, SnakeCase }
 import io.getquill.context.monix.MonixJdbcContext.Runner
 import io.getquill.{ PostgresJdbcContext, PostgresMonixJdbcContext, SnakeCase }
@@ -101,5 +103,8 @@ class E2EInjectorHelperImpl(val superAdmin: SuperAdmin, val tenantAdmin: TenantA
       super.configure()
       bind(classOf[KeycloakUsersRuntimeConfig]).toInstance(KeycloakUsersRuntimeConfig(tenantAdmin))
     }
+
+    override def TeamDriveClient: ScopedBindingBuilder =
+      bind(classOf[TeamDriveClient]).to(classOf[FakeTeamDriveClient])
 
   }))

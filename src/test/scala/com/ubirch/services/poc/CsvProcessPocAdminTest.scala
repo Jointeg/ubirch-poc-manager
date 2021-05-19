@@ -56,7 +56,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           assert(pocAdminStatusOpt.isDefined)
           assert(pocAdminStatusOpt.get.pocAdminId == pocAdmin.id)
         }).onErrorHandle { e =>
-            fail(e)
+          fail(e)
         }.runSyncUnsafe()
       }
     }
