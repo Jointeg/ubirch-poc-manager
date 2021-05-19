@@ -1,15 +1,13 @@
 package com.ubirch.services.superadmin
 
 import com.ubirch.ModelCreationHelper.{ createTenant, createTenantRequest }
-import com.ubirch.{ PocConfig, UnitTestBase }
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.models.auth.CertIdentifier
-import com.ubirch.models.tenant.{ OrgId, OrgUnitId, TenantId }
+import com.ubirch.models.tenant.{ OrgId, TenantId }
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
-import com.ubirch.services.teamdrive.{ model, TeamDriveService }
-import com.ubirch.services.teamdrive.model.TeamDriveClient
-import com.ubirch.test.FakeTeamDriveClient
+import com.ubirch.services.teamdrive.TeamDriveService
+import com.ubirch.{ PocConfig, UnitTestBase }
 import monix.eval.Task
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
@@ -33,7 +31,6 @@ class SuperAdminServiceSpec extends UnitTestBase {
         r.isRight shouldBe true
         val t = tenantRepo.getTenant(r.right.get).runSyncUnsafe()
         t.isDefined shouldBe true
-        t.get.orgUnitId.isDefined shouldBe true
         t.get.sharedAuthCert.isDefined shouldBe true
       }
     }
@@ -49,7 +46,6 @@ class SuperAdminServiceSpec extends UnitTestBase {
         r.isRight shouldBe true
         val t = tenantRepo.getTenant(r.right.get).runSyncUnsafe()
         t.isDefined shouldBe true
-        t.get.orgUnitId.isEmpty shouldBe true
         t.get.sharedAuthCert.isEmpty shouldBe true
       }
     }
@@ -106,8 +102,7 @@ class SuperAdminServiceSpec extends UnitTestBase {
         val superAdminSvc =
           new DefaultSuperAdminService(aesEncryption, repo, certHandlerMock, teamDriveServiceMock, pocConfigMock)
 
-        assertThrows[TenantCreationException](superAdminSvc
-          .createSharedAuthCert(tenant, OrgUnitId(orgUnitCertId)).runSyncUnsafe())
+        assertThrows[TenantCreationException](superAdminSvc.createSharedAuthCert(tenant).runSyncUnsafe())
       }
     }
 

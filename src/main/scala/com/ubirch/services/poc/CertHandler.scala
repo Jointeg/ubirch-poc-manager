@@ -102,8 +102,31 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
       .response(asJson[SharedAuthCertificateResponse])
       .send())
 
-    import cats.syntax.either._
+    response.flatMap { r =>
+      if (r.code == StatusCode.Conflict) logger.debug("response object also has code in case of conflict")
+      r.body match {
+        case Right(response: SharedAuthCertificateResponse) => Task(Right(response))
 
+        case Left(ex: HttpError) if ex.statusCode == sttp.model.StatusCode.Conflict =>
+          logger.info("shared auth creation for responded with conflict; will be updated instead")
+          updateSharedAuthCertificate(groupId)
+
+        case Left(responseError: ResponseError[Exception]) =>
+          logger.error("unexpected exception during shared auth cert creation", responseError)
+          Task(Left(CertificateCreationError(responseError.getMessage)))
+      }
+    }
+  }
+
+  private def updateSharedAuthCertificate(groupId: UUID)
+    : Task[Either[CertificateCreationError, SharedAuthCertificateResponse]] = {
+
+    val response = Task.deferFuture(basicRequest
+      .put(uri"$certManagerUrl/groups/${groupId.toString}")
+      .auth.bearer(certManagerToken)
+      .response(asJson[SharedAuthCertificateResponse])
+      .send())
+    import cats.syntax.either._
     response.map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage)))
   }
 
