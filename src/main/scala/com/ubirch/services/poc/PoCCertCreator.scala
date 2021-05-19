@@ -1,7 +1,6 @@
 package com.ubirch.services.poc
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.auth.CertIdentifier
-import com.ubirch.models.auth.cert.SharedAuthCertificateResponse
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.PKCS12Operations
 import com.ubirch.services.teamdrive.TeamDriveService
@@ -38,7 +37,7 @@ object PoCCertCreator extends LazyLogging {
           case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
           case Right(keystore) => Task(keystore)
         } // TODO: store the PKCS12 and passphrase in TeamDrive
-      name = s"${stage}_tenantName_${poc.pocName}_${poc.externalId}" // TODO missing tenantName
+      name = s"${stage}_${tenant.tenantName.value}_${poc.pocName}_${poc.externalId}"
       _ <- teamDriveService.shareCert(
         name,
         ubirchAdmins :+ poc.manager.managerEmail,
