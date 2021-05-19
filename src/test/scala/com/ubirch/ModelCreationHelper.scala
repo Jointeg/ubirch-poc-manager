@@ -18,6 +18,7 @@ object ModelCreationHelper {
   private val encryptedData = EncryptedData(base64String)
   private val deviceCreationToken = EncryptedDeviceCreationToken(encryptedData)
   val dataSchemaGroupId = "data-schema-id"
+  val pocTypeValue = "ub_vac_app"
 
   private val tenantName = "tenantName"
 
@@ -52,6 +53,7 @@ object ModelCreationHelper {
       id,
       TenantId(tenantName),
       externalId,
+      pocTypeValue,
       name,
       Address("", "", None, 67832, "", None, None, "France"),
       "pocPhone",

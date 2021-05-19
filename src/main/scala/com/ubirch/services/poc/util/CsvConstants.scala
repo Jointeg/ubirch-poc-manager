@@ -3,6 +3,7 @@ package com.ubirch.services.poc.util
 object CsvConstants {
 
   val externalId = "external_id*"
+  val pocType = "poc_type*"
   val pocName = "poc_name*"
   val street = "street*"
   val streetNumber = "street_number*"
@@ -35,6 +36,7 @@ object CsvConstants {
 
   val pocHeaderColsOrder: Array[String] = Array(
     externalId,
+    pocType,
     pocName,
     street,
     streetNumber,
@@ -59,6 +61,7 @@ object CsvConstants {
 
   val pocAdminHeaderColsOrder: Array[String] = Array(
     externalId,
+    pocType,
     pocName,
     street,
     streetNumber,

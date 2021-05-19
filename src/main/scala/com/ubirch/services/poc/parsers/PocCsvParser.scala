@@ -1,9 +1,9 @@
 package com.ubirch.services.poc.parsers
 
+import cats.data.Validated.{ Invalid, Valid }
+import cats.implicits.{ catsSyntaxTuple11Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
-import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
 import com.ubirch.models.csv.PocRow
 import com.ubirch.models.poc
 import com.ubirch.models.poc._
@@ -47,6 +47,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
     tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPoc.externalId),
+      validateMapContainsStringKey(pocType, csvPoc.pocType, pocConfig.pocTypeEndpointMap),
       validatePocName(pocName, csvPoc.pocName),
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
@@ -59,6 +60,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
     ).mapN {
       (
         externalId,
+        pocType,
         pocName,
         address,
         pocPhone,
@@ -73,6 +75,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             UUID.randomUUID(),
             tenant.id,
             externalId,
+            pocType,
             pocName,
             address,
             pocPhone,

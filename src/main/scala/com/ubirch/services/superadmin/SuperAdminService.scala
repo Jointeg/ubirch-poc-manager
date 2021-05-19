@@ -35,10 +35,10 @@ class DefaultSuperAdminService @Inject() (
         aesEncryption.encrypt(createTenantRequest.deviceCreationToken.value)(EncryptedDeviceCreationToken(_))
       tenant = convertToTenant(encryptedDeviceCreationToken, createTenantRequest)
 
+      _ <- createOrgCert(tenant)
       tenantId <-
         if (tenant.sharedAuthCertRequired) {
           for {
-            _ <- createOrgCert(tenant)
             orgUnitID <- createOrgUnitCert(tenant)
             response <- createSharedAuthCert(tenant, orgUnitID)
             _ <- teamDriveService.shareCert(
