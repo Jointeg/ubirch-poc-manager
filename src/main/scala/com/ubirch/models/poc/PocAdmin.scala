@@ -14,8 +14,8 @@ case class PocAdmin(
   email: String,
   mobilePhone: String,
   webIdentRequired: Boolean,
-  webIdentIdentifier: Option[String],
-  webInitiateId: Option[UUID],
+  webIdentId: Option[String],
+  webIdentInitiateId: Option[UUID],
   certifierUserId: UUID,
   dateOfBirth: BirthDate,
   status: Status = Pending,
@@ -45,8 +45,8 @@ object PocAdmin {
       email = email,
       mobilePhone = mobilePhone,
       webIdentRequired = webIdentRequired,
-      webIdentIdentifier = None,
-      webInitiateId = None,
+      webIdentId = None,
+      webIdentInitiateId = None,
       certifierUserId = certifierUserId,
       dateOfBirth = BirthDate(dateOfBirth)
     )
