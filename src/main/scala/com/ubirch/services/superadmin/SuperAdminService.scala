@@ -41,7 +41,7 @@ class DefaultSuperAdminService @Inject() (
         if (tenant.sharedAuthCertRequired) {
           for {
             orgUnitID <- createOrgUnitCert(tenant)
-            response <- createSharedAuthCert(tenant, orgUnitID)
+            response <- createSharedAuthCert(tenant)
             _ <- createShareCertIntoTD(tenant, response)
             cert <- getCert(tenant, response)
             updated = tenant.copy(sharedAuthCert = Some(SharedAuthCert(cert)))
