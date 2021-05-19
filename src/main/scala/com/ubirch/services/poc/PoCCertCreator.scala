@@ -32,11 +32,11 @@ object PoCCertCreator extends LazyLogging {
       }
       (pocAndStatus, sharedAuthResponse) = statusWithResponse
       _ <-
-        Task.pure(
+        Task(
           PKCS12Operations.recreateFromBase16String(sharedAuthResponse.pkcs12, sharedAuthResponse.passphrase)).flatMap {
           case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
           case Right(keystore) => Task(keystore)
-        } // TODO: store the PKCS12 and passphrase in TeamDrive
+        }
       name = s"${stage}_${tenant.tenantName.value}_${poc.pocName}_${poc.externalId}"
       _ <- teamDriveService.shareCert(
         name,
@@ -44,7 +44,11 @@ object PoCCertCreator extends LazyLogging {
         sharedAuthResponse.passphrase,
         sharedAuthResponse.pkcs12
       )
-    } yield pocAndStatus.updatePoc(_.copy(sharedAuthCertId = Some(sharedAuthResponse.certUuid)))
+    } yield {
+      pocAndStatus
+        .updatePoc(_.copy(sharedAuthCertId = Some(sharedAuthResponse.certUuid)))
+        .updateStatus(_.copy(clientCertProvided = Some(true)))
+    }
   }
 
   def pocCreationError[A](msg: String, pocAndStatus: PocAndStatus): Task[A] = {
