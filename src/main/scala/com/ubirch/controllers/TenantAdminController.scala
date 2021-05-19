@@ -12,12 +12,18 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantName }
+import com.ubirch.models.tenant.{ CreateWebInitiateIdRequest, CreateWebInitiateIdResponse, Tenant, TenantName }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
-import com.ubirch.services.tenantadmin.TenantAdminService
+import com.ubirch.services.tenantadmin.{
+  PocAdminAssignedToDifferentTenant,
+  PocAdminNotFound,
+  PocAdminRepositoryError,
+  TenantAdminService,
+  WebIdentNotRequired
+}
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -182,6 +188,34 @@ class TenantAdminController @Inject() (
               response.setHeader("Content-Disposition", "attachment; filename=simplified-devices-info.csv")
               Ok(devicesInformation)
             })
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
+  post("webident/initiate-id", ???) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult("Create web initiate id") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            tenantAdminService.createWebInitiateId(tenant, parsedBody.extract[CreateWebInitiateIdRequest]).map {
+              case Right(webInitiateId) => Ok(CreateWebInitiateIdResponse(webInitiateId))
+              case Left(PocAdminNotFound(pocAdminId)) =>
+                logger.error(s"Could not find PocAdmin with id: $pocAdminId")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
+              case Left(PocAdminAssignedToDifferentTenant(tenantId, pocAdminTenantId)) =>
+                logger.error(s"Tenant with ID $tenantId tried to operate on PoC Admin with ID $pocAdminTenantId who is assigned to different tenant")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
+              case Left(WebIdentNotRequired(tenantId, pocAdminId)) =>
+                logger.error(s"Tenant with ID $tenantId tried to create WebInitiateId but PoC admin with ID $pocAdminId does not require WebIdent")
+                BadRequest("PoC admin does not require WebIdent")
+              case Left(PocAdminRepositoryError(msg)) =>
+                logger.error(s"Error has occurred while operating on PocAdmin table: $msg")
+                InternalServerError(NOK.serverError("Could not create PoC admin WebInitiateId"))
+            }
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))

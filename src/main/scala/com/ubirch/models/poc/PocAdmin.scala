@@ -15,6 +15,7 @@ case class PocAdmin(
   mobilePhone: String,
   webIdentRequired: Boolean,
   webIdentIdentifier: Option[String],
+  webInitiateId: Option[UUID],
   certifierUserId: UUID,
   dateOfBirth: BirthDate,
   status: Status = Pending,
@@ -35,18 +36,19 @@ object PocAdmin {
     webIdentRequired: Boolean,
     certifierUserId: UUID,
     dateOfBirth: LocalDate): PocAdmin = {
-    PocAdmin(
-      id,
-      pocId,
-      tenantId,
-      name,
-      surName,
-      email,
-      mobilePhone,
-      webIdentRequired,
-      None,
-      certifierUserId,
-      BirthDate(dateOfBirth)
+    new PocAdmin(
+      id = id,
+      pocId = pocId,
+      tenantId = tenantId,
+      name = name,
+      surname = surName,
+      email = email,
+      mobilePhone = mobilePhone,
+      webIdentRequired = webIdentRequired,
+      webIdentIdentifier = None,
+      webInitiateId = None,
+      certifierUserId = certifierUserId,
+      dateOfBirth = BirthDate(dateOfBirth)
     )
   }
 
