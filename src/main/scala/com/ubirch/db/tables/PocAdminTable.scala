@@ -15,6 +15,8 @@ trait PocAdminRepository {
   def getPocAdmin(pocAdminId: UUID): Task[Option[PocAdmin]]
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
+
+  def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminRepository {
@@ -35,6 +37,11 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.tenantId == lift(tenantId))
     }
 
+  private def updatePocAdminQuery(pocAdmin: PocAdmin) =
+    quote {
+      querySchema[PocAdmin]("poc_manager.poc_admin_table").update(lift(pocAdmin))
+    }
+
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] =
     run(createPocAdminQuery(pocAdmin)).map(_ => pocAdmin.id)
 
@@ -44,4 +51,5 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]] = {
     run(getAllPocAdminsByTenantIdQuery(tenantId))
   }
+  override def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit] = run(updatePocAdminQuery(pocAdmin)).void
 }

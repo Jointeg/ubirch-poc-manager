@@ -30,4 +30,5 @@ class PocAdminRepositoryMock extends PocAdminRepository {
       }.toList
     }
   }
+  override def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit] = Task(pocAdminDatastore.update(pocAdmin.id, pocAdmin))
 }

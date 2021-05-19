@@ -12,12 +12,17 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ Tenant, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantName, UpdateWebidentIdentifierRequest }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
-import com.ubirch.services.tenantadmin.TenantAdminService
+import com.ubirch.services.tenantadmin.{
+  NotExistingPocAdminStatus,
+  PocAdminIsNotAssignedToRequestingTenant,
+  TenantAdminService,
+  UnknownPocAdmin
+}
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -98,6 +103,16 @@ class TenantAdminController @Inject() (
       .description("Retrieves all devices that belongs to PoCs that are managed by querying Tenant.")
       .tags("Tenant-Admin", "Devices")
       .authorizations()
+
+  val updateWebidentIdentifier: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("UpdateWebidentIdentifier")
+      .summary("Updates Webident Identifier for given PoC Admin")
+      .tags("Tenant-Admin")
+      .authorizations()
+      .parameters(
+        bodyParam[String]("pocAdminId").description("ID of PoC admin for which identifier will be assigned"),
+        bodyParam[String]("webidentIdentifier").description("Webident identifier")
+      )
 
   post("/pocs/create", operation(createListOfPocs)) {
 
@@ -182,6 +197,34 @@ class TenantAdminController @Inject() (
               response.setHeader("Content-Disposition", "attachment; filename=simplified-devices-info.csv")
               Ok(devicesInformation)
             })
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
+  post("webident/identifier", operation(updateWebidentIdentifier)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult("Update Webident identifier") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            tenantAdminService.updateWebidentIdentifier(
+              tenant,
+              parsedBody.extract[UpdateWebidentIdentifierRequest]).map {
+              case Right(_) => Ok("")
+              case Left(UnknownPocAdmin(id)) =>
+                logger.error(s"Could not find PoC Admin with id $id")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC Admin with provided ID"))
+              case Left(PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId, requestingTenantId)) =>
+                logger.error(
+                  s"Requesting tenant with ID $requestingTenantId asked to change WebIdent for admin with id $pocAdminTenantId that is not under his assignment")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC Admin with provided ID"))
+              case Left(NotExistingPocAdminStatus(id)) =>
+                logger.error(s"Could not find PoC Admin status for id $id")
+                NotFound(NOK.resourceNotFoundError("Could not find Poc Admin Status assigned to given PoC Admin"))
+            }
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))

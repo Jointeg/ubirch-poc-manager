@@ -19,4 +19,6 @@ class PocAdminStatusRepositoryMock extends PocAdminStatusRepository {
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]] = {
     Task(pocAdminDatastore.get(pocAdminId))
   }
+  override def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
+    Task(pocAdminDatastore.update(pocAdminStatus.pocAdminId, pocAdminStatus))
 }
