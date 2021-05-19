@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_table
     id                   UUID        NOT NULL,
     tenant_id            UUID        NOT NULL,
     external_id          varchar(40) NOT NULL,
+    poc_type             text        NOT NULL,
     poc_name             text        NOT NULL,
     street               text        NOT NULL,
     house_number         text        NOT NULL,

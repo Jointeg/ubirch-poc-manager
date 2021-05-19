@@ -33,6 +33,7 @@ class PocJsonFormatTest extends UnitTestBase {
           |  "id":"da4ba61a-e6c9-4124-bd3a-df7373e73676",
           |  "tenantId":"cdc1e27c-ff79-5bd8-38a1-bf918d618b2b",
           |  "externalId":"64ccc885-b512-413c-8155-4320e34e4ce7",
+          |  "pocType":"ub_vac_app",
           |  "pocName":"pocName",
           |  "address":{
           |    "street":"",
@@ -70,6 +71,7 @@ class PocJsonFormatTest extends UnitTestBase {
       id = id,
       tenantId = TenantId(tenantName),
       externalId = externalId,
+      pocType = "ub_vac_app",
       pocName = "pocName",
       address = Address("", "", None, 67832, "", None, None, "France"),
       phone = "pocPhone",

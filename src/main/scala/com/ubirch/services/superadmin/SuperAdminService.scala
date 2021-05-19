@@ -51,7 +51,7 @@ class DefaultSuperAdminService @Inject() (
     certHandler
       .createOrganisationalCertificate(tenant.getOrgId, orgCertIdentifier)
       .map {
-        case Right(_)                            =>
+        case Right(_) =>
           logger.debug(s"successfully created org cert ${tenant.getOrgId} for tenant ${tenant.tenantName}")
         case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
       }
@@ -66,7 +66,7 @@ class DefaultSuperAdminService @Inject() (
       certHandler
         .createOrganisationalUnitCertificate(tenant.getOrgId, orgUnitCertId, identifier)
         .map {
-          case Right(_)                            =>
+          case Right(_) =>
             logger.debug(s"successfully created org unit cert $orgUnitCertId for tenant ${tenant.tenantName}")
             Some(OrgUnitId(orgUnitCertId))
           case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
@@ -89,7 +89,7 @@ class DefaultSuperAdminService @Inject() (
           case Right(SharedAuthCertificateResponse(certUuid, _, _)) =>
             logger.debug(s"successfully created shared auth cert $groupId for tenant ${tenant.tenantName}")
             Some(SharedAuthResult(groupId, certUuid))
-          case Left(CertificateCreationError(msg))                  => throw TenantCreationException(msg)
+          case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
         }
     }
   }
@@ -103,8 +103,9 @@ class DefaultSuperAdminService @Inject() (
       certHandler
         .getCert(sharedAuthResult.get.sharedAuthCertId)
         .map {
-          case Right(cert: String)                 =>
-            logger.debug(s"successfully retrieved cert ${sharedAuthResult.get.sharedAuthCertId} for tenant ${tenant.tenantName}")
+          case Right(cert: String) =>
+            logger.debug(
+              s"successfully retrieved cert ${sharedAuthResult.get.sharedAuthCertId} for tenant ${tenant.tenantName}")
             Some(cert)
           case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
         }

@@ -4,6 +4,7 @@ import scala.util.Try
 
 case class PocAdminRow(
   externalId: String,
+  pocType: String,
   pocName: String,
   pocStreet: String,
   pocHouseNumber: String,
@@ -59,7 +60,8 @@ object PocAdminRow {
       columns(22),
       columns(23),
       columns(24),
-      columns(25)
+      columns(25),
+      columns(26)
     )
   }
 }

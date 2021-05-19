@@ -4,10 +4,10 @@ import cats.syntax.apply._
 import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocAdminRow
 import com.ubirch.models.poc
-import com.ubirch.models.poc.{ Address, JsonConfig, LogoURL, Pending, Poc, PocAdmin, PocManager }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.CsvConstants
+import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
@@ -85,6 +85,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPocAdmin.externalId),
+      validateMapContainsStringKey(pocType, csvPocAdmin.pocType, pocConfig.pocTypeEndpointMap),
       validateString(pocName, csvPocAdmin.pocName),
       pocAddress,
       validatePhone(phone, csvPocAdmin.pocPhone),
@@ -97,6 +98,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     ).mapN {
       (
         externalId,
+        pocType,
         pocName,
         address,
         pocPhone,
@@ -111,6 +113,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
             UUID.randomUUID(),
             tenant.id,
             externalId,
+            pocType,
             pocName,
             address,
             pocPhone,
