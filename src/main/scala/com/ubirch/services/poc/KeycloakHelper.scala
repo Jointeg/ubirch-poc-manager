@@ -199,7 +199,7 @@ class KeycloakHelperImpl @Inject() (
     roles
       .findRoleRepresentation(RoleName(poc.roleName), instance)
       .flatMap {
-        case Some(role) => groups.addRoleToGroup(GroupId(groupId), role, instance)
+        case Some(role) => groups.assignRoleToGroup(GroupId(groupId), role, instance)
         case None =>
           throwError(
             PocAndStatus(poc, status),
@@ -218,11 +218,11 @@ class KeycloakHelperImpl @Inject() (
     roles
       .findRoleRepresentation(RoleName(tenantRole), instance)
       .flatMap {
-        case Some(role) => groups.addRoleToGroup(GroupId(groupId), role, instance)
+        case Some(role) => groups.assignRoleToGroup(GroupId(groupId), role, instance)
         case None =>
           throwError(
             PocAndStatus(poc, status),
-            s"adding role ${tenantRole} to ${groupId} failed as role doesn't exist")
+            s"adding role $tenantRole to $groupId failed as role doesn't exist")
       }
   }
 }

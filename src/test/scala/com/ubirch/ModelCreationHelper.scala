@@ -31,7 +31,6 @@ object ModelCreationHelper {
       TenantName(name),
       API,
       deviceCreationToken,
-      IdGardIdentifier("folder-identifier"),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
       OrgId(TenantId(TenantName(name)).value),
@@ -80,9 +79,6 @@ object ModelCreationHelper {
       TenantName("tenantName"),
       API,
       PlainDeviceCreationToken(token),
-      IdGardIdentifier("empty"),
-      TenantCertifyGroupId(UUID.randomUUID().toString),
-      TenantDeviceGroupId(UUID.randomUUID().toString),
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 }

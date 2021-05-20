@@ -4,7 +4,7 @@ import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
-import com.ubirch.models.tenant._
+import com.ubirch.models.tenant.{ API, EncryptedDeviceCreationToken, SharedAuthCert, Tenant, TenantName }
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
@@ -25,9 +25,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "tenantName": "$tenantName",
        |    "usageType": "API",
        |    "deviceCreationToken": "1234567890",
-       |    "idGardIdentifier": "gard-identifier",
-       |    "certifyGroupId": "random-certify-group",
-       |    "deviceGroupId": "random-device-group",
        |    "sharedAuthCertRequired": true
        |}
        |""".stripMargin
@@ -39,9 +36,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "tenantName": "$tenantName",
        |    "usageType": "API",
        |    "deviceCreationToken": "1234567890",
-       |    "idGardIdentifier": "gard-identifier",
-       |    "certifyGroupId": "random-certify-group",
-       |    "deviceGroupId": "random-device-group",
        |    "sharedAuthCertRequired": false
        |}
        |""".stripMargin
@@ -52,9 +46,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |{
        |    "tenantName": "$tenantName",
        |    "deviceCreationToken": "1234567890",
-       |    "idGardIdentifier": "gard-identifier",
-       |    "certifyGroupId": "random-certify-group",
-       |    "deviceGroupId": "random-device-group"
        |}
        |""".stripMargin
   }
@@ -79,9 +70,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
         maybeTenant.value.tenantName shouldBe TenantName(tenantName)
         maybeTenant.value.usageType shouldBe API
-        maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
-        maybeTenant.value.certifyGroupId shouldBe TenantCertifyGroupId("random-certify-group")
-        maybeTenant.value.deviceGroupId shouldBe TenantDeviceGroupId("random-device-group")
         maybeTenant.value.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
       }
     }
@@ -105,9 +93,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
         maybeTenant.value.tenantName shouldBe TenantName(tenantName)
         maybeTenant.value.usageType shouldBe API
-        maybeTenant.value.idGardIdentifier shouldBe IdGardIdentifier("gard-identifier")
-        maybeTenant.value.certifyGroupId shouldBe TenantCertifyGroupId("random-certify-group")
-        maybeTenant.value.deviceGroupId shouldBe TenantDeviceGroupId("random-device-group")
         maybeTenant.value.sharedAuthCert shouldBe None
       }
     }

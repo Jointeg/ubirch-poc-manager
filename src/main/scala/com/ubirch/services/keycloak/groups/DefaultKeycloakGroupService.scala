@@ -132,7 +132,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     }
   }
 
-  override def addRoleToGroup(
+  override def assignRoleToGroup(
     groupId: GroupId,
     role: RoleRepresentation,
     keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] =
