@@ -149,7 +149,7 @@ class TenantAdminController @Inject() (
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             (for {
-              criteria <- handleValidation(tenant)
+              criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
               pocs <- pocTable.getAllPocsByCriteria(criteria)
             } yield Paginated_OUT(pocs.total, pocs.records))
               .map(toJson)
@@ -195,7 +195,7 @@ class TenantAdminController @Inject() (
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             (for {
-              criteria <- handleValidation(tenant)
+              criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPocAdmin)
               pocAdmins <- pocAdminRepository.getAllByCriteria(criteria)
             } yield Paginated_OUT(pocAdmins.total, pocAdmins.records.map(PocAdmin_OUT.fromPocAdmin)))
               .map(toJson)
@@ -239,8 +239,8 @@ class TenantAdminController @Inject() (
     }
   }
 
-  private def handleValidation(tenant: Tenant) =
-    CriteriaValidator.validateParams(tenant.id, params) match {
+  private def handleValidation(tenant: Tenant, validSortColumns: Seq[String]) =
+    CriteriaValidator.validateParams(tenant.id, params, validSortColumns) match {
       case Validated.Valid(a)   => Task(a)
       case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
     }

@@ -16,7 +16,6 @@ import com.ubirch.services.{CertifyKeycloak, DeviceKeycloak}
 import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
-import monix.eval.Task
 import org.joda.time.DateTime
 import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
 import org.json4s.native.Serialization.{read, write}
@@ -407,21 +406,22 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return PoC page for given index and size" in withInjector { Injector =>
+    "return PoC admins page for given index and size" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
+      val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
 
       val r = for {
-        _ <- pocTable.createPoc(createPoc(poc1id, tenant.tenantName))
-        _ <- pocTable.createPoc(createPoc(poc2id, tenant.tenantName))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), tenant.tenantName))
-        _ <- pocTable.createPoc(createPoc(UUID.randomUUID(), TenantName("some name")))
-        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
-      } yield pocs
-      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = TenantId(TenantName("other")), pocId = poc.id))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).map(_.toPocAdminOut)
       get(
         "/poc-admins",
         params = Map("pageIndex" -> "1", "pageSize" -> "2"),
@@ -430,90 +430,94 @@ class TenantAdminControllerSpec
         status should equal(200)
         val out = read[Paginated_OUT[PocAdmin_OUT]](body)
         out.total shouldBe 5
-        out.records shouldBe pocs.slice(2, 4)
+        out.records shouldBe pocAdmins.slice(2, 4)
       }
     }
 
-    "return PoCs for passed search query" in withInjector { Injector =>
+    "return PoC admins for passed search query" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
+      val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
-        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
-      } yield pocs
-      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, email = "admin1@example.com"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, email = "admin11@example.com"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, email = "admi212@example.com"))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).map(_.toPocAdminOut)
       get(
         "/poc-admins",
-        params = Map("search" -> "POC 1"),
+        params = Map("search" -> "admin1"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val out = read[Paginated_OUT[PocAdmin_OUT]](body)
         out.total shouldBe 2
-        out.records shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
+        out.records shouldBe pocAdmins.filter(_.email.startsWith("admin1"))
       }
     }
 
-    "return PoCs ordered asc by field" in withInjector { Injector =>
+    "return PoC admins ordered asc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
+      val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
-        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
-      } yield pocs
-      val pocs = await(r, 5.seconds).sortBy(_.pocName).map(_.datesToIsoFormat)
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin1"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin2"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin3"))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).sortBy(_.name).map(_.toPocAdminOut)
       get(
         "/poc-admins",
-        params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
+        params = Map("sortColumn" -> "name", "sortOrder" -> "asc"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val out = read[Paginated_OUT[PocAdmin_OUT]](body)
         out.total shouldBe 3
-        out.records shouldBe pocs
+        out.records shouldBe pocAdmins
       }
     }
 
-    "return PoCs ordered desc by field" in withInjector { Injector =>
+    "return PoC admins ordered desc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
+      val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
-        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
-      } yield pocs
-      val pocs = await(r, 5.seconds).sortBy(_.pocName).reverse.map(_.datesToIsoFormat)
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin1"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin2"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin3"))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).sortBy(_.name).reverse.map(_.toPocAdminOut)
       get(
         "/poc-admins",
-        params = Map("sortColumn" -> "pocName", "sortOrder" -> "desc"),
+        params = Map("sortColumn" -> "name", "sortOrder" -> "desc"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
         val out = read[Paginated_OUT[PocAdmin_OUT]](body)
         out.total shouldBe 3
-        out.records shouldBe pocs
+        out.records shouldBe pocAdmins
       }
     }
 
-    "return only pocs with matching status" in withInjector { Injector =>
+    "return only poc admins with matching status" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
+      val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
-        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
-      } yield pocs
-      val pocs = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.datesToIsoFormat)
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Pending))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Processing))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Completed))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.toPocAdminOut)
       get(
         "/poc-admins",
         params = Map("filterColumn[status]" -> "pending,processing"),
@@ -522,21 +526,22 @@ class TenantAdminControllerSpec
         status should equal(200)
         val out = read[Paginated_OUT[PocAdmin_OUT]](body)
         out.total shouldBe 2
-        out.records shouldBe pocs
+        out.records shouldBe pocAdmins
       }
     }
 
-    "return pocs with each status when filterColumnStatus parameter is empty" in withInjector { Injector =>
+    "return poc admins with each status when filterColumnStatus parameter is empty" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
+      val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
-        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, status = Completed))
-        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
-      } yield pocs
-      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Pending))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Processing))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Completed))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).map(_.toPocAdminOut)
       get(
         "/poc-admins",
         params = Map("filterColumn[status]" -> ""),
@@ -545,7 +550,7 @@ class TenantAdminControllerSpec
         status should equal(200)
         val out = read[Paginated_OUT[PocAdmin_OUT]](body)
         out.total shouldBe 3
-        out.records shouldBe pocs
+        out.records shouldBe pocAdmins
       }
     }
   }

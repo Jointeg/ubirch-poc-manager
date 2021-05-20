@@ -89,8 +89,8 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
     }
     val dynamic = q.dynamic
     sort.field match {
-      case Some("name") => dynamic.sortBy(p => quote(p.id))(ord)
-      case Some("pocName") => dynamic.sortBy(p => quote(p.tenantId))(ord)
+      case Some("name") => dynamic.sortBy(p => quote(p.name))(ord)
+      case Some("pocName") => dynamic.sortBy(p => quote(p.pocId))(ord)
       case _ => dynamic
     }
   }
