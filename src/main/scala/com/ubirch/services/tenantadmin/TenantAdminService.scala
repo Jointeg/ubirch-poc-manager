@@ -2,7 +2,7 @@ package com.ubirch.services.tenantadmin
 import cats.data.EitherT
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository }
 import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
-import com.ubirch.models.tenant.{ CreateWebIdentInitiateIdRequest, Tenant, TenantId, UpdateWebidentIdentifierRequest }
+import com.ubirch.models.tenant.{ CreateWebIdentInitiateIdRequest, Tenant, TenantId, UpdateWebIdentIdRequest }
 import cats.Applicative
 import monix.eval.Task
 
@@ -11,9 +11,9 @@ import javax.inject.Inject
 
 trait TenantAdminService {
   def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String]
-  def updateWebidentIdentifier(
+  def updateWebIdentId(
     tenant: Tenant,
-    request: UpdateWebidentIdentifierRequest): Task[Either[UpdateWebidentIdError, Unit]]
+    request: UpdateWebIdentIdRequest): Task[Either[UpdateWebIdentIdError, Unit]]
   def createWebIdentInitiateId(
     tenant: Tenant,
     createWebIdentInitiateIdRequest: CreateWebIdentInitiateIdRequest)
@@ -68,28 +68,43 @@ class DefaultTenantAdminService @Inject() (
     } yield webIdentInitiateId).value
   }
 
-  override def updateWebidentIdentifier(
+  override def updateWebIdentId(
     tenant: Tenant,
-    request: UpdateWebidentIdentifierRequest): Task[Either[UpdateWebidentIdError, Unit]] = {
+    request: UpdateWebIdentIdRequest): Task[Either[UpdateWebIdentIdError, Unit]] = {
+    import UpdateWebIdentIdError._
 
-    val getPocAdmin: EitherT[Task, UpdateWebidentIdError, PocAdmin] =
-      EitherT(pocAdminRepository.getPocAdmin(request.pocAdminId).map(_.toRight(UnknownPocAdmin(request.pocAdminId))))
-
-    def isPocAdminAssignedToRequestingTenant(pocAdmin: PocAdmin): EitherT[Task, UpdateWebidentIdError, Unit] =
-      if (pocAdmin.tenantId == tenant.id) EitherT.right(Task(()))
-      else EitherT.left(Task(PocAdminIsNotAssignedToRequestingTenant(pocAdmin.tenantId, tenant.id)))
-
-    def getPocAdminStatus(pocAdmin: PocAdmin): EitherT[Task, UpdateWebidentIdError, PocAdminStatus] =
+    def getPocAdminStatus(pocAdmin: PocAdmin): EitherT[Task, UpdateWebIdentIdError, PocAdminStatus] =
       EitherT(pocAdminStatusRepository.getStatus(pocAdmin.id).map(_.toRight(NotExistingPocAdminStatus(pocAdmin.id))))
 
-    (for {
-      pocAdmin <- getPocAdmin
-      _ <- isPocAdminAssignedToRequestingTenant(pocAdmin)
-      _ <- EitherT.right[UpdateWebidentIdError](pocAdminRepository.updatePocAdmin(pocAdmin.copy(webIdentIdentifier =
-        Some(request.webidentIdentifier.toString))))
-      pocAdminStatus <- getPocAdminStatus(pocAdmin)
-      _ <- EitherT.right[UpdateWebidentIdError](
+    def updatePocAdminWebIdentId(pocAdmin: PocAdmin) = {
+      EitherT.right[UpdateWebIdentIdError](pocAdminRepository.updatePocAdmin(pocAdmin.copy(webIdentId =
+        Some(request.webIdentId.toString))))
+    }
+
+    def updatePocAdminStatus(pocAdminStatus: PocAdminStatus) = {
+      EitherT.right[UpdateWebIdentIdError](
         pocAdminStatusRepository.updateStatus(pocAdminStatus.copy(webIdentIdentified = Some(true))))
+    }
+
+    def isSameWebIdentInitialId(tenant: Tenant, pocAdmin: PocAdmin) = {
+      if (pocAdmin.webIdentInitiateId.contains(request.webIdentInitialId)) {
+        EitherT.rightT[Task, UpdateWebIdentIdError](())
+      } else {
+        EitherT.leftT[Task, UpdateWebIdentIdError](DifferentWebIdentInitialId(
+          request.webIdentInitialId,
+          tenant,
+          pocAdmin))
+      }
+    }
+
+    (for {
+      pocAdmin <- getPocAdmin(request.pocAdminId, UnknownPocAdmin)
+      _ <- isPocAdminAssignedToTenant[Task, UpdateWebIdentIdError](tenant, pocAdmin)(
+        PocAdminIsNotAssignedToRequestingTenant(pocAdmin.tenantId, tenant.id))
+      _ <- isSameWebIdentInitialId(tenant, pocAdmin)
+      _ <- updatePocAdminWebIdentId(pocAdmin)
+      pocAdminStatus <- getPocAdminStatus(pocAdmin)
+      _ <- updatePocAdminStatus(pocAdminStatus)
     } yield ()).value
   }
 
@@ -115,8 +130,12 @@ case class PocAdminAssignedToDifferentTenant(tenantId: TenantId, pocAdminId: UUI
 case class WebIdentNotRequired(tenantId: TenantId, pocAdminId: UUID) extends CreatewebIdentInitiateIdErrors
 case class PocAdminRepositoryError(msg: String) extends CreatewebIdentInitiateIdErrors
 
-sealed trait UpdateWebidentIdError
-case class UnknownPocAdmin(id: UUID) extends UpdateWebidentIdError
-case class PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId: TenantId, requestingTenantId: TenantId)
-  extends UpdateWebidentIdError
-case class NotExistingPocAdminStatus(pocAdminId: UUID) extends UpdateWebidentIdError
+sealed trait UpdateWebIdentIdError
+object UpdateWebIdentIdError {
+  case class UnknownPocAdmin(id: UUID) extends UpdateWebIdentIdError
+  case class PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId: TenantId, requestingTenantId: TenantId)
+    extends UpdateWebIdentIdError
+  case class DifferentWebIdentInitialId(requestWebIdentInitialId: UUID, tenant: Tenant, pocAdmin: PocAdmin)
+    extends UpdateWebIdentIdError
+  case class NotExistingPocAdminStatus(pocAdminId: UUID) extends UpdateWebIdentIdError
+}

@@ -17,7 +17,7 @@ import com.ubirch.models.tenant.{
   CreateWebInitiateIdResponse,
   Tenant,
   TenantName,
-  UpdateWebidentIdentifierRequest
+  UpdateWebIdentIdRequest
 }
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
@@ -106,14 +106,15 @@ class TenantAdminController @Inject() (
       .tags("Tenant-Admin", "Devices")
       .authorizations()
 
-  val updateWebidentIdentifier: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("UpdateWebidentIdentifier")
-      .summary("Updates Webident Identifier for given PoC Admin")
+  val updateWebIdentId: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("UpdateWebIdentId")
+      .summary("Updates WebIdent Identifier for given PoC Admin")
       .tags("Tenant-Admin")
       .authorizations()
       .parameters(
         bodyParam[String]("pocAdminId").description("ID of PoC admin for which identifier will be assigned"),
-        bodyParam[String]("webidentIdentifier").description("Webident identifier")
+        bodyParam[String]("webIdentId").description("WebIdent identifier"),
+        bodyParam[String]("webIdentInitialId").description("WebIdent initial ID")
       )
 
   val createWebInitiateId: SwaggerSupportSyntax.OperationBuilder =
@@ -247,14 +248,15 @@ class TenantAdminController @Inject() (
     }
   }
 
-  post("webident/identifier", operation(updateWebidentIdentifier)) {
+  post("/webident/id", operation(updateWebIdentId)) {
     authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult("Update Webident identifier") { _ => _ =>
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
-            tenantAdminService.updateWebidentIdentifier(
+            import UpdateWebIdentIdError._
+            tenantAdminService.updateWebIdentId(
               tenant,
-              parsedBody.extract[UpdateWebidentIdentifierRequest]).map {
+              Serialization.read[UpdateWebIdentIdRequest](request.body)).map {
               case Right(_) => Ok("")
               case Left(UnknownPocAdmin(id)) =>
                 logger.error(s"Could not find PoC Admin with id $id")
@@ -263,6 +265,10 @@ class TenantAdminController @Inject() (
                 logger.error(
                   s"Requesting tenant with ID $requestingTenantId asked to change WebIdent for admin with id $pocAdminTenantId that is not under his assignment")
                 NotFound(NOK.resourceNotFoundError("Could not find PoC Admin with provided ID"))
+              case Left(DifferentWebIdentInitialId(requestWebIdentInitialId, tenant, pocAdmin)) =>
+                logger.error(
+                  s"Requesting Tenant (${tenant.id}) tried to update WebIdent ID of PoC admin (${pocAdmin.id}) but sent WebIdentInitialID ($requestWebIdentInitialId) does not match the one that is assigned to PoC Admin")
+                BadRequest("Wrong WebIdentInitialId")
               case Left(NotExistingPocAdminStatus(id)) =>
                 logger.error(s"Could not find PoC Admin status for id $id")
                 NotFound(NOK.resourceNotFoundError("Could not find Poc Admin Status assigned to given PoC Admin"))
