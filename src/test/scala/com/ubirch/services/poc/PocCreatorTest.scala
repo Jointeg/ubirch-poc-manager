@@ -18,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 
 class PocCreatorTest extends UnitTestBase {
 
-  "PocCreationLoop" should {
+  "PocCreation" should {
 
     "create pending poc successfully (less code)" in {
       withInjector { injector =>

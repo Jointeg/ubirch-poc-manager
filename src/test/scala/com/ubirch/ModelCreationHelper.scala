@@ -4,6 +4,7 @@ import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
+import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -66,6 +67,36 @@ object ModelCreationHelper {
       status
     )
 
+  def createPocAdmin(
+    pocAdminId: UUID = UUID.randomUUID(),
+    pocId: UUID,
+    tenantName: TenantName,
+    name: String = "firstname",
+    surname: String = "lastname",
+    email: String = "test@example.com",
+    mobilePhone: String = "08023-782137",
+    webIdentRequired: Boolean = false,
+    webIdentIdentifier: Option[String] = None,
+    certifierUserId: UUID = UUID.randomUUID(),
+    dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
+    status: Status = Pending
+  ): PocAdmin = {
+    PocAdmin(
+      pocAdminId,
+      pocId,
+      TenantId(tenantName),
+      name,
+      surname,
+      email,
+      mobilePhone,
+      webIdentRequired,
+      webIdentIdentifier,
+      certifierUserId,
+      dateOfBirth,
+      status
+    )
+  }
+
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
       pocId,
@@ -77,6 +108,17 @@ object ModelCreationHelper {
       logoReceived = None,
       logoStored = None
     )
+
+  def createPocAdminStatus(pocAdminId: UUID = UUID.randomUUID(), webIdentRequired: Boolean = false): PocAdminStatus = {
+    val webIdentTriggered = if (webIdentRequired) Some(false) else None
+    val webIdentIdentifierSuccess = if (webIdentRequired) Some(false) else None
+    PocAdminStatus(
+      pocAdminId,
+      webIdentRequired,
+      webIdentTriggered,
+      webIdentIdentifierSuccess
+    )
+  }
 
   def createTenantRequest(sharedAuthCertRequired: Boolean = true): CreateTenantRequest =
     CreateTenantRequest(

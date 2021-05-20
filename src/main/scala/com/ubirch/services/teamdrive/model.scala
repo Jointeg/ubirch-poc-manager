@@ -11,14 +11,22 @@ object model {
     def createSpace(name: String, path: String): Task[SpaceId]
     def putFile(spaceId: SpaceId, fileName: String, file: ByteBuffer): Task[FileId]
     def inviteMember(spaceId: SpaceId, email: String, permissionLevel: PermissionLevel): Task[Boolean]
+    def getSpaceIdByName(spaceName: String): Task[Option[SpaceId]]
   }
 
   case class SpaceId(v: Int) extends AnyVal
 
   case class FileId(v: Int) extends AnyVal
 
-  case class TeamDriveError(code: Int, message: String)
+  sealed trait TeamDriveException {
+    val message: String
+  }
+  case class TeamDriveHttpError(code: Int, message: String)
     extends RuntimeException(s"TeamDrive failed with message '$message' and code '$code'")
+    with TeamDriveException
+  case class TeamDriveError(message: String)
+    extends RuntimeException(s"TeamDrive failed with message '$message'")
+    with TeamDriveException
 
   case object Read extends PermissionLevel
 

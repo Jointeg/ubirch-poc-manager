@@ -1,5 +1,7 @@
 package com.ubirch.teamdrive
 
+import com.ubirch.PocConfig
+import com.ubirch.services.execution.{ Execution, ExecutionProvider }
 import com.ubirch.services.teamdrive._
 import com.ubirch.services.teamdrive.model.Read
 import com.ubirch.test.TaskSupport._
@@ -7,6 +9,7 @@ import com.ubirch.test.TestData._
 import com.ubirch.test._
 import monix.eval.Task
 import org.json4s.Formats
+import org.scalatest.mockito.MockitoSugar.mock
 import sttp.client.SttpClientException
 
 import java.nio.ByteBuffer
@@ -15,6 +18,7 @@ import scala.concurrent.duration._
 class SttpTeamDriveClientTest extends HttpTest {
 
   implicit private val formats: Formats = org.json4s.DefaultFormats
+  implicit val execution = mock[Execution]
 
   import SttpTeamDriveClientTest._
 
@@ -40,7 +44,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       val response = client.createSpace(spaceName, spacePath).catchError
 
       // then
-      response mustBe model.TeamDriveError(30, "some error")
+      response mustBe model.TeamDriveHttpError(30, "some error")
     }
   }
 
@@ -72,7 +76,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       val response = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).catchError
 
       // then
-      response mustBe model.TeamDriveError(30, "some error")
+      response mustBe model.TeamDriveHttpError(30, "some error")
     }
   }
 
@@ -104,7 +108,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).catchError
 
       // then
-      response mustBe model.TeamDriveError(30, "some error")
+      response mustBe model.TeamDriveHttpError(30, "some error")
     }
   }
 

@@ -4,11 +4,13 @@ import com.ubirch.services.teamdrive.model.{ FileId, PermissionLevel, SpaceId, T
 import monix.eval.Task
 
 import java.nio.ByteBuffer
+import javax.inject.Singleton
 import scala.collection._
 
 /**
   * Is not thread-safe
   */
+@Singleton
 class FakeTeamDriveClient extends TeamDriveClient {
   private var files: Map[SpaceId, Seq[FileId]] = Map.empty
   private var spaces: Map[SpaceId, String] = Map.empty
@@ -47,6 +49,10 @@ class FakeTeamDriveClient extends TeamDriveClient {
         case None => false
       }
     }
+
+  override def getSpaceIdByName(spaceName: String): Task[Option[SpaceId]] = Task {
+    spaces.filter(_._2 == spaceName).keys.headOption
+  }
 
   def emailIsInvited(spaceId: SpaceId, email: String): Boolean =
     invitations(spaceId).contains(email)

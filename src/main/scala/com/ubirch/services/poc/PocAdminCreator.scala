@@ -1,10 +1,22 @@
 package com.ubirch.services.poc
 
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
-import com.ubirch.db.tables.{ PocAdminStatusTable, PocAdminTable, PocTable, TenantTable }
+import com.ubirch.PocConfig
+import com.ubirch.db.tables.{
+  PocAdminRepository,
+  PocAdminStatusRepository,
+  PocAdminStatusTable,
+  PocAdminTable,
+  PocRepository,
+  PocTable,
+  TenantRepository,
+  TenantTable
+}
 import com.ubirch.models.poc.{ Completed, Poc, PocAdmin, PocAdminStatus, Processing, Status }
 import com.ubirch.models.tenant.Tenant
+import com.ubirch.services.teamdrive.model.{ Read, TeamDriveClient }
 import monix.eval.Task
+import PocAdminCreator.{ throwAndLogError, throwError }
 
 import javax.inject.Inject
 
@@ -27,19 +39,20 @@ object PocAdminCreator {
 }
 
 class PocAdminCreatorImpl @Inject() (
-  pocTable: PocTable,
-  pocAdminTable: PocAdminTable,
-  pocAdminStatusTable: PocAdminStatusTable,
-  tenantTable: TenantTable,
-  keycloakHelper: KeycloakHelper,
+  pocRepository: PocRepository,
+  pocAdminRepository: PocAdminRepository,
+  pocAdminStatusRepository: PocAdminStatusRepository,
+  tenantRepository: TenantRepository,
+  teamDriveClient: TeamDriveClient,
+  pocConfig: PocConfig,
   certifyHelper: CertifyHelper)
   extends PocAdminCreator
   with LazyLogging {
   def createPocAdmins(): Task[PocAdminCreationResult] = {
-    pocAdminTable.getAllUncompletedPocs().flatMap {
+    pocAdminRepository.getAllUncompletedPocs().flatMap {
       case pocAdmins if pocAdmins.isEmpty =>
         logger.debug("no poc admins waiting for completion")
-        Task(PocAdminCreationSuccess)
+        Task(NoWaitingPocAdmin)
       case pocAdmins =>
         logger.info(s"starting to create ${pocAdmins.size} pocAdmins")
         Task.gather(pocAdmins.map(createPocAdmin))
@@ -75,13 +88,14 @@ class PocAdminCreatorImpl @Inject() (
     tenant: Tenant): Task[Either[String, PocAdminStatus]] = {
     val creationResult: Task[PocAdminAndStatus] = for {
       afterCertifyTaskStatus <- doCertifyRealmRelatedTasks(pocAdminAndStatus, poc, tenant)
-    } yield afterCertifyTaskStatus
+      completeStatus <- invitePocAdminToTeamDrive(afterCertifyTaskStatus, tenant)
+    } yield completeStatus
 
     (for {
       completePocAndStatus <- creationResult
       newPocAdmin = completePocAndStatus.admin.copy(status = Completed)
-      _ <- pocAdminTable.updatePocAdmin(newPocAdmin)
-      _ <- pocAdminStatusTable.updateStatus(completePocAndStatus.status)
+      _ <- pocAdminRepository.updatePocAdmin(newPocAdmin)
+      _ <- pocAdminStatusRepository.updateStatus(completePocAndStatus.status)
     } yield {
       logger.info(s"finished to create poc admin with id ${pocAdminAndStatus.admin.id}")
       Right(completePocAndStatus.status)
@@ -99,11 +113,30 @@ class PocAdminCreatorImpl @Inject() (
     } yield finalStatus
   }
 
+  private def invitePocAdminToTeamDrive(
+    pocAdminAndStatus: PocAdminAndStatus,
+    tenant: Tenant): Task[PocAdminAndStatus] = {
+    val spaceName = s"${pocConfig.teamDriveStage}_${tenant.tenantName.value}"
+    teamDriveClient.getSpaceIdByName(spaceName).flatMap {
+      case Some(spaceId) => teamDriveClient.inviteMember(spaceId, pocAdminAndStatus.admin.email, Read)
+      case None =>
+        val errorMsg = s"space was not found. ${spaceName}"
+        logger.error(errorMsg)
+        throwError(pocAdminAndStatus, errorMsg)
+    }.map { _ =>
+      pocAdminAndStatus.copy(status = pocAdminAndStatus.status.copy(invitedToTeamDrive = true))
+    }.onErrorHandle {
+      case ex =>
+        val errorMsg = s"failed to invite poc admin ${pocAdminAndStatus.admin.id} to TeamDrive."
+        throwAndLogError(pocAdminAndStatus, errorMsg, ex, logger)
+    }
+  }
+
   private def updateStatusOfPoc(pocAdmin: PocAdmin, newStatus: Status): Task[PocAdmin] = {
     if (pocAdmin.status == newStatus) Task(pocAdmin)
     else {
       val updatedPoc = pocAdmin.copy(status = newStatus)
-      pocAdminTable
+      pocAdminRepository
         .updatePocAdmin(updatedPoc)
         .map(_ => updatedPoc)
     }
@@ -112,9 +145,9 @@ class PocAdminCreatorImpl @Inject() (
   private def retrieveStatusAndTenant(pocAdmin: PocAdmin)
     : Task[(Option[PocAdminStatus], Option[Poc], Option[Tenant])] = {
     for {
-      status <- pocAdminStatusTable.getStatus(pocAdmin.id)
-      poc <- pocTable.getPoc(pocAdmin.pocId)
-      tenant <- tenantTable.getTenant(pocAdmin.tenantId)
+      status <- pocAdminStatusRepository.getStatus(pocAdmin.id)
+      poc <- pocRepository.getPoc(pocAdmin.pocId)
+      tenant <- tenantRepository.getTenant(pocAdmin.tenantId)
     } yield (status, poc, tenant)
   }
 
@@ -122,8 +155,8 @@ class PocAdminCreatorImpl @Inject() (
     ex match {
       case pace: PocAdminCreationError =>
         (for {
-          _ <- pocAdminTable.updatePocAdmin(pace.pocAdminAndStatus.admin)
-          _ <- pocAdminStatusTable.updateStatus(pace.pocAdminAndStatus.status)
+          _ <- pocAdminRepository.updatePocAdmin(pace.pocAdminAndStatus.admin)
+          _ <- pocAdminStatusRepository.updateStatus(pace.pocAdminAndStatus.status)
         } yield {
           val msg =
             s"updated poc admin status after poc admin creation failed; ${pace.pocAdminAndStatus.status}, error: ${pace.message}"
@@ -144,7 +177,7 @@ class PocAdminCreatorImpl @Inject() (
 }
 
 sealed trait PocAdminCreationResult
-case object PocAdminCreationSuccess extends PocAdminCreationResult
+case object NoWaitingPocAdmin extends PocAdminCreationResult
 case class PocAdminCreationMaybeSuccess(list: Seq[Either[String, PocAdminStatus]]) extends PocAdminCreationResult
 
 case class PocAdminAndStatus(admin: PocAdmin, status: PocAdminStatus)

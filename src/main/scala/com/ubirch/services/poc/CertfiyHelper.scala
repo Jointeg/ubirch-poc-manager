@@ -14,6 +14,9 @@ import monix.eval.Task
 
 import javax.inject.Inject
 
+/**
+  * This trait is for certify realm on keycloak related operations
+  */
 trait CertifyHelper {
   def createCertifyUserWithRequiredActions(pocAdminAndStatus: PocAdminAndStatus): Task[PocAdminAndStatus]
 
