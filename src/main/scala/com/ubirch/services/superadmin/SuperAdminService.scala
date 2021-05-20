@@ -25,7 +25,8 @@ class DefaultSuperAdminService @Inject() (
   tenantRepository: TenantRepository,
   certHandler: CertHandler,
   teamDriveService: TeamDriveService,
-  pocConfig: PocConfig)
+  pocConfig: PocConfig,
+  keycloakHelper: TenantKeycloakHelper)
   extends SuperAdminService
   with LazyLogging
   with TaskHelpers {
@@ -34,13 +35,15 @@ class DefaultSuperAdminService @Inject() (
     for {
       encryptedDeviceCreationToken <-
         aesEncryption.encrypt(createTenantRequest.deviceCreationToken.value)(EncryptedDeviceCreationToken(_))
-      tenant = convertToTenant(encryptedDeviceCreationToken, createTenantRequest)
+
+      deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest.tenantName)
+      tenant = convertToTenant(encryptedDeviceCreationToken, createTenantRequest, deviceAndCertifyGroup)
 
       _ <- createOrgCert(tenant)
       tenantId <-
         if (tenant.sharedAuthCertRequired) {
           for {
-            orgUnitID <- createOrgUnitCert(tenant)
+            _ <- createOrgUnitCert(tenant)
             response <- createSharedAuthCert(tenant)
             _ <- createShareCertIntoTD(tenant, response)
             cert <- getCert(tenant, response)
@@ -124,16 +127,16 @@ class DefaultSuperAdminService @Inject() (
 
   private def convertToTenant(
     encryptedDeviceCreationToken: EncryptedDeviceCreationToken,
-    createTenantRequest: CreateTenantRequest): Tenant = {
+    createTenantRequest: CreateTenantRequest,
+    deviceAndCertifyGroup: DeviceAndCertifyGroups): Tenant = {
     val tenantId = TenantId(createTenantRequest.tenantName)
     Tenant(
       tenantId,
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
       encryptedDeviceCreationToken,
-      createTenantRequest.idGardIdentifier,
-      createTenantRequest.certifyGroupId,
-      createTenantRequest.deviceGroupId,
+      TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
+      TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),
       orgId = OrgId(tenantId.value),
       sharedAuthCertRequired = createTenantRequest.sharedAuthCertRequired
     )

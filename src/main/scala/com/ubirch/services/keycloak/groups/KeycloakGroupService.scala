@@ -24,7 +24,7 @@ trait KeycloakGroupService {
     childGroupName: GroupName,
     keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]]
 
-  def addRoleToGroup(
+  def assignRoleToGroup(
     groupId: GroupId,
     role: RoleRepresentation,
     keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
