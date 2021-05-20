@@ -36,11 +36,8 @@ object ModelCreationHelper {
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
       OrgId(TenantId(TenantName(name)).value),
-      sharedAuthCertRequired = true,
-      Some(OrgUnitId(UUID.randomUUID())),
-      Some(GroupId(UUID.randomUUID())),
-      sharedAuthCert
-    )
+      sharedAuthCertRequired = true
+    ).copy(sharedAuthCert = sharedAuthCert)
   }
 
   def createPoc(

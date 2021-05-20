@@ -15,11 +15,47 @@ case class Tenant(
   deviceGroupId: TenantDeviceGroupId,
   orgId: OrgId,
   sharedAuthCertRequired: Boolean,
-  orgUnitId: Option[OrgUnitId] = None,
-  groupId: Option[GroupId] = None,
+  orgUnitId: OrgUnitId,
+  groupId: GroupId,
   sharedAuthCert: Option[SharedAuthCert] = None,
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
   def getOrgId: UUID = orgId.value.value.asJava()
+}
+
+object Tenant {
+
+  def apply(
+    id: TenantId,
+    tenantName: TenantName,
+    usageType: UsageType,
+    deviceCreationToken: EncryptedDeviceCreationToken,
+    idGardIdentifier: IdGardIdentifier,
+    certifyGroupId: TenantCertifyGroupId,
+    deviceGroupId: TenantDeviceGroupId,
+    orgId: OrgId,
+    sharedAuthCertRequired: Boolean): Tenant =
+    Tenant(
+      id,
+      tenantName,
+      usageType,
+      deviceCreationToken,
+      idGardIdentifier,
+      certifyGroupId,
+      deviceGroupId,
+      orgId,
+      sharedAuthCertRequired,
+      getNamespacedOrgUnitId(id),
+      getNamespacedGroupId(id)
+    )
+
+  private def getNamespacedOrgUnitId(tenantId: TenantId) = {
+    OrgUnitId(memeid4s.UUID.V5.apply(tenantId.value.value, "orgUnitId").asJava())
+  }
+
+  private def getNamespacedGroupId(tenantId: TenantId) = {
+    GroupId(memeid4s.UUID.V5.apply(tenantId.value.value, "groupId").asJava())
+  }
+
 }
