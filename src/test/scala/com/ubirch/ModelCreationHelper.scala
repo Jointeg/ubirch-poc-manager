@@ -96,7 +96,7 @@ object ModelCreationHelper {
     email: String = TestData.PocAdmin.email,
     mobilePhone: String = TestData.PocAdmin.mobilePhone,
     webIdentRequired: Boolean = TestData.PocAdmin.webIdentRequired,
-    webIdentIdentifier: Option[String] = TestData.PocAdmin.webIdentIdentifier,
+    webIdentIdentifier: Option[Boolean] = TestData.PocAdmin.webIdentIdentifier,
     certifierUserId: UUID = UUID.randomUUID(),
     dateOfBirth: BirthDate = TestData.PocAdmin.dateOfBirth,
     status: Status = TestData.PocAdmin.status,

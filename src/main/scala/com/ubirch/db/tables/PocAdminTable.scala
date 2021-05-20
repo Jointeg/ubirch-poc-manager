@@ -1,10 +1,12 @@
 package com.ubirch.db.tables
 
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
-import com.ubirch.models.poc.PocAdmin
+import com.ubirch.db.tables.model.{Criteria, PaginatedResult}
+import com.ubirch.models.common
+import com.ubirch.models.common.Sort
+import com.ubirch.models.poc.{PocAdmin, Status}
 import com.ubirch.models.tenant.TenantId
-import io.getquill.{ EntityQuery, Insert }
+import io.getquill.{EntityQuery, Insert, Ord, Query}
 import monix.eval.Task
 
 import java.util.UUID
@@ -48,7 +50,55 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
     run(getAllPocAdminsByTenantIdQuery(tenantId))
   }
 
-  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[PocAdmin]] = {
-    Task.pure(PaginatedResult(2, Seq.empty))
+  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[PocAdmin]] =
+    transaction {
+      val pocsByCriteria = filterByStatuses(getAllByCriteriaQuery(criteria), criteria.filter.status)
+      val sorted = sortedPocAdmins(pocsByCriteria, criteria.sort)
+      for {
+        total <- run(pocsByCriteria.size)
+        pocs <- run {
+          sorted
+            .drop(quote(lift(criteria.page.index * criteria.page.size)))
+            .take(quote(lift(criteria.page.size)))
+        }
+      } yield {
+        PaginatedResult(total, pocs)
+      }
+    }
+
+  private def getAllByCriteriaQuery(criteria: Criteria) = {
+    val pocByTenantId = quote {
+      querySchema[PocAdmin]("poc_manager.poc_admin_table")
+        .filter(_.tenantId == lift(criteria.tenantId))
+    }
+
+    criteria.search match {
+      case Some(s) =>
+        quote {
+          pocByTenantId
+            .filter(_.email.like(lift(s"$s%")))
+        }
+      case None => pocByTenantId
+    }
   }
+
+  private def sortedPocAdmins(q: Quoted[Query[PocAdmin]], sort: Sort) = {
+    def ord[T]: Ord[T] = sort.order match {
+      case common.ASC  => Ord.asc[T]
+      case common.DESC => Ord.desc[T]
+    }
+    val dynamic = q.dynamic
+    sort.field match {
+      case Some("name") => dynamic.sortBy(p => quote(p.id))(ord)
+      case Some("pocName") => dynamic.sortBy(p => quote(p.tenantId))(ord)
+      case _ => dynamic
+    }
+  }
+
+  private def filterByStatuses(q: Quoted[Query[PocAdmin]], statuses: Seq[Status]) =
+    statuses match {
+      case Nil => quote(q)
+      case _   => quote(q.filter(p => liftQuery(statuses).contains(p.status)))
+    }
+
 }

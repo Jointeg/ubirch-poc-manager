@@ -11,7 +11,7 @@ import com.ubirch.controllers.concerns.{
 }
 import com.ubirch.controllers.validator.CriteriaValidator
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.{ Poc, PocAdmin, PocStatus, Status }
 import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
@@ -22,6 +22,7 @@ import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.joda.time.LocalDate
 import org.json4s.Formats
 import org.json4s.native.Serialization.write
 import org.scalatra._
@@ -196,7 +197,7 @@ class TenantAdminController @Inject() (
             (for {
               criteria <- handleValidation(tenant)
               pocAdmins <- pocAdminRepository.getAllByCriteria(criteria)
-            } yield Paginated_OUT(pocAdmins.total, pocAdmins.records.map(pa => PocAdmin_OUT(pa.id))))
+            } yield Paginated_OUT(pocAdmins.total, pocAdmins.records.map(PocAdmin_OUT.fromPocAdmin)))
               .map(toJson)
               .onErrorRecoverWith {
                 case ValidationError(e) =>
@@ -249,7 +250,30 @@ object TenantAdminController {
   case class Paginated_OUT[T](total: Long, records: Seq[T])
   case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
 
-  case class PocAdmin_OUT(id: UUID)
+  case class PocAdmin_OUT(
+    id: UUID,
+    firstName: String,
+    lastName: String,
+    dateOfBirth: LocalDate,
+    email: String,
+    phone: String,
+    pocName: String,
+    state: Status
+  )
+
+  object PocAdmin_OUT {
+    def fromPocAdmin(pocAdmin: PocAdmin): PocAdmin_OUT =
+      PocAdmin_OUT(
+        pocAdmin.id,
+        pocAdmin.name,
+        pocAdmin.surname,
+        pocAdmin.dateOfBirth.date,
+        pocAdmin.email,
+        pocAdmin.mobilePhone,
+        pocAdmin.name,
+        pocAdmin.status
+      )
+  }
 
   implicit class ResponseOps[T](r: Response[T]) {
     def toJson(implicit f: Formats): Task[String] = Task(write[Response[T]](r))
