@@ -31,11 +31,11 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
   private def createRoles(tenantRoleName: String): Task[Unit] = {
     val tenantRole = CreateKeycloakRole(RoleName(tenantRoleName))
 
-    def createRole(instance: KeycloakInstance) =
+    def createRole(instance: KeycloakInstance): Task[Unit] =
       roles.createNewRole(tenantRole, instance).map {
         case Left(_: RoleCreationException) =>
           throw TenantCreationException(s"failed to creat role in ${instance.name} realm with name $tenantRoleName ")
-        case _ =>
+        case _ => ()
       }
 
     createRole(CertifyKeycloak)
