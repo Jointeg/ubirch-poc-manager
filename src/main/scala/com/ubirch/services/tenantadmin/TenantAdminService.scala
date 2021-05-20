@@ -1,9 +1,9 @@
 package com.ubirch.services.tenantadmin
+import cats.Applicative
 import cats.data.EitherT
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository }
 import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant.{ CreateWebIdentInitiateIdRequest, Tenant, TenantId, UpdateWebIdentIdRequest }
-import cats.Applicative
 import monix.eval.Task
 
 import java.util.UUID
@@ -79,17 +79,12 @@ class DefaultTenantAdminService @Inject() (
       )
 
     def updatePocAdminWebIdentId(pocAdmin: PocAdmin) = {
-      EitherT.right[UpdateWebIdentIdError](pocAdminRepository.updatePocAdmin(pocAdmin.copy(webIdentId =
-        Some(request.webIdentId.toString))))
-    }
-
-    def resetPocAdminWebIdentId(pocAdmin: PocAdmin) = {
-      EitherT.right[UpdateWebIdentIdError](pocAdminRepository.updatePocAdmin(pocAdmin.copy(webIdentId = None)))
+      EitherT.right[UpdateWebIdentIdError](pocAdminRepository.updateWebIdentId(request.webIdentId, pocAdmin.id))
     }
 
     def updatePocAdminStatus(pocAdminStatus: PocAdminStatus) = {
       EitherT.right[UpdateWebIdentIdError](
-        pocAdminStatusRepository.updateStatus(pocAdminStatus.copy(webIdentIdentified = Some(true))))
+        pocAdminStatusRepository.updateWebIdentIdentified(pocAdminStatus.pocAdminId, webIdentIdentified = true))
     }
 
     def isSameWebIdentInitialId(tenant: Tenant, pocAdmin: PocAdmin) = {

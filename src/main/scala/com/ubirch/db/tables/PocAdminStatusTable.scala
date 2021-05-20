@@ -14,6 +14,8 @@ trait PocAdminStatusRepository {
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]]
 
   def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit]
+
+  def updateWebIdentIdentified(pocAdminId: UUID, webIdentIdentified: Boolean): Task[Unit]
 }
 
 class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminStatusRepository {
@@ -31,7 +33,14 @@ class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContex
 
   private def updateStatusQuery(pocAdminStatus: PocAdminStatus) =
     quote {
-      querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").update(lift(pocAdminStatus))
+      querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(
+        _.pocAdminId == lift(pocAdminStatus.pocAdminId)).update(lift(pocAdminStatus))
+    }
+
+  private def updateWebIdentIdentifier(pocAdminId: UUID, webIdentIdentified: Boolean) =
+    quote {
+      querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(_.pocAdminId == lift(pocAdminId)).update(
+        _.webIdentIdentified -> lift(Option(webIdentIdentified)))
     }
 
   def createStatus(pocAdminStatus: PocAdminStatus): Task[UUID] =
@@ -42,4 +51,8 @@ class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContex
 
   override def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
     run(updateStatusQuery(pocAdminStatus)).void
+
+  override def updateWebIdentIdentified(
+    pocAdminId: UUID,
+    webIdentIdentified: Boolean): Task[Unit] = run(updateWebIdentIdentifier(pocAdminId, webIdentIdentified)).void
 }

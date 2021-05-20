@@ -9,6 +9,7 @@ import com.ubirch.db.tables.{
   PocAdminStatusRepository,
   PocRepository,
   PocStatusRepository,
+  TenantRepository,
   TenantTable
 }
 import com.ubirch.e2e.E2ETestBase
@@ -521,21 +522,29 @@ class TenantAdminControllerSpec
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
         val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
-        val tenant = addTenantToDB()
-        val poc = createPoc(poc1id, tenant.tenantName)
-        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
-        val pocAdminStatus = createPocAdminStatus(pocAdmin)
+        val tenantTable = injector.get[TenantRepository]
+        val tenant1 = createTenant("tenant1")
+        val tenant2 = createTenant("tenant2")
+        val poc = createPoc(poc1id, tenant1.tenantName)
+        val pocAdmin1 = createPocAdmin(pocId = poc.id, tenantId = tenant1.id)
+        val pocAdmin2 = createPocAdmin(pocId = poc.id, tenantId = tenant2.id)
+        val pocAdminStatus1 = createPocAdminStatus(pocAdmin1)
+        val pocAdminStatus2 = createPocAdminStatus(pocAdmin2)
         val r = for {
+          _ <- tenantTable.createTenant(tenant1)
+          _ <- tenantTable.createTenant(tenant2)
           _ <- pocTable.createPoc(poc)
-          _ <- pocAdminTable.createPocAdmin(pocAdmin)
-          _ <- pocAdminStatusTable.createStatus(pocAdminStatus)
+          _ <- pocAdminTable.createPocAdmin(pocAdmin1)
+          _ <- pocAdminTable.createPocAdmin(pocAdmin2)
+          _ <- pocAdminStatusTable.createStatus(pocAdminStatus1)
+          _ <- pocAdminStatusTable.createStatus(pocAdminStatus2)
         } yield ()
         await(r, 5.seconds)
 
         post(
           "/webident/id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
-          body = updateWebIdentIdJson(pocAdmin.id, UUID.randomUUID(), UUID.randomUUID()).getBytes
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare),
+          body = updateWebIdentIdJson(pocAdmin1.id, UUID.randomUUID(), UUID.randomUUID()).getBytes
         ) {
           status shouldBe BadRequest().status
           body shouldBe "Wrong WebIdentInitialId"
@@ -543,26 +552,32 @@ class TenantAdminControllerSpec
 
         post(
           "/webident/initiate-id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
-          body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare),
+          body = initiateIdJson(pocAdmin1.id).getBytes(StandardCharsets.UTF_8)
         ) {
           status shouldBe Ok().status
         }
 
-        val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
+        val updatedPocAdmin1 = await(pocAdminTable.getPocAdmin(pocAdmin1.id), 5.seconds)
 
         val webIdentId = UUID.randomUUID()
         post(
           "/webident/id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare),
           body = updateWebIdentIdJson(
-            pocAdmin.id,
+            pocAdmin1.id,
             webIdentId,
-            updatedPocAdmin.value.webIdentInitiateId.value).getBytes
+            updatedPocAdmin1.value.webIdentInitiateId.value).getBytes
         ) {
           status shouldBe Ok().status
           body shouldBe ""
         }
+
+        val pocAdmin2AfterOperations = await(pocAdminTable.getPocAdmin(pocAdmin2.id), 5.seconds)
+        pocAdmin2AfterOperations.value shouldBe pocAdmin2.copy(lastUpdated = pocAdmin2AfterOperations.value.lastUpdated)
+        val pocAdminStatus2AfterOperations = await(pocAdminStatusTable.getStatus(pocAdmin2.id), 5.seconds)
+        pocAdminStatus2AfterOperations.value shouldBe pocAdminStatus2.copy(lastUpdated =
+          pocAdminStatus2AfterOperations.value.lastUpdated)
       }
     }
   }
