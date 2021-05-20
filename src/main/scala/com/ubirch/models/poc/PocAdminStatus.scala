@@ -9,7 +9,7 @@ case class PocAdminStatus(
   webIdentRequired: Boolean,
   webIdentIdentified: Option[Boolean],
   webIdentTriggered: Option[Boolean],
-  keycloakUserCreated: Boolean = false,
+  certifierUserCreated: Boolean = false,
   emailActionRequired: Boolean = false,
   verifyEmailSet: Boolean = false,
   updatePasswordSet: Boolean = false,

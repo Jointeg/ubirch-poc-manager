@@ -1,10 +1,16 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocStatus, createTenant }
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocAdminStatus, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.PoC_OUT
-import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
+import com.ubirch.db.tables.{
+  PocAdminRepository,
+  PocAdminStatusRepository,
+  PocRepository,
+  PocStatusRepository,
+  TenantTable
+}
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
 import com.ubirch.models.poc._
@@ -22,7 +28,7 @@ import org.json4s.native.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
-import org.scalatra.Ok
+import org.scalatra.{ BadRequest, Ok }
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -489,6 +495,74 @@ class TenantAdminControllerSpec
           await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value.webIdentInitiateId.value
 
         firstWebIdentInitiatedId shouldNot be(secondWebIdentInitiatedId)
+      }
+    }
+  }
+
+  "Endpoint POST /webident/id" should {
+    def initiateIdJson(pocAdminId: UUID) =
+      s"""
+         |{
+         |  "pocAdminId": "${pocAdminId.toString}"
+         |}
+         |""".stripMargin
+
+    def updateWebIdentIdJson(pocAdminId: UUID, webIdentId: UUID, webIdentInitiateId: UUID) =
+      s"""
+         |{
+         |  "pocAdminId": "${pocAdminId.toString}",
+         |  "webIdentId": "${webIdentId.toString}",
+         |  "webIdentInitiateId": "${webIdentInitiateId.toString}"
+         |}
+         |""".stripMargin
+    "Be able to update WebIdentId once the WebInitiateId is set up" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
+        val tenant = addTenantToDB()
+        val poc = createPoc(poc1id, tenant.tenantName)
+        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
+        val pocAdminStatus = createPocAdminStatus(pocAdmin)
+        val r = for {
+          _ <- pocTable.createPoc(poc)
+          _ <- pocAdminTable.createPocAdmin(pocAdmin)
+          _ <- pocAdminStatusTable.createStatus(pocAdminStatus)
+        } yield ()
+        await(r, 5.seconds)
+
+        post(
+          "/webident/id",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          body = updateWebIdentIdJson(pocAdmin.id, UUID.randomUUID(), UUID.randomUUID()).getBytes
+        ) {
+          status shouldBe BadRequest().status
+          body shouldBe "Wrong WebIdentInitialId"
+        }
+
+        post(
+          "/webident/initiate-id",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
+        ) {
+          status shouldBe Ok().status
+        }
+
+        val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
+
+        val webIdentId = UUID.randomUUID()
+        post(
+          "/webident/id",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          body = updateWebIdentIdJson(
+            pocAdmin.id,
+            webIdentId,
+            updatedPocAdmin.value.webIdentInitiateId.value).getBytes
+        ) {
+          status shouldBe Ok().status
+          body shouldBe ""
+        }
       }
     }
   }

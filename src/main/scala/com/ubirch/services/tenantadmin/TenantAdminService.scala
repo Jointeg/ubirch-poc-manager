@@ -87,11 +87,11 @@ class DefaultTenantAdminService @Inject() (
     }
 
     def isSameWebIdentInitialId(tenant: Tenant, pocAdmin: PocAdmin) = {
-      if (pocAdmin.webIdentInitiateId.contains(request.webIdentInitialId)) {
+      if (pocAdmin.webIdentInitiateId.contains(request.webIdentInitiateId)) {
         EitherT.rightT[Task, UpdateWebIdentIdError](())
       } else {
         EitherT.leftT[Task, UpdateWebIdentIdError](DifferentWebIdentInitialId(
-          request.webIdentInitialId,
+          request.webIdentInitiateId,
           tenant,
           pocAdmin))
       }
