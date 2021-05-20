@@ -3,8 +3,8 @@ package com.ubirch.controllers.validator
 import cats.data.Validated._
 import cats.data._
 import cats.implicits._
-import com.ubirch.controllers.validator.PocCriteriaValidator.PocCriteriaValidationResult
-import com.ubirch.db.tables.PocRepository.{ PocCriteria, PocFilter }
+import com.ubirch.controllers.validator.CriteriaValidator.PocCriteriaValidationResult
+import com.ubirch.db.tables.model.{ Criteria, StatusFilter }
 import com.ubirch.models.common.{ ASC, Order, Page, Sort }
 import com.ubirch.models.poc.Status
 import com.ubirch.models.tenant.TenantId
@@ -12,7 +12,7 @@ import org.scalatra.Params
 
 import scala.util.{ Failure, Success, Try }
 
-sealed trait PocCriteriaValidator {
+sealed trait CriteriaValidator {
   private val validSortColumns: Seq[String] =
     Seq(
       "id",
@@ -91,17 +91,17 @@ sealed trait PocCriteriaValidator {
     }
 }
 
-object PocCriteriaValidator extends PocCriteriaValidator {
+object CriteriaValidator extends CriteriaValidator {
   type PocCriteriaValidationResult[A] = ValidatedNec[(String, String), A]
 
-  def validateParams(tenantId: TenantId, params: Params): PocCriteriaValidationResult[PocCriteria] = {
+  def validateParams(tenantId: TenantId, params: Params): PocCriteriaValidationResult[Criteria] = {
     val page = (validatePageIndex(params, default = 0), validatePageSize(params, default = 20)).mapN(Page)
     val sort = (validateSortColumn(params), validateSortOrder(params, default = ASC)).mapN(Sort)
     val serach: PocCriteriaValidationResult[Option[String]] = params.get("search").validNec
 
     (page, sort, serach, validateFilterColumnStatus(params)).mapN {
       (page, sort, search, filterColumnStatus) =>
-        PocCriteria(tenantId, page, sort, search, PocFilter(filterColumnStatus))
+        Criteria(tenantId, page, sort, search, StatusFilter(filterColumnStatus))
     }
   }
 }

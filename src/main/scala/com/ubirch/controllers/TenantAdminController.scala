@@ -9,12 +9,12 @@ import com.ubirch.controllers.concerns.{
   KeycloakBearerAuthenticationSupport,
   Token
 }
-import com.ubirch.controllers.validator.PocCriteriaValidator
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
+import com.ubirch.controllers.validator.CriteriaValidator
+import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantName }
-import com.ubirch.services.CertifyKeycloak
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
+import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import com.ubirch.services.tenantadmin.TenantAdminService
@@ -36,6 +36,7 @@ class TenantAdminController @Inject() (
   pocBatchHandler: PocBatchHandlerImpl,
   pocStatusTable: PocStatusRepository,
   pocTable: PocRepository,
+  pocAdminRepository: PocAdminRepository,
   tenantTable: TenantTable,
   config: Config,
   val swagger: Swagger,
@@ -50,13 +51,7 @@ class TenantAdminController @Inject() (
 
   implicit override protected def jsonFormats: Formats = jFormats
 
-  override protected def applicationDescription: String = "Tenant Admin Controller"
-
   override val service: String = config.getString(GenericConfPaths.NAME)
-
-  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
-
   override val successCounter: Counter =
     Counter
       .build()
@@ -64,40 +59,46 @@ class TenantAdminController @Inject() (
       .help("Represents the number of tenant admin controller successes")
       .labelNames("service", "method")
       .register()
-
   override val errorCounter: Counter = Counter
     .build()
     .name("tenant_admin_failures")
     .help("Represents the number of tenant admin controller failures")
     .labelNames("service", "method")
     .register()
-
   val createListOfPocs: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[PoC_OUT]("create list of PoCs")
+    apiOperation[Paginated_OUT[Poc]]("create list of PoCs")
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC", "Tenant-Admin")
-
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[PocStatus]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin", "PocStatus")
-
   val getPocs: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve all pocs of the requesting tenant")
       .summary("Get PoCs")
       .description("Retrieve PoCs that belong to the querying tenant.")
       .tags("Tenant-Admin", "PoCs")
       .authorizations()
-
+  val getPocAdmins: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve all poc admins of the requesting tenant")
+      .summary("Get PoC admins")
+      .description("Retrieve PoC admins that belong to the querying tenant.")
+      .tags("Tenant-Admin", "PoCs", "PoC Admins")
+      .authorizations()
   val getDevices: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("Retrieve all devices from all PoCs of Tenant")
       .summary("Get devices")
       .description("Retrieves all devices that belongs to PoCs that are managed by querying Tenant.")
       .tags("Tenant-Admin", "Devices")
       .authorizations()
+
+  override protected def applicationDescription: String = "Tenant Admin Controller"
+
+  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
+    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
 
   post("/pocs/create", operation(createListOfPocs)) {
 
@@ -147,12 +148,9 @@ class TenantAdminController @Inject() (
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             (for {
-              pocCriteria <- PocCriteriaValidator.validateParams(tenant.id, params) match {
-                case Validated.Valid(a)   => Task(a)
-                case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
-              }
-              pocs <- pocTable.getAllPocsByCriteria(pocCriteria)
-            } yield PoC_OUT(pocs.total, pocs.pocs))
+              criteria <- handleValidation(tenant)
+              pocs <- pocTable.getAllPocsByCriteria(criteria)
+            } yield Paginated_OUT(pocs.total, pocs.records))
               .map(toJson)
               .onErrorRecoverWith {
                 case ValidationError(e) =>
@@ -190,6 +188,34 @@ class TenantAdminController @Inject() (
     }
   }
 
+  get("/poc-admins", operation(getPocAdmins)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult("Get all PoC Admins for a tenant") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            (for {
+              criteria <- handleValidation(tenant)
+              pocAdmins <- pocAdminRepository.getAllByCriteria(criteria)
+            } yield Paginated_OUT(pocAdmins.total, pocAdmins.records.map(pa => PocAdmin_OUT(pa.id))))
+              .map(toJson)
+              .onErrorRecoverWith {
+                case ValidationError(e) =>
+                  ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
+                    .toJson
+                    .map(BadRequest(_))
+              }
+              .onErrorHandle { ex =>
+                InternalServerError(NOK.serverError(
+                  s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
+              }
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
   private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
 
     token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
@@ -211,11 +237,19 @@ class TenantAdminController @Inject() (
         InternalServerError(NOK.serverError(errorMsg))
     }
   }
+
+  private def handleValidation(tenant: Tenant) =
+    CriteriaValidator.validateParams(tenant.id, params) match {
+      case Validated.Valid(a)   => Task(a)
+      case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
+    }
 }
 
 object TenantAdminController {
-  case class PoC_OUT(total: Long, records: Seq[Poc])
+  case class Paginated_OUT[T](total: Long, records: Seq[T])
   case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
+
+  case class PocAdmin_OUT(id: UUID)
 
   implicit class ResponseOps[T](r: Response[T]) {
     def toJson(implicit f: Formats): Task[String] = Task(write[Response[T]](r))

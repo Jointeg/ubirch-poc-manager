@@ -1,6 +1,7 @@
 package com.ubirch.db.tables
 
 import com.ubirch.db.context.QuillMonixJdbcContext
+import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
 import com.ubirch.models.poc.PocAdmin
 import com.ubirch.models.tenant.TenantId
 import io.getquill.{ EntityQuery, Insert }
@@ -15,6 +16,8 @@ trait PocAdminRepository {
   def getPocAdmin(pocAdminId: UUID): Task[Option[PocAdmin]]
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
+
+  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[PocAdmin]]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminRepository {
@@ -43,5 +46,9 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]] = {
     run(getAllPocAdminsByTenantIdQuery(tenantId))
+  }
+
+  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[PocAdmin]] = {
+    Task.pure(PaginatedResult(2, Seq.empty))
   }
 }

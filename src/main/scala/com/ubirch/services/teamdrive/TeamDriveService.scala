@@ -31,7 +31,8 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDrive
       _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, Read)))
       certByteArray <- toByteArray(certificate)
       certFileId <- client.putFile(spaceId, s"cert_$spaceName.pfx", ByteBuffer.wrap(certByteArray))
-      passphraseFileId <- client.putFile(spaceId, s"passphrase_$spaceName.txt", ByteBuffer.wrap(passphrase.value.getBytes))
+      passphraseFileId <-
+        client.putFile(spaceId, s"passphrase_$spaceName.txt", ByteBuffer.wrap(passphrase.value.getBytes))
     } yield SharedCertificate(
       spaceName = spaceName,
       spaceId = spaceId,

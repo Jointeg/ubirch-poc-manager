@@ -30,4 +30,6 @@ class PocAdminRepositoryMock extends PocAdminRepository {
       }.toList
     }
   }
+
+  override def getAllByCriteria(criteria: model.Criteria): Task[model.PaginatedResult[PocAdmin]] = ???
 }

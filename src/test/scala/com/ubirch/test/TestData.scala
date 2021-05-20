@@ -1,5 +1,9 @@
 package com.ubirch.test
 
+import com.ubirch.models.poc.{ BirthDate, Pending, Status }
+import com.ubirch.models.tenant.TenantName
+import org.joda.time.LocalDate
+
 object TestData {
   val username: String = "username"
   val password: String = "password"
@@ -9,4 +13,16 @@ object TestData {
   val email2: String = "email2@example.com"
   val defaultPermissionLevel: String = "readWrite"
   val spaceId: Int = 2
+  val tenantName: TenantName = TenantName("tenantName")
+
+  object PocAdmin {
+    val name: String = "poc"
+    val surname: String = "admin"
+    val email: String = "poc.admin@ubirch.com"
+    val mobilePhone: String = "123456789"
+    val webIdentRequired: Boolean = false
+    val webIdentIdentifier: Option[String] = None
+    val dateOfBirth: BirthDate = BirthDate(LocalDate.now())
+    val status: Status = Pending
+  }
 }
