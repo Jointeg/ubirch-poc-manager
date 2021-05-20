@@ -38,7 +38,7 @@ class PocAdminRepositoryMock extends PocAdminRepository {
     }
   }
 
-  def getAllUncompletedPocs(): Task[List[PocAdmin]] = {
+  def getAllUncompletedPocAdmins(): Task[List[PocAdmin]] = {
     Task {
       pocAdminDatastore.collect {
         case (_, pocAdmin: PocAdmin) if pocAdmin.status != Completed => pocAdmin

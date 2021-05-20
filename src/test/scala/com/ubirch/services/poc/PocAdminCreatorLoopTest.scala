@@ -11,6 +11,7 @@ import com.ubirch.db.tables.{
 import com.ubirch.models.poc.PocAdminStatus
 import com.ubirch.services.poc.PocAdminTestHelper.{ addPocAndStatusToRepository, createPocAdminAndStatus }
 import com.ubirch.services.poc.PocTestHelper.{ addPocTripleToRepository, createPocTriple }
+import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.test.FakeTeamDriveClient
 import monix.reactive.Observable
 import org.scalatest.Assertion
@@ -44,15 +45,15 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
-        teamDriveClient.createSpace(spaceName, spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
 
         Thread.sleep(4000)
         // not process because web ident is not successful yet
         val adminStatusPoc = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe()
         adminStatusPoc.get shouldBe pocAdminStatus
         pocAdminStatusTable.updateStatus(pocAdminStatus.copy(
-          webIdentTriggered = Some(true),
-          webIdentIdentifierSuccess = Some(true))).runSyncUnsafe()
+          webIdentInitiated = Some(true),
+          webIdentSuccess = Some(true))).runSyncUnsafe()
 
         Thread.sleep(3000)
         val status = pocAdminStatusTable.getStatus(pocAdminStatus.pocAdminId).runSyncUnsafe().get
@@ -63,11 +64,11 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
   }
 
   private def assertStatusAllTrue(status: PocAdminStatus): Assertion = {
-    assert(status.certifierUserCreated)
+    assert(status.certifyUserCreated)
     assert(status.keycloakEmailSent)
     assert(status.pocAdminGroupAssigned)
     assert(status.pocCertifyGroupAssigned)
     assert(status.pocTenantGroupAssigned)
-    assert(status.invitedToTeamDrive)
+    assert(status.invitedToTeamDrive.get)
   }
 }

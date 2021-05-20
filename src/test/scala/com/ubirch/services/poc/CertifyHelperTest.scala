@@ -7,7 +7,7 @@ class CertifyHelperTest extends UnitTestBase {
   private val tenant = createTenant()
   private val poc = createPoc(tenantName = tenant.tenantName)
   private val pocAdmin = createPocAdmin(pocId = poc.id, tenantName = tenant.tenantName)
-  private val pocAdminStatus = createPocAdminStatus(pocAdmin.id)
+  private val pocAdminStatus = createPocAdminStatus(pocAdmin.id, poc)
   "CertifyHelper" should {
     "success - addGroupsToCertifyUser" in {
       withInjector { injector =>

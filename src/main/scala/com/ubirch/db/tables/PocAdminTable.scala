@@ -18,7 +18,7 @@ trait PocAdminRepository {
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
 
-  def getAllUncompletedPocs(): Task[List[PocAdmin]]
+  def getAllUncompletedPocAdmins(): Task[List[PocAdmin]]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminRepository {
@@ -39,7 +39,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.tenantId == lift(tenantId))
     }
 
-  private def getAllPocsWithoutStatusQuery(status: Status) =
+  private def getAllPocAdminsWithoutStatusQuery(status: Status) =
     quote {
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.status != lift(status))
     }
@@ -59,7 +59,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
     run(getAllPocAdminsByTenantIdQuery(tenantId))
   }
 
-  def getAllUncompletedPocs(): Task[List[PocAdmin]] = run(getAllPocsWithoutStatusQuery(Completed))
+  def getAllUncompletedPocAdmins(): Task[List[PocAdmin]] = run(getAllPocAdminsWithoutStatusQuery(Completed))
 
   def updatePocAdmin(pocAdmin: PocAdmin): Task[UUID] = run(updatePocAdminQuery(pocAdmin)).map(_ => pocAdmin.id)
 }

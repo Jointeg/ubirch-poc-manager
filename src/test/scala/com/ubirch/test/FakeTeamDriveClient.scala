@@ -1,6 +1,6 @@
 package com.ubirch.test
 
-import com.ubirch.services.teamdrive.model.{ FileId, PermissionLevel, SpaceId, TeamDriveClient }
+import com.ubirch.services.teamdrive.model.{ FileId, PermissionLevel, SpaceId, SpaceName, TeamDriveClient }
 import monix.eval.Task
 
 import java.nio.ByteBuffer
@@ -18,12 +18,12 @@ class FakeTeamDriveClient extends TeamDriveClient {
   private var nextSpaceId: SpaceId = SpaceId(1)
   private var nextFileId: FileId = FileId(1)
 
-  override def createSpace(name: String, path: String): Task[SpaceId] =
+  override def createSpace(name: SpaceName, path: String): Task[SpaceId] =
     Task {
       val id = nextSpaceId
       nextSpaceId = id.copy(id.v + 1)
       files = files + (id -> Seq.empty)
-      spaces = spaces + (id -> name)
+      spaces = spaces + (id -> name.v)
       invitations = invitations + (id -> Seq.empty)
       id
     }
@@ -50,8 +50,8 @@ class FakeTeamDriveClient extends TeamDriveClient {
       }
     }
 
-  override def getSpaceIdByName(spaceName: String): Task[Option[SpaceId]] = Task {
-    spaces.filter(_._2 == spaceName).keys.headOption
+  override def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]] = Task {
+    spaces.filter(_._2 == spaceName.v).keys.headOption
   }
 
   def emailIsInvited(spaceId: SpaceId, email: String): Boolean =

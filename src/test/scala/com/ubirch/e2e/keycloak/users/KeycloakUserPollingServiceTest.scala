@@ -1,7 +1,7 @@
 package com.ubirch.e2e.keycloak.users
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.e2e.{ E2ETestBase, KeycloakOperations }
-import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.keycloak.user.{ CreateDeviceKeycloakUser, CreateKeycloakUser }
 import com.ubirch.models.user.{ Email, FirstName, LastName }
 import com.ubirch.services.keycloak.users.{ KeycloakUserService, UserPollingService }
 import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, DeviceKeycloakConnector }
@@ -103,7 +103,7 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
         val pollingResult = for {
           _ <- cleanAllUsers(certifyKeycloakConnector, deviceKeycloakConnector)
           _ <- userService.createUser(
-            CreateKeycloakUser(
+            CreateDeviceKeycloakUser(
               FirstName(injector.tenantAdmin.userName.value),
               LastName(injector.tenantAdmin.userName.value),
               injector.tenantAdmin.userName,

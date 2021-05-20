@@ -11,7 +11,7 @@ import java.util.UUID
 object PocAdminTestHelper {
   def createPocAdminAndStatus(poc: Poc, tenant: Tenant, webIdentRequired: Boolean): (PocAdmin, PocAdminStatus) = {
     val pocAdmin = createPocAdmin(pocId = poc.id, tenantName = tenant.tenantName, webIdentRequired = webIdentRequired)
-    val pocAdminStatus = createPocAdminStatus(pocAdmin.id, webIdentRequired)
+    val pocAdminStatus = createPocAdminStatus(pocAdmin.id, poc, webIdentRequired)
     (pocAdmin, pocAdminStatus)
   }
 
@@ -28,19 +28,19 @@ object PocAdminTestHelper {
   }
 
   def createPocAdminStatusAllTrue(webIdentRequired: Boolean): PocAdminStatus = {
-    val webIdentTriggered = if (webIdentRequired) Some(true) else None
-    val webIdentIdentifierSuccess = if (webIdentRequired) Some(true) else None
+    val webIdentInitiated = if (webIdentRequired) Some(true) else None
+    val webIdentSuccess = if (webIdentRequired) Some(true) else None
     PocAdminStatus(
       pocAdminId = UUID.randomUUID(),
       webIdentRequired = webIdentRequired,
-      webIdentTriggered = webIdentTriggered,
-      webIdentIdentifierSuccess = webIdentIdentifierSuccess,
-      certifierUserCreated = true,
+      webIdentInitiated = webIdentInitiated,
+      webIdentSuccess = webIdentSuccess,
+      certifyUserCreated = true,
       keycloakEmailSent = true,
       pocCertifyGroupAssigned = true,
       pocTenantGroupAssigned = true,
       pocAdminGroupAssigned = true,
-      invitedToTeamDrive = true,
+      invitedToTeamDrive = Some(true),
       errorMessage = None
     )
   }

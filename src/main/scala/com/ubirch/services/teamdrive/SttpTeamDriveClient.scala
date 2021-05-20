@@ -18,6 +18,10 @@ import javax.inject.{ Inject, Singleton }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
+/**
+  * This class internally calls the TeamDrive Http Api
+  * [[https://docs.teamdrive.net/Agent/4.6.11/html/TeamDrive_Http_Api.html#]]
+  */
 @Singleton
 class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
   implicit formats: Formats,
@@ -34,8 +38,8 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
     basicRequest.auth.basic(config.username, config.password)
       .readTimeout(config.readTimeout)
 
-  override def createSpace(name: String, path: String): Task[SpaceId] =
-    callCreateSpace(name, path).flatMap { r =>
+  override def createSpace(name: SpaceName, path: String): Task[SpaceId] =
+    callCreateSpace(name.v, path).flatMap { r =>
       handleResponse(r) { v => Task.pure(SpaceId(v.spaceId)) }
     }
 
@@ -108,14 +112,13 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
         .send()
     }
 
-  override def getSpaceIdByName(spaceName: String): Task[Option[SpaceId]] = {
+  override def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]] = {
     callGetSpaces().map {
       _.body match {
         case Right(spaces) =>
-          val filteredSpaces = spaces.filter(_.name == spaceName)
+          val filteredSpaces = spaces.filter(_.name == spaceName.v)
           if (filteredSpaces.isEmpty) {
-            val errorMsg = s"couldn't find the space name: $spaceName"
-            logger.warn(s"couldn't find the space name: $spaceName")
+            logger.warn(s"couldn't find the space name: ${spaceName.v}")
             None
           } else if (filteredSpaces.size > 1) {
             val spaceInfo = filteredSpaces.map { s => s"id: ${s.id}, name: ${s.name}" }
@@ -126,7 +129,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
             Some(SpaceId(filteredSpaces.head.id))
           }
         case Left(ex) =>
-          val errorMsg = s"couldn't retrieve space by $spaceName, error: $ex"
+          val errorMsg = s"couldn't retrieve space by ${spaceName.v}, error: $ex"
           logger.error(errorMsg)
           throw TeamDriveError(errorMsg)
       }

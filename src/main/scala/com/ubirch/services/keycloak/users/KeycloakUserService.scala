@@ -4,6 +4,8 @@ import cats.data.OptionT
 import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.{
+  CreateCertifyKeycloakUser,
+  CreateDeviceKeycloakUser,
   CreateKeycloakUser,
   UserAlreadyExists,
   UserCreationError,
@@ -11,7 +13,7 @@ import com.ubirch.models.keycloak.user.{
   UserRequiredAction
 }
 import com.ubirch.models.user.{ UserId, UserName }
-import com.ubirch.services.{ CertifyKeycloak, KeycloakConnector, KeycloakInstance }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
@@ -38,16 +40,25 @@ trait KeycloakUserService {
     groupId: String,
     instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
 
-  def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit]
+  def addGroupToUserByUserId(
+    userId: UserId,
+    groupId: String,
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
+
+  def deleteUser(username: UserName, instance: KeycloakInstance = CertifyKeycloak): Task[Unit]
+
+  def getUserById(
+    userId: UserId,
+    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]]
 
   def getUser(
     username: UserName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]]
+    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]]
 
   /**
     * Send an email to user with actions set to the user
     */
-  def sendRequiredActionsEmail(userName: UserName, instance: KeycloakInstance): Task[Either[String, Unit]]
+  def sendRequiredActionsEmail(userId: UserId, instance: KeycloakInstance): Task[Either[String, Unit]]
 }
 
 @Singleton
@@ -59,24 +70,48 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     createKeycloakUser: CreateKeycloakUser,
     instance: KeycloakInstance = CertifyKeycloak,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
-    val keycloakUser = createKeycloakUser.toKeycloakRepresentation
-    keycloakUser.setEnabled(true)
-    keycloakUser.setAttributes(Map("confirmation_mail_sent" -> List("false").asJava).asJava)
-    keycloakUser.setRequiredActions(userRequiredActions.map(_.toString).asJava)
-    logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
-    Task {
-      val resp =
-        keycloakConnector
-          .getKeycloak(instance)
-          .realm(keycloakConnector.getKeycloakRealm(instance))
-          .users()
-          .create(keycloakUser)
-      processCreationResponse(resp, keycloakUser.getUsername)
-    }.onErrorHandle { ex =>
-      val errorMsg = s"failed to create user ${createKeycloakUser.userName.value}"
-      logger.error(errorMsg, ex)
-      Left(UserCreationError(errorMsg))
+    (createKeycloakUser, instance) match {
+      case (_: CreateDeviceKeycloakUser, CertifyKeycloak) =>
+        Task(
+          Left(UserCreationError(s"user and instance don't match. deviceKeycloak user and certify keycloak instance")))
+      case (_: CreateCertifyKeycloakUser, DeviceKeycloak) =>
+        Task(
+          Left(UserCreationError(s"user and instance don't match. certifyKeycloak user and device keycloak instance")))
+      case (_, _) => {
+        val keycloakUser = createKeycloakUser.toKeycloakRepresentation
+        keycloakUser.setEnabled(true)
+        keycloakUser.setAttributes(Map("confirmation_mail_sent" -> List("false").asJava).asJava)
+        keycloakUser.setRequiredActions(userRequiredActions.map(_.toString).asJava)
+        logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
+        Task {
+          val resp =
+            keycloakConnector
+              .getKeycloak(instance)
+              .realm(keycloakConnector.getKeycloakRealm(instance))
+              .users()
+              .create(keycloakUser)
+          processCreationResponse(resp, keycloakUser.getUsername)
+        }.onErrorHandle { ex =>
+          val errorMsg = s"failed to create user ${createKeycloakUser}"
+          logger.error(errorMsg, ex)
+          Left(UserCreationError(errorMsg))
+        }
+      }
     }
+  }
+
+  override def getUserById(
+    userId: UserId,
+    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]] = {
+    logger.debug(s"Retrieving keycloak user id: ${userId.value}")
+    Task(
+      Option(keycloakConnector
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .users()
+        .get(userId.value.toString)
+        .toRepresentation)
+    )
   }
 
   override def getUser(
@@ -116,6 +151,27 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
   }
 
+  override def addGroupToUserByUserId(
+    userId: UserId,
+    groupId: String,
+    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] = {
+    getUserById(userId, instance).map {
+      case Some(userRepresentation: UserRepresentation) =>
+        Right(
+          keycloakConnector
+            .getKeycloak(instance)
+            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .users()
+            .get(userRepresentation.getId)
+            .joinGroup(groupId))
+      case None =>
+        Left(s"user with id ${userId.value} wasn't found")
+    }.onErrorHandle { ex =>
+      logger.error(s"failed to add group $groupId to user ${userId.value}", ex)
+      Left(s"failed to add group $groupId to user ${userId.value}")
+    }
+  }
+
   override def deleteUser(username: UserName, instance: KeycloakInstance = CertifyKeycloak): Task[Unit] = {
     (for {
       user <- OptionT(getUser(username))
@@ -130,8 +186,8 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     } yield ()).value.void
   }
 
-  override def sendRequiredActionsEmail(userName: UserName, instance: KeycloakInstance): Task[Either[String, Unit]] = {
-    getUser(userName, instance).map {
+  override def sendRequiredActionsEmail(userId: UserId, instance: KeycloakInstance): Task[Either[String, Unit]] = {
+    getUserById(userId, instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         val actions = userRepresentation.getRequiredActions
         if (!actions.isEmpty) {
@@ -140,13 +196,13 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
             .get(userRepresentation.getId)
             .executeActionsEmail(actions))
         } else {
-          Left(s"no action is setup for user: $userName.")
+          Left(s"no action is setup for user: ${userId.value}.")
         }
       case None =>
-        Left(s"user with name $userName wasn't found")
+        Left(s"user with name ${userId.value} wasn't found")
     }.onErrorHandle { ex =>
-      logger.error(s"failed to execute required actions to user $userName", ex)
-      Left(s"failed to execute required actions to user $userName")
+      logger.error(s"failed to execute required actions to user ${userId.value}", ex)
+      Left(s"failed to execute required actions to user ${userId.value}")
     }
   }
 
@@ -156,7 +212,7 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
       Right(getIdFromPath(response))
     } else if (response.getStatusInfo.equals(Status.CONFLICT)) {
       logger.info(s"user with name $userName already existed")
-      Left(UserAlreadyExists(UserName(userName)))
+      Left(UserAlreadyExists(userName))
     } else {
       logger.error(s"failed to create user $userName; response has status ${response.getStatus}")
       Left(UserCreationError(s"failed to create user $userName; response has status ${response.getStatus}"))

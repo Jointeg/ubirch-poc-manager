@@ -253,7 +253,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val (firstCreationResult, secondCreationResult) = await(result, 5.seconds)
 
         firstCreationResult.isRight shouldBe true
-        secondCreationResult.left.value shouldBe UserAlreadyExists(newKeycloakUser.userName)
+        secondCreationResult.left.value shouldBe UserAlreadyExists(newKeycloakUser.userName.value)
 
       }
     }
@@ -367,24 +367,24 @@ class KeycloakIntegrationTest extends E2ETestBase {
         usr1.isRight shouldBe true
         usr2.isRight shouldBe true
       }
-    }
 
-    "delete user only from Keycloak that was asked for" in {
-      withInjector { injector =>
-        val keycloakUserService = injector.get[KeycloakUserService]
+      "delete user only from Keycloak that was asked for" in {
+        withInjector { injector =>
+          val keycloakUserService = injector.get[KeycloakUserService]
 
-        val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
-        val result = for {
-          _ <- keycloakUserService.createUser(newKeycloakUser, CertifyKeycloak)
-          _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
-          _ <- keycloakUserService.deleteUser(newKeycloakUser.userName, CertifyKeycloak)
-          deletedUser <- keycloakUserService.getUser(newKeycloakUser.userName, CertifyKeycloak)
-          existingUser <- keycloakUserService.getUser(newKeycloakUser.userName, DeviceKeycloak)
-        } yield (deletedUser, existingUser)
+          val newKeycloakUser = KeycloakTestData.createNewKeycloakUser()
+          val result = for {
+            _ <- keycloakUserService.createUser(newKeycloakUser, CertifyKeycloak)
+            _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
+            _ <- keycloakUserService.deleteUser(newKeycloakUser.userName, CertifyKeycloak)
+            deletedUser <- keycloakUserService.getUser(newKeycloakUser.userName, CertifyKeycloak)
+            existingUser <- keycloakUserService.getUser(newKeycloakUser.userName, DeviceKeycloak)
+          } yield (deletedUser, existingUser)
 
-        val (deletedUser, existingUser) = await(result, 5.seconds)
-        deletedUser shouldBe None
-        existingUser shouldBe defined
+          val (deletedUser, existingUser) = await(result, 5.seconds)
+          deletedUser shouldBe None
+          existingUser shouldBe defined
+        }
       }
     }
   }

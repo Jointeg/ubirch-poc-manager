@@ -15,6 +15,7 @@ import com.ubirch.services.poc.PocAdminTestHelper.{
   createPocAdminAndStatus,
   createPocAdminStatusAllTrue
 }
+import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.test.FakeTeamDriveClient
 
 import java.util.UUID
@@ -38,7 +39,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
-        teamDriveClient.createSpace(spaceName, spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
 
         val result = creator.createPocAdmins().runSyncUnsafe()
 
@@ -79,7 +80,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
-        teamDriveClient.createSpace(spaceName, spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
 
         // start process
         val result = creator.createPocAdmins().runSyncUnsafe()
@@ -95,8 +96,8 @@ class PocAdminCreatorTest extends UnitTestBase {
         pocAdminStatus shouldBe expectedPocAdminStatus.get
 
         pocAdminStatusTable.updateStatus(pocAdminStatus.copy(
-          webIdentTriggered = Some(true),
-          webIdentIdentifierSuccess = Some(true))).runSyncUnsafe()
+          webIdentInitiated = Some(true),
+          webIdentSuccess = Some(true))).runSyncUnsafe()
 
         // restart process
         val secondResult = creator.createPocAdmins().runSyncUnsafe()
@@ -136,10 +137,10 @@ class PocAdminCreatorTest extends UnitTestBase {
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = s"local_${tenant.tenantName.value}"
         val webIdentSuccessPocAdminStatus =
-          pocAdminStatus.copy(webIdentTriggered = Some(true), webIdentIdentifierSuccess = Some(true))
+          pocAdminStatus.copy(webIdentInitiated = Some(true), webIdentSuccess = Some(true))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, webIdentSuccessPocAdminStatus)
-        teamDriveClient.createSpace(spaceName, spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
 
         // start process
         val result = creator.createPocAdmins().runSyncUnsafe()
@@ -151,7 +152,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         val updatedPocAdminStatus = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe()
         val expected = webIdentSuccessPocAdminStatus.copy(
-          certifierUserCreated = true,
+          certifyUserCreated = true,
           keycloakEmailSent = true,
           pocAdminGroupAssigned = true,
           errorMessage = Some("pocCertifyGroupId is missing, when it should be added to certify")

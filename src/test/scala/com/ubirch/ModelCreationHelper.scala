@@ -76,8 +76,9 @@ object ModelCreationHelper {
     email: String = "test@example.com",
     mobilePhone: String = "08023-782137",
     webIdentRequired: Boolean = false,
-    webIdentIdentifier: Option[String] = None,
-    certifierUserId: UUID = UUID.randomUUID(),
+    webIdentInitiateId: Option[UUID] = None,
+    webIdentId: Option[String] = None,
+    certifyUserId: Option[UUID] = None,
     dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
     status: Status = Pending
   ): PocAdmin = {
@@ -90,8 +91,9 @@ object ModelCreationHelper {
       email,
       mobilePhone,
       webIdentRequired,
-      webIdentIdentifier,
-      certifierUserId,
+      webIdentInitiateId,
+      webIdentId,
+      certifyUserId,
       dateOfBirth,
       status
     )
@@ -109,14 +111,19 @@ object ModelCreationHelper {
       logoStored = None
     )
 
-  def createPocAdminStatus(pocAdminId: UUID = UUID.randomUUID(), webIdentRequired: Boolean = false): PocAdminStatus = {
+  def createPocAdminStatus(
+    pocAdminId: UUID = UUID.randomUUID(),
+    poc: Poc,
+    webIdentRequired: Boolean = false): PocAdminStatus = {
     val webIdentTriggered = if (webIdentRequired) Some(false) else None
     val webIdentIdentifierSuccess = if (webIdentRequired) Some(false) else None
+    val inviteToTeamDrive = if (poc.clientCertRequired) Some(false) else None
     PocAdminStatus(
       pocAdminId,
       webIdentRequired,
       webIdentTriggered,
-      webIdentIdentifierSuccess
+      webIdentIdentifierSuccess,
+      invitedToTeamDrive = inviteToTeamDrive
     )
   }
 

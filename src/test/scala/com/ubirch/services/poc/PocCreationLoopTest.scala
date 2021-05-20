@@ -2,7 +2,7 @@ package com.ubirch.services.poc
 import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.UnitTestBase
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
-import com.ubirch.models.keycloak.user.CreateKeycloakUser
+import com.ubirch.models.keycloak.user.{ CreateDeviceKeycloakUser, CreateKeycloakUser }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.user.{ Email, FirstName, LastName, UserName }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
@@ -58,7 +58,7 @@ class PocCreationLoopTest extends UnitTestBase {
 
   private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
     users.createUser(
-      CreateKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
+      CreateDeviceKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
       DeviceKeycloak).runSyncUnsafe()
   }
 
