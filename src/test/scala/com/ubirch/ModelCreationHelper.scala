@@ -4,9 +4,11 @@ import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
+import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
+import scala.util.Random
 
 object ModelCreationHelper {
 
@@ -35,11 +37,8 @@ object ModelCreationHelper {
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
       OrgId(TenantId(TenantName(name)).value),
-      sharedAuthCertRequired = true,
-      Some(OrgUnitId(UUID.randomUUID())),
-      Some(GroupId(UUID.randomUUID())),
-      sharedAuthCert
-    )
+      sharedAuthCertRequired = true
+    ).copy(sharedAuthCert = sharedAuthCert)
   }
 
   def createPoc(
@@ -65,6 +64,25 @@ object ModelCreationHelper {
       PocManager("surname", "", "", "08023-782137"),
       status
     )
+
+  def createPocAdmin(
+    id: UUID = UUID.randomUUID(),
+    pocId: UUID,
+    tenantId: TenantId,
+    webIdentRequired: Boolean = true) = {
+    PocAdmin(
+      id = id,
+      pocId = pocId,
+      tenantId = tenantId,
+      name = Random.alphanumeric.take(10).mkString,
+      surName = Random.alphanumeric.take(10).mkString,
+      email = Random.alphanumeric.take(10).mkString,
+      mobilePhone = Random.alphanumeric.take(10).mkString,
+      webIdentRequired = webIdentRequired,
+      certifierUserId = UUID.randomUUID(),
+      dateOfBirth = LocalDate.now()
+    )
+  }
 
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(

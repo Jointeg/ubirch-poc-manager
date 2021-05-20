@@ -17,6 +17,8 @@ trait PocAdminRepository {
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
 
   def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit]
+
+  def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminRepository {
@@ -42,6 +44,13 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
       querySchema[PocAdmin]("poc_manager.poc_admin_table").update(lift(pocAdmin))
     }
 
+  private def updateWebInitiateId(pocAdminId: UUID, webInitiateId: UUID) =
+    quote {
+      querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.id == lift(pocAdminId)).update(
+        _.webIdentInitiateId -> lift(Option(webInitiateId))
+      )
+    }
+
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] =
     run(createPocAdminQuery(pocAdmin)).map(_ => pocAdmin.id)
 
@@ -52,4 +61,8 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
     run(getAllPocAdminsByTenantIdQuery(tenantId))
   }
   override def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit] = run(updatePocAdminQuery(pocAdmin)).void
+
+  override def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = {
+    run(updateWebInitiateId(pocAdminId, webIdentInitiateId)).void
+  }
 }

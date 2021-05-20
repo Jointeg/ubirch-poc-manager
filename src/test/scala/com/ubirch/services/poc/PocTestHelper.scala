@@ -61,7 +61,7 @@ object PocTestHelper extends Awaits {
 
   def createPocStatusAllTrue(): PocStatus = {
     PocStatus(
-      UUID.randomUUID(),
+      pocId = UUID.randomUUID(),
       certifyRoleCreated = true,
       certifyGroupCreated = true,
       certifyGroupRoleAssigned = true,
@@ -74,15 +74,15 @@ object PocTestHelper extends Awaits {
       assignedDataSchemaGroup = true,
       assignedDeviceGroup = true,
       clientCertRequired = false,
-      None,
-      None,
-      None,
+      orgUnitCertCreated = None,
+      clientCertCreated = None,
+      clientCertProvided = None,
       logoRequired = false,
-      None,
-      None,
+      logoReceived = None,
+      logoStored = None,
       goClientProvided = true,
       certifyApiProvided = true,
-      None
+      errorMessage = None
     )
   }
 
