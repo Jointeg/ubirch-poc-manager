@@ -74,10 +74,13 @@ class DefaultSuperAdminService @Inject() (
   }
 
   private def persistTenant(updatedTenant: Tenant): Task[Either[DBError, TenantId]] = {
-    tenantRepository.createTenant(updatedTenant).map(Right.apply).onErrorHandle(ex => {
-      logger.error(s"Could not create Tenant in DB because: ${ex.getMessage}")
-      Left(DBError(updatedTenant.id))
-    })
+    tenantRepository
+      .createTenant(updatedTenant)
+      .map(Right.apply)
+      .onErrorHandle(ex => {
+        logger.error(s"Could not create Tenant in DB because: ${ex.getMessage}")
+        Left(DBError(updatedTenant.id))
+      })
   }
 
   private def createOrgCert(tenant: Tenant): Task[Unit] = {
