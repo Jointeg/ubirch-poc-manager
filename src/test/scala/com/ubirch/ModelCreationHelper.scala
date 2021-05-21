@@ -5,8 +5,7 @@ import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
-import org.joda.time.DateTime
-import org.joda.time.LocalDate
+import org.joda.time.{ DateTime, LocalDate }
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -65,25 +64,6 @@ object ModelCreationHelper {
       status
     )
 
-  def createPocAdmin(
-    id: UUID = UUID.randomUUID(),
-    pocId: UUID,
-    tenantId: TenantId,
-    webIdentRequired: Boolean = true) = {
-    PocAdmin(
-      id = id,
-      pocId = pocId,
-      tenantId = tenantId,
-      name = Random.alphanumeric.take(10).mkString,
-      surName = Random.alphanumeric.take(10).mkString,
-      email = Random.alphanumeric.take(10).mkString,
-      mobilePhone = Random.alphanumeric.take(10).mkString,
-      webIdentRequired = webIdentRequired,
-      certifierUserId = UUID.randomUUID(),
-      dateOfBirth = LocalDate.now()
-    )
-  }
-
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
       pocId,
@@ -113,7 +93,6 @@ object ModelCreationHelper {
     email: String = TestData.PocAdmin.email,
     mobilePhone: String = TestData.PocAdmin.mobilePhone,
     webIdentRequired: Boolean = TestData.PocAdmin.webIdentRequired,
-    webIdentIdentifier: Option[Boolean] = TestData.PocAdmin.webIdentIdentifier,
     certifierUserId: UUID = UUID.randomUUID(),
     dateOfBirth: BirthDate = TestData.PocAdmin.dateOfBirth,
     status: Status = TestData.PocAdmin.status,
@@ -127,12 +106,13 @@ object ModelCreationHelper {
       surname = surname,
       email = email,
       mobilePhone = mobilePhone,
-      webIdentRequired = webIdentRequired,
-      webIdentIdentifier = webIdentIdentifier,
       certifierUserId = certifierUserId,
       dateOfBirth = dateOfBirth,
       status = status,
       lastUpdated = lastUpdated,
-      created = created
+      created = created,
+      webIdentRequired = webIdentRequired,
+      webIdentId = None,
+      webIdentInitiateId = None
     )
 }

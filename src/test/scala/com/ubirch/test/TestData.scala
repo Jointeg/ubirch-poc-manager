@@ -20,7 +20,7 @@ object TestData {
     val surname: String = "admin"
     val email: String = "poc.admin@ubirch.com"
     val mobilePhone: String = "123456789"
-    val webIdentRequired: Boolean = false
+    val webIdentRequired: Boolean = true
     val webIdentIdentifier: Option[Boolean] = None
     val dateOfBirth: BirthDate = BirthDate(LocalDate.now())
     val status: Status = Pending
