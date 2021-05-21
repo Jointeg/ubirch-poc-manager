@@ -153,6 +153,11 @@ class Binder extends AbstractModule {
   def PocAdminStatusRepository: ScopedBindingBuilder =
     bind(classOf[PocAdminStatusRepository]).to(classOf[PocAdminStatusTable])
 
+  def PocEmployeeRepository: ScopedBindingBuilder = bind(classOf[PocEmployeeRepository]).to(classOf[PocEmployeeTable])
+
+  def PocEmployeeStatusRepository: ScopedBindingBuilder =
+    bind(classOf[PocEmployeeStatusRepository]).to(classOf[PocEmployeeStatusTable])
+
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
   def DeviceCreator: ScopedBindingBuilder = bind(classOf[DeviceCreator]).to(classOf[DeviceCreatorImpl])
@@ -212,6 +217,8 @@ class Binder extends AbstractModule {
     PocStatusRepository
     PocAdminRepository
     PocAdminStatusRepository
+    PocEmployeeRepository
+    PocEmployeeStatusRepository
     TenantRepository
     AESKeyProvider
     AESEncryption

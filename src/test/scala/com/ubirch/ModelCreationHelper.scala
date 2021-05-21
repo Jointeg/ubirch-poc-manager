@@ -2,6 +2,7 @@ package com.ubirch
 
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
+import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import org.joda.time.LocalDate
@@ -23,6 +24,8 @@ object ModelCreationHelper {
   val pocTypeValue = "ub_vac_app"
 
   private val tenantName = "tenantName"
+  private val tenantNameObj = TenantName("tenantName")
+  private val tenantId = TenantId(TenantName(tenantName))
 
   def createTenant(
     name: String = tenantName,
@@ -42,7 +45,7 @@ object ModelCreationHelper {
 
   def createPoc(
     id: UUID = UUID.randomUUID(),
-    tenantName: TenantName,
+    tenantName: TenantName = tenantNameObj,
     externalId: String = UUID.randomUUID().toString,
     name: String = "pocName",
     status: Status = Pending
@@ -68,7 +71,7 @@ object ModelCreationHelper {
     id: UUID = UUID.randomUUID(),
     pocId: UUID,
     tenantId: TenantId,
-    webIdentRequired: Boolean = true) = {
+    webIdentRequired: Boolean = true): PocAdmin =
     PocAdmin(
       id = id,
       pocId = pocId,
@@ -81,7 +84,6 @@ object ModelCreationHelper {
       certifierUserId = UUID.randomUUID(),
       dateOfBirth = LocalDate.now()
     )
-  }
 
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
@@ -101,5 +103,35 @@ object ModelCreationHelper {
       API,
       PlainDeviceCreationToken(token),
       sharedAuthCertRequired = sharedAuthCertRequired
+    )
+
+  def createPocAndEmployee: (Poc, PocEmployee) = {
+    val pocId = UUID.randomUUID()
+    (createPoc(pocId, tenantNameObj), createPocEmployee(pocId = pocId))
+  }
+
+  def createPocAndEmployeeAndStatus: (Poc, PocEmployee, PocEmployeeStatus) = {
+    val employeeId = UUID.randomUUID()
+    val pocId = UUID.randomUUID()
+    (
+      createPoc(pocId, tenantNameObj),
+      createPocEmployee(pocId = pocId, employeeId = employeeId),
+      createPocEmployeeStatus(employeeId))
+  }
+
+  def createPocEmployee(employeeId: UUID = UUID.randomUUID(), pocId: UUID = UUID.randomUUID()): PocEmployee = {
+    PocEmployee(
+      employeeId,
+      pocId,
+      tenantId,
+      "Hans",
+      "Welsich",
+      s"${employeeId.toString}@test.de"
+    )
+  }
+
+  def createPocEmployeeStatus(employeeId: UUID = UUID.randomUUID()): PocEmployeeStatus =
+    PocEmployeeStatus(
+      employeeId
     )
 }

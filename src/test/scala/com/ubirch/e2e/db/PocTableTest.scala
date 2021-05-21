@@ -4,7 +4,7 @@ import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus }
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.TenantName
+import com.ubirch.models.tenant.{ TenantId, TenantName }
 import org.postgresql.util.PSQLException
 
 import java.util.UUID
@@ -141,6 +141,50 @@ class PocTableTest extends E2ETestBase {
     //        await(res1, 5.seconds) shouldBe (None, None)
     //      }
     //    }
+
+    "get all by tenantId" in {
+      withInjector { injector =>
+        val pocRepo = injector.get[PocRepository]
+        val poc1 = createPoc()
+        val poc2 = createPoc()
+        val pocByDiffTenant = createPoc().copy(tenantId = TenantId(TenantName("different tenant")))
+
+        val res = for {
+          _ <- pocRepo.createPoc(poc1)
+          _ <- pocRepo.createPoc(poc2)
+          _ <- pocRepo.createPoc(pocByDiffTenant)
+          data <- pocRepo.getAllPocsByTenantId(poc1.tenantId)
+        } yield {
+          data
+        }
+        val allEmployeesByTenant = await(res, 5.seconds)
+        allEmployeesByTenant.size shouldBe 2
+        allEmployeesByTenant.exists(_.id == poc1.id) shouldBe true
+        allEmployeesByTenant.exists(_.id == poc2.id) shouldBe true
+      }
+    }
+
+    "get all uncompleted" in {
+      withInjector { injector =>
+        val pocRepo = injector.get[PocRepository]
+        val poc1 = createPoc()
+        val poc2 = createPoc()
+        val pocByDiffTenant = createPoc().copy(status = Completed)
+
+        val res = for {
+          _ <- pocRepo.createPoc(poc1)
+          _ <- pocRepo.createPoc(poc2)
+          _ <- pocRepo.createPoc(pocByDiffTenant)
+          data <- pocRepo.getAllUncompletedPocs()
+        } yield {
+          data
+        }
+        val allEmployeesByTenant = await(res, 5.seconds)
+        allEmployeesByTenant.size shouldBe 2
+        allEmployeesByTenant.exists(_.id == poc1.id) shouldBe true
+        allEmployeesByTenant.exists(_.id == poc2.id) shouldBe true
+      }
+    }
   }
 
 }
