@@ -55,7 +55,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
 
-        val tenantName = Random.alphanumeric.take(10).mkString
+        val tenantName = getRandomString
         val createTenantBody = createTenantJson(tenantName)
 
         post(
@@ -78,7 +78,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
 
-        val tenantName = Random.alphanumeric.take(10).mkString
+        val tenantName = getRandomString
         val createTenantBody = createTenantJsonWithoutClientCert(tenantName)
 
         post(
@@ -101,7 +101,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
 
-        val tenantName = Random.alphanumeric.take(10).mkString
+        val tenantName = getRandomString
         val createTenantBody = createTenantJson(tenantName)
 
         post(
@@ -125,7 +125,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     "create tenant with encrypted DeviceCreationToken " in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
-        val tenantName = Random.alphanumeric.take(10).mkString
+        val tenantName = getRandomString
         val createTenantBody = createTenantJson(tenantName)
 
         post(
@@ -153,7 +153,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     "respond with 400 if request is invalid" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
-        val tenantName = Random.alphanumeric.take(10).mkString
+        val tenantName = getRandomString
         val createTenantBody = missingRequiredFieldsCreateTenantJson(tenantName)
 
         post(
@@ -169,7 +169,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     "authenticate users related to certify keycloak only" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
-        val tenantName = Random.alphanumeric.take(10).mkString
+        val tenantName = getRandomString
         val createTenantBody = createTenantJson(tenantName)
 
         post(
@@ -205,4 +205,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       addServlet(superAdminController, "/*")
     }
   }
+
+  private def getRandomString: String = Random.alphanumeric.take(10).mkString("")
 }

@@ -56,11 +56,6 @@ trait KeycloakUserService {
     groupId: String,
     instance: KeycloakInstance): Task[Either[String, Unit]]
 
-  def addGroupToUserByUserId(
-    userId: UserId,
-    groupId: String,
-    instance: KeycloakInstance): Task[Either[String, Unit]]
-
   /**
     * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
@@ -120,7 +115,7 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
           .create(keycloakUser)
       processCreationResponse(resp, keycloakUser.getUsername)
     }.onErrorHandle { ex =>
-      val errorMsg = s"failed to create user ${createKeycloakUser}"
+      val errorMsg = s"failed to create user $createKeycloakUser"
       logger.error(errorMsg, ex)
       Left(UserCreationError(errorMsg))
     }
@@ -129,7 +124,7 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   override def getUserById(
     userId: UserId,
     instance: KeycloakInstance): Task[Option[UserRepresentation]] = {
-    logger.debug(s"Retrieving keycloak user id: ${userId.value}")
+    logger.debug(s"Retrieving keycloak user id: $userId")
     Task(
       Option(keycloakConnector
         .getKeycloak(instance)
@@ -196,27 +191,6 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }.onErrorHandle { ex =>
       logger.error(s"failed to add group $groupId to user $userId", ex)
       Left(s"failed to add group $groupId to user $userId")
-    }
-  }
-
-  override def addGroupToUserByUserId(
-    userId: UserId,
-    groupId: String,
-    instance: KeycloakInstance): Task[Either[String, Unit]] = {
-    getUserById(userId, instance).map {
-      case Some(userRepresentation: UserRepresentation) =>
-        Right(
-          keycloakConnector
-            .getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance))
-            .users()
-            .get(userRepresentation.getId)
-            .joinGroup(groupId))
-      case None =>
-        Left(s"user with id ${userId.value} wasn't found")
-    }.onErrorHandle { ex =>
-      logger.error(s"failed to add group $groupId to user ${userId.value}", ex)
-      Left(s"failed to add group $groupId to user ${userId.value}")
     }
   }
 

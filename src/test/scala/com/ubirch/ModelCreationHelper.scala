@@ -3,9 +3,8 @@ package com.ubirch
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
-import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
-import org.joda.time.{ DateTime, LocalDate }
+import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -70,10 +69,10 @@ object ModelCreationHelper {
     pocAdminId: UUID = UUID.randomUUID(),
     pocId: UUID,
     tenantId: TenantId,
-    name: String = Random.alphanumeric.take(10).mkString,
-    surname: String = Random.alphanumeric.take(10).mkString,
-    email: String = Random.alphanumeric.take(10).mkString,
-    mobilePhone: String = Random.alphanumeric.take(10).mkString,
+    name: String = getRandomString,
+    surname: String = getRandomString,
+    email: String = getRandomString,
+    mobilePhone: String = getRandomString,
     webIdentRequired: Boolean = true,
     webIdentInitiateId: Option[UUID] = None,
     webIdentId: Option[String] = None,
@@ -98,9 +97,9 @@ object ModelCreationHelper {
     )
   }
 
-  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = {
-    PocAdminStatus.init(pocAdmin, poc)
-  }
+  private def getRandomString = Random.alphanumeric.take(10).mkString
+
+  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = PocAdminStatus.init(pocAdmin, poc)
 
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(

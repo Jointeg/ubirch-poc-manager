@@ -10,28 +10,27 @@ import scala.util.Random
 object KeycloakTestData {
 
   def createNewDeviceKeycloakUser(): CreateBasicKeycloakUser = {
-    val email = s"${Random.alphanumeric.take(10).mkString("")}@email.com"
+    val email = s"$getRandomString@email.com"
     CreateBasicKeycloakUser(
-      FirstName(Random.alphanumeric.take(10).mkString("")),
-      LastName(Random.alphanumeric.take(10).mkString("")),
+      FirstName(getRandomString),
+      LastName(getRandomString),
       UserName(email),
       Email(email)
     )
   }
 
   def createNewCertifyKeycloakUser(): CreateKeycloakUserWithoutUserName = {
-    val email = s"${Random.alphanumeric.take(10).mkString("")}@email.com"
+    val email = s"$getRandomString@email.com"
     CreateKeycloakUserWithoutUserName(
-      FirstName(Random.alphanumeric.take(10).mkString("")),
-      LastName(Random.alphanumeric.take(10).mkString("")),
+      FirstName(getRandomString),
+      LastName(getRandomString),
       Email(email)
     )
   }
 
-  def createNewKeycloakRole(): CreateKeycloakRole =
-    CreateKeycloakRole(RoleName(Random.alphanumeric.take(10).mkString("")))
+  def createNewKeycloakRole(): CreateKeycloakRole = CreateKeycloakRole(RoleName(getRandomString))
 
-  def createNewKeycloakGroup(): CreateKeycloakGroup =
-    CreateKeycloakGroup(GroupName(Random.alphanumeric.take(10).mkString("")))
+  def createNewKeycloakGroup(): CreateKeycloakGroup = CreateKeycloakGroup(GroupName(getRandomString))
 
+  private def getRandomString: String = Random.alphanumeric.take(10).mkString("")
 }

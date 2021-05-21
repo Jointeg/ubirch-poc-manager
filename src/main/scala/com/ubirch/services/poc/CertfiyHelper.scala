@@ -2,6 +2,7 @@ package com.ubirch.services.poc
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
+import com.ubirch.models.keycloak.group.GroupId
 import com.ubirch.models.keycloak.user.{
   CreateKeycloakUserWithoutUserName,
   UserAlreadyExists,
@@ -74,11 +75,7 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
     }
   }
 
-  /**
-    * Add poc.tenantGroupId and poc.CertifyGroupId, PocAdminGroupId into the user
-    * @param pocAdminAndStatus
-    * @return
-    */
+
   override def addGroupsToCertifyUser(
     pocAdminAndStatus: PocAdminAndStatus,
     poc: Poc,
@@ -104,8 +101,7 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
         case Left(errorMsg) =>
           throwError(status1, errorMsg)
       }
-      tenantGroupId = TENANT_GROUP_PREFIX + tenant.tenantName.value
-      statusFinal <- addGroupByIdToCertify(userId, tenantGroupId).map {
+      statusFinal <- addGroupByIdToCertify(userId, tenant.certifyGroupId.value).map {
         case Right(_) =>
           status2.copy(status = status2.status.copy(pocTenantGroupAssigned = true))
         case Left(errorMsg) =>
@@ -117,6 +113,6 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
   private def addGroupByIdToCertify(
     userId: UUID,
     groupId: String): Task[Either[String, Unit]] = {
-    users.addGroupToUserByUserId(UserId(userId), groupId, CertifyKeycloak)
+    users.addGroupToUserById(UserId(userId), groupId, CertifyKeycloak)
   }
 }
