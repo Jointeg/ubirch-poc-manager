@@ -1,15 +1,20 @@
 package com.ubirch.db.tables
 
 import com.ubirch.models.poc.{ Completed, PocAdmin }
+import com.ubirch.db.tables.model.PaginatedResult
+import com.ubirch.models.poc.{ Poc, PocAdmin }
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
 import java.util.UUID
-import javax.inject.Singleton
+import javax.inject.{ Inject, Singleton }
 import scala.collection.mutable
 
 @Singleton
-class PocAdminRepositoryMock extends PocAdminRepository {
+class PocAdminRepositoryMock @Inject() (
+  pocAdminStatusRepositoryMock: PocAdminStatusRepositoryMock,
+  pocRepository: PocRepository)
+  extends PocAdminRepository {
   private val pocAdminDatastore = mutable.Map[UUID, PocAdmin]()
 
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] = {
@@ -50,5 +55,27 @@ class PocAdminRepositoryMock extends PocAdminRepository {
     pocAdminDatastore.update(
       pocAdminId,
       pocAdminDatastore(pocAdminId).copy(webIdentInitiateId = Some(webIdentInitiateId)))
+  }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentInitiated(pocAdminId, webIdentInitiated = true))
+
+  override def updateWebIdentIdAndStatus(
+    webIdentId: UUID,
+    pocAdminId: UUID): Task[Unit] = Task {
+    pocAdminDatastore.update(pocAdminId, pocAdminDatastore(pocAdminId).copy(webIdentId = Some(webIdentId.toString)))
+  }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentSuccess(pocAdminId, webIdentSuccess = true))
+
+  override def getAllByCriteria(criteria: model.Criteria): Task[model.PaginatedResult[(PocAdmin, Poc)]] = {
+    val all = pocAdminDatastore.values
+      .filter(_.tenantId == criteria.tenantId)
+      .map { pa =>
+        Task.parZip2(
+          Task.pure(pa),
+          pocRepository.getPoc(pa.pocId).flatMap {
+            case Some(value) => Task.pure(value)
+            case None => Task.raiseError(
+                new RuntimeException(s"PoC with id ${pa.pocId} does not exists for PocAdmin with id ${pa.id}"))
+          }
+        )
+      }
+    Task.sequence(all).map(i => PaginatedResult(i.size, i.toSeq))
   }
 }

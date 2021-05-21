@@ -14,6 +14,10 @@ trait PocAdminStatusRepository {
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]]
 
   def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit]
+
+  def updateWebIdentSuccess(pocAdminId: UUID, webIdentSuccess: Boolean): Task[Unit]
+
+  def updateWebIdentInitiated(pocAdminId: UUID, webIdentInitiated: Boolean): Task[Unit]
 }
 
 class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminStatusRepository {
@@ -29,7 +33,7 @@ class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContex
       querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(_.pocAdminId == lift(pocAdminId))
     }
 
-  private def updatePocAdminStatusQuery(pocAdminStatus: PocAdminStatus): Quoted[Update[PocAdminStatus]] =
+  private def updateStatusQuery(pocAdminStatus: PocAdminStatus) =
     quote {
       querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(
         _.pocAdminId == lift(pocAdminStatus.pocAdminId)).update(lift(pocAdminStatus))
@@ -38,9 +42,29 @@ class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContex
   def createStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
     run(createPocAdminStatusQuery(pocAdminStatus)).void
 
+  private def updateWebIdentIdSuccessQuery(pocAdminId: UUID, webIdentSuccess: Boolean) =
+    quote {
+      querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(_.pocAdminId == lift(pocAdminId)).update(
+        _.webIdentSuccess -> lift(Option(webIdentSuccess)))
+    }
+
+  private def updateWebIdentInitiatedQuery(pocAdminId: UUID, webIdentInitiated: Boolean) =
+    quote {
+      querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(_.pocAdminId == lift(pocAdminId)).update(
+        _.webIdentInitiated -> lift(Option(webIdentInitiated)))
+    }
+
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]] =
     run(getStatusQuery(pocAdminId)).map(_.headOption)
 
   def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
-    run(updatePocAdminStatusQuery(pocAdminStatus)).void
+    run(updateStatusQuery(pocAdminStatus)).void
+
+  def updateWebIdentSuccess(
+    pocAdminId: UUID,
+    webIdentSuccess: Boolean): Task[Unit] = run(updateWebIdentIdSuccessQuery(pocAdminId, webIdentSuccess)).void
+
+  def updateWebIdentInitiated(
+    pocAdminId: UUID,
+    webIdentInitiated: Boolean): Task[Unit] = run(updateWebIdentInitiatedQuery(pocAdminId, webIdentInitiated)).void
 }

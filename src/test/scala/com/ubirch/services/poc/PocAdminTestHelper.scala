@@ -11,7 +11,7 @@ import java.util.UUID
 object PocAdminTestHelper {
   def createPocAdminAndStatus(poc: Poc, tenant: Tenant, webIdentRequired: Boolean): (PocAdmin, PocAdminStatus) = {
     val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id, webIdentRequired = webIdentRequired)
-    val pocAdminStatus = createPocAdminStatus(pocAdmin.id, poc, webIdentRequired)
+    val pocAdminStatus = createPocAdminStatus(pocAdmin, poc)
     (pocAdmin, pocAdminStatus)
   }
 

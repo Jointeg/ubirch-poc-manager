@@ -122,7 +122,8 @@ class PocAdminCreatorImpl @Inject() (
       }.map { _ =>
         pocAdminAndStatus.copy(status = pocAdminAndStatus.status.copy(invitedToTeamDrive = Some(true)))
       }.onErrorHandle {
-        case ex =>
+        case ex: PocAdminCreationError => throw ex
+        case ex: Exception =>
           val errorMsg = s"failed to invite poc admin ${pocAdminAndStatus.admin.id} to TeamDrive. $ex"
           throwAndLogError(pocAdminAndStatus, errorMsg, ex, logger)
       }

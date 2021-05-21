@@ -3,8 +3,9 @@ package com.ubirch
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
+import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
-import org.joda.time.LocalDate
+import org.joda.time.{ DateTime, LocalDate }
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -97,6 +98,10 @@ object ModelCreationHelper {
     )
   }
 
+  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = {
+    PocAdminStatus.init(pocAdmin, poc)
+  }
+
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
       pocId,
@@ -108,22 +113,6 @@ object ModelCreationHelper {
       logoReceived = None,
       logoStored = None
     )
-
-  def createPocAdminStatus(
-    pocAdminId: UUID = UUID.randomUUID(),
-    poc: Poc,
-    webIdentRequired: Boolean = false): PocAdminStatus = {
-    val webIdentTriggered = if (webIdentRequired) Some(false) else None
-    val webIdentIdentifierSuccess = if (webIdentRequired) Some(false) else None
-    val inviteToTeamDrive = if (poc.clientCertRequired) Some(false) else None
-    PocAdminStatus(
-      pocAdminId,
-      webIdentRequired,
-      webIdentTriggered,
-      webIdentIdentifierSuccess,
-      invitedToTeamDrive = inviteToTeamDrive
-    )
-  }
 
   def createTenantRequest(sharedAuthCertRequired: Boolean = true): CreateTenantRequest =
     CreateTenantRequest(

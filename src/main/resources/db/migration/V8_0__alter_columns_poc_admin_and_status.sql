@@ -16,7 +16,7 @@ ALTER TABLE poc_manager.poc_admin_status_table
     RENAME certifier_user_created TO certify_user_created;
 
 ALTER TABLE poc_manager.poc_admin_status_table
-    ADD COLUMN invited_to_team_drive boolean NOT NULL;
+    ADD COLUMN invited_to_team_drive boolean;
 
 ALTER TABLE poc_manager.poc_admin_status_table
     RENAME web_ident_triggered TO web_ident_initiated;
