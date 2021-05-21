@@ -11,22 +11,29 @@ import scala.collection.mutable
 class PocAdminStatusRepositoryMock extends PocAdminStatusRepository {
   private val pocAdminDatastore = mutable.Map[UUID, PocAdminStatus]()
 
-  def createStatus(pocAdminStatus: PocAdminStatus): Task[UUID] = Task {
+  def createStatus(pocAdminStatus: PocAdminStatus): Task[Unit] = Task {
     pocAdminDatastore += pocAdminStatus.pocAdminId -> pocAdminStatus
-    pocAdminStatus.pocAdminId
   }
 
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]] = {
     Task(pocAdminDatastore.get(pocAdminId))
   }
-  override def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
+
+  def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
     Task(pocAdminDatastore.update(pocAdminStatus.pocAdminId, pocAdminStatus))
 
-  override def updateWebIdentIdentified(
+  def updateWebIdentSuccess(
     pocAdminId: UUID,
-    webIdentIdentified: Boolean): Task[Unit] = Task {
+    webIdentSuccess: Boolean): Task[Unit] = Task {
     pocAdminDatastore.update(
       pocAdminId,
-      pocAdminDatastore(pocAdminId).copy(webIdentIdentified = Some(webIdentIdentified)))
+      pocAdminDatastore(pocAdminId).copy(webIdentSuccess = Some(webIdentSuccess)))
   }
+
+  def updateWebIdentInitiated(pocAdminId: UUID, webIdentInitiated: Boolean): Task[Unit] = Task {
+    pocAdminDatastore.update(
+      pocAdminId,
+      pocAdminDatastore(pocAdminId).copy(webIdentInitiated = Some(webIdentInitiated)))
+  }
+
 }

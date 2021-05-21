@@ -3,9 +3,8 @@ package com.ubirch
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
-import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
-import org.joda.time.{ DateTime, LocalDate }
+import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -46,7 +45,8 @@ object ModelCreationHelper {
     tenantName: TenantName,
     externalId: String = UUID.randomUUID().toString,
     name: String = "pocName",
-    status: Status = Pending
+    status: Status = Pending,
+    clientCertRequired: Boolean = false
   ): Poc =
     Poc(
       id,
@@ -58,16 +58,48 @@ object ModelCreationHelper {
       "pocPhone",
       certifyApp = true,
       None,
-      clientCertRequired = false,
+      clientCertRequired,
       dataSchemaGroupId,
       Some(JsonConfig(parse("""{"test":"hello"}"""))),
       PocManager("surname", "", "", "08023-782137"),
       status
     )
 
-  def createPocAdminStatus(pocAdmin: PocAdmin): PocAdminStatus = {
-    PocAdminStatus.init(pocAdmin)
+  def createPocAdmin(
+    pocAdminId: UUID = UUID.randomUUID(),
+    pocId: UUID,
+    tenantId: TenantId,
+    name: String = getRandomString,
+    surname: String = getRandomString,
+    email: String = getRandomString,
+    mobilePhone: String = getRandomString,
+    webIdentRequired: Boolean = true,
+    webIdentInitiateId: Option[UUID] = None,
+    webIdentId: Option[String] = None,
+    certifyUserId: Option[UUID] = None,
+    dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
+    status: Status = Pending
+  ): PocAdmin = {
+    PocAdmin(
+      pocAdminId,
+      pocId,
+      tenantId,
+      name,
+      surname,
+      email,
+      mobilePhone,
+      webIdentRequired,
+      webIdentInitiateId,
+      webIdentId,
+      certifyUserId,
+      dateOfBirth,
+      status
+    )
   }
+
+  private def getRandomString = Random.alphanumeric.take(10).mkString
+
+  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = PocAdminStatus.init(pocAdmin, poc)
 
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
@@ -87,38 +119,5 @@ object ModelCreationHelper {
       API,
       PlainDeviceCreationToken(token),
       sharedAuthCertRequired = sharedAuthCertRequired
-    )
-
-  def createPocAdmin(
-    id: UUID = UUID.randomUUID(),
-    pocId: UUID = UUID.randomUUID(),
-    tenantId: TenantId = TenantId(TestData.tenantName),
-    name: String = TestData.PocAdmin.name,
-    surname: String = TestData.PocAdmin.surname,
-    email: String = TestData.PocAdmin.email,
-    mobilePhone: String = TestData.PocAdmin.mobilePhone,
-    webIdentRequired: Boolean = TestData.PocAdmin.webIdentRequired,
-    certifierUserId: UUID = UUID.randomUUID(),
-    dateOfBirth: BirthDate = TestData.PocAdmin.dateOfBirth,
-    status: Status = TestData.PocAdmin.status,
-    lastUpdated: Updated = Updated(DateTime.now()),
-    created: Created = Created(DateTime.now()),
-    webIdentInitiateId: Option[UUID] = None): PocAdmin =
-    PocAdmin(
-      id = id,
-      pocId = pocId,
-      tenantId = tenantId,
-      name = name,
-      surname = surname,
-      email = email,
-      mobilePhone = mobilePhone,
-      certifierUserId = certifierUserId,
-      dateOfBirth = dateOfBirth,
-      status = status,
-      lastUpdated = lastUpdated,
-      created = created,
-      webIdentRequired = webIdentRequired,
-      webIdentId = None,
-      webIdentInitiateId = webIdentInitiateId
     )
 }

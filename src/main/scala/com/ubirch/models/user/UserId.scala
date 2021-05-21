@@ -4,7 +4,9 @@ import io.getquill.MappedEncoding
 
 import java.util.UUID
 
-case class UserId(value: UUID) extends AnyVal
+case class UserId(value: UUID) extends AnyVal {
+  override def toString: String = value.toString
+}
 
 object UserId {
   implicit val encodeUserId: MappedEncoding[UserId, UUID] = MappedEncoding[UserId, UUID](_.value)

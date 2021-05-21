@@ -3,7 +3,7 @@ package com.ubirch.services.teamdrive
 import com.ubirch.models.auth.Base16String
 import com.ubirch.models.auth.cert.Passphrase
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
-import com.ubirch.services.teamdrive.model.{ FileId, Read, SpaceId, TeamDriveClient }
+import com.ubirch.services.teamdrive.model.{ FileId, Read, SpaceId, SpaceName, TeamDriveClient }
 import monix.eval.Task
 
 import java.nio.ByteBuffer
@@ -11,7 +11,7 @@ import javax.inject.{ Inject, Singleton }
 
 trait TeamDriveService {
   def shareCert(
-    spaceName: String,
+    spaceName: SpaceName,
     emails: Seq[String],
     passphrase: Passphrase,
     certificate: Base16String
@@ -21,13 +21,13 @@ trait TeamDriveService {
 @Singleton
 class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDriveService {
   def shareCert(
-    spaceName: String,
+    spaceName: SpaceName,
     emails: Seq[String],
     passphrase: Passphrase,
     certificate: Base16String
   ): Task[SharedCertificate] =
     for {
-      spaceId <- client.createSpace(spaceName, spaceName)
+      spaceId <- client.createSpace(spaceName, spaceName.v) // use space name as path
       _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, Read)))
       certByteArray <- toByteArray(certificate)
       certFileId <- client.putFile(spaceId, s"cert_$spaceName.pfx", ByteBuffer.wrap(certByteArray))
@@ -49,5 +49,9 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDrive
 }
 
 object TeamDriveService {
-  case class SharedCertificate(spaceName: String, spaceId: SpaceId, passphraseFileId: FileId, certificateFileId: FileId)
+  case class SharedCertificate(
+    spaceName: SpaceName,
+    spaceId: SpaceId,
+    passphraseFileId: FileId,
+    certificateFileId: FileId)
 }

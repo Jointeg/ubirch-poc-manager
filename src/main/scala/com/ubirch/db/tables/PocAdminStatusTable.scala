@@ -2,20 +2,22 @@ package com.ubirch.db.tables
 
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.models.poc.PocAdminStatus
-import io.getquill.{ EntityQuery, Insert }
+import io.getquill.{ EntityQuery, Insert, Update }
 import monix.eval.Task
 
 import java.util.UUID
 import javax.inject.Inject
 
 trait PocAdminStatusRepository {
-  def createStatus(pocAdminStatus: PocAdminStatus): Task[UUID]
+  def createStatus(pocAdminStatus: PocAdminStatus): Task[Unit]
 
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]]
 
   def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit]
 
-  def updateWebIdentIdentified(pocAdminId: UUID, webIdentIdentified: Boolean): Task[Unit]
+  def updateWebIdentSuccess(pocAdminId: UUID, webIdentSuccess: Boolean): Task[Unit]
+
+  def updateWebIdentInitiated(pocAdminId: UUID, webIdentInitiated: Boolean): Task[Unit]
 }
 
 class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminStatusRepository {
@@ -37,22 +39,32 @@ class PocAdminStatusTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContex
         _.pocAdminId == lift(pocAdminStatus.pocAdminId)).update(lift(pocAdminStatus))
     }
 
-  private def updateWebIdentIdentifier(pocAdminId: UUID, webIdentIdentified: Boolean) =
+  def createStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
+    run(createPocAdminStatusQuery(pocAdminStatus)).void
+
+  private def updateWebIdentIdSuccessQuery(pocAdminId: UUID, webIdentSuccess: Boolean) =
     quote {
       querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(_.pocAdminId == lift(pocAdminId)).update(
-        _.webIdentIdentified -> lift(Option(webIdentIdentified)))
+        _.webIdentSuccess -> lift(Option(webIdentSuccess)))
     }
 
-  def createStatus(pocAdminStatus: PocAdminStatus): Task[UUID] =
-    run(createPocAdminStatusQuery(pocAdminStatus)).map(_ => pocAdminStatus.pocAdminId)
+  private def updateWebIdentInitiatedQuery(pocAdminId: UUID, webIdentInitiated: Boolean) =
+    quote {
+      querySchema[PocAdminStatus]("poc_manager.poc_admin_status_table").filter(_.pocAdminId == lift(pocAdminId)).update(
+        _.webIdentInitiated -> lift(Option(webIdentInitiated)))
+    }
 
   def getStatus(pocAdminId: UUID): Task[Option[PocAdminStatus]] =
     run(getStatusQuery(pocAdminId)).map(_.headOption)
 
-  override def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
+  def updateStatus(pocAdminStatus: PocAdminStatus): Task[Unit] =
     run(updateStatusQuery(pocAdminStatus)).void
 
-  override def updateWebIdentIdentified(
+  def updateWebIdentSuccess(
     pocAdminId: UUID,
-    webIdentIdentified: Boolean): Task[Unit] = run(updateWebIdentIdentifier(pocAdminId, webIdentIdentified)).void
+    webIdentSuccess: Boolean): Task[Unit] = run(updateWebIdentIdSuccessQuery(pocAdminId, webIdentSuccess)).void
+
+  def updateWebIdentInitiated(
+    pocAdminId: UUID,
+    webIdentInitiated: Boolean): Task[Unit] = run(updateWebIdentInitiatedQuery(pocAdminId, webIdentInitiated)).void
 }

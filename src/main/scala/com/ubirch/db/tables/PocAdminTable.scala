@@ -1,6 +1,7 @@
 package com.ubirch.db.tables
 
 import com.ubirch.db.context.QuillMonixJdbcContext
+import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
 import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
 import com.ubirch.models.common
 import com.ubirch.models.common.Sort
@@ -15,11 +16,13 @@ import javax.inject.Inject
 trait PocAdminRepository {
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID]
 
+  def updatePocAdmin(pocAdmin: PocAdmin): Task[UUID]
+
   def getPocAdmin(pocAdminId: UUID): Task[Option[PocAdmin]]
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
 
-  def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit]
+  def getAllUncompletedPocAdmins(): Task[List[PocAdmin]]
 
   def updateWebIdentIdAndStatus(webIdentId: UUID, pocAdminId: UUID): Task[Unit]
 
@@ -45,6 +48,11 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
   private def getAllPocAdminsByTenantIdQuery(tenantId: TenantId): Quoted[EntityQuery[PocAdmin]] =
     quote {
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.tenantId == lift(tenantId))
+    }
+
+  private def getAllPocAdminsWithoutStatusQuery(status: Status) =
+    quote {
+      querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.status != lift(status))
     }
 
   private def updatePocAdminQuery(pocAdmin: PocAdmin) =
@@ -75,16 +83,25 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]] = {
     run(getAllPocAdminsByTenantIdQuery(tenantId))
   }
-  override def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit] = run(updatePocAdminQuery(pocAdmin)).void
 
-  override def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = {
-    run(updateWebInitiateId(pocAdminId, webIdentInitiateId)).void
+  def getAllUncompletedPocAdmins(): Task[List[PocAdmin]] = run(getAllPocAdminsWithoutStatusQuery(Completed))
+
+  def updatePocAdmin(pocAdmin: PocAdmin): Task[UUID] = run(updatePocAdminQuery(pocAdmin)).map(_ => pocAdmin.id)
+
+  def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = {
+    transaction {
+      for {
+        _ <- run(updateWebInitiateId(pocAdminId, webIdentInitiateId)).void
+        _ <- pocAdminStatusTable.updateWebIdentInitiated(pocAdminId, webIdentInitiated = true)
+      } yield ()
+    }
   }
-  override def updateWebIdentIdAndStatus(webIdentId: UUID, pocAdminId: UUID): Task[Unit] =
+
+  def updateWebIdentIdAndStatus(webIdentId: UUID, pocAdminId: UUID): Task[Unit] =
     transaction {
       for {
         _ <- run(updateWebIdentIdQuery(webIdentId, pocAdminId)).void
-        _ <- pocAdminStatusTable.updateWebIdentIdentified(pocAdminId, webIdentIdentified = true)
+        _ <- pocAdminStatusTable.updateWebIdentSuccess(pocAdminId, webIdentSuccess = true)
       } yield ()
     }
 

@@ -50,6 +50,7 @@ object ConfPaths {
   trait ServicesConfPaths {
     final val DATA_SCHEMA_GROUP_MAP = "system.services.dataSchemaGroupMap"
     final val POC_TYPE_ENDPOINT_MAP = "system.services.pocTypeEndpointMap"
+    final val POC_ADMIN_GROUP_ID = "system.services.pocAdminGroupId"
     final val CERTIFY_USERS_GROUP_ID = "system.services.certifyUsersGroupId"
     //urls and tokens
     final val THING_API_URL_CREATE_DEVICE = "system.services.thingApiURLCreateDevice"

@@ -4,6 +4,7 @@ import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.PKCS12Operations
 import com.ubirch.services.teamdrive.TeamDriveService
+import com.ubirch.services.teamdrive.model.SpaceName
 import monix.eval.Task
 
 import java.util.UUID
@@ -37,7 +38,7 @@ object PoCCertCreator extends LazyLogging {
           case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
           case Right(keystore) => Task(keystore)
         }
-      name = s"${stage}_${poc.pocType.split("_")(1)}_${tenant.tenantName.value}_${poc.pocName}_${poc.externalId}"
+      name = SpaceName.forPoc(stage, tenant, poc)
       _ <- teamDriveService.shareCert(
         name,
         ubirchAdmins :+ poc.manager.managerEmail,

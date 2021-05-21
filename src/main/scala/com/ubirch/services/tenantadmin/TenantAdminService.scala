@@ -8,6 +8,7 @@ import monix.eval.Task
 
 import java.util.UUID
 import javax.inject.Inject
+import scala.language.higherKinds
 
 trait TenantAdminService {
   def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String]

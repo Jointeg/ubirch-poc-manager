@@ -3,19 +3,15 @@ package com.ubirch.services.poc
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
-import com.ubirch.ConfPaths.{ PostgresPaths, TeamDrivePaths }
+import com.ubirch.ConfPaths.TeamDrivePaths
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
-import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
-import com.ubirch.services.poc.util.PKCS12Operations
 import com.ubirch.services.teamdrive.TeamDriveService
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.json4s.native.Serialization
-
-import java.util.UUID
 
 trait PocCreator {
 
@@ -99,7 +95,7 @@ class PocCreatorImpl @Inject() (
   def doOrganisationUnitCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
       PoCCertCreator.pocCreationError("a poc shouldn't require client cert if tenant usageType is API", pocAndStatus)
-    else if (pocAndStatus.poc.clientCertRequired) {
+    else if (pocAndStatus.poc.clientCertRequired && !pocAndStatus.status.orgUnitCertCreated.contains(true)) {
       PoCCertCreator.createPoCOrganisationalUnitCertificate(tenant, pocAndStatus)(certHandler)
     } else {
       Task(pocAndStatus)
@@ -111,7 +107,7 @@ class PocCreatorImpl @Inject() (
       PoCCertCreator.pocCreationError(
         "a poc shouldn't require shared auth cert if tenant usageType is API",
         pocAndStatus)
-    else if (pocAndStatus.poc.clientCertRequired && pocAndStatus.status.clientCertCreated.isDefined && !pocAndStatus.status.clientCertCreated.get) {
+    else if (pocAndStatus.poc.clientCertRequired && !pocAndStatus.status.clientCertCreated.contains(true)) {
       PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus, ubirchAdminsEmails, stage)(
         certHandler,
         teamDriveService)

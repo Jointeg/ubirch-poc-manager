@@ -17,8 +17,7 @@ trait DeviceHelper {
 
 }
 
-class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGroupService, pocConfig: PocConfig)
-  extends DeviceHelper {
+class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConfig) extends DeviceHelper {
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 
@@ -51,7 +50,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
 
   private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Unit]] = {
     val deviceId = pocAndStatus.poc.getDeviceId
-    users.addGroupToUser(deviceId, groupId, DeviceKeycloak)
+    users.addGroupToUserByName(deviceId, groupId, DeviceKeycloak)
   }
 
 }

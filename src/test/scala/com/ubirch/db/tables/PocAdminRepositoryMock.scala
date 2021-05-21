@@ -1,5 +1,6 @@
 package com.ubirch.db.tables
 
+import com.ubirch.models.poc.{ Completed, PocAdmin }
 import com.ubirch.db.tables.model.PaginatedResult
 import com.ubirch.models.poc.{ Poc, PocAdmin }
 import com.ubirch.models.tenant.TenantId
@@ -23,6 +24,13 @@ class PocAdminRepositoryMock @Inject() (
     }
   }
 
+  def updatePocAdmin(pocAdmin: PocAdmin): Task[UUID] = {
+    Task {
+      pocAdminDatastore.update(pocAdmin.id, pocAdmin)
+      pocAdmin.id
+    }
+  }
+
   def getPocAdmin(pocAdminId: UUID): Task[Option[PocAdmin]] = {
     Task(pocAdminDatastore.get(pocAdminId))
   }
@@ -34,18 +42,26 @@ class PocAdminRepositoryMock @Inject() (
       }.toList
     }
   }
-  override def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit] = Task(pocAdminDatastore.update(pocAdmin.id, pocAdmin))
 
-  override def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = Task {
+  def getAllUncompletedPocAdmins(): Task[List[PocAdmin]] = {
+    Task {
+      pocAdminDatastore.collect {
+        case (_, pocAdmin: PocAdmin) if pocAdmin.status != Completed => pocAdmin
+      }.toList
+    }
+  }
+
+  def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = Task {
     pocAdminDatastore.update(
       pocAdminId,
       pocAdminDatastore(pocAdminId).copy(webIdentInitiateId = Some(webIdentInitiateId)))
-  }
+  }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentInitiated(pocAdminId, webIdentInitiated = true))
+
   override def updateWebIdentIdAndStatus(
     webIdentId: UUID,
     pocAdminId: UUID): Task[Unit] = Task {
     pocAdminDatastore.update(pocAdminId, pocAdminDatastore(pocAdminId).copy(webIdentId = Some(webIdentId.toString)))
-  }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentIdentified(pocAdminId, webIdentIdentified = true))
+  }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentSuccess(pocAdminId, webIdentSuccess = true))
 
   override def getAllByCriteria(criteria: model.Criteria): Task[model.PaginatedResult[(PocAdmin, Poc)]] = {
     val all = pocAdminDatastore.values

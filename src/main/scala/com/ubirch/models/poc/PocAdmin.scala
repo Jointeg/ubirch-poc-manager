@@ -14,9 +14,9 @@ case class PocAdmin(
   email: String,
   mobilePhone: String,
   webIdentRequired: Boolean,
-  webIdentId: Option[String],
   webIdentInitiateId: Option[UUID],
-  certifierUserId: UUID,
+  webIdentId: Option[String],
+  certifyUserId: Option[UUID],
   dateOfBirth: BirthDate,
   status: Status = Pending,
   lastUpdated: Updated = Updated(DateTime.now()),
@@ -34,21 +34,20 @@ object PocAdmin {
     email: String,
     mobilePhone: String,
     webIdentRequired: Boolean,
-    certifierUserId: UUID,
     dateOfBirth: LocalDate): PocAdmin = {
-    new PocAdmin(
-      id = id,
-      pocId = pocId,
-      tenantId = tenantId,
-      name = name,
-      surname = surName,
-      email = email,
-      mobilePhone = mobilePhone,
-      webIdentRequired = webIdentRequired,
-      webIdentId = None,
-      webIdentInitiateId = None,
-      certifierUserId = certifierUserId,
-      dateOfBirth = BirthDate(dateOfBirth)
+    PocAdmin(
+      id,
+      pocId,
+      tenantId,
+      name,
+      surName,
+      email,
+      mobilePhone,
+      webIdentRequired,
+      None,
+      None,
+      None,
+      BirthDate(dateOfBirth)
     )
   }
 
