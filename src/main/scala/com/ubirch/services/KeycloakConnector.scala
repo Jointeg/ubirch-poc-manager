@@ -35,8 +35,14 @@ class DefaultKeycloakConnector @Inject() (
     }
 }
 
-sealed trait KeycloakInstance
+sealed trait KeycloakInstance {
+  val name: String
+}
 
-case object CertifyKeycloak extends KeycloakInstance
+case object CertifyKeycloak extends KeycloakInstance {
+  val name = "certify realm"
+}
 
-case object DeviceKeycloak extends KeycloakInstance
+case object DeviceKeycloak extends KeycloakInstance {
+  val name = "device realm"
+}

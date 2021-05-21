@@ -3,21 +3,21 @@ package com.ubirch.services.poc
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.models.keycloak.user.{
-  CreateCertifyKeycloakUser,
-  CreateKeycloakUser,
+  CreateKeycloakUserWithoutUserName,
   UserAlreadyExists,
   UserCreationError,
   UserRequiredAction
 }
 import com.ubirch.models.poc.Poc
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.models.user.{ Email, FirstName, LastName, UserId, UserName }
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserId }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.PocAdminCreator.throwError
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
 
+import java.util.UUID
 import javax.inject.Inject
 
 /**
@@ -39,14 +39,14 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
   override def createCertifyUserWithRequiredActions(pocAdminAndStatus: PocAdminAndStatus): Task[PocAdminAndStatus] = {
     if (pocAdminAndStatus.status.certifyUserCreated) Task(pocAdminAndStatus)
     else {
-      val keycloakUser = CreateCertifyKeycloakUser(
+      val keycloakUser = CreateKeycloakUserWithoutUserName(
         FirstName(pocAdminAndStatus.admin.name),
         LastName(pocAdminAndStatus.admin.surname),
         Email(pocAdminAndStatus.admin.email)
       )
       val requiredActions =
         List(UserRequiredAction.VERIFY_EMAIL, UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
-      users.createUser(keycloakUser, CertifyKeycloak, requiredActions).map {
+      users.createUserWithoutUserName(keycloakUser, CertifyKeycloak, requiredActions).map {
         case Right(userId) =>
           pocAdminAndStatus.copy(
             admin = pocAdminAndStatus.admin.copy(certifyUserId = Some(userId.value)),
@@ -83,8 +83,13 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
     pocAdminAndStatus: PocAdminAndStatus,
     poc: Poc,
     tenant: Tenant): Task[PocAdminAndStatus] = {
+    val userId = pocAdminAndStatus.admin.certifyUserId.getOrElse(
+      throwError(
+        pocAdminAndStatus,
+        "certifyUserId is missing, when it should be added to certify")
+    )
     for {
-      status1 <- addGroupByIdToCertify(pocConfig.pocAdminGroupId, pocAdminAndStatus).map {
+      status1 <- addGroupByIdToCertify(userId, pocConfig.pocAdminGroupId).map {
         case Right(_) =>
           pocAdminAndStatus.copy(status = pocAdminAndStatus.status.copy(pocAdminGroupAssigned = true))
         case Left(errorMsg) =>
@@ -93,14 +98,14 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
       certifyGroupId = poc.certifyGroupId.getOrElse(throwError(
         status1,
         "pocCertifyGroupId is missing, when it should be added to certify"))
-      status2 <- addGroupByIdToCertify(certifyGroupId, status1).map {
+      status2 <- addGroupByIdToCertify(userId, certifyGroupId).map {
         case Right(_) =>
           status1.copy(status = status1.status.copy(pocCertifyGroupAssigned = true))
         case Left(errorMsg) =>
           throwError(status1, errorMsg)
       }
       tenantGroupId = TENANT_GROUP_PREFIX + tenant.tenantName.value
-      statusFinal <- addGroupByIdToCertify(tenantGroupId, status2).map {
+      statusFinal <- addGroupByIdToCertify(userId, tenantGroupId).map {
         case Right(_) =>
           status2.copy(status = status2.status.copy(pocTenantGroupAssigned = true))
         case Left(errorMsg) =>
@@ -110,9 +115,8 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
   }
 
   private def addGroupByIdToCertify(
-    groupId: String,
-    pocAdminAndStatus: PocAdminAndStatus): Task[Either[String, Unit]] = {
-    val userId = pocAdminAndStatus.admin.id.toString
-    users.addGroupToUser(userId, groupId, CertifyKeycloak)
+    userId: UUID,
+    groupId: String): Task[Either[String, Unit]] = {
+    users.addGroupToUserByUserId(UserId(userId), groupId, CertifyKeycloak)
   }
 }

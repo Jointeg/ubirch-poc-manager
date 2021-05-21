@@ -3,8 +3,8 @@ package com.ubirch.services.superadmin
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.db.tables.TenantRepository
-import com.ubirch.models.auth.{ Base16String, CertIdentifier }
 import com.ubirch.models.auth.cert.{ Passphrase, SharedAuthCertificateResponse }
+import com.ubirch.models.auth.{ Base16String, CertIdentifier }
 import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
@@ -26,7 +26,8 @@ class DefaultSuperAdminService @Inject() (
   tenantRepository: TenantRepository,
   certHandler: CertHandler,
   teamDriveService: TeamDriveService,
-  pocConfig: PocConfig)
+  pocConfig: PocConfig,
+  keycloakHelper: TenantKeycloakHelper)
   extends SuperAdminService
   with LazyLogging
   with TaskHelpers {
@@ -35,17 +36,19 @@ class DefaultSuperAdminService @Inject() (
     for {
       encryptedDeviceCreationToken <-
         aesEncryption.encrypt(createTenantRequest.deviceCreationToken.value)(EncryptedDeviceCreationToken(_))
-      tenant = convertToTenant(encryptedDeviceCreationToken, createTenantRequest)
+
+      deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest.tenantName)
+      tenant = convertToTenant(encryptedDeviceCreationToken, createTenantRequest, deviceAndCertifyGroup)
 
       _ <- createOrgCert(tenant)
       tenantId <-
         if (tenant.sharedAuthCertRequired) {
           for {
-            orgUnitID <- createOrgUnitCert(tenant)
-            response <- createSharedAuthCert(tenant, orgUnitID)
+            _ <- createOrgUnitCert(tenant)
+            response <- createSharedAuthCert(tenant)
             _ <- createShareCertIntoTD(tenant, response)
             cert <- getCert(tenant, response)
-            updated = updateTenant(tenant, orgUnitID, response, cert)
+            updated = tenant.copy(sharedAuthCert = Some(SharedAuthCert(cert)))
             tenantId <- persistTenant(updated)
           } yield {
             tenantId
@@ -88,30 +91,26 @@ class DefaultSuperAdminService @Inject() (
       }
   }
 
-  private[superadmin] def createOrgUnitCert(tenant: Tenant): Task[OrgUnitId] = {
-    val orgUnitCertId = UUID.randomUUID()
+  private[superadmin] def createOrgUnitCert(tenant: Tenant): Task[Unit] = {
     val identifier = CertIdentifier.tenantOrgUnitCert(tenant.tenantName)
     certHandler
-      .createOrganisationalUnitCertificate(tenant.getOrgId, orgUnitCertId, identifier)
+      .createOrganisationalUnitCertificate(tenant.getOrgId, tenant.orgUnitId.value, identifier)
       .map {
         case Right(_) =>
-          logger.debug(s"successfully created org unit cert $orgUnitCertId for tenant ${tenant.tenantName}")
-          OrgUnitId(orgUnitCertId)
+          logger.debug(s"successfully created org unit cert ${tenant.orgUnitId.value} for tenant ${tenant.tenantName}")
         case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
       }
   }
 
-  private[superadmin] def createSharedAuthCert(
-    tenant: Tenant,
-    orgUnitId: OrgUnitId): Task[SharedAuthResult] = {
-    val groupId = UUID.randomUUID()
+  private[superadmin] def createSharedAuthCert(tenant: Tenant): Task[SharedAuthResult] = {
+
     val identifier = CertIdentifier.tenantClientCert(tenant.tenantName)
     certHandler
-      .createSharedAuthCertificate(orgUnitId.value, groupId, identifier)
+      .createSharedAuthCertificate(tenant.orgUnitId.value, tenant.groupId.value, identifier)
       .map {
         case Right(SharedAuthCertificateResponse(certUuid, passphrase, pkcs12)) =>
-          logger.debug(s"successfully created shared auth cert $groupId for tenant ${tenant.tenantName}")
-          SharedAuthResult(groupId, certUuid, passphrase, pkcs12)
+          logger.debug(s"successfully created shared auth cert ${tenant.groupId.value} for tenant ${tenant.tenantName}")
+          SharedAuthResult(certUuid, passphrase, pkcs12)
         case Left(CertificateCreationError(msg)) => throw TenantCreationException(msg)
       }
   }
@@ -128,33 +127,20 @@ class DefaultSuperAdminService @Inject() (
       }
   }
 
-  private[superadmin] def updateTenant(
-    tenant: Tenant,
-    orgUnitId: OrgUnitId,
-    sharedAuthResult: SharedAuthResult,
-    sharedAuthCert: String) = {
-    tenant
-      .copy(
-        orgUnitId = Some(orgUnitId),
-        groupId = Some(GroupId(sharedAuthResult.groupId)),
-        sharedAuthCert = Some(SharedAuthCert(sharedAuthCert)))
-  }
-
   private def convertToTenant(
     encryptedDeviceCreationToken: EncryptedDeviceCreationToken,
-    createTenantRequest: CreateTenantRequest): Tenant = {
+    createTenantRequest: CreateTenantRequest,
+    deviceAndCertifyGroup: DeviceAndCertifyGroups): Tenant = {
     val tenantId = TenantId(createTenantRequest.tenantName)
     Tenant(
       tenantId,
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
       encryptedDeviceCreationToken,
-      createTenantRequest.idGardIdentifier,
-      createTenantRequest.certifyGroupId,
-      createTenantRequest.deviceGroupId,
+      TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
+      TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),
       orgId = OrgId(tenantId.value),
-      sharedAuthCertRequired = createTenantRequest.sharedAuthCertRequired,
-      orgUnitId = None
+      sharedAuthCertRequired = createTenantRequest.sharedAuthCertRequired
     )
   }
 
@@ -164,4 +150,4 @@ sealed trait CreateTenantErrors
 case class DBError(tenantId: TenantId) extends CreateTenantErrors
 
 case class TenantCreationException(msg: String) extends Throwable
-case class SharedAuthResult(groupId: UUID, sharedAuthCertId: UUID, passphrase: Passphrase, pkcs12: Base16String)
+case class SharedAuthResult(sharedAuthCertId: UUID, passphrase: Passphrase, pkcs12: Base16String)

@@ -6,6 +6,7 @@ import com.typesafe.config.Config
 import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
 import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
+import com.ubirch.models.tenant.{ TenantKeycloakHelper, TenantKeycloakHelperImpl }
 import com.ubirch.services.auth._
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
@@ -81,8 +82,11 @@ class Binder extends AbstractModule {
   def PublicKeyPoolService: ScopedBindingBuilder =
     bind(classOf[PublicKeyPoolService]).to(classOf[DefaultPublicKeyPoolService])
 
-  def TenantService: ScopedBindingBuilder =
+  def SuperAdminService: ScopedBindingBuilder =
     bind(classOf[SuperAdminService]).to(classOf[DefaultSuperAdminService])
+
+  def TenantKeycloakHelper: ScopedBindingBuilder =
+    bind(classOf[TenantKeycloakHelper]).to(classOf[TenantKeycloakHelperImpl])
 
   def KeycloakUserConnector: ScopedBindingBuilder =
     bind(classOf[CertifyKeycloakConnector]).to(classOf[CertifyKeycloakConfigConnector])
@@ -202,7 +206,8 @@ class Binder extends AbstractModule {
     KeycloakUserService
     KeycloakRolesService
     KeycloakGroupService
-    TenantService
+    SuperAdminService
+    TenantKeycloakHelper
     AuthClient
     UserPollingService
     QuillMonixJdbcContext

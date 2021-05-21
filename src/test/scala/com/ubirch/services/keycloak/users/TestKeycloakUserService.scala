@@ -1,10 +1,8 @@
 package com.ubirch.services.keycloak.users
 import com.ubirch.models.keycloak.user.{
-  CreateCertifyKeycloakUser,
-  CreateDeviceKeycloakUser,
-  CreateKeycloakUser,
+  CreateBasicKeycloakUser,
+  CreateKeycloakUserWithoutUserName,
   UserAlreadyExists,
-  UserCreationError,
   UserException,
   UserRequiredAction
 }
@@ -19,38 +17,38 @@ import scala.collection.mutable
 
 @Singleton
 class TestKeycloakUserService() extends KeycloakUserService {
-  private val keycloakCertifyDatastore = mutable.Map[UserId, CreateCertifyKeycloakUser]()
-  private val keycloakDeviceDatastore = mutable.Map[UserId, CreateDeviceKeycloakUser]()
+  private val keycloakCertifyDatastore = mutable.Map[UserId, CreateKeycloakUserWithoutUserName]()
+  private val keycloakDeviceDatastore = mutable.Map[UserId, CreateBasicKeycloakUser]()
 
   override def createUser(
-    createKeycloakUser: CreateKeycloakUser,
-    instance: KeycloakInstance = CertifyKeycloak,
+    createBasicKeycloakUser: CreateBasicKeycloakUser,
+    instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
-    (createKeycloakUser, instance) match {
-      case (_: CreateDeviceKeycloakUser, CertifyKeycloak) =>
-        Task(Left(UserCreationError("user and instance don't match. device user and certify keycloak")))
-      case (_: CreateCertifyKeycloakUser, DeviceKeycloak) =>
-        Task(Left(UserCreationError("user and instance don't match. certify user and instance keycloak")))
-      case (user: CreateCertifyKeycloakUser, CertifyKeycloak) =>
-        keycloakCertifyDatastore.find(_._2.email == user.email) match {
-          case Some(_) => Task(Left(UserAlreadyExists(user.email.value)))
-          case None =>
-            val userId = UUID.randomUUID()
-            keycloakCertifyDatastore += (UserId(userId) -> user)
-            Task(Right(UserId(userId)))
-        }
-      case (user: CreateDeviceKeycloakUser, DeviceKeycloak) =>
-        keycloakDeviceDatastore.find(_._2.userName == user.userName) match {
-          case Some(_) => Task(Left(UserAlreadyExists(user.userName.value)))
-          case None =>
-            val userId = UUID.randomUUID()
-            keycloakDeviceDatastore += (UserId(userId) -> user)
-            Task(Right(UserId(userId)))
-        }
+    keycloakDeviceDatastore.find(_._2.userName == createBasicKeycloakUser.userName) match {
+      case Some(_) => Task(Left(UserAlreadyExists(createBasicKeycloakUser.userName.value)))
+      case None =>
+        val userId = UUID.randomUUID()
+        keycloakDeviceDatastore += (UserId(userId) -> createBasicKeycloakUser)
+        Task(Right(UserId(userId)))
     }
   }
 
-  override def deleteUser(username: UserName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
+  override def createUserWithoutUserName(
+    createKeycloakUserWithoutUserName: CreateKeycloakUserWithoutUserName,
+    instance: KeycloakInstance,
+    userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
+    keycloakCertifyDatastore.find(_._2.email == createKeycloakUserWithoutUserName.email) match {
+      case Some(_) => Task(Left(UserAlreadyExists(createKeycloakUserWithoutUserName.email.value)))
+      case None =>
+        val userId = UUID.randomUUID()
+        keycloakCertifyDatastore += (UserId(userId) -> createKeycloakUserWithoutUserName)
+        Task(Right(UserId(userId)))
+    }
+  }
+
+  override def deleteUserByUserName(
+    username: UserName,
+    keycloakInstance: KeycloakInstance = DeviceKeycloak): Task[Unit] =
     keycloakInstance match {
       case CertifyKeycloak => Task(())
       case DeviceKeycloak =>
@@ -65,7 +63,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
 
   override def getUserById(
     userId: UserId,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]] = Task {
+    instance: KeycloakInstance): Task[Option[UserRepresentation]] = Task {
     val datastore = instance match {
       case CertifyKeycloak => keycloakCertifyDatastore
       case DeviceKeycloak  => keycloakDeviceDatastore
@@ -73,9 +71,9 @@ class TestKeycloakUserService() extends KeycloakUserService {
     datastore.find(_._1 == userId).map(_._2.toKeycloakRepresentation)
   }
 
-  override def getUser(
+  override def getUserByUserName(
     username: UserName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]] =
+    keycloakInstance: KeycloakInstance = DeviceKeycloak): Task[Option[UserRepresentation]] =
     keycloakInstance match {
       case CertifyKeycloak => Task(None) // certify keycloak doesn't have user name field
       case DeviceKeycloak => Task {
@@ -91,8 +89,14 @@ class TestKeycloakUserService() extends KeycloakUserService {
     keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
     Task { Right(()) }
 
-  override def addGroupToUser(
+  override def addGroupToUserByName(
     userName: String,
+    groupId: String,
+    keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
+    Task { Right(()) }
+
+  override def addGroupToUserById(
+    userId: UserId,
     groupId: String,
     keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
     Task { Right(()) }

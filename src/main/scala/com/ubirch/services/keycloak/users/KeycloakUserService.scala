@@ -4,16 +4,16 @@ import cats.data.OptionT
 import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user.{
-  CreateCertifyKeycloakUser,
-  CreateDeviceKeycloakUser,
+  CreateBasicKeycloakUser,
   CreateKeycloakUser,
+  CreateKeycloakUserWithoutUserName,
   UserAlreadyExists,
   UserCreationError,
   UserException,
   UserRequiredAction
 }
 import com.ubirch.models.user.{ UserId, UserName }
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
+import com.ubirch.services.{ DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
@@ -28,32 +28,54 @@ import scala.collection.JavaConverters.{
 
 trait KeycloakUserService {
   /**
-    * when the isVerifyEmail parameter is true, a keycloak user is created with setting the actions of UserRequiredActions parameter
+    * A keycloak user is created with setting the actions of UserRequiredActions parameter
     */
   def createUser(
-    createKeycloakUser: CreateKeycloakUser,
-    instance: KeycloakInstance = CertifyKeycloak,
+    createBasicKeycloakUser: CreateBasicKeycloakUser,
+    instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]]
 
-  def addGroupToUser(
+  /**
+    * A keycloak user is created with setting the actions of UserRequiredActions parameter
+    */
+  def createUserWithoutUserName(
+    createKeycloakUserWithoutUserName: CreateKeycloakUserWithoutUserName,
+    instance: KeycloakInstance,
+    userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]]
+
+  /**
+    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    */
+  def addGroupToUserByName(
     userName: String,
     groupId: String,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
+    instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def addGroupToUserById(
+    userId: UserId,
+    groupId: String,
+    instance: KeycloakInstance): Task[Either[String, Unit]]
 
   def addGroupToUserByUserId(
     userId: UserId,
     groupId: String,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
+    instance: KeycloakInstance): Task[Either[String, Unit]]
 
-  def deleteUser(username: UserName, instance: KeycloakInstance = CertifyKeycloak): Task[Unit]
+  /**
+    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    */
+  def deleteUserByUserName(username: UserName, instance: KeycloakInstance): Task[Unit]
 
   def getUserById(
     userId: UserId,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]]
+    instance: KeycloakInstance): Task[Option[UserRepresentation]]
 
-  def getUser(
+  /**
+    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    */
+  def getUserByUserName(
     username: UserName,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]]
+    instance: KeycloakInstance = DeviceKeycloak): Task[Option[UserRepresentation]]
 
   /**
     * Send an email to user with actions set to the user
@@ -67,42 +89,46 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   with LazyLogging {
 
   override def createUser(
-    createKeycloakUser: CreateKeycloakUser,
-    instance: KeycloakInstance = CertifyKeycloak,
+    createBasicKeycloakUser: CreateBasicKeycloakUser,
+    instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
-    (createKeycloakUser, instance) match {
-      case (_: CreateDeviceKeycloakUser, CertifyKeycloak) =>
-        Task(
-          Left(UserCreationError(s"user and instance don't match. deviceKeycloak user and certify keycloak instance")))
-      case (_: CreateCertifyKeycloakUser, DeviceKeycloak) =>
-        Task(
-          Left(UserCreationError(s"user and instance don't match. certifyKeycloak user and device keycloak instance")))
-      case (_, _) => {
-        val keycloakUser = createKeycloakUser.toKeycloakRepresentation
-        keycloakUser.setEnabled(true)
-        keycloakUser.setAttributes(Map("confirmation_mail_sent" -> List("false").asJava).asJava)
-        keycloakUser.setRequiredActions(userRequiredActions.map(_.toString).asJava)
-        logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
-        Task {
-          val resp =
-            keycloakConnector
-              .getKeycloak(instance)
-              .realm(keycloakConnector.getKeycloakRealm(instance))
-              .users()
-              .create(keycloakUser)
-          processCreationResponse(resp, keycloakUser.getUsername)
-        }.onErrorHandle { ex =>
-          val errorMsg = s"failed to create user ${createKeycloakUser}"
-          logger.error(errorMsg, ex)
-          Left(UserCreationError(errorMsg))
-        }
-      }
+    _createUser(createBasicKeycloakUser, instance, userRequiredActions)
+  }
+
+  override def createUserWithoutUserName(
+    createKeycloakUserWithoutUserName: CreateKeycloakUserWithoutUserName,
+    instance: KeycloakInstance,
+    userRequiredActions: List[UserRequiredAction.Value]): Task[Either[UserException, UserId]] = {
+    _createUser(createKeycloakUserWithoutUserName, instance, userRequiredActions)
+  }
+
+  private def _createUser(
+    createKeycloakUser: CreateKeycloakUser,
+    instance: KeycloakInstance,
+    userRequiredActions: List[UserRequiredAction.Value]): Task[Either[UserException, UserId]] = {
+    val keycloakUser = createKeycloakUser.toKeycloakRepresentation
+    keycloakUser.setEnabled(true)
+    keycloakUser.setAttributes(Map("confirmation_mail_sent" -> List("false").asJava).asJava)
+    keycloakUser.setRequiredActions(userRequiredActions.map(_.toString).asJava)
+    logger.debug(s"Creating keycloak user ${keycloakUser.getUsername}")
+    Task {
+      val resp =
+        keycloakConnector
+          .getKeycloak(instance)
+          .realm(keycloakConnector.getKeycloakRealm(instance))
+          .users()
+          .create(keycloakUser)
+      processCreationResponse(resp, keycloakUser.getUsername)
+    }.onErrorHandle { ex =>
+      val errorMsg = s"failed to create user ${createKeycloakUser}"
+      logger.error(errorMsg, ex)
+      Left(UserCreationError(errorMsg))
     }
   }
 
   override def getUserById(
     userId: UserId,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]] = {
+    instance: KeycloakInstance): Task[Option[UserRepresentation]] = {
     logger.debug(s"Retrieving keycloak user id: ${userId.value}")
     Task(
       Option(keycloakConnector
@@ -114,9 +140,9 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     )
   }
 
-  override def getUser(
+  override def getUserByUserName(
     username: UserName,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Option[UserRepresentation]] = {
+    instance: KeycloakInstance = DeviceKeycloak): Task[Option[UserRepresentation]] = {
     logger.debug(s"Retrieving keycloak user $username")
     Task(
       keycloakConnector
@@ -129,12 +155,12 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     )
   }
 
-  override def addGroupToUser(
+  override def addGroupToUserByName(
     userName: String,
     groupId: String,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] = {
+    instance: KeycloakInstance): Task[Either[String, Unit]] = {
 
-    getUser(UserName(userName), instance).map {
+    getUserByUserName(UserName(userName), instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         Right(
           keycloakConnector
@@ -151,10 +177,32 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
   }
 
+  override def addGroupToUserById(
+    userId: UserId,
+    groupId: String,
+    instance: KeycloakInstance): Task[Either[String, Unit]] = {
+
+    getUserById(userId, instance).map {
+      case Some(userRepresentation: UserRepresentation) =>
+        Right(
+          keycloakConnector
+            .getKeycloak(instance)
+            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .users()
+            .get(userRepresentation.getId)
+            .joinGroup(groupId))
+      case None =>
+        Left(s"user with name $userId wasn't found")
+    }.onErrorHandle { ex =>
+      logger.error(s"failed to add group $groupId to user $userId", ex)
+      Left(s"failed to add group $groupId to user $userId")
+    }
+  }
+
   override def addGroupToUserByUserId(
     userId: UserId,
     groupId: String,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] = {
+    instance: KeycloakInstance): Task[Either[String, Unit]] = {
     getUserById(userId, instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         Right(
@@ -172,9 +220,9 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
   }
 
-  override def deleteUser(username: UserName, instance: KeycloakInstance = CertifyKeycloak): Task[Unit] = {
+  override def deleteUserByUserName(username: UserName, instance: KeycloakInstance = DeviceKeycloak): Task[Unit] = {
     (for {
-      user <- OptionT(getUser(username))
+      user <- OptionT(getUserByUserName(username, instance))
       _ <- OptionT.liftF(
         Task(
           keycloakConnector

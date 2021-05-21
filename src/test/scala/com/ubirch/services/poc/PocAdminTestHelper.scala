@@ -2,7 +2,7 @@ package com.ubirch.services.poc
 
 import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus }
 import com.ubirch.ModelCreationHelper.{ createPocAdmin, createPocAdminStatus }
-import com.ubirch.db.tables.{ PocAdminRepositoryMock, PocAdminStatusRepositoryMock, TenantRepositoryMock }
+import com.ubirch.db.tables.{ PocAdminRepositoryMock, PocAdminStatusRepositoryMock }
 import com.ubirch.models.tenant.Tenant
 import monix.execution.Scheduler.Implicits.global
 
@@ -10,7 +10,7 @@ import java.util.UUID
 
 object PocAdminTestHelper {
   def createPocAdminAndStatus(poc: Poc, tenant: Tenant, webIdentRequired: Boolean): (PocAdmin, PocAdminStatus) = {
-    val pocAdmin = createPocAdmin(pocId = poc.id, tenantName = tenant.tenantName, webIdentRequired = webIdentRequired)
+    val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id, webIdentRequired = webIdentRequired)
     val pocAdminStatus = createPocAdminStatus(pocAdmin.id, poc, webIdentRequired)
     (pocAdmin, pocAdminStatus)
   }

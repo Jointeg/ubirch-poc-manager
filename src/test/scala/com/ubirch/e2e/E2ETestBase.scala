@@ -25,8 +25,9 @@ trait E2ETestBase
   with StrictLogging {
 
   def withInjector[A](testCode: E2EInjectorHelperImpl => A): A = {
+    val tenantAdminEmail = s"${Random.alphanumeric.take(10).mkString("")}@email.com"
     val tenantAdmin: TenantAdmin =
-      TenantAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
+      TenantAdmin(UserName(tenantAdminEmail), tenantAdminEmail, Random.alphanumeric.take(10).mkString(""))
     val superAdmin: SuperAdmin =
       SuperAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
     val injector = new E2EInjectorHelperImpl(superAdmin, tenantAdmin)

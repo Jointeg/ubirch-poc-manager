@@ -45,4 +45,10 @@ class PocAdminRepositoryMock extends PocAdminRepository {
       }.toList
     }
   }
+
+  def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = Task {
+    pocAdminDatastore.update(
+      pocAdminId,
+      pocAdminDatastore(pocAdminId).copy(webIdentInitiateId = Some(webIdentInitiateId)))
+  }
 }

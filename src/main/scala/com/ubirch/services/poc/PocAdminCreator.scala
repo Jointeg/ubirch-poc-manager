@@ -1,13 +1,13 @@
 package com.ubirch.services.poc
 
-import com.typesafe.scalalogging.{LazyLogging, Logger}
+import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.PocConfig
-import com.ubirch.db.tables.{PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository}
-import com.ubirch.models.poc.{Completed, Poc, PocAdmin, PocAdminStatus, Processing, Status}
+import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
+import com.ubirch.models.poc.{ Completed, Poc, PocAdmin, PocAdminStatus, Processing, Status }
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.services.teamdrive.model.{Read, SpaceName, TeamDriveClient}
+import com.ubirch.services.teamdrive.model.{ Read, SpaceName, TeamDriveClient }
 import monix.eval.Task
-import PocAdminCreator.{throwAndLogError, throwError}
+import PocAdminCreator.{ throwAndLogError, throwError }
 import com.ubirch.db.context.QuillMonixJdbcContext
 
 import javax.inject.Inject
@@ -87,7 +87,8 @@ class PocAdminCreatorImpl @Inject() (
     (for {
       completePocAndStatus <- creationResult
       _ <- quillMonixJdbcContext.withTransaction {
-        updateStatusOfPoc(completePocAndStatus.admin, Completed) >> pocAdminStatusRepository.updateStatus(completePocAndStatus.status)
+        updateStatusOfPoc(completePocAndStatus.admin, Completed) >> pocAdminStatusRepository.updateStatus(
+          completePocAndStatus.status)
       }
     } yield {
       logger.info(s"finished to create poc admin with id ${pocAdminAndStatus.admin.id}")
@@ -122,7 +123,7 @@ class PocAdminCreatorImpl @Inject() (
         pocAdminAndStatus.copy(status = pocAdminAndStatus.status.copy(invitedToTeamDrive = Some(true)))
       }.onErrorHandle {
         case ex =>
-          val errorMsg = s"failed to invite poc admin ${pocAdminAndStatus.admin.id} to TeamDrive."
+          val errorMsg = s"failed to invite poc admin ${pocAdminAndStatus.admin.id} to TeamDrive. $ex"
           throwAndLogError(pocAdminAndStatus, errorMsg, ex, logger)
       }
     } else {
@@ -154,7 +155,8 @@ class PocAdminCreatorImpl @Inject() (
       case pace: PocAdminCreationError =>
         (for {
           _ <- quillMonixJdbcContext.withTransaction {
-            pocAdminRepository.updatePocAdmin(pace.pocAdminAndStatus.admin) >> pocAdminStatusRepository.updateStatus(pace.pocAdminAndStatus.status)
+            pocAdminRepository.updatePocAdmin(pace.pocAdminAndStatus.admin) >> pocAdminStatusRepository.updateStatus(
+              pace.pocAdminAndStatus.status)
           }
         } yield {
           val msg =

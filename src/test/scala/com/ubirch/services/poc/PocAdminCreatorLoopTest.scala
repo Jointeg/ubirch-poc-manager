@@ -10,7 +10,7 @@ import com.ubirch.db.tables.{
 }
 import com.ubirch.models.poc.PocAdminStatus
 import com.ubirch.services.poc.PocAdminTestHelper.{ addPocAndStatusToRepository, createPocAdminAndStatus }
-import com.ubirch.services.poc.PocTestHelper.{ addPocTripleToRepository, createPocTriple }
+import com.ubirch.services.poc.PocTestHelper.{ addPocTripleToRepository, createPocStatusAllTrue, createPocTriple }
 import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.test.FakeTeamDriveClient
 import monix.reactive.Observable
@@ -32,7 +32,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = s"local_${tenant.tenantName.value}"
         //start process

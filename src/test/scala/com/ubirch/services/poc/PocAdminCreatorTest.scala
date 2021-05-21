@@ -33,7 +33,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = s"local_${tenant.tenantName.value}"
         val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
@@ -74,7 +74,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = s"local_${tenant.tenantName.value}"
         val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
@@ -133,7 +133,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = s"local_${tenant.tenantName.value}"
         val webIdentSuccessPocAdminStatus =
@@ -153,7 +153,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val updatedPocAdminStatus = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe()
         val expected = webIdentSuccessPocAdminStatus.copy(
           certifyUserCreated = true,
-          keycloakEmailSent = true,
+          keycloakEmailSent = false,
           pocAdminGroupAssigned = true,
           errorMessage = Some("pocCertifyGroupId is missing, when it should be added to certify")
         )

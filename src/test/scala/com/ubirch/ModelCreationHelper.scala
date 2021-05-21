@@ -8,6 +8,7 @@ import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
+import scala.util.Random
 
 object ModelCreationHelper {
 
@@ -32,15 +33,11 @@ object ModelCreationHelper {
       TenantName(name),
       API,
       deviceCreationToken,
-      IdGardIdentifier("folder-identifier"),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
       OrgId(TenantId(TenantName(name)).value),
-      sharedAuthCertRequired = true,
-      Some(OrgUnitId(UUID.randomUUID())),
-      Some(GroupId(UUID.randomUUID())),
-      sharedAuthCert
-    )
+      sharedAuthCertRequired = true
+    ).copy(sharedAuthCert = sharedAuthCert)
   }
 
   def createPoc(
@@ -48,7 +45,8 @@ object ModelCreationHelper {
     tenantName: TenantName,
     externalId: String = UUID.randomUUID().toString,
     name: String = "pocName",
-    status: Status = Pending
+    status: Status = Pending,
+    clientCertRequired: Boolean = false
   ): Poc =
     Poc(
       id,
@@ -60,7 +58,7 @@ object ModelCreationHelper {
       "pocPhone",
       certifyApp = true,
       None,
-      clientCertRequired = false,
+      clientCertRequired,
       dataSchemaGroupId,
       Some(JsonConfig(parse("""{"test":"hello"}"""))),
       PocManager("surname", "", "", "08023-782137"),
@@ -70,12 +68,12 @@ object ModelCreationHelper {
   def createPocAdmin(
     pocAdminId: UUID = UUID.randomUUID(),
     pocId: UUID,
-    tenantName: TenantName,
-    name: String = "firstname",
-    surname: String = "lastname",
-    email: String = "test@example.com",
-    mobilePhone: String = "08023-782137",
-    webIdentRequired: Boolean = false,
+    tenantId: TenantId,
+    name: String = Random.alphanumeric.take(10).mkString,
+    surname: String = Random.alphanumeric.take(10).mkString,
+    email: String = Random.alphanumeric.take(10).mkString,
+    mobilePhone: String = Random.alphanumeric.take(10).mkString,
+    webIdentRequired: Boolean = true,
     webIdentInitiateId: Option[UUID] = None,
     webIdentId: Option[String] = None,
     certifyUserId: Option[UUID] = None,
@@ -85,7 +83,7 @@ object ModelCreationHelper {
     PocAdmin(
       pocAdminId,
       pocId,
-      TenantId(tenantName),
+      tenantId,
       name,
       surname,
       email,
@@ -132,9 +130,6 @@ object ModelCreationHelper {
       TenantName("tenantName"),
       API,
       PlainDeviceCreationToken(token),
-      IdGardIdentifier("empty"),
-      TenantCertifyGroupId(UUID.randomUUID().toString),
-      TenantDeviceGroupId(UUID.randomUUID().toString),
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 }

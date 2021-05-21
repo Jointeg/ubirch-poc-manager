@@ -50,7 +50,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
 
   private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Unit]] = {
     val deviceId = pocAndStatus.poc.getDeviceId
-    users.addGroupToUser(deviceId, groupId, DeviceKeycloak)
+    users.addGroupToUserByName(deviceId, groupId, DeviceKeycloak)
   }
 
 }

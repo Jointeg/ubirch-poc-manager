@@ -7,7 +7,7 @@ sealed trait CreateKeycloakUser {
   def toKeycloakRepresentation: UserRepresentation
 }
 
-case class CreateDeviceKeycloakUser(
+case class CreateBasicKeycloakUser(
   firstName: FirstName,
   lastName: LastName,
   userName: UserName,
@@ -23,7 +23,7 @@ case class CreateDeviceKeycloakUser(
   }
 }
 
-case class CreateCertifyKeycloakUser(
+case class CreateKeycloakUserWithoutUserName(
   firstName: FirstName,
   lastName: LastName,
   email: Email
