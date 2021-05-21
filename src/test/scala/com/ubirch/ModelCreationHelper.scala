@@ -4,8 +4,9 @@ import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.models.tenant._
+import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
-import org.joda.time.LocalDate
+import org.joda.time.{ DateTime, LocalDate }
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -67,23 +68,9 @@ object ModelCreationHelper {
       status
     )
 
-  def createPocAdmin(
-    id: UUID = UUID.randomUUID(),
-    pocId: UUID,
-    tenantId: TenantId,
-    webIdentRequired: Boolean = true): PocAdmin =
-    PocAdmin(
-      id = id,
-      pocId = pocId,
-      tenantId = tenantId,
-      name = Random.alphanumeric.take(10).mkString,
-      surName = Random.alphanumeric.take(10).mkString,
-      email = Random.alphanumeric.take(10).mkString,
-      mobilePhone = Random.alphanumeric.take(10).mkString,
-      webIdentRequired = webIdentRequired,
-      certifierUserId = UUID.randomUUID(),
-      dateOfBirth = LocalDate.now()
-    )
+  def createPocAdminStatus(pocAdmin: PocAdmin): PocAdminStatus = {
+    PocAdminStatus.init(pocAdmin)
+  }
 
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
@@ -134,5 +121,38 @@ object ModelCreationHelper {
   def createPocEmployeeStatus(employeeId: UUID = UUID.randomUUID()): PocEmployeeStatus =
     PocEmployeeStatus(
       employeeId
+    )
+
+  def createPocAdmin(
+    id: UUID = UUID.randomUUID(),
+    pocId: UUID = UUID.randomUUID(),
+    tenantId: TenantId = TenantId(TestData.tenantName),
+    name: String = TestData.PocAdmin.name,
+    surname: String = TestData.PocAdmin.surname,
+    email: String = TestData.PocAdmin.email,
+    mobilePhone: String = TestData.PocAdmin.mobilePhone,
+    webIdentRequired: Boolean = TestData.PocAdmin.webIdentRequired,
+    certifierUserId: UUID = UUID.randomUUID(),
+    dateOfBirth: BirthDate = TestData.PocAdmin.dateOfBirth,
+    status: Status = TestData.PocAdmin.status,
+    lastUpdated: Updated = Updated(DateTime.now()),
+    created: Created = Created(DateTime.now()),
+    webIdentInitiateId: Option[UUID] = None): PocAdmin =
+    PocAdmin(
+      id = id,
+      pocId = pocId,
+      tenantId = tenantId,
+      name = name,
+      surname = surname,
+      email = email,
+      mobilePhone = mobilePhone,
+      certifierUserId = certifierUserId,
+      dateOfBirth = dateOfBirth,
+      status = status,
+      lastUpdated = lastUpdated,
+      created = created,
+      webIdentRequired = webIdentRequired,
+      webIdentId = None,
+      webIdentInitiateId = webIdentInitiateId
     )
 }

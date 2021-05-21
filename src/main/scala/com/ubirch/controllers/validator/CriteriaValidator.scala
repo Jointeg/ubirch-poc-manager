@@ -3,8 +3,8 @@ package com.ubirch.controllers.validator
 import cats.data.Validated._
 import cats.data._
 import cats.implicits._
-import com.ubirch.controllers.validator.PocCriteriaValidator.PocCriteriaValidationResult
-import com.ubirch.db.tables.PocRepository.{ PocCriteria, PocFilter }
+import com.ubirch.controllers.validator.CriteriaValidator.PocCriteriaValidationResult
+import com.ubirch.db.tables.model.{ Criteria, StatusFilter }
 import com.ubirch.models.common.{ ASC, Order, Page, Sort }
 import com.ubirch.models.poc.Status
 import com.ubirch.models.tenant.TenantId
@@ -12,25 +12,7 @@ import org.scalatra.Params
 
 import scala.util.{ Failure, Success, Try }
 
-sealed trait PocCriteriaValidator {
-  private val validSortColumns: Seq[String] =
-    Seq(
-      "id",
-      "tenantId",
-      "externalId",
-      "pocName",
-      "phone",
-      "certifyApp",
-      "clientCertRequired",
-      "dataSchemaId",
-      "roleName",
-      "deviceId",
-      "clientCertFolder",
-      "status",
-      "lastUpdated",
-      "created"
-    )
-
+sealed trait CriteriaValidator {
   protected def validatePageIndex(params: Params, default: Int): PocCriteriaValidationResult[Int] =
     params.get("pageIndex") match {
       case Some(v) =>
@@ -55,7 +37,9 @@ sealed trait PocCriteriaValidator {
       case None => default.validNec
     }
 
-  protected def validateSortColumn(params: Params): PocCriteriaValidationResult[Option[String]] =
+  protected def validateSortColumn(
+    params: Params,
+    validSortColumns: Seq[String]): PocCriteriaValidationResult[Option[String]] =
     params.get("sortColumn") match {
       case Some(v) =>
         if (validSortColumns.contains(v)) v.some.validNec
@@ -91,17 +75,40 @@ sealed trait PocCriteriaValidator {
     }
 }
 
-object PocCriteriaValidator extends PocCriteriaValidator {
+object CriteriaValidator extends CriteriaValidator {
   type PocCriteriaValidationResult[A] = ValidatedNec[(String, String), A]
 
-  def validateParams(tenantId: TenantId, params: Params): PocCriteriaValidationResult[PocCriteria] = {
+  val validSortColumnsForPoc: Seq[String] =
+    Seq(
+      "id",
+      "tenantId",
+      "externalId",
+      "pocName",
+      "phone",
+      "certifyApp",
+      "clientCertRequired",
+      "dataSchemaId",
+      "roleName",
+      "deviceId",
+      "clientCertFolder",
+      "status",
+      "lastUpdated",
+      "created"
+    )
+
+  val validSortColumnsForPocAdmin: Seq[String] = Seq("name", "pocName")
+
+  def validateParams(
+    tenantId: TenantId,
+    params: Params,
+    validSortColumns: Seq[String]): PocCriteriaValidationResult[Criteria] = {
     val page = (validatePageIndex(params, default = 0), validatePageSize(params, default = 20)).mapN(Page)
-    val sort = (validateSortColumn(params), validateSortOrder(params, default = ASC)).mapN(Sort)
+    val sort = (validateSortColumn(params, validSortColumns), validateSortOrder(params, default = ASC)).mapN(Sort)
     val serach: PocCriteriaValidationResult[Option[String]] = params.get("search").validNec
 
     (page, sort, serach, validateFilterColumnStatus(params)).mapN {
       (page, sort, search, filterColumnStatus) =>
-        PocCriteria(tenantId, page, sort, search, PocFilter(filterColumnStatus))
+        Criteria(tenantId, page, sort, search, StatusFilter(filterColumnStatus))
     }
   }
 }
