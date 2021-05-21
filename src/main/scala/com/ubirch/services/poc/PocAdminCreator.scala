@@ -116,7 +116,7 @@ class PocAdminCreatorImpl @Inject() (
       teamDriveClient.getSpaceIdByName(spaceName).flatMap {
         case Some(spaceId) => teamDriveClient.inviteMember(spaceId, pocAdminAndStatus.admin.email, Read)
         case None =>
-          val errorMsg = s"space was not found. ${spaceName}"
+          val errorMsg = s"space was not found. $spaceName"
           logger.error(errorMsg)
           throwError(pocAdminAndStatus, errorMsg)
       }.map { _ =>

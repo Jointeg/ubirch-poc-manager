@@ -6,7 +6,7 @@ import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupName, GroupNotFound }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
 import com.ubirch.models.keycloak.user.{ UserAlreadyExists, UserRequiredAction }
-import com.ubirch.models.user.{ UserName }
+import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -402,7 +402,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val result = for {
           userId <- users.createUserWithoutUserName(newKeycloakUser, CertifyKeycloak, actions)
           user <- users.getUserById(userId.right.get, CertifyKeycloak)
-        } yield (user)
+        } yield user
         val userOpt = result.runSyncUnsafe()
         assert(userOpt.isDefined)
         val addedActions = userOpt.get.getRequiredActions.asScala.toList

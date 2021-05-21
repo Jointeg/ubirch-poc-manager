@@ -725,7 +725,7 @@ class TenantAdminControllerSpec
         val pocAdminTable = injector.get[PocAdminRepository]
         val tenant = addTenantToDB()
         val poc = createPoc(poc1id, tenant.tenantName)
-        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id, webIdentRequired = true)
+        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
         val r = for {
           _ <- pocTable.createPoc(poc)
           _ <- pocAdminTable.createPocAdmin(pocAdmin)

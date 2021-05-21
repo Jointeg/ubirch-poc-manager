@@ -3,3 +3,4 @@ ALTER TABLE poc_manager.poc_admin_status_table
 
 ALTER TABLE poc_manager.poc_admin_status_table
     RENAME email_action_requied TO email_action_required;
+

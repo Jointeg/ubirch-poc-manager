@@ -1,7 +1,7 @@
 package com.ubirch.services.teamdrive
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.services.execution.{ Execution, SttpResources }
+import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
 import org.json4s.Formats
@@ -23,10 +23,8 @@ import scala.concurrent.duration.Duration
   * [[https://docs.teamdrive.net/Agent/4.6.11/html/TeamDrive_Http_Api.html#]]
   */
 @Singleton
-class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
-  implicit formats: Formats,
-  execution: Execution
-) extends TeamDriveClient
+class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit formats: Formats)
+  extends TeamDriveClient
   with LazyLogging {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization

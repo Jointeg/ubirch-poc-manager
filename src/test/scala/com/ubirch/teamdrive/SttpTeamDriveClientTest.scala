@@ -18,7 +18,6 @@ import scala.concurrent.duration._
 class SttpTeamDriveClientTest extends HttpTest {
 
   implicit private val formats: Formats = org.json4s.DefaultFormats
-  implicit val execution = mock[Execution]
 
   import SttpTeamDriveClientTest._
 

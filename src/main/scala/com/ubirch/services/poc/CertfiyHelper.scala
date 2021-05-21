@@ -75,7 +75,6 @@ class CertifyHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocCon
     }
   }
 
-
   override def addGroupsToCertifyUser(
     pocAdminAndStatus: PocAdminAndStatus,
     poc: Poc,

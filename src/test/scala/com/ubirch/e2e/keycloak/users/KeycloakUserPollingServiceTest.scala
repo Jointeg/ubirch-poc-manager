@@ -1,9 +1,9 @@
 package com.ubirch.e2e.keycloak.users
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.e2e.{ E2ETestBase, KeycloakOperations }
-import com.ubirch.models.keycloak.user.{ CreateKeycloakUserWithoutUserName }
+import com.ubirch.models.keycloak.user.CreateKeycloakUserWithoutUserName
 import com.ubirch.models.user.{ Email, FirstName, LastName }
-import com.ubirch.services.{ CertifyKeycloak }
+import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.{ KeycloakUserService, UserPollingService }
 import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, DeviceKeycloakConnector }
 import monix.eval.Task
@@ -43,7 +43,7 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
         result._2.right.value.size shouldBe 2
         val userIds = result._1
         result._2.right.value.find(
-          _.id.value == userIds(0).right.get.value) shouldBe defined
+          _.id.value == userIds.head.right.get.value) shouldBe defined
         result._2.right.value.find(
           _.id.value == userIds(2).right.get.value) shouldBe defined
       }

@@ -21,9 +21,10 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 
-    val groupId = pocConfig.dataSchemaGroupMap.get(poc.dataSchemaId).getOrElse {
-      throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}")
-    }
+    val groupId = pocConfig.dataSchemaGroupMap.getOrElse(
+      poc.dataSchemaId,
+      throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}"))
+
     val status1 =
       addGroupByIdToDevice(groupId, PocAndStatus(poc, status))
         .map {
