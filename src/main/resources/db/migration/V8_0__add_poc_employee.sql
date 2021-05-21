@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS poc_manager.poc_employee_table
     created                     text            NOT NULL,
     PRIMARY KEY(id),
     CONSTRAINT unique_poc_employee UNIQUE (email),
-    FOREIGN KEY (poc_id) REFERENCES poc_table(id)
+    FOREIGN KEY (poc_id) REFERENCES poc_table(id),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 );
 
 CREATE TABLE IF NOT EXISTS poc_manager.poc_employee_status_table

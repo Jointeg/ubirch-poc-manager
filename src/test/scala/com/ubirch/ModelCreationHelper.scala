@@ -105,15 +105,16 @@ object ModelCreationHelper {
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 
-  def createPocAndEmployee: (Poc, PocEmployee) = {
+  def createTenantPocAndEmployee: (Tenant, Poc, PocEmployee) = {
     val pocId = UUID.randomUUID()
-    (createPoc(pocId, tenantNameObj), createPocEmployee(pocId = pocId))
+    (createTenant(), createPoc(id = pocId, tenantNameObj), createPocEmployee(pocId = pocId))
   }
 
-  def createPocAndEmployeeAndStatus: (Poc, PocEmployee, PocEmployeeStatus) = {
+  def createTenantPocEmployeeAndStatus: (Tenant, Poc, PocEmployee, PocEmployeeStatus) = {
     val employeeId = UUID.randomUUID()
     val pocId = UUID.randomUUID()
     (
+      createTenant(),
       createPoc(pocId, tenantNameObj),
       createPocEmployee(pocId = pocId, employeeId = employeeId),
       createPocEmployeeStatus(employeeId))

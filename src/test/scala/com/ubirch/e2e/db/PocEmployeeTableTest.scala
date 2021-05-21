@@ -1,8 +1,8 @@
 package com.ubirch.e2e.db
 
-import com.ubirch.ModelCreationHelper.{ createPocAndEmployee, createPocEmployee }
+import com.ubirch.ModelCreationHelper.{ createPocEmployee, createTenantPocAndEmployee }
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocRepository, TenantRepository }
-import com.ubirch.e2e.E2ETestBase
+import com.ubirch.e2e.{ E2EInjectorHelperImpl, E2ETestBase }
 import com.ubirch.models.poc.Completed
 import com.ubirch.models.tenant.{ TenantId, TenantName }
 import org.postgresql.util.PSQLException
@@ -12,14 +12,21 @@ import scala.concurrent.duration.DurationInt
 
 class PocEmployeeTableTest extends E2ETestBase {
 
+  val (tenant, poc, employee) = createTenantPocAndEmployee
+
+  def beforeEach(injector: E2EInjectorHelperImpl): Unit = {
+    val pocRepo = injector.get[PocRepository]
+    val tenantRepo = injector.get[TenantRepository]
+    await(tenantRepo.createTenant(tenant), 2.seconds)
+    await(pocRepo.createPoc(poc), 2.seconds)
+  }
+
   "PocTable" should {
     "be able to store and retrieve data in DB" in {
-      withInjector { injector =>
-        val pocRepo = injector.get[PocRepository]
+      withInjector { injector: E2EInjectorHelperImpl =>
+        beforeEach(injector)
         val repo = injector.get[PocEmployeeRepository]
-        val (poc, employee) = createPocAndEmployee
         val res = for {
-          _ <- pocRepo.createPoc(poc)
           _ <- repo.createPocEmployee(employee)
           data <- repo.getPocEmployee(employee.id)
         } yield data
@@ -38,11 +45,9 @@ class PocEmployeeTableTest extends E2ETestBase {
 
     "fail when same PocEmployee is tried to be stored twice, when unique email constraint is violated" in {
       withInjector { injector =>
-        val pocRepo = injector.get[PocRepository]
+        beforeEach(injector)
         val repo = injector.get[PocEmployeeRepository]
-        val (poc, employee) = createPocAndEmployee
         val res = for {
-          _ <- pocRepo.createPoc(poc)
           _ <- repo.createPocEmployee(employee)
           data <- repo.createPocEmployee(employee.copy(UUID.randomUUID()))
         } yield {
@@ -54,11 +59,9 @@ class PocEmployeeTableTest extends E2ETestBase {
 
     "fail when same PocEmployee is tried to be stored twice, when only primary key is the same" in {
       withInjector { injector =>
-        val pocRepo = injector.get[PocRepository]
+        beforeEach(injector)
         val repo = injector.get[PocEmployeeRepository]
-        val (poc, employee) = createPocAndEmployee
         val res = for {
-          _ <- pocRepo.createPoc(poc)
           _ <- repo.createPocEmployee(employee)
           data <- repo.createPocEmployee(employee.copy(name = "Svenja"))
         } yield {
@@ -70,12 +73,10 @@ class PocEmployeeTableTest extends E2ETestBase {
 
     "be able to store and update data in DB" in {
       withInjector { injector =>
-        val pocRepo = injector.get[PocRepository]
+        beforeEach(injector)
         val repo = injector.get[PocEmployeeRepository]
-        val (poc, employee) = createPocAndEmployee
         val updatedPocEmployee = employee.copy(name = "Lisa")
         val res = for {
-          _ <- pocRepo.createPoc(poc)
           _ <- repo.createPocEmployee(employee)
           _ <- repo.updatePocEmployee(updatedPocEmployee)
           data <- repo.getPocEmployee(employee.id)
@@ -89,11 +90,9 @@ class PocEmployeeTableTest extends E2ETestBase {
 
     "be able to store and delete data in DB" in {
       withInjector { injector =>
-        val pocRepo = injector.get[PocRepository]
+        beforeEach(injector)
         val repo = injector.get[PocEmployeeRepository]
-        val (poc, employee) = createPocAndEmployee
         val res1 = for {
-          _ <- pocRepo.createPoc(poc)
           _ <- repo.createPocEmployee(employee)
           data <- repo.getPocEmployee(employee.id)
         } yield {
@@ -113,39 +112,39 @@ class PocEmployeeTableTest extends E2ETestBase {
 
     "get all by tenantId" in {
       withInjector { injector =>
-        val pocRepo = injector.get[PocRepository]
+        beforeEach(injector)
         val repo = injector.get[PocEmployeeRepository]
-        val (poc, employee1) = createPocAndEmployee
+        val tenantRepo = injector.get[TenantRepository]
+        val tenantName2 = TenantName("tenant2")
+        val tenant2 = tenant.copy(TenantId(tenantName2), tenantName2)
         val employee2 = createPocEmployee(pocId = poc.id)
-        val employeeDiffTenant = createPocEmployee(pocId = poc.id).copy(tenantId = TenantId(TenantName("test")))
+        val employeeDiffTenant = createPocEmployee(pocId = poc.id).copy(tenantId = tenant2.id)
 
         val res = for {
-          _ <- pocRepo.createPoc(poc)
-          _ <- repo.createPocEmployee(employee1)
+          _ <- tenantRepo.createTenant(tenant2)
+          _ <- repo.createPocEmployee(employee)
           _ <- repo.createPocEmployee(employee2)
           _ <- repo.createPocEmployee(employeeDiffTenant)
-          data <- repo.getPocEmployeesByTenantId(employee1.tenantId)
+          data <- repo.getPocEmployeesByTenantId(employee.tenantId)
         } yield {
           data
         }
         val allEmployeesByTenant = await(res, 5.seconds)
         allEmployeesByTenant.size shouldBe 2
-        allEmployeesByTenant.exists(_.id == employee1.id) shouldBe true
+        allEmployeesByTenant.exists(_.id == employee.id) shouldBe true
         allEmployeesByTenant.exists(_.id == employee2.id) shouldBe true
       }
     }
 
     "get all uncompleted" in {
       withInjector { injector =>
-        val pocRepo = injector.get[PocRepository]
+        beforeEach(injector)
         val repo = injector.get[PocEmployeeRepository]
-        val (poc, employee1) = createPocAndEmployee
         val employee2 = createPocEmployee(pocId = poc.id)
         val employeeCompleted = createPocEmployee(pocId = poc.id).copy(status = Completed)
 
         val res = for {
-          _ <- pocRepo.createPoc(poc)
-          _ <- repo.createPocEmployee(employee1)
+          _ <- repo.createPocEmployee(employee)
           _ <- repo.createPocEmployee(employee2)
           _ <- repo.createPocEmployee(employeeCompleted)
           data <- repo.getUncompletedPocEmployees()
@@ -154,7 +153,7 @@ class PocEmployeeTableTest extends E2ETestBase {
         }
         val allEmployeesByTenant = await(res, 5.seconds)
         allEmployeesByTenant.size shouldBe 2
-        allEmployeesByTenant.exists(_.id == employee1.id) shouldBe true
+        allEmployeesByTenant.exists(_.id == employee.id) shouldBe true
         allEmployeesByTenant.exists(_.id == employee2.id) shouldBe true
       }
     }
