@@ -12,7 +12,13 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.controllers.validator.PocCriteriaValidator
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ CreateWebIdentInitiateIdRequest, CreateWebInitiateIdResponse, Tenant, TenantName }
+import com.ubirch.models.tenant.{
+  CreateWebIdentInitiateIdRequest,
+  CreateWebInitiateIdResponse,
+  Tenant,
+  TenantName,
+  UpdateWebIdentIdRequest
+}
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
@@ -99,6 +105,17 @@ class TenantAdminController @Inject() (
       .description("Retrieves all devices that belongs to PoCs that are managed by querying Tenant.")
       .tags("Tenant-Admin", "Devices")
       .authorizations()
+
+  val updateWebIdentId: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("UpdateWebIdentId")
+      .summary("Updates WebIdent Identifier for given PoC Admin")
+      .tags("Tenant-Admin")
+      .authorizations()
+      .parameters(
+        bodyParam[String]("pocAdminId").description("ID of PoC admin for which identifier will be assigned"),
+        bodyParam[String]("webIdentId").description("WebIdent identifier"),
+        bodyParam[String]("webIdentInitialId").description("WebIdent initial ID")
+      )
 
   val createWebInitiateId: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("Create WebInitiateId for given PoC admin")
@@ -222,6 +239,39 @@ class TenantAdminController @Inject() (
               case Left(PocAdminRepositoryError(msg)) =>
                 logger.error(s"Error has occurred while operating on PocAdmin table: $msg")
                 InternalServerError(NOK.serverError("Could not create PoC admin WebInitiateId"))
+            }
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
+  post("/webident/id", operation(updateWebIdentId)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult("Update Webident identifier") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            import UpdateWebIdentIdError._
+            tenantAdminService.updateWebIdentId(
+              tenant,
+              Serialization.read[UpdateWebIdentIdRequest](request.body)).map {
+              case Right(_) => Ok("")
+              case Left(UnknownPocAdmin(id)) =>
+                logger.error(s"Could not find PoC Admin with id $id")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC Admin with provided ID"))
+              case Left(PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId, requestingTenantId)) =>
+                logger.error(
+                  s"Requesting tenant with ID $requestingTenantId asked to change WebIdent for admin with id $pocAdminTenantId that is not under his assignment")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC Admin with provided ID"))
+              case Left(DifferentWebIdentInitialId(requestWebIdentInitialId, tenant, pocAdmin)) =>
+                logger.error(
+                  s"Requesting Tenant (${tenant.id}) tried to update WebIdent ID of PoC admin (${pocAdmin.id}) but sent WebIdentInitialID ($requestWebIdentInitialId) does not match the one that is assigned to PoC Admin")
+                BadRequest("Wrong WebIdentInitialId")
+              case Left(NotExistingPocAdminStatus(id)) =>
+                logger.error(s"Could not find PoC Admin status for id $id")
+                NotFound(NOK.resourceNotFoundError("Could not find Poc Admin Status assigned to given PoC Admin"))
             }
           case Left(errorMsg: String) =>
             logger.error(errorMsg)

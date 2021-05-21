@@ -83,6 +83,10 @@ object ModelCreationHelper {
     )
   }
 
+  def createPocAdminStatus(pocAdmin: PocAdmin): PocAdminStatus = {
+    PocAdminStatus.init(pocAdmin)
+  }
+
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
       pocId,
