@@ -10,7 +10,9 @@ import javax.inject.{ Inject, Singleton }
 import scala.collection.mutable
 
 @Singleton
-class PocAdminRepositoryMock @Inject() (pocAdminStatusRepositoryMock: PocAdminStatusRepositoryMock, pocRepository: PocRepository)
+class PocAdminRepositoryMock @Inject() (
+  pocAdminStatusRepositoryMock: PocAdminStatusRepositoryMock,
+  pocRepository: PocRepository)
   extends PocAdminRepository {
   private val pocAdminDatastore = mutable.Map[UUID, PocAdmin]()
 

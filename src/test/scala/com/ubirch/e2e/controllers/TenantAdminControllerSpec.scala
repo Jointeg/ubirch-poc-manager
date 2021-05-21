@@ -5,7 +5,6 @@ import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocAdmi
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OUT }
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, PocTable, TenantTable }
-import com.ubirch.controllers.TenantAdminController.PoC_OUT
 import com.ubirch.db.tables.{
   PocAdminRepository,
   PocAdminStatusRepository,

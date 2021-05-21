@@ -14,7 +14,7 @@ case class PocAdmin(
   email: String,
   mobilePhone: String,
   webIdentRequired: Boolean,
-  webIdentId: Option[Boolean],
+  webIdentId: Option[String],
   webIdentInitiateId: Option[UUID],
   certifierUserId: UUID,
   dateOfBirth: BirthDate,
