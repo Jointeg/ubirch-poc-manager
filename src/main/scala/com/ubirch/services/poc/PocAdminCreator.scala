@@ -58,6 +58,7 @@ class PocAdminCreatorImpl @Inject() (
       case (Some(status: PocAdminStatus), Some(poc: Poc), Some(tenant: Tenant)) =>
         // Skip if the web ident has not been successful
         if (status.webIdentSuccess.contains(false)) {
+          logger.info(s"cannot process as webident is not finished yet for poc admin ${pocAdmin.id}")
           Task(Right(status))
         } else {
           updateStatusOfPoc(pocAdmin, Processing)
