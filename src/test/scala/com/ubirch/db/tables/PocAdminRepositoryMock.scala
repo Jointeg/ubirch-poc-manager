@@ -10,7 +10,8 @@ import javax.inject.{ Inject, Singleton }
 import scala.collection.mutable
 
 @Singleton
-class PocAdminRepositoryMock @Inject() (pocRepository: PocRepository) extends PocAdminRepository {
+class PocAdminRepositoryMock @Inject() (pocAdminStatusRepositoryMock: PocAdminStatusRepositoryMock, pocRepository: PocRepository)
+  extends PocAdminRepository {
   private val pocAdminDatastore = mutable.Map[UUID, PocAdmin]()
 
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] = {
@@ -31,11 +32,18 @@ class PocAdminRepositoryMock @Inject() (pocRepository: PocRepository) extends Po
       }.toList
     }
   }
+  override def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit] = Task(pocAdminDatastore.update(pocAdmin.id, pocAdmin))
+
   override def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = Task {
     pocAdminDatastore.update(
       pocAdminId,
       pocAdminDatastore(pocAdminId).copy(webIdentInitiateId = Some(webIdentInitiateId)))
   }
+  override def updateWebIdentIdAndStatus(
+    webIdentId: UUID,
+    pocAdminId: UUID): Task[Unit] = Task {
+    pocAdminDatastore.update(pocAdminId, pocAdminDatastore(pocAdminId).copy(webIdentId = Some(webIdentId.toString)))
+  }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentIdentified(pocAdminId, webIdentIdentified = true))
 
   override def getAllByCriteria(criteria: model.Criteria): Task[model.PaginatedResult[(PocAdmin, Poc)]] = {
     val all = pocAdminDatastore.values
