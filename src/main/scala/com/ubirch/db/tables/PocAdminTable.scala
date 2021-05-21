@@ -1,12 +1,12 @@
 package com.ubirch.db.tables
 
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.model.{Criteria, PaginatedResult}
+import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
 import com.ubirch.models.common
 import com.ubirch.models.common.Sort
-import com.ubirch.models.poc.{PocAdmin, Status}
+import com.ubirch.models.poc.{ Poc, PocAdmin, Status }
 import com.ubirch.models.tenant.TenantId
-import io.getquill.{EntityQuery, Insert, Ord, Query}
+import io.getquill.{ EntityQuery, Insert, Ord, Query }
 import monix.eval.Task
 
 import java.util.UUID
@@ -19,7 +19,7 @@ trait PocAdminRepository {
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
 
-  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[PocAdmin]]
+  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[(PocAdmin, Poc)]]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminRepository {
@@ -50,7 +50,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
     run(getAllPocAdminsByTenantIdQuery(tenantId))
   }
 
-  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[PocAdmin]] =
+  def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[(PocAdmin, Poc)]] =
     transaction {
       val pocsByCriteria = filterByStatuses(getAllByCriteriaQuery(criteria), criteria.filter.status)
       val sorted = sortedPocAdmins(pocsByCriteria, criteria.sort)
@@ -87,11 +87,12 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
       case common.ASC  => Ord.asc[T]
       case common.DESC => Ord.desc[T]
     }
-    val dynamic = q.dynamic
+    val dynamic =
+      quote(q.join(querySchema[Poc]("poc_manager.poc_table")).on { case (pa, p) => pa.pocId == p.id }).dynamic
     sort.field match {
-      case Some("name") => dynamic.sortBy(p => quote(p.name))(ord)
-      case Some("pocName") => dynamic.sortBy(p => quote(p.pocId))(ord)
-      case _ => dynamic
+      case Some("name")    => dynamic.sortBy(r => quote(r._1.name))(ord)
+      case Some("pocName") => dynamic.sortBy(r => quote(r._2.pocName))(ord)
+      case _               => dynamic
     }
   }
 

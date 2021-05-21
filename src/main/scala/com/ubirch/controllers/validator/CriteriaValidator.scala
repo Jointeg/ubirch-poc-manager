@@ -37,7 +37,9 @@ sealed trait CriteriaValidator {
       case None => default.validNec
     }
 
-  protected def validateSortColumn(params: Params, validSortColumns: Seq[String]): PocCriteriaValidationResult[Option[String]] =
+  protected def validateSortColumn(
+    params: Params,
+    validSortColumns: Seq[String]): PocCriteriaValidationResult[Option[String]] =
     params.get("sortColumn") match {
       case Some(v) =>
         if (validSortColumns.contains(v)) v.some.validNec
@@ -96,7 +98,10 @@ object CriteriaValidator extends CriteriaValidator {
 
   val validSortColumnsForPocAdmin: Seq[String] = Seq("name", "pocName")
 
-  def validateParams(tenantId: TenantId, params: Params, validSortColumns: Seq[String]): PocCriteriaValidationResult[Criteria] = {
+  def validateParams(
+    tenantId: TenantId,
+    params: Params,
+    validSortColumns: Seq[String]): PocCriteriaValidationResult[Criteria] = {
     val page = (validatePageIndex(params, default = 0), validatePageSize(params, default = 20)).mapN(Page)
     val sort = (validateSortColumn(params, validSortColumns), validateSortOrder(params, default = ASC)).mapN(Sort)
     val serach: PocCriteriaValidationResult[Option[String]] = params.get("search").validNec

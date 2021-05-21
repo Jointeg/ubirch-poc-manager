@@ -197,7 +197,9 @@ class TenantAdminController @Inject() (
             (for {
               criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPocAdmin)
               pocAdmins <- pocAdminRepository.getAllByCriteria(criteria)
-            } yield Paginated_OUT(pocAdmins.total, pocAdmins.records.map(PocAdmin_OUT.fromPocAdmin)))
+            } yield Paginated_OUT(
+              pocAdmins.total,
+              pocAdmins.records.map { case (pa, p) => PocAdmin_OUT.fromPocAdmin(pa, p) }))
               .map(toJson)
               .onErrorRecoverWith {
                 case ValidationError(e) =>
@@ -262,16 +264,16 @@ object TenantAdminController {
   )
 
   object PocAdmin_OUT {
-    def fromPocAdmin(pocAdmin: PocAdmin): PocAdmin_OUT =
+    def fromPocAdmin(pocAdmin: PocAdmin, poc: Poc): PocAdmin_OUT =
       PocAdmin_OUT(
-        pocAdmin.id,
-        pocAdmin.name,
-        pocAdmin.surname,
-        pocAdmin.dateOfBirth.date,
-        pocAdmin.email,
-        pocAdmin.mobilePhone,
-        pocAdmin.name,
-        pocAdmin.status
+        id = pocAdmin.id,
+        firstName = pocAdmin.name,
+        lastName = pocAdmin.surname,
+        dateOfBirth = pocAdmin.dateOfBirth.date,
+        email = pocAdmin.email,
+        phone = pocAdmin.mobilePhone,
+        pocName = poc.pocName,
+        state = pocAdmin.status
       )
   }
 
