@@ -5,11 +5,12 @@ import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
 import java.util.UUID
-import javax.inject.Singleton
+import javax.inject.{ Inject, Singleton }
 import scala.collection.mutable
 
 @Singleton
-class PocAdminRepositoryMock extends PocAdminRepository {
+class PocAdminRepositoryMock @Inject() (pocAdminStatusRepositoryMock: PocAdminStatusRepositoryMock)
+  extends PocAdminRepository {
   private val pocAdminDatastore = mutable.Map[UUID, PocAdmin]()
 
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] = {
@@ -37,9 +38,9 @@ class PocAdminRepositoryMock extends PocAdminRepository {
       pocAdminId,
       pocAdminDatastore(pocAdminId).copy(webIdentInitiateId = Some(webIdentInitiateId)))
   }
-  override def updateWebIdentId(
+  override def updateWebIdentIdAndStatus(
     webIdentId: UUID,
     pocAdminId: UUID): Task[Unit] = Task {
     pocAdminDatastore.update(pocAdminId, pocAdminDatastore(pocAdminId).copy(webIdentId = Some(webIdentId.toString)))
-  }
+  }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentIdentified(pocAdminId, webIdentIdentified = true))
 }

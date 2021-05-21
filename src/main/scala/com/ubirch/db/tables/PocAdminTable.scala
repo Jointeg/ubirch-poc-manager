@@ -18,12 +18,13 @@ trait PocAdminRepository {
 
   def updatePocAdmin(pocAdmin: PocAdmin): Task[Unit]
 
-  def updateWebIdentId(webIdentId: UUID, pocAdminId: UUID): Task[Unit]
+  def updateWebIdentIdAndStatus(webIdentId: UUID, pocAdminId: UUID): Task[Unit]
 
   def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit]
 }
 
-class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocAdminRepository {
+class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, pocAdminStatusTable: PocAdminStatusTable)
+  extends PocAdminRepository {
   import QuillMonixJdbcContext.ctx._
 
   private def createPocAdminQuery(pocAdmin: PocAdmin): Quoted[Insert[PocAdmin]] =
@@ -74,6 +75,11 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) ext
   override def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = {
     run(updateWebInitiateId(pocAdminId, webIdentInitiateId)).void
   }
-  override def updateWebIdentId(webIdentId: UUID, pocAdminId: UUID): Task[Unit] =
-    run(updateWebIdentIdQuery(webIdentId, pocAdminId)).void
+  override def updateWebIdentIdAndStatus(webIdentId: UUID, pocAdminId: UUID): Task[Unit] =
+    transaction {
+      for {
+        _ <- run(updateWebIdentIdQuery(webIdentId, pocAdminId)).void
+        _ <- pocAdminStatusTable.updateWebIdentIdentified(pocAdminId, webIdentIdentified = true)
+      } yield ()
+    }
 }

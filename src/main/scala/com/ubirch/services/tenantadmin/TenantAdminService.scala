@@ -78,13 +78,10 @@ class DefaultTenantAdminService @Inject() (
         pocAdminStatusRepository.getStatus(pocAdmin.id).map(_.toRight(NotExistingPocAdminStatus(pocAdmin.id)))
       )
 
-    def updatePocAdminWebIdentId(pocAdmin: PocAdmin) = {
-      EitherT.right[UpdateWebIdentIdError](pocAdminRepository.updateWebIdentId(request.webIdentId, pocAdmin.id))
-    }
-
-    def updatePocAdminStatus(pocAdminStatus: PocAdminStatus) = {
-      EitherT.right[UpdateWebIdentIdError](
-        pocAdminStatusRepository.updateWebIdentIdentified(pocAdminStatus.pocAdminId, webIdentIdentified = true))
+    def updatePocAdminWebIdentIdAndStatus(pocAdmin: PocAdmin) = {
+      EitherT.right[UpdateWebIdentIdError](pocAdminRepository.updateWebIdentIdAndStatus(
+        request.webIdentId,
+        pocAdmin.id))
     }
 
     def isSameWebIdentInitialId(tenant: Tenant, pocAdmin: PocAdmin) = {
@@ -103,9 +100,8 @@ class DefaultTenantAdminService @Inject() (
       _ <- isPocAdminAssignedToTenant[Task, UpdateWebIdentIdError](tenant, pocAdmin)(
         PocAdminIsNotAssignedToRequestingTenant(pocAdmin.tenantId, tenant.id))
       _ <- isSameWebIdentInitialId(tenant, pocAdmin)
-      pocAdminStatus <- getPocAdminStatus(pocAdmin)
-      _ <- updatePocAdminWebIdentId(pocAdmin)
-      _ <- updatePocAdminStatus(pocAdminStatus)
+      _ <- getPocAdminStatus(pocAdmin)
+      _ <- updatePocAdminWebIdentIdAndStatus(pocAdmin)
     } yield ()).value
   }
 
