@@ -356,7 +356,8 @@ object TenantAdminController {
     email: String,
     phone: String,
     pocName: String,
-    state: Status
+    state: Status,
+    webIdentInitiateId: Option[UUID]
   )
 
   object PocAdmin_OUT {
@@ -369,7 +370,8 @@ object TenantAdminController {
         email = pocAdmin.email,
         phone = pocAdmin.mobilePhone,
         pocName = poc.pocName,
-        state = pocAdmin.status
+        state = pocAdmin.status,
+        webIdentInitiateId = pocAdmin.webIdentInitiateId
       )
   }
 

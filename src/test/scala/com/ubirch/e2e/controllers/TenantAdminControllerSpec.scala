@@ -367,7 +367,10 @@ class TenantAdminControllerSpec
         val poc = addPocToDb(tenant, Injector.get[PocTable])
 
         val r = for {
-          _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
+          _ <- repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            webIdentInitiateId = Some(UUID.randomUUID())))
           _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
           _ <- repository.createPocAdmin(createPocAdmin(tenantId = TenantId(TenantName("other")), pocId = poc.id))
           admins <- repository.getAllPocAdminsByTenantId(tenant.id)

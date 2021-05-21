@@ -102,7 +102,8 @@ object ModelCreationHelper {
     dateOfBirth: BirthDate = TestData.PocAdmin.dateOfBirth,
     status: Status = TestData.PocAdmin.status,
     lastUpdated: Updated = Updated(DateTime.now()),
-    created: Created = Created(DateTime.now())): PocAdmin =
+    created: Created = Created(DateTime.now()),
+    webIdentInitiateId: Option[UUID] = None): PocAdmin =
     PocAdmin(
       id = id,
       pocId = pocId,
@@ -118,6 +119,6 @@ object ModelCreationHelper {
       created = created,
       webIdentRequired = webIdentRequired,
       webIdentId = None,
-      webIdentInitiateId = None
+      webIdentInitiateId = webIdentInitiateId
     )
 }
