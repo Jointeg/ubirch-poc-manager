@@ -31,6 +31,11 @@ class PocAdminRepositoryMock @Inject() (pocRepository: PocRepository) extends Po
       }.toList
     }
   }
+  override def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit] = Task {
+    pocAdminDatastore.update(
+      pocAdminId,
+      pocAdminDatastore(pocAdminId).copy(webIdentInitiateId = Some(webIdentInitiateId)))
+  }
 
   override def getAllByCriteria(criteria: model.Criteria): Task[model.PaginatedResult[(PocAdmin, Poc)]] = {
     val all = pocAdminDatastore.values

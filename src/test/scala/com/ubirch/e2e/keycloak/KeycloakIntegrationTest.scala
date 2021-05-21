@@ -11,7 +11,7 @@ import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
-import org.keycloak.representations.idm.GroupRepresentation
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
 import org.scalactic.StringNormalizations._
 
 import java.util.UUID
@@ -55,13 +55,13 @@ class KeycloakIntegrationTest extends E2ETestBase {
           _ <- roles.createNewRole(CreateKeycloakRole(RoleName(tenantName)))
           tenantRole <- roles.findRoleRepresentation(RoleName(tenantName))
           tenantGroup <- groups.createGroup(CreateKeycloakGroup(GroupName(tenantName)))
-          - <- groups.addRoleToGroup(tenantGroup.right.value, tenantRole.get)
+          - <- groups.assignRoleToGroup(tenantGroup.right.value, tenantRole.get)
 
           //create poc role and create as subGroup of tenantgroup
           _ <- roles.createNewRole(CreateKeycloakRole(RoleName(pocName)))
           pocRole <- roles.findRoleRepresentation(RoleName(pocName))
           pocGroup <- groups.addSubGroup(tenantGroup.right.value, GroupName(pocName))
-          - <- groups.addRoleToGroup(pocGroup.right.value, pocRole.get)
+          - <- groups.assignRoleToGroup(pocGroup.right.value, pocRole.get)
 
           //retrieve final Groups
           tenantGroupFinal <- groups.findGroupById(tenantGroup.right.value)
@@ -84,6 +84,31 @@ class KeycloakIntegrationTest extends E2ETestBase {
         pocGroup.right.value.getName shouldBe pocName
         pocGroup.right.value.getPath shouldBe childPocPath
         pocGroup.right.value.getRealmRoles shouldBe List(pocName).asJava
+      }
+    }
+
+    "Assign role to group, if already exists" in {
+      withInjector { injector =>
+        val groups = injector.get[KeycloakGroupService]
+        val roles = injector.get[KeycloakRolesService]
+
+        val roleName = "test-role"
+        val role = CreateKeycloakRole(RoleName(roleName))
+        val group = createNewKeycloakGroup().copy(groupName = GroupName(roleName))
+        val roleRepr = new RoleRepresentation()
+        roleRepr.setName(roleName)
+
+        val res = for {
+          _ <- roles.createNewRole(role)
+          role <- roles.findRoleRepresentation(RoleName(roleName))
+          createdGroup <- groups.createGroup(group)
+          _ <- groups.assignRoleToGroup(createdGroup.right.get, role.get)
+          foundGroup <- groups.findGroupById(createdGroup.right.get)
+        } yield foundGroup
+
+        val foundGroup: GroupRepresentation = await(res, 2.seconds).right.get
+        foundGroup.getName shouldBe roleName
+        foundGroup.getRealmRoles.get(0) shouldBe roleName
       }
     }
 

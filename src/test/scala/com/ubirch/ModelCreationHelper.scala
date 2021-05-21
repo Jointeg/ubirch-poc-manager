@@ -6,9 +6,11 @@ import com.ubirch.models.tenant._
 import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
+import scala.util.Random
 
 object ModelCreationHelper {
 
@@ -32,7 +34,6 @@ object ModelCreationHelper {
       TenantName(name),
       API,
       deviceCreationToken,
-      IdGardIdentifier("folder-identifier"),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
       OrgId(TenantId(TenantName(name)).value),
@@ -64,6 +65,25 @@ object ModelCreationHelper {
       status
     )
 
+  def createPocAdmin(
+    id: UUID = UUID.randomUUID(),
+    pocId: UUID,
+    tenantId: TenantId,
+    webIdentRequired: Boolean = true) = {
+    PocAdmin(
+      id = id,
+      pocId = pocId,
+      tenantId = tenantId,
+      name = Random.alphanumeric.take(10).mkString,
+      surName = Random.alphanumeric.take(10).mkString,
+      email = Random.alphanumeric.take(10).mkString,
+      mobilePhone = Random.alphanumeric.take(10).mkString,
+      webIdentRequired = webIdentRequired,
+      certifierUserId = UUID.randomUUID(),
+      dateOfBirth = LocalDate.now()
+    )
+  }
+
   def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
     PocStatus(
       pocId,
@@ -81,9 +101,6 @@ object ModelCreationHelper {
       TenantName("tenantName"),
       API,
       PlainDeviceCreationToken(token),
-      IdGardIdentifier("empty"),
-      TenantCertifyGroupId(UUID.randomUUID().toString),
-      TenantDeviceGroupId(UUID.randomUUID().toString),
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 

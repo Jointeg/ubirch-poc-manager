@@ -12,18 +12,19 @@ import com.ubirch.controllers.concerns.{
 import com.ubirch.controllers.validator.CriteriaValidator
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc.{ Poc, PocAdmin, PocStatus, Status }
-import com.ubirch.models.tenant.{ Tenant, TenantName }
+import com.ubirch.models.tenant.{ CreateWebIdentInitiateIdRequest, CreateWebInitiateIdResponse, Tenant, TenantName }
 import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
-import com.ubirch.services.tenantadmin.TenantAdminService
+import com.ubirch.services.tenantadmin._
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.joda.time.LocalDate
 import org.json4s.Formats
+import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
@@ -52,7 +53,13 @@ class TenantAdminController @Inject() (
 
   implicit override protected def jsonFormats: Formats = jFormats
 
+  override protected def applicationDescription: String = "Tenant Admin Controller"
+
   override val service: String = config.getString(GenericConfPaths.NAME)
+
+  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
+    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
+
   override val successCounter: Counter =
     Counter
       .build()
@@ -60,23 +67,27 @@ class TenantAdminController @Inject() (
       .help("Represents the number of tenant admin controller successes")
       .labelNames("service", "method")
       .register()
+
   override val errorCounter: Counter = Counter
     .build()
     .name("tenant_admin_failures")
     .help("Represents the number of tenant admin controller failures")
     .labelNames("service", "method")
     .register()
+
   val createListOfPocs: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[Paginated_OUT[Poc]]("create list of PoCs")
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC", "Tenant-Admin")
+
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[PocStatus]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
       .description("Retrieve PoC Status queried by pocId. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin", "PocStatus")
+
   val getPocs: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve all pocs of the requesting tenant")
       .summary("Get PoCs")
@@ -96,10 +107,15 @@ class TenantAdminController @Inject() (
       .tags("Tenant-Admin", "Devices")
       .authorizations()
 
-  override protected def applicationDescription: String = "Tenant Admin Controller"
-
-  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
+  val createWebInitiateId: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Create WebInitiateId for given PoC admin")
+      .summary("Create WebInitiateId")
+      .description("Creates WebInitiateId for given PoC admin")
+      .tags("Tenant-Admin", "WebIdent")
+      .authorizations()
+      .parameters(
+        bodyParam[String]("pocAdminId").description("ID of PocAdmin for which WebInitiateId will be created")
+      )
 
   post("/pocs/create", operation(createListOfPocs)) {
 
@@ -181,6 +197,36 @@ class TenantAdminController @Inject() (
               response.setHeader("Content-Disposition", "attachment; filename=simplified-devices-info.csv")
               Ok(devicesInformation)
             })
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
+  post("/webident/initiate-id", operation(createWebInitiateId)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult("Create web initiate id") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            tenantAdminService.createWebIdentInitiateId(
+              tenant,
+              Serialization.read[CreateWebIdentInitiateIdRequest](request.body)).map {
+              case Right(webInitiateId) => Ok(toJson(CreateWebInitiateIdResponse(webInitiateId)))
+              case Left(PocAdminNotFound(pocAdminId)) =>
+                logger.error(s"Could not find PocAdmin with id: $pocAdminId")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
+              case Left(PocAdminAssignedToDifferentTenant(tenantId, pocAdminTenantId)) =>
+                logger.error(s"Tenant with ID $tenantId tried to operate on PoC Admin with ID $pocAdminTenantId who is assigned to different tenant")
+                NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
+              case Left(WebIdentNotRequired(tenantId, pocAdminId)) =>
+                logger.error(s"Tenant with ID $tenantId tried to create WebInitiateId but PoC admin with ID $pocAdminId does not require WebIdent")
+                BadRequest("PoC admin does not require WebIdent")
+              case Left(PocAdminRepositoryError(msg)) =>
+                logger.error(s"Error has occurred while operating on PocAdmin table: $msg")
+                InternalServerError(NOK.serverError("Could not create PoC admin WebInitiateId"))
+            }
           case Left(errorMsg: String) =>
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))

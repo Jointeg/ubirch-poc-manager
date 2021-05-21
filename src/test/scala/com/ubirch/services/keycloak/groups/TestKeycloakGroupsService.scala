@@ -6,7 +6,6 @@ import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
-import java.util
 import javax.inject.Singleton
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.{ collectionAsScalaIterableConverter, seqAsJavaListConverter }
@@ -109,7 +108,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     }
   }
 
-  override def addRoleToGroup(
+  override def assignRoleToGroup(
     groupId: GroupId,
     role: RoleRepresentation,
     instance: KeycloakInstance): Task[Either[String, Unit]] = {

@@ -7,13 +7,14 @@ import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OU
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, PocTable, TenantTable }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
-import com.ubirch.models.poc.{ Completed, Created, Pending, Poc, PocAdmin, PocStatus, Processing, Updated }
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.poc._
+import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.DateTime
@@ -22,7 +23,9 @@ import org.json4s.native.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
+import org.scalatra.Ok
 
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -691,6 +694,62 @@ class TenantAdminControllerSpec
           bodyLines.size shouldBe 1
           bodyLines should contain(""""externalId"; "pocName"; "deviceId"""")
         }
+      }
+    }
+  }
+
+  "Endpoint POST /webident/initiate-id" should {
+
+    def initiateIdJson(pocAdminId: UUID) =
+      s"""
+         |{
+         |  "pocAdminId": "${pocAdminId.toString}"
+         |}
+         |""".stripMargin
+
+    "create new WebInitiateId each time it is called" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val tenant = addTenantToDB()
+        val poc = createPoc(poc1id, tenant.tenantName)
+        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
+        val r = for {
+          _ <- pocTable.createPoc(poc)
+          _ <- pocAdminTable.createPocAdmin(pocAdmin)
+        } yield ()
+        await(r, 5.seconds)
+
+        post(
+          "/webident/initiate-id",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
+        ) {
+          status shouldBe Ok().status
+          val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
+          body shouldBe
+            s"""{"webInitiateId":"${updatedPocAdmin.value.webIdentInitiateId.value.toString}"}""".stripMargin
+        }
+
+        val firstWebIdentInitiatedId =
+          await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value.webIdentInitiateId.value
+
+        post(
+          "/webident/initiate-id",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
+        ) {
+          status shouldBe Ok().status
+          val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
+          body shouldBe
+            s"""{"webInitiateId":"${updatedPocAdmin.value.webIdentInitiateId.value.toString}"}""".stripMargin
+        }
+
+        val secondWebIdentInitiatedId =
+          await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value.webIdentInitiateId.value
+
+        firstWebIdentInitiatedId shouldNot be(secondWebIdentInitiatedId)
       }
     }
   }
