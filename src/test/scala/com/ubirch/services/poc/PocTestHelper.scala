@@ -1,15 +1,9 @@
 package com.ubirch.services.poc
 import com.ubirch.Awaits
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
-import com.ubirch.db.tables.{
-  PocRepository,
-  PocRepositoryMock,
-  PocStatusRepository,
-  PocStatusRepositoryMock,
-  TenantRepositoryMock
-}
+import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
-import com.ubirch.models.keycloak.user.{ CreateKeycloakUser, UserException }
+import com.ubirch.models.keycloak.user.{ CreateBasicKeycloakUser, UserException }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId }
 import com.ubirch.models.user.{ Email, FirstName, LastName, UserId, UserName }
@@ -24,9 +18,9 @@ import scala.concurrent.duration.DurationInt
 
 object PocTestHelper extends Awaits {
 
-  def createPocTriple(): (Poc, PocStatus, Tenant) = {
+  def createPocTriple(clientCertRequired: Boolean = false): (Poc, PocStatus, Tenant) = {
     val tenant = createTenant()
-    val poc = createPoc(tenantName = tenant.tenantName)
+    val poc = createPoc(tenantName = tenant.tenantName, clientCertRequired = clientCertRequired)
     val pocStatus = createPocStatus(poc.id)
     (poc, pocStatus, tenant)
   }
@@ -55,7 +49,7 @@ object PocTestHelper extends Awaits {
 
   def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc): Either[UserException, UserId] = {
     users.createUser(
-      CreateKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
+      CreateBasicKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
       DeviceKeycloak).runSyncUnsafe()
   }
 

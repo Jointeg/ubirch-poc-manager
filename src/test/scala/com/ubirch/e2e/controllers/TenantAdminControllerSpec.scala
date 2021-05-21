@@ -4,7 +4,7 @@ import com.ubirch.FakeTokenCreator
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocAdminStatus, createPocStatus, createTenant }
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OUT }
-import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, PocTable, TenantTable }
+import com.ubirch.db.tables.PocTable
 import com.ubirch.db.tables.{
   PocAdminRepository,
   PocAdminStatusRepository,
@@ -793,8 +793,8 @@ class TenantAdminControllerSpec
         val poc = createPoc(poc1id, tenant1.tenantName)
         val pocAdmin1 = createPocAdmin(pocId = poc.id, tenantId = tenant1.id)
         val pocAdmin2 = createPocAdmin(pocId = poc.id, tenantId = tenant2.id)
-        val pocAdminStatus1 = createPocAdminStatus(pocAdmin1)
-        val pocAdminStatus2 = createPocAdminStatus(pocAdmin2)
+        val pocAdminStatus1 = createPocAdminStatus(pocAdmin1, poc)
+        val pocAdminStatus2 = createPocAdminStatus(pocAdmin2, poc)
         val r = for {
           _ <- tenantTable.createTenant(tenant1)
           _ <- tenantTable.createTenant(tenant2)

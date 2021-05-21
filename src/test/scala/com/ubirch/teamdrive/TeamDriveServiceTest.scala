@@ -2,6 +2,7 @@ package com.ubirch.teamdrive
 
 import com.ubirch.TestBase
 import com.ubirch.services.poc.TestCertHandler
+import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.services.teamdrive.{ TeamDriveService, TeamDriveServiceImpl }
 import com.ubirch.test.{ FakeTeamDriveClient, TestData }
 
@@ -12,7 +13,7 @@ class TeamDriveServiceTest extends TestBase {
     "share cert and passphrase with given email address" in testTeamDriveService { (service, fakeClient) =>
       // when
       val result = service.shareCert(
-        "spaceName",
+        SpaceName("spaceName"),
         Seq(TestData.email, TestData.email2),
         TestCertHandler.passphrase,
         TestCertHandler.validPkcs12).unwrap

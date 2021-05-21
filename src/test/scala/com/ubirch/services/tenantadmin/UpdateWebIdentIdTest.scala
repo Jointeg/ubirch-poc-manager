@@ -30,7 +30,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val poc = createPoc(pocId, tenant.tenantName)
         val pocAdmin =
           createPocAdmin(pocId = poc.id, tenantId = tenant.id).copy(webIdentInitiateId = Some(webIdentInitiateId))
-        val pocAdminStatus = createPocAdminStatus(pocAdmin)
+        val pocAdminStatus = createPocAdminStatus(pocAdmin, poc)
         val r = for {
           _ <- pocTable.createPoc(poc)
           _ <- pocAdminTable.createPocAdmin(pocAdmin)
@@ -48,7 +48,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val pocAdminAfterUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
         pocAdminAfterUpdate.value.webIdentId.value shouldBe webIdentId.toString
         val statusAfterUpdate = await(pocAdminStatusTable.getStatus(pocAdmin.id), 5.seconds)
-        statusAfterUpdate.value.webIdentIdentified shouldBe Some(true)
+        statusAfterUpdate.value.webIdentSuccess shouldBe Some(true)
       }
     }
 
@@ -65,7 +65,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val poc = createPoc(pocId, tenant.tenantName)
         val pocAdmin =
           createPocAdmin(pocId = poc.id, tenantId = tenant.id).copy(webIdentInitiateId = Some(webIdentInitiateId))
-        val pocAdminStatus = createPocAdminStatus(pocAdmin)
+        val pocAdminStatus = createPocAdminStatus(pocAdmin, poc)
         val r = for {
           _ <- pocTable.createPoc(poc)
           _ <- pocAdminTable.createPocAdmin(pocAdmin)
@@ -103,8 +103,8 @@ class UpdateWebIdentIdTest extends UnitTestBase {
           createPocAdmin(pocId = poc.id, tenantId = tenant1.id).copy(webIdentInitiateId = Some(webIdentInitiateId))
         val pocAdmin2 =
           createPocAdmin(pocId = poc.id, tenantId = tenant2.id).copy(webIdentInitiateId = Some(webIdentInitiateId))
-        val pocAdminStatus1 = createPocAdminStatus(pocAdmin1)
-        val pocAdminStatus2 = createPocAdminStatus(pocAdmin2)
+        val pocAdminStatus1 = createPocAdminStatus(pocAdmin1, poc)
+        val pocAdminStatus2 = createPocAdminStatus(pocAdmin2, poc)
         val r = for {
           _ <- pocTable.createPoc(poc)
           _ <- pocAdminTable.createPocAdmin(pocAdmin1)
@@ -141,7 +141,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val poc = createPoc(pocId, tenant.tenantName)
         val pocAdmin =
           createPocAdmin(pocId = poc.id, tenantId = tenant.id).copy(webIdentInitiateId = Some(webIdentInitiateId))
-        val pocAdminStatus = createPocAdminStatus(pocAdmin)
+        val pocAdminStatus = createPocAdminStatus(pocAdmin, poc)
         val r = for {
           _ <- pocTable.createPoc(poc)
           _ <- pocAdminTable.createPocAdmin(pocAdmin)

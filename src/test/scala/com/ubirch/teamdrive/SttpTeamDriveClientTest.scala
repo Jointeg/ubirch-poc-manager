@@ -1,12 +1,15 @@
 package com.ubirch.teamdrive
 
+import com.ubirch.PocConfig
+import com.ubirch.services.execution.{ Execution, ExecutionProvider }
 import com.ubirch.services.teamdrive._
-import com.ubirch.services.teamdrive.model.Read
+import com.ubirch.services.teamdrive.model.{ Read, SpaceName }
 import com.ubirch.test.TaskSupport._
 import com.ubirch.test.TestData._
 import com.ubirch.test._
 import monix.eval.Task
 import org.json4s.Formats
+import org.scalatest.mockito.MockitoSugar.mock
 import sttp.client.SttpClientException
 
 import java.nio.ByteBuffer
@@ -25,7 +28,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       httpStub.spaceWillBeCreated(spaceId = 8, spaceName = spaceName, spacePath = spacePath)
 
       // when
-      val response = client.createSpace(spaceName, spacePath).unwrap
+      val response = client.createSpace(SpaceName(spaceName), spacePath).unwrap
 
       // then
       response mustBe model.SpaceId(8)
@@ -37,10 +40,10 @@ class SttpTeamDriveClientTest extends HttpTest {
       httpStub.createSpaceWillFail(errorCode = 30, errorMessage = "some error", statusCode = 400)
 
       // when
-      val response = client.createSpace(spaceName, spacePath).catchError
+      val response = client.createSpace(SpaceName(spaceName), spacePath).catchError
 
       // then
-      response mustBe model.TeamDriveError(30, "some error")
+      response mustBe model.TeamDriveHttpError(30, "some error")
     }
   }
 
@@ -72,7 +75,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       val response = client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).catchError
 
       // then
-      response mustBe model.TeamDriveError(30, "some error")
+      response mustBe model.TeamDriveHttpError(30, "some error")
     }
   }
 
@@ -104,7 +107,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).catchError
 
       // then
-      response mustBe model.TeamDriveError(30, "some error")
+      response mustBe model.TeamDriveHttpError(30, "some error")
     }
   }
 
@@ -117,7 +120,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       val matchTimeout: PartialFunction[Throwable, String] = {
         case _: SttpClientException.ReadException => "read timeout"
       }
-      val response1 = client.createSpace(spaceName, spacePath).onErrorRecover(matchTimeout)
+      val response1 = client.createSpace(SpaceName(spaceName), spacePath).onErrorRecover(matchTimeout)
       val response2 = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).onErrorRecover(matchTimeout)
       val response3 =
         client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)
@@ -137,7 +140,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       val matchTimeout: PartialFunction[Throwable, String] = {
         case _: SttpClientException.ConnectException => "connection timeout"
       }
-      val response1 = client.createSpace(spaceName, spacePath).onErrorRecover(matchTimeout)
+      val response1 = client.createSpace(SpaceName(spaceName), spacePath).onErrorRecover(matchTimeout)
       val response2 = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).onErrorRecover(matchTimeout)
       val response3 =
         client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)

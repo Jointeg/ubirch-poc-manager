@@ -17,14 +17,14 @@ trait DeviceHelper {
 
 }
 
-class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGroupService, pocConfig: PocConfig)
-  extends DeviceHelper {
+class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConfig) extends DeviceHelper {
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 
-    val groupId = pocConfig.dataSchemaGroupMap.get(poc.dataSchemaId).getOrElse {
-      throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}")
-    }
+    val groupId = pocConfig.dataSchemaGroupMap.getOrElse(
+      poc.dataSchemaId,
+      throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}"))
+
     val status1 =
       addGroupByIdToDevice(groupId, PocAndStatus(poc, status))
         .map {
@@ -51,7 +51,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, groups: KeycloakGr
 
   private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Unit]] = {
     val deviceId = pocAndStatus.poc.getDeviceId
-    users.addGroupToUser(deviceId, groupId, DeviceKeycloak)
+    users.addGroupToUserByName(deviceId, groupId, DeviceKeycloak)
   }
 
 }

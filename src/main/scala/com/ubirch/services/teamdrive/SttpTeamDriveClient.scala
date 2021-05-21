@@ -1,5 +1,6 @@
 package com.ubirch.services.teamdrive
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
@@ -17,10 +18,14 @@ import javax.inject.{ Inject, Singleton }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
+/**
+  * This class internally calls the TeamDrive Http Api
+  * [[https://docs.teamdrive.net/Agent/4.6.11/html/TeamDrive_Http_Api.html#]]
+  */
 @Singleton
-class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
-  implicit formats: Formats
-) extends TeamDriveClient {
+class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit formats: Formats)
+  extends TeamDriveClient
+  with LazyLogging {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val backend: SttpBackend[Future, Nothing, WebSocketHandler] = SttpResources.backend
@@ -31,8 +36,8 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
     basicRequest.auth.basic(config.username, config.password)
       .readTimeout(config.readTimeout)
 
-  override def createSpace(name: String, path: String): Task[SpaceId] =
-    callCreateSpace(name, path).flatMap { r =>
+  override def createSpace(name: SpaceName, path: String): Task[SpaceId] =
+    callCreateSpace(name.v, path).flatMap { r =>
       handleResponse(r) { v => Task.pure(SpaceId(v.spaceId)) }
     }
 
@@ -40,7 +45,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
     name: String,
     path: String
   ): Task[Response[Either[ResponseError[Exception], CreateSpace_OUT]]] =
-    Task.fromFuture(
+    Task.deferFuture(
       authenticatedRequest
         .post(uri"${config.url}/api/createSpace")
         .body(CreateSpace_IN(spaceName = name, spacePath = path, disableFileSystem = false, webAccess = true))
@@ -53,7 +58,8 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
       case Left(e) =>
         e match {
           case HttpError(body, _) =>
-            Task(read[TeamDriveError_OUT](body)).flatMap(e => Task.raiseError(TeamDriveError(e.error, e.error_message)))
+            Task(read[TeamDriveError_OUT](body)).flatMap(e =>
+              Task.raiseError(TeamDriveHttpError(e.error, e.error_message)))
           case a @ DeserializationError(_, _) => Task.raiseError(a)
         }
       case Right(v) => onSuccess(v)
@@ -69,7 +75,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
     fileName: String,
     file: ByteBuffer
   ): Task[Response[Either[ResponseError[Exception], PutFile_OUT]]] =
-    Task.fromFuture {
+    Task.deferFuture {
       authenticatedRequest
         .put(uri"${config.url}/files/${spaceId.v}/$fileName")
         .body(file)
@@ -87,7 +93,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
     email: String,
     permissionLevel: PermissionLevel
   ): Task[Response[Either[ResponseError[Exception], InviteMember_OUT]]] =
-    Task.fromFuture {
+    Task.deferFuture {
       authenticatedRequest
         .contentType(MediaType.ApplicationJson.charset(StandardCharsets.UTF_8))
         .post(uri"${config.url}/api/inviteMember")
@@ -103,6 +109,39 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(
         .response(asJson[InviteMember_OUT])
         .send()
     }
+
+  override def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]] = {
+    callGetSpaces().map {
+      _.body match {
+        case Right(spaces) =>
+          val filteredSpaces = spaces.filter(_.name == spaceName.v)
+          if (filteredSpaces.isEmpty) {
+            logger.warn(s"couldn't find the space name: ${spaceName.v}")
+            None
+          } else if (filteredSpaces.size > 1) {
+            val spaceInfo = filteredSpaces.map { s => s"id: ${s.id}, name: ${s.name}" }
+            val errorMsg = s"found duplicate space names: $spaceInfo"
+            logger.error(s"found duplicate space names: $spaceInfo")
+            throw TeamDriveError(errorMsg)
+          } else {
+            Some(SpaceId(filteredSpaces.head.id))
+          }
+        case Left(ex) =>
+          val errorMsg = s"couldn't retrieve space by ${spaceName.v}, error: $ex"
+          logger.error(errorMsg)
+          throw TeamDriveError(errorMsg)
+      }
+    }
+  }
+
+  private def callGetSpaces(): Task[Response[Either[ResponseError[Exception], Seq[Space]]]] = {
+    Task.deferFuture {
+      authenticatedRequest
+        .get(uri"${config.url}/api/getSpaces")
+        .response(asJson[Seq[Space]])
+        .send()
+    }
+  }
 }
 
 object SttpTeamDriveClient {
@@ -119,4 +158,15 @@ object SttpTeamDriveClient {
 
   case class InviteMember_IN(spaceId: Int, text: String, permissionLevel: String, sendEmail: Boolean, name: String)
   case class InviteMember_OUT(result: Boolean)
+
+  // these are some of fields from the getSpace endpoint
+  case class Space(
+    id: Int,
+    name: String,
+    creator: String,
+    currentSnapshotId: Int,
+    status: String,
+    permissionLevel: String,
+    webAccessAllowed: Boolean,
+    hasComments: Boolean)
 }

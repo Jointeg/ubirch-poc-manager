@@ -10,6 +10,7 @@ import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
 import com.ubirch.services.teamdrive.TeamDriveService
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
+import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.util.TaskHelpers
 import monix.eval.Task
 
@@ -59,8 +60,9 @@ class DefaultSuperAdminService @Inject() (
   }
 
   private def createShareCertIntoTD(tenant: Tenant, sharedAuthResult: SharedAuthResult): Task[SharedCertificate] = {
+    val spaceName = SpaceName.forTenant(pocConfig.teamDriveStage, tenant)
     teamDriveService.shareCert(
-      s"${pocConfig.teamDriveStage}_${tenant.tenantName.value}",
+      spaceName,
       pocConfig.teamDriveAdminEmails,
       sharedAuthResult.passphrase,
       sharedAuthResult.pkcs12).onErrorHandleWith {

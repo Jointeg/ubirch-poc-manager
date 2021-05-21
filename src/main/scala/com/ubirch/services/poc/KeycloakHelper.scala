@@ -16,7 +16,6 @@ import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import javax.inject.Singleton
 
 trait KeycloakHelper {
-
   def createDeviceRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
   def createDeviceGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
@@ -32,6 +31,7 @@ trait KeycloakHelper {
   def assignTenantRoleToCertifyGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
   def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+
 }
 
 case class PocAndStatus(poc: Poc, status: PocStatus) {

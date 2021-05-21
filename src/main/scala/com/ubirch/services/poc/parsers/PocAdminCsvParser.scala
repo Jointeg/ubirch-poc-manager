@@ -62,7 +62,6 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
       ) =>
         {
           val uuid = UUID.randomUUID()
-          val keyCloakUserId = UUID.randomUUID()
           PocAdmin(
             uuid,
             poc.id,
@@ -72,7 +71,6 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
             adminEmail,
             adminMobilePhone,
             webIdentRequired,
-            keyCloakUserId,
             adminDateOfBirth
           )
         }
