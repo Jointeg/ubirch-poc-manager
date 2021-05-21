@@ -2,7 +2,7 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.PocRepository.{ PaginatedPocs, PocCriteria }
+import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
 import com.ubirch.models.common
 import com.ubirch.models.common.{ Page, Sort }
 import com.ubirch.models.poc._
@@ -28,18 +28,11 @@ trait PocRepository {
 
   def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]]
 
-  def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs]
+  def getAllPocsByCriteria(criteria: Criteria): Task[PaginatedResult[Poc]]
 
   def getAllUncompletedPocs(): Task[List[Poc]]
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]]
-}
-
-object PocRepository {
-  case class PocCriteria(tenantId: TenantId, page: Page, sort: Sort, search: Option[String], filter: PocFilter)
-  case class PocFilter(status: Seq[Status])
-
-  case class PaginatedPocs(total: Long, pocs: Seq[Poc])
 }
 
 @Singleton
@@ -128,7 +121,7 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
 
   def getAllUncompletedPocs(): Task[List[Poc]] = run(getAllPocsWithoutStatusQuery(Completed))
 
-  override def getAllPocsByCriteria(pocCriteria: PocCriteria): Task[PaginatedPocs] =
+  override def getAllPocsByCriteria(pocCriteria: Criteria): Task[PaginatedResult[Poc]] =
     transaction {
       val pocsByCriteria = filterByStatuses(getAllPocsByCriteriaQuery(pocCriteria), pocCriteria.filter.status)
       val sortedPocs = sortPocs(pocsByCriteria, pocCriteria.sort)
@@ -140,11 +133,11 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
             .take(quote(lift(pocCriteria.page.size)))
         }
       } yield {
-        PaginatedPocs(total, pocs)
+        PaginatedResult(total, pocs)
       }
     }
 
-  private def getAllPocsByCriteriaQuery(criteria: PocCriteria) = {
+  private def getAllPocsByCriteriaQuery(criteria: Criteria) = {
     val pocByTenantId = quote {
       querySchema[Poc]("poc_manager.poc_table")
         .filter(_.tenantId == lift(criteria.tenantId))

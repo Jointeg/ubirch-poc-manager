@@ -9,9 +9,9 @@ import com.ubirch.controllers.concerns.{
   KeycloakBearerAuthenticationSupport,
   Token
 }
-import com.ubirch.controllers.validator.PocCriteriaValidator
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantTable }
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.controllers.validator.CriteriaValidator
+import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
+import com.ubirch.models.poc.{ Poc, PocAdmin, PocStatus, Status }
 import com.ubirch.models.tenant.{
   CreateWebIdentInitiateIdRequest,
   CreateWebInitiateIdResponse,
@@ -28,6 +28,7 @@ import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.joda.time.LocalDate
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
@@ -43,6 +44,7 @@ class TenantAdminController @Inject() (
   pocBatchHandler: PocBatchHandlerImpl,
   pocStatusTable: PocStatusRepository,
   pocTable: PocRepository,
+  pocAdminRepository: PocAdminRepository,
   tenantTable: TenantTable,
   config: Config,
   val swagger: Swagger,
@@ -80,7 +82,7 @@ class TenantAdminController @Inject() (
     .register()
 
   val createListOfPocs: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[PoC_OUT]("create list of PoCs")
+    apiOperation[Paginated_OUT[Poc]]("create list of PoCs")
       .summary("PoC batch creation")
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
@@ -98,7 +100,12 @@ class TenantAdminController @Inject() (
       .description("Retrieve PoCs that belong to the querying tenant.")
       .tags("Tenant-Admin", "PoCs")
       .authorizations()
-
+  val getPocAdmins: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve all poc admins of the requesting tenant")
+      .summary("Get PoC admins")
+      .description("Retrieve PoC admins that belong to the querying tenant.")
+      .tags("Tenant-Admin", "PoCs", "PoC Admins")
+      .authorizations()
   val getDevices: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("Retrieve all devices from all PoCs of Tenant")
       .summary("Get devices")
@@ -175,12 +182,9 @@ class TenantAdminController @Inject() (
         retrieveTenantFromToken(token).flatMap {
           case Right(tenant: Tenant) =>
             (for {
-              pocCriteria <- PocCriteriaValidator.validateParams(tenant.id, params) match {
-                case Validated.Valid(a)   => Task(a)
-                case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
-              }
-              pocs <- pocTable.getAllPocsByCriteria(pocCriteria)
-            } yield PoC_OUT(pocs.total, pocs.pocs))
+              criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
+              pocs <- pocTable.getAllPocsByCriteria(criteria)
+            } yield Paginated_OUT(pocs.total, pocs.records))
               .map(toJson)
               .onErrorRecoverWith {
                 case ValidationError(e) =>
@@ -281,6 +285,36 @@ class TenantAdminController @Inject() (
     }
   }
 
+  get("/poc-admins", operation(getPocAdmins)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult("Get all PoC Admins for a tenant") { _ => _ =>
+        retrieveTenantFromToken(token).flatMap {
+          case Right(tenant: Tenant) =>
+            (for {
+              criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPocAdmin)
+              pocAdmins <- pocAdminRepository.getAllByCriteria(criteria)
+            } yield Paginated_OUT(
+              pocAdmins.total,
+              pocAdmins.records.map { case (pa, p) => PocAdmin_OUT.fromPocAdmin(pa, p) }))
+              .map(toJson)
+              .onErrorRecoverWith {
+                case ValidationError(e) =>
+                  ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
+                    .toJson
+                    .map(BadRequest(_))
+              }
+              .onErrorHandle { ex =>
+                InternalServerError(NOK.serverError(
+                  s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
+              }
+          case Left(errorMsg: String) =>
+            logger.error(errorMsg)
+            Task(BadRequest(NOK.authenticationError(errorMsg)))
+        }
+      }
+    }
+  }
+
   private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
 
     token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
@@ -302,11 +336,44 @@ class TenantAdminController @Inject() (
         InternalServerError(NOK.serverError(errorMsg))
     }
   }
+
+  private def handleValidation(tenant: Tenant, validSortColumns: Seq[String]) =
+    CriteriaValidator.validateParams(tenant.id, params, validSortColumns) match {
+      case Validated.Valid(a)   => Task(a)
+      case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
+    }
 }
 
 object TenantAdminController {
-  case class PoC_OUT(total: Long, records: Seq[Poc])
+  case class Paginated_OUT[T](total: Long, records: Seq[T])
   case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
+
+  case class PocAdmin_OUT(
+    id: UUID,
+    firstName: String,
+    lastName: String,
+    dateOfBirth: LocalDate,
+    email: String,
+    phone: String,
+    pocName: String,
+    state: Status,
+    webIdentInitiateId: Option[UUID]
+  )
+
+  object PocAdmin_OUT {
+    def fromPocAdmin(pocAdmin: PocAdmin, poc: Poc): PocAdmin_OUT =
+      PocAdmin_OUT(
+        id = pocAdmin.id,
+        firstName = pocAdmin.name,
+        lastName = pocAdmin.surname,
+        dateOfBirth = pocAdmin.dateOfBirth.date,
+        email = pocAdmin.email,
+        phone = pocAdmin.mobilePhone,
+        pocName = poc.pocName,
+        state = pocAdmin.status,
+        webIdentInitiateId = pocAdmin.webIdentInitiateId
+      )
+  }
 
   implicit class ResponseOps[T](r: Response[T]) {
     def toJson(implicit f: Formats): Task[String] = Task(write[Response[T]](r))
