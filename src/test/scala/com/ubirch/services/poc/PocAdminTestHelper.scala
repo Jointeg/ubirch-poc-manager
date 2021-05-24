@@ -37,8 +37,6 @@ object PocAdminTestHelper {
       webIdentSuccess = webIdentSuccess,
       certifyUserCreated = true,
       keycloakEmailSent = true,
-      pocCertifyGroupAssigned = true,
-      pocTenantGroupAssigned = true,
       pocAdminGroupAssigned = true,
       invitedToTeamDrive = Some(true),
       errorMessage = None

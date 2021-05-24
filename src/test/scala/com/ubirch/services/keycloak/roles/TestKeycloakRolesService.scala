@@ -62,12 +62,9 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   override def findRoleRepresentation(
     roleName: RoleName,
     keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]] = {
-    val opt: Option[KeycloakRole] = keycloakInstance match {
-      case CertifyKeycloak =>
-        val r = rolesCertifyDatastore.get(roleName)
-        r
-      case DeviceKeycloak =>
-        rolesDeviceDatastore.get(roleName)
+    val opt = keycloakInstance match {
+      case CertifyKeycloak => rolesCertifyDatastore.get(roleName)
+      case DeviceKeycloak  => rolesDeviceDatastore.get(roleName)
     }
     Task(opt.map { keycloakRole =>
       val role = new RoleRepresentation()
