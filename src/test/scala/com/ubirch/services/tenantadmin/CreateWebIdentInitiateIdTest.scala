@@ -64,7 +64,7 @@ class CreateWebIdentInitiateIdTest extends UnitTestBase {
           tenantAdminService.createWebIdentInitiateId(tenant, CreateWebIdentInitiateIdRequest(randomPocAdminId)),
           5.seconds)
 
-        result shouldBe Left(PocAdminNotFound(randomPocAdminId))
+        result shouldBe Left(CreateWebIdentInitiateIdErrors.PocAdminNotFound(randomPocAdminId))
         val pocAdminAfterFailedUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
         pocAdminAfterFailedUpdate.value.webIdentInitiateId shouldBe None
       }
@@ -98,7 +98,7 @@ class CreateWebIdentInitiateIdTest extends UnitTestBase {
           tenantAdminService.createWebIdentInitiateId(tenant1, CreateWebIdentInitiateIdRequest(pocAdmin2.id)),
           5.seconds)
 
-        result shouldBe Left(PocAdminAssignedToDifferentTenant(tenant1.id, pocAdmin2.id))
+        result shouldBe Left(CreateWebIdentInitiateIdErrors.PocAdminAssignedToDifferentTenant(tenant1.id, pocAdmin2.id))
         val pocAdminAfterFailedUpdate1 = await(pocAdminTable.getPocAdmin(pocAdmin1.id), 5.seconds)
         pocAdminAfterFailedUpdate1.value.webIdentInitiateId shouldBe None
         val pocAdminAfterFailedUpdate2 = await(pocAdminTable.getPocAdmin(pocAdmin2.id), 5.seconds)
@@ -126,7 +126,7 @@ class CreateWebIdentInitiateIdTest extends UnitTestBase {
           tenantAdminService.createWebIdentInitiateId(tenant, CreateWebIdentInitiateIdRequest(pocAdmin.id)),
           5.seconds)
 
-        result shouldBe Left(WebIdentNotRequired(tenant.id, pocAdmin.id))
+        result shouldBe Left(CreateWebIdentInitiateIdErrors.WebIdentNotRequired(tenant.id, pocAdmin.id))
       }
     }
   }

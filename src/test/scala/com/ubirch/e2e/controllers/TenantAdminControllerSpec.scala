@@ -1,23 +1,14 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocAdminStatus, createPocStatus, createTenant }
+import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OUT }
-import com.ubirch.db.tables.PocTable
-import com.ubirch.db.tables.{
-  PocAdminRepository,
-  PocAdminStatusRepository,
-  PocRepository,
-  PocStatusRepository,
-  TenantRepository,
-  TenantTable
-}
+import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.{ Tenant, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
@@ -25,10 +16,11 @@ import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
-import org.joda.time.DateTime
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.json4s._
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.{ read, write }
-import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 import org.scalatra.{ BadRequest, Ok }
@@ -843,6 +835,87 @@ class TenantAdminControllerSpec
         val pocAdminStatus2AfterOperations = await(pocAdminStatusTable.getStatus(pocAdmin2.id), 5.seconds)
         pocAdminStatus2AfterOperations.value shouldBe pocAdminStatus2.copy(lastUpdated =
           pocAdminStatus2AfterOperations.value.lastUpdated)
+      }
+    }
+  }
+
+  "Endpoint GET /poc-admin/status/:id" should {
+    "return status for asked PocAdmin" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
+        val tenantTable = injector.get[TenantRepository]
+        val tenant = createTenant()
+        val poc = createPoc(poc1id, tenant.tenantName)
+        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
+        val pocAdminStatus = createPocAdminStatus(pocAdmin, poc).copy(
+          webIdentRequired = true,
+          webIdentInitiated = Some(true),
+          webIdentSuccess = Some(false),
+          invitedToTeamDrive = None,
+          errorMessage = Some("random error message")
+        )
+        val r = for {
+          _ <- tenantTable.createTenant(tenant)
+          _ <- pocTable.createPoc(poc)
+          _ <- pocAdminTable.createPocAdmin(pocAdmin)
+          _ <- pocAdminStatusTable.createStatus(pocAdminStatus)
+        } yield ()
+        await(r, 5.seconds)
+
+        val pocAdminStatusAfterInsert = await(pocAdminStatusTable.getStatus(pocAdmin.id), 5.seconds).getOrElse(fail(
+          s"Expected to have PoC Admin status with id ${pocAdmin.id}"))
+
+        get(
+          s"/poc-admin/status/${pocAdmin.id}",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          status should equal(200)
+          pretty(render(parse(body))) shouldBe
+            s"""|{
+                |  "webIdentRequired" : true,
+                |  "webIdentInitiated" : true,
+                |  "webIdentSuccess" : false,
+                |  "certifyUserCreated" : false,
+                |  "pocAdminGroupAssigned" : false,
+                |  "keycloakEmailSent" : false,
+                |  "errorMessage" : "random error message",
+                |  "lastUpdated" : "${pocAdminStatusAfterInsert.lastUpdated.dateTime.withZone(DateTimeZone.UTC).toString()}",
+                |  "created" : "${pocAdminStatusAfterInsert.created.dateTime.withZone(DateTimeZone.UTC).toString()}"
+                |}""".stripMargin
+        }
+      }
+    }
+
+    "fail with 500 if the provided PocAdmin ID can't be converted to UUID" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
+        val tenantTable = injector.get[TenantRepository]
+        val tenant = createTenant()
+        val poc = createPoc(poc1id, tenant.tenantName)
+        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
+        val pocAdminStatus = createPocAdminStatus(pocAdmin, poc)
+        val r = for {
+          _ <- tenantTable.createTenant(tenant)
+          _ <- pocTable.createPoc(poc)
+          _ <- pocAdminTable.createPocAdmin(pocAdmin)
+          _ <- pocAdminStatusTable.createStatus(pocAdminStatus)
+        } yield ()
+        await(r, 5.seconds)
+
+        val pocAdminStatusAfterInsert = await(pocAdminStatusTable.getStatus(pocAdmin.id), 5.seconds).getOrElse(fail(
+          s"Expected to have PoC Admin status with id ${pocAdmin.id}"))
+
+        get(
+          s"/poc-admin/status/wrongUUID",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          status should equal(400)
+          assert(body.contains("Invalid UUID string"))
+        }
       }
     }
   }
