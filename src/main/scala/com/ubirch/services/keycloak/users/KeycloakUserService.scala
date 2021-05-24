@@ -1,30 +1,19 @@
 package com.ubirch.services.keycloak.users
 
 import cats.data.OptionT
-import com.google.inject.{ Inject, Singleton }
+import cats.syntax.either._
+import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.keycloak.user.{
-  CreateBasicKeycloakUser,
-  CreateKeycloakUser,
-  CreateKeycloakUserWithoutUserName,
-  UserAlreadyExists,
-  UserCreationError,
-  UserException,
-  UserRequiredAction
-}
-import com.ubirch.models.user.{ UserId, UserName }
-import com.ubirch.services.{ DeviceKeycloak, KeycloakConnector, KeycloakInstance }
+import com.ubirch.models.keycloak.user._
+import com.ubirch.models.user.{UserId, UserName}
+import com.ubirch.services.{DeviceKeycloak, KeycloakConnector, KeycloakInstance}
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
 import java.util.UUID
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
-import scala.collection.JavaConverters.{
-  iterableAsScalaIterableConverter,
-  mapAsJavaMapConverter,
-  seqAsJavaListConverter
-}
+import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
 
 trait KeycloakUserService {
   /**
@@ -76,6 +65,10 @@ trait KeycloakUserService {
     * Send an email to user with actions set to the user
     */
   def sendRequiredActionsEmail(userId: UserId, instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
 }
 
 @Singleton
@@ -228,6 +221,32 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
   }
 
+  override def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    getUserById(UserId(id), instance).flatMap {
+      case Some(ur) => update(id, {
+        ur.setEnabled(true)
+        ur
+      }, instance).map(_ => ().asRight)
+      case None => Task.pure(s"user with name $id wasn't found".asLeft)
+    }.onErrorHandle { ex =>
+      val message = s"Could not activate user with id $id. Reason: ${ex.getMessage}"
+      logger.error(message, ex)
+      message.asLeft
+    }
+
+  override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    getUserById(UserId(id), instance).flatMap {
+      case Some(ur) => update(id, {
+        ur.setEnabled(false)
+        ur
+      }, instance).map(_ => ().asRight)
+      case None => Task.pure(s"user with name $id wasn't found".asLeft)
+    }.onErrorHandle { ex =>
+      val message = s"Could not deactivate user with id $id. Reason: ${ex.getMessage}"
+      logger.error(message, ex)
+      message.asLeft
+    }
+
   private def processCreationResponse(response: Response, userName: String): Either[UserException, UserId] = {
 
     if (response.getStatusInfo.equals(Status.CREATED)) {
@@ -244,5 +263,16 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   private def getIdFromPath(response: Response) = {
     val path = response.getLocation.getPath
     UserId(UUID.fromString(path.substring(path.lastIndexOf('/') + 1)))
+  }
+
+  private def update(id: UUID, userRepresentation: UserRepresentation, instance: KeycloakInstance): Task[Unit] = {
+    Task(
+      keycloakConnector
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .users()
+        .get(id.toString)
+        .update(userRepresentation)
+    )
   }
 }

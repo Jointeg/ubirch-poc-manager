@@ -9,6 +9,7 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, Word
 import java.util.concurrent.Executors
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
+import scala.concurrent.duration._
 
 /**
   * Represents base for a convenient test
@@ -38,7 +39,7 @@ trait Awaits {
     Await.result(future, atMost)
   }
 
-  def await[T](task: Task[T], atMost: Duration)(implicit scheduler: Scheduler): T = {
+  def await[T](task: Task[T], atMost: Duration = 5.seconds)(implicit scheduler: Scheduler): T = {
     val future = task.runToFuture
     Await.result(future, atMost)
   }
