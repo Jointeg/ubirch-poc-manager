@@ -1,37 +1,28 @@
 package com.ubirch.e2e.controllers
 
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocAdminStatus, createPocStatus, createTenant }
+import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OUT }
-import com.ubirch.db.tables.PocTable
-import com.ubirch.db.tables.{
-  PocAdminRepository,
-  PocAdminStatusRepository,
-  PocRepository,
-  PocStatusRepository,
-  TenantRepository,
-  TenantTable
-}
+import com.ubirch.controllers.TenantAdminController.{Paginated_OUT, PocAdmin_OUT}
+import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.{ Tenant, TenantName }
-import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
+import com.ubirch.models.tenant.{Tenant, TenantId, TenantName}
+import com.ubirch.services.formats.{CustomFormats, JodaDateTimeFormats}
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.services.{CertifyKeycloak, DeviceKeycloak}
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.DateTime
-import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
-import org.json4s.native.Serialization.{ read, write }
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.native.Serialization.{read, write}
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatest.prop.TableDrivenPropertyChecks
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
-import org.scalatra.{ BadRequest, Ok }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatra.{BadRequest, Ok}
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -843,6 +834,24 @@ class TenantAdminControllerSpec
         val pocAdminStatus2AfterOperations = await(pocAdminStatusTable.getStatus(pocAdmin2.id), 5.seconds)
         pocAdminStatus2AfterOperations.value shouldBe pocAdminStatus2.copy(lastUpdated =
           pocAdminStatus2AfterOperations.value.lastUpdated)
+      }
+    }
+  }
+
+  "Endpoint PUT /poc-admin/:id/active/:isActive" should {
+    "deactivate user" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val id = await(repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id)))
+
+      put(
+        s"/poc-admin/$id/active/0",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        body should equal("")
       }
     }
   }

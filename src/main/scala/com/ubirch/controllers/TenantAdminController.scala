@@ -315,6 +315,12 @@ class TenantAdminController @Inject() (
     }
   }
 
+  put("/poc-admin/:id/active/:isActive") {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token =>
+      Ok("")
+    }
+  }
+
   private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
 
     token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
