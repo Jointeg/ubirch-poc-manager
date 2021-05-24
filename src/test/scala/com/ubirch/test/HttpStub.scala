@@ -240,6 +240,15 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
     self
   }
 
+  def loginWasNotCalled(): HttpStub = {
+    wiremock.verify(exactly(0), postRequestedFor(urlEqualTo("/login")))
+    self
+  }
+
+  def loginWasCalled(): HttpStub = {
+    wiremock.verify(exactly(1), postRequestedFor(urlEqualTo("/login")))
+    self
+  }
 }
 
 object HttpStub {
