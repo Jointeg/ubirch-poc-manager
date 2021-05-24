@@ -5,7 +5,7 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import sttp.model.MediaType.ApplicationOctetStream
 import sttp.model.{ HeaderNames, MediaType }
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF-8") { self =>
 
@@ -160,6 +160,74 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
     self
   }
 
+  def getLoginInformationWillReturn(isLoginRequired: Boolean): HttpStub = {
+    wiremock.stubFor(
+      get(urlEqualTo("/getLoginInformation"))
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(200)
+            .withBody(getLoginInformationResponse(isLoginRequired = isLoginRequired))
+        )
+    )
+    self
+  }
+
+  def getLoginInformationWillFail(
+    errorCode: Int,
+    errorMessage: String,
+    statusCode: Int): HttpStub = {
+    wiremock.stubFor(
+      get(urlEqualTo("/getLoginInformation"))
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(statusCode)
+            .withBody(errorResponse(errorMessage, statusCode, errorCode))
+        )
+    )
+    self
+  }
+
+  def loginWillBeOk(username: String = TestData.username, password: String = TestData.password): HttpStub = {
+    wiremock.stubFor(
+      post(urlEqualTo("/login"))
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .withRequestBody(matchingJsonPath("username", equalTo(username)))
+        .withRequestBody(matchingJsonPath("password", equalTo(password)))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(200)
+            .withBody(loginResponse(username))
+        )
+    )
+    self
+  }
+
+  def loginWillFail(
+    username: String = TestData.username,
+    password: String = TestData.password,
+    errorCode: Int,
+    errorMessage: String,
+    statusCode: Int): HttpStub = {
+    wiremock.stubFor(
+      post(urlEqualTo("/login"))
+        .withHeader(HeaderNames.ContentType, equalTo(ApplicationJson))
+        .withRequestBody(matchingJsonPath("username", equalTo(username)))
+        .withRequestBody(matchingJsonPath("password", equalTo(password)))
+        .willReturn(
+          aResponse()
+            .withHeader(HeaderNames.ContentType, ApplicationJson)
+            .withStatus(statusCode)
+            .withBody(errorResponse(errorMessage, statusCode, errorCode))
+        )
+    )
+    self
+  }
+
   def anyRequestWillTimeout(delay: Duration): HttpStub = {
     val response = aResponse()
       .withFixedDelay(delay.toMillis.toInt)
@@ -172,6 +240,15 @@ class HttpStub(wiremock: WireMockServer, val url: String, charset: String = "UTF
     self
   }
 
+  def loginWasNotCalled(): HttpStub = {
+    wiremock.verify(exactly(0), postRequestedFor(urlEqualTo("/login")))
+    self
+  }
+
+  def loginWasCalled(): HttpStub = {
+    wiremock.verify(exactly(1), postRequestedFor(urlEqualTo("/login")))
+    self
+  }
 }
 
 object HttpStub {
@@ -245,4 +322,48 @@ object HttpStub {
        |}""".stripMargin
 
   def inviteMemberOkResponse: String = """{ "result": true }"""
+
+  def getLoginInformationResponse(isLoginRequired: Boolean): String =
+    s"""{
+       | "isWebApi" : true,
+       | "isLoginRequired" : $isLoginRequired,
+       | "canMountFileSystem" : false,
+       | "apiUrl" : "/",
+       | "websocketUrl" : ":4041",
+       | "localUser" : "username"
+       |}""".stripMargin
+
+  def loginResponse(username: String): String =
+    s"""{
+       |   "isLoginRequired" : false,
+       |   "websocketUrl" : ":4041",
+       |   "superPinExportRequired" : false,
+       |   "reencryptionStatus" : {
+       |      "pending" : false,
+       |      "done" : 0,
+       |      "total" : 0,
+       |      "inProgress" : false,
+       |      "isEncryption" : false
+       |   },
+       |   "initials" : "gr",
+       |   "canMountFileSystem" : false,
+       |   "isWebApi" : true,
+       |   "address" : {
+       |      "email" : "user@example.com",
+       |      "id" : 1,
+       |      "icon" : "self",
+       |      "name" : "$username",
+       |      "profile" : {
+       |         "email" : "user@example.com",
+       |         "phone" : "",
+       |         "mobile" : ""
+       |      },
+       |      "initials" : "gr"
+       |   },
+       |   "localUser" : "$username",
+       |   "superPinActivated" : false,
+       |   "accessProtectionSettings" : true,
+       |   "apiUrl" : "/",
+       |   "username" : "username"
+       |}""".stripMargin
 }
