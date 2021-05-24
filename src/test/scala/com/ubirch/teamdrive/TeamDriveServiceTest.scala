@@ -1,16 +1,29 @@
 package com.ubirch.teamdrive
 
-import com.ubirch.TestBase
+import com.ubirch.models.auth.Base16String
 import com.ubirch.services.poc.TestCertHandler
-import com.ubirch.services.teamdrive.model.SpaceName
-import com.ubirch.services.teamdrive.{ TeamDriveService, TeamDriveServiceImpl }
-import com.ubirch.test.{ FakeTeamDriveClient, TestData }
+import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
+import com.ubirch.services.teamdrive.model._
+import com.ubirch.services.teamdrive.{SttpTeamDriveClient, TeamDriveServiceImpl}
+import com.ubirch.test.{HttpTest, TestData}
+import org.json4s.Formats
 
-class TeamDriveServiceTest extends TestBase {
+class TeamDriveServiceTest extends HttpTest {
+  implicit private val formats: Formats = org.json4s.DefaultFormats
+
   import com.ubirch.test.TaskSupport._
 
   "TeamDriveServiceTest.shareCert" must {
-    "share cert and passphrase with given email address" in testTeamDriveService { (service, fakeClient) =>
+    "share cert and passphrase with given email address" in httpTest { httpStub =>
+      // given
+      val service = new TeamDriveServiceImpl(new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url)))
+
+      httpStub.spaceWillBeCreated(spaceId = 8, spaceName = "spaceName", spacePath = "spaceName")
+      httpStub.fileWillBeSent(spaceId = 8, fileBody = TestCertHandler.passphrase.value.getBytes, fileName = "passphrase_spaceName.pwd", fileId = 16)
+      httpStub.fileWillBeSent(spaceId = 8, fileBody = Base16String.toByteArray(TestCertHandler.validPkcs12), fileName = "cert_spaceName.pfx", fileId = 17)
+      httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email, permissionLevel = "read")
+      httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email2, permissionLevel = "read")
+
       // when
       val result = service.shareCert(
         SpaceName("spaceName"),
@@ -18,19 +31,9 @@ class TeamDriveServiceTest extends TestBase {
         TestCertHandler.passphrase,
         TestCertHandler.validPkcs12).unwrap
 
-      // expect
-      fakeClient.spaceIsCreated(result.spaceId, "spaceName") mustBe true
-      fakeClient.fileExist(result.spaceId, result.certificateFileId) mustBe true
-      fakeClient.fileExist(result.spaceId, result.passphraseFileId) mustBe true
-      fakeClient.emailIsInvited(result.spaceId, TestData.email) mustBe true
-      fakeClient.emailIsInvited(result.spaceId, TestData.email2) mustBe true
+      // then
+      result must equal(SharedCertificate(SpaceName("spaceName"), SpaceId(8), FileId(16), FileId(17)))
     }
   }
 
-  def testTeamDriveService(test: (TeamDriveService, FakeTeamDriveClient) => Unit): Unit = {
-    val client = new FakeTeamDriveClient()
-    val service = new TeamDriveServiceImpl(client)
-    test(service, client)
-    ()
-  }
 }

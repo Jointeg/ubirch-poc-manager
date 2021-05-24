@@ -16,12 +16,10 @@ class SttpTeamDriveClientTest extends HttpTest {
 
   implicit private val formats: Formats = org.json4s.DefaultFormats
 
-  import SttpTeamDriveClientTest._
-
   "SttpTeamDriveClient.createSpace" must {
     "create one for given name and path" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.spaceWillBeCreated(spaceId = 8, spaceName = spaceName, spacePath = spacePath)
 
       // when
@@ -33,7 +31,7 @@ class SttpTeamDriveClientTest extends HttpTest {
 
     "fail when TeamDrive responds with an error" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.createSpaceWillFail(errorCode = 30, errorMessage = "some error", statusCode = 400)
 
       // when
@@ -47,7 +45,7 @@ class SttpTeamDriveClientTest extends HttpTest {
   "SttpTeamDriveClient.putFile" must {
     "send file to given space" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       val content = "content".getBytes
       httpStub.fileWillBeSent(spaceId = 8, fileBody = content, fileName = "cert.txt", fileId = 16)
 
@@ -60,7 +58,7 @@ class SttpTeamDriveClientTest extends HttpTest {
 
     "fail when TeamDrive responds with an error" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.putFileWillFail(
         errorCode = 30,
         errorMessage = "some error",
@@ -79,7 +77,7 @@ class SttpTeamDriveClientTest extends HttpTest {
   "SttpTeamDriveClient.inviteMember" must {
     "send invitation" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.invitationWillBeAccepted(spaceId = 8, permissionLevel = "read", email = "admin@ubirch.com")
 
       // when
@@ -91,7 +89,7 @@ class SttpTeamDriveClientTest extends HttpTest {
 
     "fail when TeamDrive responds with an error" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.invitationWillFail(
         errorCode = 30,
         errorMessage = "some error",
@@ -111,7 +109,7 @@ class SttpTeamDriveClientTest extends HttpTest {
   "SttpTeamDriveClient.getLoginInformation" must {
     "return whether login is required" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.getLoginInformationWillReturn(isLoginRequired = true)
 
       // when
@@ -123,7 +121,7 @@ class SttpTeamDriveClientTest extends HttpTest {
 
     "fail when TeamDrive responds with an error" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.getLoginInformationWillFail(errorMessage = "some error", statusCode = 400, errorCode = 30)
 
       // when
@@ -137,7 +135,7 @@ class SttpTeamDriveClientTest extends HttpTest {
   "SttpTeamDriveClient.login" must {
     "return whether login is required" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.loginWillBeOk(username, password)
 
       // expect
@@ -146,7 +144,7 @@ class SttpTeamDriveClientTest extends HttpTest {
 
     "fail when TeamDrive responds with an error" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url))
       httpStub.loginWillFail(
         username = username,
         password = password,
@@ -165,7 +163,7 @@ class SttpTeamDriveClientTest extends HttpTest {
   "SttpTeamDriveClient" must {
     "get request timeout on each endpoint, for configured value" in httpTest { httpStub =>
       // given
-      val client = new SttpTeamDriveClient(config(url = httpStub.url, readTimeout = 1.second))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(url = httpStub.url, readTimeout = 1.second))
       httpStub.anyRequestWillTimeout(delay = 5.seconds)
 
       val matchTimeout: PartialFunction[Throwable, String] = {
@@ -188,7 +186,7 @@ class SttpTeamDriveClientTest extends HttpTest {
     "get connection timeout on each endpoint, for configured value" in httpTest { httpStub =>
       // given
       httpStub.kill()
-      val client = new SttpTeamDriveClient(config(url = httpStub.url))
+      val client = new SttpTeamDriveClient(sttpTeamDriveConfig(url = httpStub.url))
 
       val matchTimeout: PartialFunction[Throwable, String] = {
         case _: SttpClientException.ConnectException => "connection timeout"
@@ -207,13 +205,4 @@ class SttpTeamDriveClientTest extends HttpTest {
       a.size mustBe a.count(_ == "connection timeout")
     }
   }
-}
-
-object SttpTeamDriveClientTest {
-  def config(
-    url: String,
-    username: String = "username",
-    password: String = "password",
-    readTimeout: Duration = 5.seconds): SttpTeamDriveClient.Config =
-    SttpTeamDriveClient.Config(url, username, password, readTimeout)
 }
