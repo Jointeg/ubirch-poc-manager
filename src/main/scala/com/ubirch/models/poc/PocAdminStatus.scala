@@ -11,8 +11,6 @@ case class PocAdminStatus(
   webIdentSuccess: Option[Boolean],
   certifyUserCreated: Boolean = false,
   pocAdminGroupAssigned: Boolean = false,
-  pocCertifyGroupAssigned: Boolean = false,
-  pocTenantGroupAssigned: Boolean = false,
   keycloakEmailSent: Boolean = false,
   invitedToTeamDrive: Option[Boolean],
   errorMessage: Option[String] = None,

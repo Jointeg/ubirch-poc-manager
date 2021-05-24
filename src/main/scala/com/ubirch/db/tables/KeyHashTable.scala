@@ -16,12 +16,12 @@ class KeyHashTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) exte
 
   private def insertNewKeyHashQuery(hashedData: HashedData) =
     quote {
-      querySchema[HashedData]("poc_manager.key_hash").insert(lift(hashedData))
+      querySchema[HashedData]("poc_manager.key_hash_table").insert(lift(hashedData))
     }
 
   private def getFirstQuery =
     quote {
-      querySchema[HashedData]("poc_manager.key_hash").take(1)
+      querySchema[HashedData]("poc_manager.key_hash_table").take(1)
     }
 
   override def insertNewKeyHash(hashedData: HashedData): Task[Unit] =

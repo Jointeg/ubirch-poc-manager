@@ -8,8 +8,6 @@ import java.util.UUID
 case class PocEmployeeStatus(
   pocEmployeeId: UUID,
   certifyUserCreated: Boolean = false,
-  pocTenantGroupAssigned: Boolean = false,
-  pocGroupAssigned: Boolean = false,
   employeeGroupAssigned: Boolean = false,
   keycloakEmailSent: Boolean = false,
   errorMessage: Option[String] = None,

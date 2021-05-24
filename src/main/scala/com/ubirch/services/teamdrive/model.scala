@@ -14,11 +14,20 @@ object model {
     def putFile(spaceId: SpaceId, fileName: String, file: ByteBuffer): Task[FileId]
     def inviteMember(spaceId: SpaceId, email: String, permissionLevel: PermissionLevel): Task[Boolean]
     def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]]
+    def getLoginInformation(): Task[LoginInformation]
+    def login(): Task[Unit]
   }
 
-  case class SpaceId(v: Int) extends AnyVal
+  case class SpaceId(v: Int) extends AnyVal {
+    override def toString: String = v.toString
+  }
 
-  case class SpaceName(v: String) extends AnyVal
+  case class SpaceName(v: String) extends AnyVal {
+    override def toString: String = v
+  }
+
+  case class LoginInformation(isLoginRequired: Boolean)
+
   object SpaceName {
     def forTenant(stage: String, tenant: Tenant): SpaceName =
       SpaceName(s"${stage}_${tenant.tenantName.value}")
@@ -31,6 +40,7 @@ object model {
   sealed trait TeamDriveException {
     val message: String
   }
+
   case class TeamDriveHttpError(code: Int, message: String)
     extends RuntimeException(s"TeamDrive failed with message '$message' and code '$code'")
     with TeamDriveException

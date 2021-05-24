@@ -1,20 +1,14 @@
 package com.ubirch.services.poc
 
 import com.ubirch.UnitTestBase
-import com.ubirch.db.tables.{
-  PocAdminRepositoryMock,
-  PocAdminStatusRepositoryMock,
-  PocRepositoryMock,
-  PocStatusRepositoryMock,
-  TenantRepositoryMock
-}
+import com.ubirch.db.tables._
 import com.ubirch.models.poc.Completed
-import com.ubirch.services.poc.PocTestHelper.{ addPocTripleToRepository, createPocTriple }
 import com.ubirch.services.poc.PocAdminTestHelper.{
   addPocAndStatusToRepository,
   createPocAdminAndStatus,
   createPocAdminStatusAllTrue
 }
+import com.ubirch.services.poc.PocTestHelper.{ addPocTripleToRepository, createPocTriple }
 import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.test.FakeTeamDriveClient
 
@@ -36,7 +30,8 @@ class PocAdminCreatorTest extends UnitTestBase {
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = s"local_${tenant.tenantName.value}"
-        val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
+        val updatedPoc =
+          poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
         teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
@@ -45,7 +40,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         result match {
           case NoWaitingPocAdmin => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) => {
+          case PocAdminCreationMaybeSuccess(list) =>
             assert(list.nonEmpty)
             assert(list.head.isRight)
             val result = list.head.right.get
@@ -54,7 +49,6 @@ class PocAdminCreatorTest extends UnitTestBase {
               allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
 
             expected shouldBe result
-          }
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
@@ -77,7 +71,8 @@ class PocAdminCreatorTest extends UnitTestBase {
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = s"local_${tenant.tenantName.value}"
-        val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
+        val updatedPoc =
+          poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
         teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
@@ -104,7 +99,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         secondResult match {
           case NoWaitingPocAdmin => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) => {
+          case PocAdminCreationMaybeSuccess(list) =>
             assert(list.nonEmpty)
             assert(list.head.isRight)
             val result = list.head.right.get
@@ -113,7 +108,6 @@ class PocAdminCreatorTest extends UnitTestBase {
               allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
 
             expected shouldBe result
-          }
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
@@ -154,20 +148,22 @@ class PocAdminCreatorTest extends UnitTestBase {
         val expected = webIdentSuccessPocAdminStatus.copy(
           certifyUserCreated = true,
           keycloakEmailSent = false,
-          pocAdminGroupAssigned = true,
-          errorMessage = Some("pocCertifyGroupId is missing, when it should be added to certify")
+          pocAdminGroupAssigned = false,
+          errorMessage = Some(s"adminGroupId is missing in poc ${poc.id}")
         )
         assert(updatedPocAdminStatus.isDefined)
         updatedPocAdminStatus.get shouldBe expected
 
-        pocTable.updatePoc(poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))).runSyncUnsafe()
+        pocTable.updatePoc(poc.copy(
+          certifyGroupId = Some(UUID.randomUUID().toString),
+          adminGroupId = Some(UUID.randomUUID().toString))).runSyncUnsafe()
 
         // restart process
         val secondResult = creator.createPocAdmins().runSyncUnsafe()
 
         secondResult match {
           case NoWaitingPocAdmin => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) => {
+          case PocAdminCreationMaybeSuccess(list) =>
             assert(list.nonEmpty)
             assert(list.head.isRight)
             val result = list.head.right.get
@@ -177,11 +173,9 @@ class PocAdminCreatorTest extends UnitTestBase {
                 pocAdminId = pocAdmin.id,
                 lastUpdated = result.lastUpdated,
                 created = result.created,
-                errorMessage = Some("pocCertifyGroupId is missing, when it should be added to certify")
+                errorMessage = Some(s"adminGroupId is missing in poc ${poc.id}")
               )
-
             expectedFinal shouldBe result
-          }
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()

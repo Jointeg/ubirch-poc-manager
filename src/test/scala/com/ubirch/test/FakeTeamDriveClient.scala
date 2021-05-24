@@ -1,6 +1,6 @@
 package com.ubirch.test
 
-import com.ubirch.services.teamdrive.model.{ FileId, PermissionLevel, SpaceId, SpaceName, TeamDriveClient }
+import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
 
 import java.nio.ByteBuffer
@@ -62,4 +62,7 @@ class FakeTeamDriveClient extends TeamDriveClient {
 
   def spaceIsCreated(spaceId: SpaceId, spaceName: String): Boolean = spaces(spaceId) == spaceName
 
+  override def getLoginInformation(): Task[LoginInformation] = Task.pure(LoginInformation(isLoginRequired = false))
+
+  override def login(): Task[Unit] = Task.unit
 }

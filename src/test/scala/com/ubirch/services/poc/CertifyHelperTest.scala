@@ -13,7 +13,8 @@ class CertifyHelperTest extends UnitTestBase {
   "CertifyHelper" should {
     "success - addGroupsToCertifyUser" in {
       withInjector { injector =>
-        val pocWithCertifyGroupId = poc.copy(certifyGroupId = Some("test"))
+        val pocWithCertifyGroupId =
+          poc.copy(certifyGroupId = Some("test"), adminGroupId = Some(UUID.randomUUID().toString))
         val certifyHelper = injector.get[CertifyHelper]
         val newStatus = certifyHelper.addGroupsToCertifyUser(
           PocAdminAndStatus(pocAdmin.copy(certifyUserId = Some(UUID.randomUUID())), pocAdminStatus),
@@ -21,8 +22,6 @@ class CertifyHelperTest extends UnitTestBase {
           tenant).runSyncUnsafe()
 
         assert(newStatus.status.pocAdminGroupAssigned)
-        assert(newStatus.status.pocTenantGroupAssigned)
-        assert(newStatus.status.pocCertifyGroupAssigned)
       }
     }
 

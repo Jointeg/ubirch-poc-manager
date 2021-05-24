@@ -6,7 +6,7 @@ import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupNam
 import com.ubirch.models.keycloak.user.{ CreateBasicKeycloakUser, UserException }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId }
-import com.ubirch.models.user.{ Email, FirstName, LastName, UserId, UserName }
+import com.ubirch.models.user._
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
@@ -59,13 +59,16 @@ object PocTestHelper extends Awaits {
       certifyRoleCreated = true,
       certifyGroupCreated = true,
       certifyGroupRoleAssigned = true,
-      certifyGroupTenantRoleAssigned = true,
+      adminGroupCreated = None,
+      adminRoleAssigned = None,
+      employeeGroupCreated = None,
+      employeeRoleAssigned = None,
       deviceRoleCreated = true,
       deviceGroupCreated = true,
       deviceGroupRoleAssigned = true,
-      deviceGroupTenantRoleAssigned = true,
       deviceCreated = true,
       assignedDataSchemaGroup = true,
+      assignedTrustedPocGroup = true,
       assignedDeviceGroup = true,
       clientCertRequired = false,
       orgUnitCertCreated = None,

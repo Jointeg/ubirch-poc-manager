@@ -16,22 +16,22 @@ class UserTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends
 
   private def createUserQuery(user: User) =
     quote {
-      querySchema[User]("poc_manager.users").insert(lift(user))
+      querySchema[User]("poc_manager.user_table").insert(lift(user))
     }
 
   private def updateUserQuery(user: User) =
     quote {
-      querySchema[User]("poc_manager.users").filter(_.id == lift(user.id)).update(lift(user))
+      querySchema[User]("poc_manager.user_table").filter(_.id == lift(user.id)).update(lift(user))
     }
 
   private def removeUserQuery(id: UserId) =
     quote {
-      querySchema[User]("poc_manager.users").filter(_.id == lift(id)).delete
+      querySchema[User]("poc_manager.user_table").filter(_.id == lift(id)).delete
     }
 
   private def getUserQuery(id: UserId) =
     quote {
-      querySchema[User]("poc_manager.users").filter(_.id == lift(id))
+      querySchema[User]("poc_manager.user_table").filter(_.id == lift(id))
     }
 
   override def createUser(user: User): Task[Unit] =
