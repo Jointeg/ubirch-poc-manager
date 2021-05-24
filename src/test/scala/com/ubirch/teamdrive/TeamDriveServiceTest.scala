@@ -4,8 +4,8 @@ import com.ubirch.models.auth.Base16String
 import com.ubirch.services.poc.TestCertHandler
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
 import com.ubirch.services.teamdrive.model._
-import com.ubirch.services.teamdrive.{SttpTeamDriveClient, TeamDriveServiceImpl}
-import com.ubirch.test.{HttpTest, TestData}
+import com.ubirch.services.teamdrive.{ SttpTeamDriveClient, TeamDriveServiceImpl }
+import com.ubirch.test.{ HttpTest, TestData }
 import org.json4s.Formats
 
 class TeamDriveServiceTest extends HttpTest {
@@ -21,8 +21,16 @@ class TeamDriveServiceTest extends HttpTest {
       httpStub.getLoginInformationWillReturn(isLoginRequired = false)
       httpStub.loginWillBeOk()
       httpStub.spaceWillBeCreated(spaceId = 8, spaceName = "spaceName", spacePath = "spaceName")
-      httpStub.fileWillBeSent(spaceId = 8, fileBody = TestCertHandler.passphrase.value.getBytes, fileName = "passphrase_spaceName.pwd", fileId = 16)
-      httpStub.fileWillBeSent(spaceId = 8, fileBody = Base16String.toByteArray(TestCertHandler.validPkcs12), fileName = "cert_spaceName.pfx", fileId = 17)
+      httpStub.fileWillBeSent(
+        spaceId = 8,
+        fileBody = TestCertHandler.passphrase.value.getBytes,
+        fileName = "passphrase_spaceName.pwd",
+        fileId = 16)
+      httpStub.fileWillBeSent(
+        spaceId = 8,
+        fileBody = Base16String.toByteArray(TestCertHandler.validPkcs12),
+        fileName = "cert_spaceName.pfx",
+        fileId = 17)
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email, permissionLevel = "read")
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email2, permissionLevel = "read")
 
@@ -45,8 +53,16 @@ class TeamDriveServiceTest extends HttpTest {
       httpStub.getLoginInformationWillReturn(isLoginRequired = true)
       httpStub.loginWillBeOk()
       httpStub.spaceWillBeCreated(spaceId = 8, spaceName = "spaceName", spacePath = "spaceName")
-      httpStub.fileWillBeSent(spaceId = 8, fileBody = TestCertHandler.passphrase.value.getBytes, fileName = "passphrase_spaceName.pwd", fileId = 16)
-      httpStub.fileWillBeSent(spaceId = 8, fileBody = Base16String.toByteArray(TestCertHandler.validPkcs12), fileName = "cert_spaceName.pfx", fileId = 17)
+      httpStub.fileWillBeSent(
+        spaceId = 8,
+        fileBody = TestCertHandler.passphrase.value.getBytes,
+        fileName = "passphrase_spaceName.pwd",
+        fileId = 16)
+      httpStub.fileWillBeSent(
+        spaceId = 8,
+        fileBody = Base16String.toByteArray(TestCertHandler.validPkcs12),
+        fileName = "cert_spaceName.pfx",
+        fileId = 17)
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email, permissionLevel = "read")
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email2, permissionLevel = "read")
 

@@ -14,7 +14,7 @@ import sttp.model.MediaType
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
