@@ -42,7 +42,8 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         // not process because the data is not in database
         pocAdminStatusTable.getStatus(pocAdminStatus.pocAdminId).runSyncUnsafe() shouldBe None
         // store objects in database
-        val updatedPoc = poc.copy(certifyGroupId = Some(UUID.randomUUID().toString))
+        val updatedPoc =
+          poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
         teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
@@ -67,8 +68,6 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
     assert(status.certifyUserCreated)
     assert(status.keycloakEmailSent)
     assert(status.pocAdminGroupAssigned)
-    assert(status.pocCertifyGroupAssigned)
-    assert(status.pocTenantGroupAssigned)
     assert(status.invitedToTeamDrive.get)
   }
 }

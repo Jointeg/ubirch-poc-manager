@@ -59,35 +59,15 @@ object CsvConstants {
   )
   val pocHeaderColOrderLength: Int = pocHeaderColsOrder.length
 
-  val pocAdminHeaderColsOrder: Array[String] = Array(
-    externalId,
-    pocType,
-    pocName,
-    street,
-    streetNumber,
-    additionalAddress,
-    zipcode,
-    city,
-    county,
-    federalState,
-    country,
-    phone,
-    certifyApp,
-    logoUrl,
-    clientCert,
-    dataSchemaId,
-    managerSurname,
-    managerName,
-    managerEmail,
-    managerMobilePhone,
-    jsonConfig,
-    technicianSurname,
-    technicianName,
-    technicianEmail,
-    technicianMobilePhone,
-    technicianDateOfBirth,
-    webIdentRequired
-  )
+  val pocAdminHeaderColsOrder: Array[String] =
+    pocHeaderColsOrder ++ Array(
+      technicianSurname,
+      technicianName,
+      technicianEmail,
+      technicianMobilePhone,
+      technicianDateOfBirth,
+      webIdentRequired
+    )
   val pocAdminHeaderColOrderLength: Int = pocAdminHeaderColsOrder.length
 
   val pocHeaderLine: String = pocHeaderColsOrder.mkString(columnSeparator)

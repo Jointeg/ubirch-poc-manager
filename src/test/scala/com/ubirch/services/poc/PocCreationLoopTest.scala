@@ -66,12 +66,10 @@ class PocCreationLoopTest extends UnitTestBase {
     status.deviceRoleCreated shouldBe true
     status.deviceGroupCreated shouldBe true
     status.deviceGroupRoleAssigned shouldBe true
-    status.deviceGroupTenantRoleAssigned shouldBe true
 
     status.certifyRoleCreated shouldBe true
     status.certifyGroupCreated shouldBe true
     status.certifyGroupRoleAssigned shouldBe true
-    status.certifyGroupTenantRoleAssigned shouldBe true
     status.deviceCreated shouldBe true
     status.goClientProvided shouldBe true
     status.certifyApiProvided shouldBe true
