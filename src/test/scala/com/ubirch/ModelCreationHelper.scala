@@ -104,9 +104,18 @@ object ModelCreationHelper {
 
   def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = PocAdminStatus.init(pocAdmin, poc)
 
-  def createPocStatus(pocId: UUID = UUID.randomUUID()): PocStatus =
+  def createPocStatus(
+    pocId: UUID = UUID.randomUUID(),
+    adminGroupCreated: Option[Boolean] = None,
+    adminRoleAssigned: Option[Boolean] = None,
+    employeeGroupCreated: Option[Boolean] = None,
+    employeeRoleAssigned: Option[Boolean] = None): PocStatus =
     PocStatus(
       pocId,
+      adminGroupCreated = adminGroupCreated,
+      adminRoleAssigned = adminRoleAssigned,
+      employeeGroupCreated = employeeGroupCreated,
+      employeeRoleAssigned = employeeRoleAssigned,
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,
