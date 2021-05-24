@@ -16,9 +16,14 @@ object model {
     def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]]
   }
 
-  case class SpaceId(v: Int) extends AnyVal
+  case class SpaceId(v: Int) extends AnyVal {
+    override def toString: String = v.toString
+  }
 
-  case class SpaceName(v: String) extends AnyVal
+  case class SpaceName(v: String) extends AnyVal {
+    override def toString: String = v
+  }
+
   object SpaceName {
     def forTenant(stage: String, tenant: Tenant): SpaceName =
       SpaceName(s"${stage}_${tenant.tenantName.value}")
@@ -31,6 +36,7 @@ object model {
   sealed trait TeamDriveException {
     val message: String
   }
+
   case class TeamDriveHttpError(code: Int, message: String)
     extends RuntimeException(s"TeamDrive failed with message '$message' and code '$code'")
     with TeamDriveException
