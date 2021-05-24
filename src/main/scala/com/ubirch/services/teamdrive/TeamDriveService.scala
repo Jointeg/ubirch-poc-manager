@@ -1,9 +1,10 @@
 package com.ubirch.services.teamdrive
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.auth.Base16String
 import com.ubirch.models.auth.cert.Passphrase
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
-import com.ubirch.services.teamdrive.model.{ FileId, Read, SpaceId, SpaceName, TeamDriveClient }
+import com.ubirch.services.teamdrive.model.{FileId, LoginInformation, Read, SpaceId, SpaceName, TeamDriveClient}
 import monix.eval.Task
 
 import java.nio.ByteBuffer
@@ -19,7 +20,7 @@ trait TeamDriveService {
 }
 
 @Singleton
-class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDriveService {
+class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDriveService with LazyLogging {
   def shareCert(
     spaceName: SpaceName,
     emails: Seq[String],
@@ -27,9 +28,15 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDrive
     certificate: Base16String
   ): Task[SharedCertificate] =
     for {
+      loginInformation <- client.getLoginInformation()
+      _ <- Task(logger.debug(s"TeamDrive agent requires login: ${loginInformation.isLoginRequired}"))
+      _ <- loginInformation match {
+        case LoginInformation(isLoginRequired) if isLoginRequired => client.login()
+        case _                                                    => Task.unit
+      }
       spaceId <- client.createSpace(spaceName, spaceName.v) // use space name as path
       _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, Read)))
-      certByteArray <- toByteArray(certificate)
+      certByteArray <- Task(Base16String.toByteArray(certificate))
       certFileId <- client.putFile(spaceId, s"cert_$spaceName.pfx", ByteBuffer.wrap(certByteArray))
       passphraseFileId <-
         client.putFile(spaceId, s"passphrase_$spaceName.pwd", ByteBuffer.wrap(passphrase.value.getBytes))
@@ -39,13 +46,6 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDrive
       passphraseFileId = passphraseFileId,
       certificateFileId = certFileId)
 
-  private def toByteArray(base16String: Base16String): Task[Array[Byte]] = Task {
-    // TODO copied from com.ubirch.models.auth.Base16String.toISO8859String
-    base16String.value.sliding(2, 2).foldLeft(Array.empty[Byte])((acc, str) => {
-      val byteValue = Integer.parseInt(str, 16)
-      acc :+ byteValue.toByte
-    })
-  }
 }
 
 object TeamDriveService {

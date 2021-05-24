@@ -4,8 +4,10 @@ import cats.effect.{ IO, Resource }
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.ubirch.TestBase
+import com.ubirch.services.teamdrive.SttpTeamDriveClient
 
 import java.net.ServerSocket
+import scala.concurrent.duration._
 
 trait HttpTest extends TestBase {
   def httpTest(test: HttpStub => Unit): Unit = {
@@ -18,6 +20,14 @@ trait HttpTest extends TestBase {
     wireMockServer.stop()
     ()
   }
+
+  def sttpTeamDriveConfig(
+    url: String,
+    username: String = "username",
+    password: String = "password",
+    readTimeout: Duration = 5.seconds
+  ): SttpTeamDriveClient.Config =
+    SttpTeamDriveClient.Config(url, username, password, readTimeout)
 
   private def randomPort(): IO[Int] =
     Resource
