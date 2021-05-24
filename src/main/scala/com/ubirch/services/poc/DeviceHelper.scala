@@ -2,11 +2,8 @@ package com.ubirch.services.poc
 
 import com.google.inject.Inject
 import com.ubirch.PocConfig
-import com.ubirch.models.keycloak.group.{ GroupId, GroupName, GroupNotFound }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.user.UserName
 import com.ubirch.services.DeviceKeycloak
-import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.PocCreator.throwError
 import monix.eval.Task
@@ -26,25 +23,40 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
       throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}"))
 
     val status1 =
-      addGroupByIdToDevice(groupId, PocAndStatus(poc, status))
-        .map {
-          case Right(_) =>
-            status.copy(assignedDataSchemaGroup = true)
-          case Left(errorMsg) =>
-            throwError(PocAndStatus(poc, status), s"failed to add device to group $groupId: $errorMsg")
-        }
+      addGroupByIdToDevice(groupId, PocAndStatus(poc, status)).map {
+        case Right(_) =>
+          status.copy(assignedDataSchemaGroup = true)
+        case Left(errorMsg) =>
+          throwError(PocAndStatus(poc, status), s"failed to add data schema group $groupId to device: $errorMsg")
+      }
+
+    val trustedPocGroupId = pocConfig.trustedPocGroupMap.getOrElse(
+      poc.dataSchemaId,
+      throwError(
+        PocAndStatus(poc, status),
+        s"can't find the poc group id corresponding the dataSchemaId: ${poc.dataSchemaId}"))
+
+    val status2 = status1.flatMap { status =>
+      addGroupByIdToDevice(trustedPocGroupId, PocAndStatus(poc, status)).map {
+        case Right(_) => status.copy(assignedTrustedPocGroup = true)
+        case Left(errorMsg) =>
+          throwError(
+            PocAndStatus(poc, status),
+            s"failed to add trusted poc group $trustedPocGroupId to device $errorMsg")
+      }
+    }
 
     for {
-      status2 <- status1
+      status <- status2
       pocDeviceGroup = poc.deviceGroupId.getOrElse(throwError(
-        PocAndStatus(poc, status2),
+        PocAndStatus(poc, status),
         "pocDeviceGroupId is missing, when it should be added to device"))
-      success <- addGroupByIdToDevice(pocDeviceGroup, PocAndStatus(poc, status2))
+      success <- addGroupByIdToDevice(pocDeviceGroup, PocAndStatus(poc, status))
     } yield {
       success match {
-        case Right(_) => status2.copy(assignedDeviceGroup = true)
+        case Right(_) => status.copy(assignedDeviceGroup = true)
         case Left(errorMsg) =>
-          throwError(PocAndStatus(poc, status2), s"failed to add group $pocDeviceGroup to device $errorMsg")
+          throwError(PocAndStatus(poc, status), s"failed to add poc group $pocDeviceGroup to device $errorMsg")
       }
     }
   }

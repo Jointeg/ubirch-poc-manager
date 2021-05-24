@@ -124,6 +124,7 @@ class PocCreatorTest extends UnitTestBase {
           deviceGroupRoleAssigned = true,
           deviceCreated = true,
           assignedDataSchemaGroup = true,
+          assignedTrustedPocGroup = true,
           assignedDeviceGroup = true,
           certifyApiProvided = true,
           goClientProvided = true
