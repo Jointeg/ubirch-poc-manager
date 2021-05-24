@@ -32,6 +32,7 @@ case class CreateKeycloakUserWithoutUserName(
     val userRepresentation = new UserRepresentation()
     userRepresentation.setFirstName(firstName.value)
     userRepresentation.setLastName(lastName.value)
+    userRepresentation.setUsername(email.value)
     userRepresentation.setEmail(email.value)
     userRepresentation
   }
