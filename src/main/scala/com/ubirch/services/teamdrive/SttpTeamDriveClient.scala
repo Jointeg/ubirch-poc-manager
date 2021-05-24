@@ -14,7 +14,7 @@ import sttp.model.MediaType
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
@@ -32,9 +32,11 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
 
   import SttpTeamDriveClient._
 
+  private val basicRequestWithTimeout: RequestT[Empty, Either[String, String], Nothing] =
+    basicRequest.readTimeout(config.readTimeout)
+
   private val authenticatedRequest: RequestT[Empty, Either[String, String], Nothing] =
-    basicRequest.auth.basic(config.username, config.password)
-      .readTimeout(config.readTimeout)
+    basicRequestWithTimeout.auth.basic(config.username, config.password)
 
   override def createSpace(name: SpaceName, path: String): Task[SpaceId] =
     callCreateSpace(name.v, path).flatMap { r =>
@@ -142,6 +144,35 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
         .send()
     }
   }
+
+  override def getLoginInformation(): Task[LoginInformation] =
+    callGetLoginInformation().flatMap { r =>
+      handleResponse(r)(li => Task.pure(li))
+    }
+
+  private def callGetLoginInformation(): Task[Response[Either[ResponseError[Exception], LoginInformation]]] =
+    Task.deferFuture {
+      basicRequestWithTimeout
+        .contentType(MediaType.ApplicationJson.charset(StandardCharsets.UTF_8))
+        .get(uri"${config.url}/getLoginInformation")
+        .response(asJson[LoginInformation])
+        .send()
+    }
+
+  override def login(): Task[Unit] =
+    callLogin().flatMap { r =>
+      handleResponse(r)(_ => Task.unit)
+    }
+
+  private def callLogin(): Task[Response[Either[ResponseError[Exception], LoginInformation]]] =
+    Task.deferFuture {
+      basicRequestWithTimeout
+        .contentType(MediaType.ApplicationJson.charset(StandardCharsets.UTF_8))
+        .post(uri"${config.url}/login")
+        .body(Login_IN(config.username, config.password))
+        .response(asJson[LoginInformation])
+        .send()
+    }
 }
 
 object SttpTeamDriveClient {
@@ -158,6 +189,8 @@ object SttpTeamDriveClient {
 
   case class InviteMember_IN(spaceId: Int, text: String, permissionLevel: String, sendEmail: Boolean, name: String)
   case class InviteMember_OUT(result: Boolean)
+
+  case class Login_IN(username: String, password: String)
 
   // these are some of fields from the getSpace endpoint
   case class Space(
