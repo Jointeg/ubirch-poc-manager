@@ -27,37 +27,37 @@ class TenantTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) exten
 
   private def createTenantQuery(tenant: Tenant) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").insert(lift(tenant))
+      querySchema[Tenant]("poc_manager.tenant_table").insert(lift(tenant))
     }
 
   private def getTenantQuery(tenantId: TenantId) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").filter(_.id == lift(tenantId))
+      querySchema[Tenant]("poc_manager.tenant_table").filter(_.id == lift(tenantId))
     }
 
   private def getTenantByNameQuery(tenantName: TenantName) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").filter(_.tenantName == lift(tenantName))
+      querySchema[Tenant]("poc_manager.tenant_table").filter(_.tenantName == lift(tenantName))
     }
 
   private def getTenantByDeviceGroupIdQuery(groupId: TenantDeviceGroupId) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").filter(_.deviceGroupId == lift(groupId))
+      querySchema[Tenant]("poc_manager.tenant_table").filter(_.deviceGroupId == lift(groupId))
     }
 
   private def getTenantByUserGroupIdQuery(groupId: TenantCertifyGroupId) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").filter(_.certifyGroupId == lift(groupId))
+      querySchema[Tenant]("poc_manager.tenant_table").filter(_.certifyGroupId == lift(groupId))
     }
 
   private def updateTenantQuery(tenant: Tenant) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").filter(_.id == lift(tenant.id)).update(lift(tenant))
+      querySchema[Tenant]("poc_manager.tenant_table").filter(_.id == lift(tenant.id)).update(lift(tenant))
     }
 
   private def deleteTenantByIdQuery(id: TenantId) =
     quote {
-      querySchema[Tenant]("poc_manager.tenants").filter(_.id == lift(id)).delete
+      querySchema[Tenant]("poc_manager.tenant_table").filter(_.id == lift(id)).delete
     }
 
   def createTenant(tenant: Tenant): Task[TenantId] = run(createTenantQuery(tenant)).map(_ => tenant.id)
