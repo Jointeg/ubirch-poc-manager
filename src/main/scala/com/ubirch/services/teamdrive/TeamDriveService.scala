@@ -1,9 +1,10 @@
 package com.ubirch.services.teamdrive
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.auth.Base16String
 import com.ubirch.models.auth.cert.Passphrase
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
-import com.ubirch.services.teamdrive.model.{ FileId, LoginInformation, Read, SpaceId, SpaceName, TeamDriveClient }
+import com.ubirch.services.teamdrive.model.{FileId, LoginInformation, Read, SpaceId, SpaceName, TeamDriveClient}
 import monix.eval.Task
 
 import java.nio.ByteBuffer
@@ -19,7 +20,7 @@ trait TeamDriveService {
 }
 
 @Singleton
-class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDriveService {
+class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDriveService with LazyLogging {
   def shareCert(
     spaceName: SpaceName,
     emails: Seq[String],
@@ -28,6 +29,7 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient) extends TeamDrive
   ): Task[SharedCertificate] =
     for {
       loginInformation <- client.getLoginInformation()
+      _ <- Task(logger.debug(s"TeamDrive agent requires login: ${loginInformation.isLoginRequired}"))
       _ <- loginInformation match {
         case LoginInformation(isLoginRequired) if isLoginRequired => client.login()
         case _                                                    => Task.unit
