@@ -35,6 +35,8 @@ object NOK {
   final val RESOURCE_NOT_FOUND_ERROR = 'ResourceNotFoundError
   final val BAD_REQUEST = 'BadRequest
 
+  def badRequest(errorMessage: String): NOK = NOK(BAD_REQUEST, errorMessage)
+
   def serverError(errorMessage: String): NOK = NOK(SERVER_ERROR, errorMessage)
 
   def parsingError(errorMessage: String): NOK = NOK(PARSING_ERROR, errorMessage)

@@ -913,7 +913,7 @@ class TenantAdminControllerSpec
         get(
           s"/poc-admin/status/wrongUUID",
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
-          status should equal(500)
+          status should equal(400)
           assert(body.contains("Invalid UUID string"))
         }
       }

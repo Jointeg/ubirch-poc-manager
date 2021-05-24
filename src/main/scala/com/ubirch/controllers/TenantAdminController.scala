@@ -302,7 +302,7 @@ class TenantAdminController @Inject() (
       case Success(uuid) => logic(uuid)
       case Failure(ex) =>
         logger.error(errorMsg(id), ex)
-        Task(InternalServerError(NOK.serverError(errorMsg + ex.getMessage)))
+        Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
 
     }
   }
