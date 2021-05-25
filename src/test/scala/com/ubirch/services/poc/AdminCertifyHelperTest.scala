@@ -5,7 +5,7 @@ import com.ubirch.UnitTestBase
 
 import java.util.UUID
 
-class CertifyHelperTest extends UnitTestBase {
+class AdminCertifyHelperTest extends UnitTestBase {
   private val tenant = createTenant()
   private val poc = createPoc(tenantName = tenant.tenantName)
   private val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
@@ -15,11 +15,10 @@ class CertifyHelperTest extends UnitTestBase {
       withInjector { injector =>
         val pocWithCertifyGroupId =
           poc.copy(certifyGroupId = Some("test"), adminGroupId = Some(UUID.randomUUID().toString))
-        val certifyHelper = injector.get[CertifyHelper]
+        val certifyHelper = injector.get[AdminCertifyHelper]
         val newStatus = certifyHelper.addGroupsToCertifyUser(
           PocAdminAndStatus(pocAdmin.copy(certifyUserId = Some(UUID.randomUUID())), pocAdminStatus),
-          pocWithCertifyGroupId,
-          tenant).runSyncUnsafe()
+          pocWithCertifyGroupId).runSyncUnsafe()
 
         assert(newStatus.status.pocAdminGroupAssigned)
       }
@@ -28,21 +27,19 @@ class CertifyHelperTest extends UnitTestBase {
     "fail - addGroupsToCertifyUser when certifyUserId is None" in {
       withInjector { injector =>
         val pocWithCertifyGroupId = poc.copy(certifyGroupId = Some("test"))
-        val certifyHelper = injector.get[CertifyHelper]
+        val certifyHelper = injector.get[AdminCertifyHelper]
         assertThrows[PocAdminCreationError](certifyHelper.addGroupsToCertifyUser(
           PocAdminAndStatus(pocAdmin, pocAdminStatus),
-          pocWithCertifyGroupId,
-          tenant).runSyncUnsafe())
+          pocWithCertifyGroupId).runSyncUnsafe())
       }
     }
 
     "fail - addGroupsToCertifyUser when certifyGroupId is None" in {
       withInjector { injector =>
-        val certifyHelper = injector.get[CertifyHelper]
+        val certifyHelper = injector.get[AdminCertifyHelper]
         assertThrows[PocAdminCreationError](certifyHelper.addGroupsToCertifyUser(
           PocAdminAndStatus(pocAdmin, pocAdminStatus),
-          poc,
-          tenant).runSyncUnsafe())
+          poc).runSyncUnsafe())
       }
     }
   }

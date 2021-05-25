@@ -1,10 +1,12 @@
 package com.ubirch
 
+import com.ubirch.db.tables.{ PocEmployeeRepositoryMock, PocEmployeeStatusRepositoryMock, PocRepositoryMock }
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
+import monix.execution.Scheduler.Implicits.global
 import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
@@ -148,6 +150,15 @@ object ModelCreationHelper {
       createPocEmployeeStatus(employeeId))
   }
 
+  def createEmployeeTriple: (Poc, PocEmployee, PocEmployeeStatus) = {
+    val employeeId = UUID.randomUUID()
+    val pocId = UUID.randomUUID()
+    (
+      createPoc(pocId, tenantNameObj),
+      createPocEmployee(pocId = pocId, employeeId = employeeId),
+      createPocEmployeeStatus(employeeId))
+  }
+
   def createPocEmployee(employeeId: UUID = UUID.randomUUID(), pocId: UUID = UUID.randomUUID()): PocEmployee = {
     PocEmployee(
       employeeId,
@@ -163,5 +174,29 @@ object ModelCreationHelper {
     PocEmployeeStatus(
       employeeId
     )
+
+  def createPocEmployeeStatusAllTrue: PocEmployeeStatus = {
+    PocEmployeeStatus(
+      pocEmployeeId = UUID.randomUUID(),
+      certifyUserCreated = true,
+      employeeGroupAssigned = true,
+      keycloakEmailSent = true,
+      errorMessage = None)
+  }
+
+  def addEmployeeTripleToRepository(
+    pocTable: PocRepositoryMock,
+    employeeTable: PocEmployeeRepositoryMock,
+    statusTable: PocEmployeeStatusRepositoryMock,
+    poc: Poc,
+    employee: PocEmployee,
+    status: PocEmployeeStatus): Unit = {
+
+    (for {
+      _ <- pocTable.createPoc(poc)
+      _ <- employeeTable.createPocEmployee(employee)
+      _ <- statusTable.createStatus(status)
+    } yield ()).runSyncUnsafe()
+  }
 
 }

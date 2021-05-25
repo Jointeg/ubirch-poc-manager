@@ -34,7 +34,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = s"local_${tenant.tenantName.value}"
+        val spaceName = SpaceName.forPoc("local", tenant, poc)
         //start process
         val pocAdminCreation = loop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
         Thread.sleep(4000)
@@ -46,7 +46,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
           poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
-        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
 
         Thread.sleep(4000)
         // not process because web ident is not successful yet

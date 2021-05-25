@@ -1,6 +1,6 @@
 package com.ubirch.models.pocEmployee
 
-import com.ubirch.models.poc.{ Created, Pending, Status, Updated }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
 import org.joda.time.DateTime
 

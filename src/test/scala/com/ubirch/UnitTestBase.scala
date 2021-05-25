@@ -63,6 +63,12 @@ class DefaultUnitTestBinder extends Binder {
   override def PocAdminStatusRepository: ScopedBindingBuilder =
     bind(classOf[PocAdminStatusRepository]).to(classOf[PocAdminStatusRepositoryMock])
 
+  override def PocEmployeeRepository: ScopedBindingBuilder =
+    bind(classOf[PocEmployeeRepository]).to(classOf[PocEmployeeRepositoryMock])
+
+  override def PocEmployeeStatusRepository: ScopedBindingBuilder =
+    bind(classOf[PocEmployeeStatusRepository]).to(classOf[PocEmployeeStatusRepositoryMock])
+
   override def TenantRepository: ScopedBindingBuilder =
     bind(classOf[TenantRepository]).to(classOf[TenantRepositoryMock])
 
@@ -90,7 +96,8 @@ class DefaultUnitTestBinder extends Binder {
   override def CertHandler: ScopedBindingBuilder =
     bind(classOf[CertHandler]).to(classOf[TestCertHandler])
 
-  override def TeamDriveClient: ScopedBindingBuilder = bind(classOf[TeamDriveClient]).to(classOf[FakeTeamDriveClient])
+  override def TeamDriveClient: ScopedBindingBuilder =
+    bind(classOf[TeamDriveClient]).to(classOf[FakeTeamDriveClient])
 
   override def configure(): Unit = {
     super.configure()

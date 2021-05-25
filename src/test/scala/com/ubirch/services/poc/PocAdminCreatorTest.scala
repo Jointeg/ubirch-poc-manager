@@ -29,12 +29,12 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = s"local_${tenant.tenantName.value}"
+        val spaceName = SpaceName.forPoc("local", tenant, poc)
         val updatedPoc =
           poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
-        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
 
         val result = creator.createPocAdmins().runSyncUnsafe()
 
@@ -48,7 +48,8 @@ class PocAdminCreatorTest extends UnitTestBase {
             val expected =
               allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
 
-            expected shouldBe result
+            result shouldBe expected
+
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
@@ -70,12 +71,12 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = s"local_${tenant.tenantName.value}"
+        val spaceName = SpaceName.forPoc("local", tenant, poc)
         val updatedPoc =
           poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
-        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
 
         // start process
         val result = creator.createPocAdmins().runSyncUnsafe()
@@ -107,7 +108,7 @@ class PocAdminCreatorTest extends UnitTestBase {
             val expected =
               allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
 
-            expected shouldBe result
+            result shouldBe expected
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
@@ -129,12 +130,12 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = s"local_${tenant.tenantName.value}"
+        val spaceName = SpaceName.forPoc("local", tenant, poc)
         val webIdentSuccessPocAdminStatus =
           pocAdminStatus.copy(webIdentInitiated = Some(true), webIdentSuccess = Some(true))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, webIdentSuccessPocAdminStatus)
-        teamDriveClient.createSpace(SpaceName(spaceName), spaceName).runSyncUnsafe()
+        teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
 
         // start process
         val result = creator.createPocAdmins().runSyncUnsafe()
@@ -175,7 +176,7 @@ class PocAdminCreatorTest extends UnitTestBase {
                 created = result.created,
                 errorMessage = Some(s"adminGroupId is missing in poc ${poc.id}")
               )
-            expectedFinal shouldBe result
+            result shouldBe expectedFinal
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
