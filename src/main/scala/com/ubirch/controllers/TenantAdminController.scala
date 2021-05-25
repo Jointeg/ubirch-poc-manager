@@ -349,7 +349,8 @@ object TenantAdminController {
     phone: String,
     pocName: String,
     state: Status,
-    webIdentInitiateId: Option[UUID]
+    webIdentInitiateId: Option[UUID],
+    webIdentSuccessId: Option[String]
   )
 
   object PocAdmin_OUT {
@@ -363,7 +364,8 @@ object TenantAdminController {
         phone = pocAdmin.mobilePhone,
         pocName = poc.pocName,
         state = pocAdmin.status,
-        webIdentInitiateId = pocAdmin.webIdentInitiateId
+        webIdentInitiateId = pocAdmin.webIdentInitiateId,
+        webIdentSuccessId = pocAdmin.webIdentId
       )
   }
 
