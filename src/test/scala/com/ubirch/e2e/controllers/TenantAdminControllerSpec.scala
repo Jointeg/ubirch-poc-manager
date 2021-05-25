@@ -12,7 +12,7 @@ import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
+import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, pocHeaderLine }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
@@ -105,6 +105,28 @@ class TenantAdminControllerSpec
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
+        }
+      }
+    }
+
+    "return invalid csv row in case of db errors" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        val tenant = addTenantToDB()
+        post(
+          "/pocs/create",
+          body = goodCsv.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          status should equal(200)
+          assert(body.isEmpty)
+        }
+
+        post(
+          "/pocs/create",
+          body = goodCsv.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          status should equal(200)
+          assert(body == goodCsv + columnSeparator + "error on persisting objects; maybe duplicated key error")
         }
       }
     }
