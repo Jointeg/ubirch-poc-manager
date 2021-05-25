@@ -31,7 +31,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
   private val tenant = createTenant()
 
   "ProcessPoc" should {
-    "create poc and pocStatus" in {
+    "create poc, admin and status" in {
       withInjector { injector =>
         val processPocAdmin = injector.get[CsvProcessPocAdmin]
         val pocRepository = injector.get[PocRepository]
@@ -61,7 +61,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
       }
     }
 
-    "fail to create poc and pocStatus when the header is invalid" in {
+    "fail to create create poc, admin and status when the header is invalid" in {
       withInjector { injector =>
         val processPocAdmin = injector.get[CsvProcessPocAdmin]
         val pocRepository = injector.get[PocRepository]
@@ -79,7 +79,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
       }
     }
 
-    "success to create poc and pocStatus for only valid rows" in {
+    "success to create poc, admin and status for only valid rows" in {
       withInjector { injector =>
         val processPocAdmin = injector.get[CsvProcessPocAdmin]
         val pocRepository = injector.get[PocRepository]

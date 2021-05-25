@@ -103,7 +103,6 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
       .send())
 
     response.flatMap { r =>
-      if (r.code == StatusCode.Conflict) logger.debug("response object also has code in case of conflict")
       r.body match {
         case Right(response: SharedAuthCertificateResponse) => Task(Right(response))
 
@@ -115,7 +114,8 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
           logger.error("unexpected exception during shared auth cert creation", responseError)
           Task(Left(CertificateCreationError(responseError.getMessage)))
       }
-    }
+    }.onErrorHandle(handleException(_, s"POST units/${orgUnitId.toString}/groups/${groupId.toString} failed; "))
+
   }
 
   private def updateSharedAuthCertificate(groupId: UUID)
@@ -126,8 +126,11 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
       .auth.bearer(certManagerToken)
       .response(asJson[SharedAuthCertificateResponse])
       .send())
+
     import cats.syntax.either._
-    response.map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage)))
+    response
+      .map(_.body.leftMap(responseError => CertificateCreationError(responseError.getMessage)))
+      .onErrorHandle(handleException(_, s"PUT /groups/${groupId.toString} failed; "))
   }
 
   def getCert(certId: UUID): Task[Either[CertificateCreationError, String]] =

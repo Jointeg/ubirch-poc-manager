@@ -7,6 +7,7 @@ import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocR
 import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocAdminCsvParser
+import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, comma }
 import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -62,7 +63,7 @@ class CsvProcessPocAdminImpl @Inject() (
       }
     }.onErrorHandle { e =>
       logger.error(s"fail to create poc admin and status. poc: $poc, pocAdmin: $pocAdmin, error: ${e.getMessage}")
-      Some(csvRow)
+      Some(csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
     }
   }
 
