@@ -57,7 +57,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
 
         val tenantName = getRandomString
         val createTenantBody = createTenantJson(tenantName)
-
         post(
           "/tenants/create",
           body = createTenantBody.getBytes(StandardCharsets.UTF_8),
@@ -119,34 +118,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
           status should equal(500)
           assert(body.contains("Failure during tenant creation"))
         }
-      }
-    }
-
-    "create tenant with encrypted DeviceCreationToken " in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val tenantName = getRandomString
-        val createTenantBody = createTenantJson(tenantName)
-
-        post(
-          "/tenants/create",
-          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdmin.prepare)) {
-          status should equal(200)
-          assert(body == "")
-        }
-
-        val tenantRepository = injector.get[TenantRepository]
-        val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
-
-        maybeTenant.value.deviceCreationToken shouldNot be(
-          EncryptedDeviceCreationToken(EncryptedData(Base64String.toBase64String("1234567890"))))
-
-        val aesEncryption = injector.get[AESEncryption]
-        val decryptedDeviceCreationToken =
-          await(aesEncryption.decrypt(maybeTenant.value.deviceCreationToken.value)(_.value), 1.second)
-
-        decryptedDeviceCreationToken shouldBe "1234567890"
       }
     }
 

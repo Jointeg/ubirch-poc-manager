@@ -145,6 +145,22 @@ class TenantAdminController @Inject() (
     }
   }
 
+  post("/deviceToken", operation(createListOfPocs)) {
+    tenantAdminEndpoint("Get all Devices for all PoCs of tenant") { tenant =>
+      tenantAdminService
+        .addDeviceCreationToken(tenant, Serialization.read[AddDeviceCreationTokenRequest](request.body))
+        .map {
+          case Right(_) => Ok()
+          case Left(errorMessage: String) =>
+            logger.error(s"failed to add deviceCreationToken $errorMessage")
+            InternalServerError("failed to device creation token update")
+        }.onErrorHandle { ex =>
+          logger.error(s"failed to add deviceCreationToken", ex)
+          InternalServerError("something went wrong on device creation token update")
+        }
+    }
+  }
+
   get("/pocStatus/:id", operation(getPocStatus)) {
     authenticated(_.hasRole(Token.TENANT_ADMIN)) { _ =>
       asyncResult("Get Poc Status") { _ => _ =>
@@ -335,6 +351,8 @@ class TenantAdminController @Inject() (
       case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
     }
 }
+
+case class AddDeviceCreationTokenRequest(token: String)
 
 object TenantAdminController {
   case class Paginated_OUT[T](total: Long, records: Seq[T])

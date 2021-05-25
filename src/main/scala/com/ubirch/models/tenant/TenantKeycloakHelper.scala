@@ -34,7 +34,7 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
     def createRole(instance: KeycloakInstance): Task[Unit] =
       roles.createNewRole(tenantRole, instance).map {
         case Left(_: RoleCreationException) =>
-          throw TenantCreationException(s"failed to creat role in ${instance.name} realm with name $tenantRoleName ")
+          throw TenantCreationException(s"failed to create role in ${instance.name} realm with name $tenantRoleName ")
         case _ => ()
       }
 
