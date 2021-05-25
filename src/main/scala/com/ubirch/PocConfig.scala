@@ -12,6 +12,7 @@ import org.json4s.jackson.JsonMethods.parse
 trait PocConfig {
 
   val dataSchemaGroupMap: Map[String, String]
+  val trustedPocGroupMap: Map[String, String]
   val pocTypeEndpointMap: Map[String, String]
 
   val teamDriveAdminEmails: Seq[String]
@@ -29,6 +30,15 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     } catch {
       case e: Exception =>
         logger.error(s"can't parse the ${ServicesConfPaths.DATA_SCHEMA_GROUP_MAP} value as Map[String, String]")
+        throw e
+    }
+
+  val trustedPocGroupMap: Map[String, String] =
+    try {
+      parse(config.getString(ServicesConfPaths.TRUSTED_POC_GROUP_MAP)).extract[Map[String, String]]
+    } catch {
+      case e: Exception =>
+        logger.error(s"can't parse the ${ServicesConfPaths.TRUSTED_POC_GROUP_MAP} value as Map[String, String]")
         throw e
     }
 

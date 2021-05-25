@@ -68,6 +68,7 @@ object PocTestHelper extends Awaits {
       deviceGroupRoleAssigned = true,
       deviceCreated = true,
       assignedDataSchemaGroup = true,
+      assignedTrustedPocGroup = true,
       assignedDeviceGroup = true,
       clientCertRequired = false,
       orgUnitCertCreated = None,

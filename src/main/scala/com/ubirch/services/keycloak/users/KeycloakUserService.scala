@@ -117,7 +117,6 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   override def getUserById(
     userId: UserId,
     instance: KeycloakInstance): Task[Option[UserRepresentation]] = {
-    logger.debug(s"Retrieving keycloak user id: $userId")
     Task(
       Option(keycloakConnector
         .getKeycloak(instance)
@@ -131,7 +130,6 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   override def getUserByUserName(
     username: UserName,
     instance: KeycloakInstance = DeviceKeycloak): Task[Option[UserRepresentation]] = {
-    logger.debug(s"Retrieving keycloak user $username")
     Task(
       keycloakConnector
         .getKeycloak(instance)

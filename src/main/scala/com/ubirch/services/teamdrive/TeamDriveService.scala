@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.auth.Base16String
 import com.ubirch.models.auth.cert.Passphrase
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
-import com.ubirch.services.teamdrive.model.{FileId, LoginInformation, Read, SpaceId, SpaceName, TeamDriveClient}
+import com.ubirch.services.teamdrive.model.{ FileId, LoginInformation, Read, SpaceId, SpaceName, TeamDriveClient }
 import monix.eval.Task
 
 import java.nio.ByteBuffer
