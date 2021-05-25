@@ -9,6 +9,7 @@ import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants
@@ -52,6 +53,13 @@ class TenantAdminControllerSpec
   private val goodCsv =
     s"""$pocHeaderLine
        |${poc1id.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+
+  private val addDeviceCreationToken: String =
+    s"""
+       |{
+       |    "token" : "1234567890"
+       |}
+       |""".stripMargin
 
   "Endpoint POST pocs/create" must {
     "return success without invalid rows" in {
@@ -372,7 +380,62 @@ class TenantAdminControllerSpec
     }
   }
 
+  "Endpoint POST /tenant-token" must {
+
+    "be able to update device creation token by a tenant admin" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val tenantTable = injector.get[TenantRepository]
+        val aesEncryption = injector.get[AESEncryption]
+        val tenant = addTenantToDB()
+
+        post(
+          "/deviceToken",
+          body = addDeviceCreationToken.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        ) {
+          status should equal(200)
+          assert(body == "")
+        }
+
+        val updatedTenant = tenantTable.getTenant(tenant.id).runSyncUnsafe()
+        val decryptedDeviceCreationToken =
+          await(aesEncryption.decrypt(updatedTenant.value.deviceCreationToken.get.value)(_.value), 1.second)
+        decryptedDeviceCreationToken shouldBe "1234567890"
+      }
+    }
+
+    "return unauthorized" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        post(
+          "/deviceToken",
+          body = addDeviceCreationToken.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)
+        ) {
+          status should equal(403)
+          assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
+        }
+      }
+    }
+
+    "return Bad Request when tenant doesn't exist" in {
+      withInjector { Injector =>
+        val token = Injector.get[FakeTokenCreator]
+        post(
+          "/deviceToken",
+          body = addDeviceCreationToken.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)
+        ) {
+          status should equal(400)
+          assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
+        }
+      }
+    }
+  }
+
   "Endpoint GET /poc-admins" must {
+
     "return only poc admins of the tenant" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]

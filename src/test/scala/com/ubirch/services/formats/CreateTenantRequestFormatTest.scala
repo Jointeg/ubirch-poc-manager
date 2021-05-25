@@ -17,7 +17,6 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |{
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
-             |    "deviceCreationToken": "1234567890",
              |    "sharedAuthCertRequired": false
              |}
              |""".stripMargin)
@@ -25,7 +24,6 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
           API,
-          PlainDeviceCreationToken("1234567890"),
           sharedAuthCertRequired = false
         )
       }
@@ -39,7 +37,6 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |{
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
-             |    "deviceCreationToken": "1234567890",
              |    "sharedAuthCertRequired": true,
              |}
              |""".stripMargin)
@@ -47,7 +44,6 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
           API,
-          PlainDeviceCreationToken("1234567890"),
           sharedAuthCertRequired = true
         )
       }

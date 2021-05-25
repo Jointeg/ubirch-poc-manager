@@ -37,7 +37,7 @@ object ModelCreationHelper {
       TenantId(TenantName(name)),
       TenantName(name),
       API,
-      deviceCreationToken,
+      Some(deviceCreationToken),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
       OrgId(TenantId(TenantName(name)).value),
@@ -131,7 +131,6 @@ object ModelCreationHelper {
     CreateTenantRequest(
       TenantName("tenantName"),
       API,
-      PlainDeviceCreationToken(token),
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 
