@@ -178,7 +178,7 @@ class Binder extends AbstractModule {
   def PocAdminCreationLoop: ScopedBindingBuilder =
     bind(classOf[PocAdminCreationLoop]).to(classOf[PocAdminCreationLoopImpl])
 
-  def CertifyHelper: ScopedBindingBuilder = bind(classOf[CertifyHelper]).to(classOf[CertifyHelperImpl])
+  def CertifyHelper: ScopedBindingBuilder = bind(classOf[AdminCertifyHelper]).to(classOf[AdminCertifyHelperImpl])
 
   def CertHandler: ScopedBindingBuilder = bind(classOf[CertHandler]).to(classOf[CertCreatorImpl])
 

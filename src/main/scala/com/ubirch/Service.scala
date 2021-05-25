@@ -7,7 +7,7 @@ import com.ubirch.models.auth.Base64String
 import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keyhash.KeyHashVerifierService
-import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop }
+import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
 import com.ubirch.services.rest.RestService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import monix.eval.Task
@@ -29,7 +29,8 @@ class Service @Inject() (
   config: Config,
   keyHashVerifierService: KeyHashVerifierService,
   pocCreationLoop: PocCreationLoop,
-  pocAdminCreationLoop: PocAdminCreationLoop
+  adminCreationLoop: PocAdminCreationLoop,
+  employeeCreationLoop: PocEmployeeCreationLoop
   /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
   extends LazyLogging {
 
@@ -71,12 +72,14 @@ class Service @Inject() (
 
     val pocCreation = pocCreationLoop.startPocCreationLoop(resp => Observable(resp)).subscribe()
 
-    val pocAdminCreation = pocAdminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
+    val adminCreation = adminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
+    val employeeCreation = employeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)).subscribe()
 
     sys.addShutdownHook {
       logger.info("Shutdown of poc creation loop service")
       pocCreation.cancel()
-      pocAdminCreation.cancel()
+      adminCreation.cancel()
+      employeeCreation.cancel()
       SttpResources.backend.close()
     }
 
