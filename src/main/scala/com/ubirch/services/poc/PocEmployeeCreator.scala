@@ -63,13 +63,13 @@ class PocEmployeeCreatorImpl @Inject() (
     }
   }
 
-  private def process(quadruple: EmployeeTriple): Task[Either[String, PocEmployeeStatus]] = {
+  private def process(triple: EmployeeTriple): Task[Either[String, PocEmployeeStatus]] = {
 
     val creationResult = for {
-      employee <- updateStatusOfEmployee(quadruple.employee, Processing)
+      employee <- updateStatusOfEmployee(triple.employee, Processing)
       _ <- employeeTable.updatePocEmployee(employee)
-      eAs1 <- createCertifyUserWithRequiredActions(EmployeeAndStatus(employee, quadruple.status))
-      eAs2 <- addGroupsToCertifyUser(eAs1, quadruple.poc)
+      eAs1 <- createCertifyUserWithRequiredActions(EmployeeAndStatus(employee, triple.status))
+      eAs2 <- addGroupsToCertifyUser(eAs1, triple.poc)
       eAs3 <- sendEmailToCertifyUser(eAs2)
     } yield eAs3
 
@@ -81,7 +81,7 @@ class PocEmployeeCreatorImpl @Inject() (
       }
     } yield {
       logger.info(s"finished to create poc employee with id ${eAs.employee.id}")
-      Right(quadruple.status)
+      Right(eAs.status)
     }).onErrorHandleWith(handlePocEmployeeCreationError)
   }
 

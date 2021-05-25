@@ -148,6 +148,15 @@ object ModelCreationHelper {
       createPocEmployeeStatus(employeeId))
   }
 
+  def createEmployeeTriple: (Poc, PocEmployee, PocEmployeeStatus) = {
+    val employeeId = UUID.randomUUID()
+    val pocId = UUID.randomUUID()
+    (
+      createPoc(pocId, tenantNameObj),
+      createPocEmployee(pocId = pocId, employeeId = employeeId),
+      createPocEmployeeStatus(employeeId))
+  }
+
   def createPocEmployee(employeeId: UUID = UUID.randomUUID(), pocId: UUID = UUID.randomUUID()): PocEmployee = {
     PocEmployee(
       employeeId,
@@ -163,5 +172,14 @@ object ModelCreationHelper {
     PocEmployeeStatus(
       employeeId
     )
+
+  def createPocEmployeeStatusAllTrue: PocEmployeeStatus = {
+    PocEmployeeStatus(
+      pocEmployeeId = UUID.randomUUID(),
+      certifyUserCreated = true,
+      employeeGroupAssigned = true,
+      keycloakEmailSent = true,
+      errorMessage = None)
+  }
 
 }

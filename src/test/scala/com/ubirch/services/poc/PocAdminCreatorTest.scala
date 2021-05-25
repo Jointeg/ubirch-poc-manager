@@ -48,7 +48,8 @@ class PocAdminCreatorTest extends UnitTestBase {
             val expected =
               allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
 
-            expected shouldBe result
+            result shouldBe expected
+
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
@@ -107,7 +108,7 @@ class PocAdminCreatorTest extends UnitTestBase {
             val expected =
               allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
 
-            expected shouldBe result
+            result shouldBe expected
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
@@ -175,7 +176,7 @@ class PocAdminCreatorTest extends UnitTestBase {
                 created = result.created,
                 errorMessage = Some(s"adminGroupId is missing in poc ${poc.id}")
               )
-            expectedFinal shouldBe result
+            result shouldBe expectedFinal
         }
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
