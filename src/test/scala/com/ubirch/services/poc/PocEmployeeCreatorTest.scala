@@ -1,10 +1,13 @@
 package com.ubirch.services.poc
 
-import com.ubirch.ModelCreationHelper.{ createEmployeeTriple, createPocEmployeeStatusAllTrue }
+import com.ubirch.ModelCreationHelper.{
+  addEmployeeTripleToRepository,
+  createEmployeeTriple,
+  createPocEmployeeStatusAllTrue
+}
 import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.{ PocEmployeeRepositoryMock, PocEmployeeStatusRepositoryMock, PocRepositoryMock }
-import com.ubirch.models.poc.{ Completed, Poc }
-import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
+import com.ubirch.models.poc.Completed
 
 import java.util.UUID
 
@@ -98,21 +101,6 @@ class PocEmployeeCreatorTest extends UnitTestBase {
         assert(newPocEmployee.get.status == Completed)
       }
     }
-  }
-
-  def addEmployeeTripleToRepository(
-    pocTable: PocRepositoryMock,
-    employeeTable: PocEmployeeRepositoryMock,
-    statusTable: PocEmployeeStatusRepositoryMock,
-    poc: Poc,
-    employee: PocEmployee,
-    status: PocEmployeeStatus): Unit = {
-
-    (for {
-      _ <- pocTable.createPoc(poc)
-      _ <- employeeTable.createPocEmployee(employee)
-      _ <- statusTable.createStatus(status)
-    } yield ()).runSyncUnsafe()
   }
 
 }
