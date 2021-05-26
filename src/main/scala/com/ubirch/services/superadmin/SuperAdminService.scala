@@ -22,7 +22,6 @@ trait SuperAdminService {
 }
 
 class DefaultSuperAdminService @Inject() (
-  aesEncryption: AESEncryption,
   tenantRepository: TenantRepository,
   certHandler: CertHandler,
   teamDriveService: TeamDriveService,
@@ -34,11 +33,8 @@ class DefaultSuperAdminService @Inject() (
 
   override def createTenant(createTenantRequest: CreateTenantRequest): Task[Either[CreateTenantErrors, TenantId]] = {
     for {
-      encryptedDeviceCreationToken <-
-        aesEncryption.encrypt(createTenantRequest.deviceCreationToken.value)(EncryptedDeviceCreationToken(_))
-
       deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest.tenantName)
-      tenant = convertToTenant(encryptedDeviceCreationToken, createTenantRequest, deviceAndCertifyGroup)
+      tenant = convertToTenant(createTenantRequest, deviceAndCertifyGroup)
 
       _ <- createOrgCert(tenant)
       tenantId <-
@@ -131,7 +127,6 @@ class DefaultSuperAdminService @Inject() (
   }
 
   private def convertToTenant(
-    encryptedDeviceCreationToken: EncryptedDeviceCreationToken,
     createTenantRequest: CreateTenantRequest,
     deviceAndCertifyGroup: DeviceAndCertifyGroups): Tenant = {
     val tenantId = TenantId(createTenantRequest.tenantName)
@@ -139,7 +134,7 @@ class DefaultSuperAdminService @Inject() (
       tenantId,
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
-      encryptedDeviceCreationToken,
+      None,
       TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
       TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),
       orgId = OrgId(tenantId.value),

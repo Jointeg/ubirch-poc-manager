@@ -7,6 +7,7 @@ import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocCsvParser
+import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -56,7 +57,7 @@ class CsvProcessPocImpl @Inject() (
       }
     }.onErrorHandle { e =>
       logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
-      Some(csvRow)
+      Some(csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
     }
   }
 
