@@ -82,6 +82,12 @@ class TenantAdminController @Inject() (
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC", "Tenant-Admin")
 
+  val deviceToken: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[Paginated_OUT[Poc]]("update device creation token for tenant")
+      .summary("updated device creation token")
+      .description("receives a CREATE-THING and GET-INFO token and store it encrypted to the tenant object")
+      .tags("Tenant", "device", "token")
+
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[PocStatus]("retrieve PoC Status via pocId")
       .summary("Get PoC Status")
@@ -145,7 +151,27 @@ class TenantAdminController @Inject() (
     }
   }
 
-  post("/deviceToken", operation(createListOfPocs)) {
+  get("/pocs", operation(getPocs)) {
+    tenantAdminEndpoint("Get all PoCs for a tenant") { tenant =>
+      (for {
+        criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
+        pocs <- pocTable.getAllPocsByCriteria(criteria)
+      } yield Paginated_OUT(pocs.total, pocs.records))
+        .map(toJson)
+        .onErrorRecoverWith {
+          case ValidationError(e) =>
+            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
+              .toJson
+              .map(BadRequest(_))
+        }
+        .onErrorHandle { ex =>
+          InternalServerError(NOK.serverError(
+            s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
+        }
+    }
+  }
+
+  post("/deviceToken", operation(deviceToken)) {
     tenantAdminEndpoint("Get all Devices for all PoCs of tenant") { tenant =>
       tenantAdminService
         .addDeviceCreationToken(tenant, Serialization.read[AddDeviceCreationTokenRequest](request.body))
@@ -173,26 +199,6 @@ class TenantAdminController @Inject() (
             }
         }
       }
-    }
-  }
-
-  get("/pocs", operation(getPocs)) {
-    tenantAdminEndpoint("Get all PoCs for a tenant") { tenant =>
-      (for {
-        criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
-        pocs <- pocTable.getAllPocsByCriteria(criteria)
-      } yield Paginated_OUT(pocs.total, pocs.records))
-        .map(toJson)
-        .onErrorRecoverWith {
-          case ValidationError(e) =>
-            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
-              .toJson
-              .map(BadRequest(_))
-        }
-        .onErrorHandle { ex =>
-          InternalServerError(NOK.serverError(
-            s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
-        }
     }
   }
 
@@ -225,6 +231,14 @@ class TenantAdminController @Inject() (
         case Left(PocAdminRepositoryError(msg)) =>
           logger.error(s"Error has occurred while operating on PocAdmin table: $msg")
           InternalServerError(NOK.serverError("Could not create PoC admin WebInitiateId"))
+        case Left(WebIdentAlreadyInitiated(webIdentInitiateId)) =>
+          Try(write[CreateWebInitiateIdResponse](CreateWebInitiateIdResponse(webIdentInitiateId))) match {
+            case Success(json) => Conflict(json)
+            case Failure(ex) =>
+              val errorMsg = s"Could not parse ${CreateWebInitiateIdResponse.getClass.getSimpleName} to json"
+              logger.error(errorMsg, ex)
+              InternalServerError(NOK.serverError(errorMsg))
+          }
       }
     }
   }
