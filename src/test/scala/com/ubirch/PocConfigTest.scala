@@ -19,8 +19,9 @@ class PocConfigTest extends UnitTestBase {
       withInjector { injector =>
         val pocConfig = injector.get[PocConfig]
         val expected = Map(
-          "ub_vac_app" -> "test",
-          "ub_vac_app" -> "test2")
+          "ub_vac_app" -> "endpoint1",
+          "ub_vac_api" -> "endpoint2",
+          "bmg_vac_api" -> "endpoint3")
         pocConfig.pocTypeEndpointMap shouldBe expected
       }
     }

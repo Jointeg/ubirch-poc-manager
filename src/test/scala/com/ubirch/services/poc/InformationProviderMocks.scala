@@ -12,12 +12,12 @@ formats: Formats)
   extends InformationProviderImpl(conf, pocConfig, certHandler: CertHandler) {
 
   override def goClientRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[StatusAndPW] = {
-    val successState = statusAndPW.pocStatus.copy(goClientProvided = true)
+    val successState = statusAndPW.status.copy(goClientProvided = true)
     Task(statusAndPW.copy(successState))
   }
 
   override def certifyApiRequest(poc: Poc, statusAndPW: StatusAndPW, body: String): Task[PocStatus] =
-    Task(statusAndPW.pocStatus.copy(certifyApiProvided = true))
+    Task(statusAndPW.status.copy(certifyApiProvided = true))
 }
 
 class InformationProviderMockWrongURL @Inject() (conf: Config, pocConfig: PocConfig, certHandler: CertHandler)(implicit

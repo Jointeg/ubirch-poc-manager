@@ -2,18 +2,19 @@ package com.ubirch
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.ServicesConfPaths
-import org.json4s.DefaultFormats
 import com.ubirch.ConfPaths.{ ServicesConfPaths, TeamDrivePaths }
+import org.json4s.DefaultFormats
+import org.json4s.jackson.JsonMethods.parse
 
 import javax.inject.{ Inject, Singleton }
-import org.json4s.jackson.JsonMethods.parse
 
 trait PocConfig {
 
   val dataSchemaGroupMap: Map[String, String]
   val trustedPocGroupMap: Map[String, String]
   val pocTypeEndpointMap: Map[String, String]
+  val locationNeeded: Seq[String]
+  val roleNeeded: Seq[String]
 
   val teamDriveAdminEmails: Seq[String]
   val teamDriveStage: String
@@ -50,6 +51,12 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
         logger.error(s"can't parse the ${ServicesConfPaths.POC_TYPE_ENDPOINT_MAP} value as Map[String, String]")
         throw e
     }
+
+  val locationNeeded: Seq[String] =
+    config.getString(ServicesConfPaths.POC_TYPES_LOCATION_NEEDED).split(",").map(_.trim)
+
+  val roleNeeded: Seq[String] =
+    config.getString(ServicesConfPaths.POC_TYPES_ROLE_NEEDED).split(",").map(_.trim)
 
   val teamDriveAdminEmails: Seq[String] =
     config.getString(TeamDrivePaths.UBIRCH_ADMINS).split(",").map(_.trim)

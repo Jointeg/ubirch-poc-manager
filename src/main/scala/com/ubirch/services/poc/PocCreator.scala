@@ -124,10 +124,10 @@ class PocCreatorImpl @Inject() (
       pocAndStatus1 <- doCertifyRealmRelatedTasks(pocAndStatus, tenant)
       pocAndStatus2 <- doDeviceRealmRelatedTasks(pocAndStatus1, tenant)
       statusAndPW3 <- createDevice(pocAndStatus2.poc, pocAndStatus2.status, tenant)
-      status4 <- addGroupsToDevice(pocAndStatus2.poc, statusAndPW3.pocStatus)
+      status4 <- addGroupsToDevice(pocAndStatus2.poc, statusAndPW3.status)
       pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, PocAndStatus(pocAndStatus2.poc, status4))
       pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus3)
-      statusAndPW5 <- infoToGoClient(pocAndStatus4.poc, statusAndPW3.copy(pocStatus = pocAndStatus4.status))
+      statusAndPW5 <- infoToGoClient(pocAndStatus4.poc, statusAndPW3.copy(status = pocAndStatus4.status))
       completeStatus <- infoToCertifyAPI(pocAndStatus4.poc, statusAndPW5, tenant)
     } yield completeStatus
 
@@ -197,7 +197,7 @@ class PocCreatorImpl @Inject() (
 
 }
 
-case class StatusAndPW(pocStatus: PocStatus, devicePassword: String)
+case class StatusAndPW(status: PocStatus, devicePassword: String)
 
 case class PocCreationError(pocAndStatus: PocAndStatus, message: String) extends Exception(message)
 
