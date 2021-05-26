@@ -3,6 +3,7 @@ package com.ubirch.controllers
 import cats.data.{ NonEmptyChain, Validated }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
+import com.ubirch.controllers.EndpointHelpers.retrieveTenantFromToken
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -18,7 +19,6 @@ import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import com.ubirch.services.tenantadmin._
-import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -315,7 +315,7 @@ class TenantAdminController @Inject() (
   private def tenantAdminEndpoint(description: String)(logic: Tenant => Task[ActionResult]) = {
     authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult(description) { _ => _ =>
-        retrieveTenantFromToken(token).flatMap {
+        retrieveTenantFromToken(token)(tenantTable).flatMap {
           case Right(tenant: Tenant) =>
             logic(tenant)
           case Left(errorMsg: String) =>
@@ -334,18 +334,6 @@ class TenantAdminController @Inject() (
         logger.error(errorMsg(id), ex)
         Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
 
-    }
-  }
-
-  private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
-
-    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
-      case Some(roleName) =>
-        tenantTable.getTenantByName(TenantName(roleName.name.stripPrefix(TENANT_GROUP_PREFIX))).map {
-          case Some(tenant) => Right(tenant)
-          case None         => Left(s"couldn't find tenant in db for ${roleName.name}")
-        }
-      case None => Task(Left("the user's token is missing a tenant role"))
     }
   }
 

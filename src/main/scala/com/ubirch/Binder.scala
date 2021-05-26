@@ -25,6 +25,7 @@ import com.ubirch.services.keycloak.users.{
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
+import com.ubirch.services.poc.employee.{ CsvProcessPocEmployee, CsvProcessPocEmployeeImpl }
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.teamdrive.{
@@ -197,6 +198,9 @@ class Binder extends AbstractModule {
   def TeamDriveClientConfig: ScopedBindingBuilder =
     bind(classOf[TeamDriveClientConfig]).to(classOf[TypesafeTeamDriveClientConfig])
 
+  def CsvProcessPocEmployee: ScopedBindingBuilder =
+    bind(classOf[CsvProcessPocEmployee]).to(classOf[CsvProcessPocEmployeeImpl])
+
   override def configure(): Unit = {
     Config
     PocConfig
@@ -258,6 +262,7 @@ class Binder extends AbstractModule {
     TeamDriveClient
     TeamDriverService
     TeamDriveClientConfig
+    CsvProcessPocEmployee
     ()
   }
 }
