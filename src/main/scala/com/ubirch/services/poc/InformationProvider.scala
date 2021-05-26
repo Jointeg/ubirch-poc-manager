@@ -32,6 +32,7 @@ case class RegisterDeviceCertifyAPI(
   uuid: String,
   password: String,
   role: Option[String],
+  location: Option[String],
   cert: Option[String])
 
 class InformationProviderImpl @Inject() (conf: Config, pocConfig: PocConfig, certHandler: CertHandler)(implicit
@@ -51,7 +52,7 @@ formats: Formats)
 
   @throws[PocCreationError]
   override def infoToGoClient(poc: Poc, statusAndPW: StatusAndPW): Task[StatusAndPW] = {
-    val status = statusAndPW.pocStatus
+    val status = statusAndPW.status
     if (status.goClientProvided) {
       Task(statusAndPW)
     } else {
@@ -78,12 +79,12 @@ formats: Formats)
         .map {
           _.code match {
             case Ok =>
-              StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
+              StatusAndPW(statusAndPW.status.copy(goClientProvided = true), statusAndPW.devicePassword)
             case Conflict =>
-              StatusAndPW(statusAndPW.pocStatus.copy(goClientProvided = true), statusAndPW.devicePassword)
+              StatusAndPW(statusAndPW.status.copy(goClientProvided = true), statusAndPW.devicePassword)
             case code =>
               throwError(
-                PocAndStatus(poc, statusAndPW.pocStatus),
+                PocAndStatus(poc, statusAndPW.status),
                 s"failure when providing device info to goClient, statusCode: $code")
           }
         }
@@ -91,7 +92,7 @@ formats: Formats)
 
   @throws[PocCreationError]
   override def infoToCertifyAPI(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): Task[PocAndStatus] = {
-    val status = statusAndPW.pocStatus
+    val status = statusAndPW.status
     if (status.certifyApiProvided) {
       Task(PocAndStatus(poc, status))
     } else {
@@ -120,26 +121,26 @@ formats: Formats)
         .map {
           _.code match {
             case Ok =>
-              statusAndPW.pocStatus.copy(certifyApiProvided = true)
+              statusAndPW.status.copy(certifyApiProvided = true)
             case code =>
               throwError(
-                PocAndStatus(poc, statusAndPW.pocStatus),
+                PocAndStatus(poc, statusAndPW.status),
                 s"failure when providing device info to certifyAPI, errorCode: $code")
           }
         }
     }
 
-  private def getCertifyApiBody(poc: Poc, statusAndPW: StatusAndPW, tenant: Tenant): Task[String] = {
+  private[poc] def getCertifyApiBody(poc: Poc, sAndPW: StatusAndPW, tenant: Tenant): Task[String] = {
 
     def getSharedAuthCertIdOrThrowError = Task(poc.sharedAuthCertId.getOrElse(throwError(
-      PocAndStatus(poc, statusAndPW.pocStatus),
+      PocAndStatus(poc, sAndPW.status),
       "Tried to obtain shared auth cert ID from PoC but it was not defined")))
 
     def getSharedAuthCertFromResponse(maybeCert: Either[CertificateCreationError, String]): Task[Option[String]] = {
       maybeCert match {
         case Left(error) =>
           Task(throwAndLogError(
-            PocAndStatus(poc, statusAndPW.pocStatus),
+            PocAndStatus(poc, sAndPW.status),
             "Requested CertManager for shared auth cert but it responded with error ",
             error,
             logger))
@@ -154,6 +155,10 @@ formats: Formats)
           maybeCert <- certHandler.getCert(certId)
           cert <- getSharedAuthCertFromResponse(maybeCert)
         } yield cert
+      } else if (tenant.sharedAuthCert.isEmpty) {
+        Task(throwError(
+          PocAndStatus(poc, sAndPW.status),
+          "failed to create certifyAPI body; client cert of tenant is missing"))
       } else {
         Task(tenant.sharedAuthCert.map(_.value))
       }
@@ -161,7 +166,7 @@ formats: Formats)
     val endpoint = pocConfig.pocTypeEndpointMap.getOrElse(
       poc.pocType,
       throwError(
-        PocAndStatus(poc, statusAndPW.pocStatus),
+        PocAndStatus(poc, sAndPW.status),
         s"couldn't find matching endpoint in pocTypeEndpointMap for pocType ${poc.pocType}"))
 
     clientCert.map(cert => {
@@ -170,9 +175,11 @@ formats: Formats)
           poc.pocName,
           endpoint,
           poc.getDeviceId,
-          statusAndPW.devicePassword,
-          Some(poc.roleName),
-          cert)
+          sAndPW.devicePassword,
+          if (pocConfig.roleNeeded.contains(poc.pocType)) Some(poc.roleName) else None,
+          if (pocConfig.locationNeeded.contains(poc.pocType)) Some(poc.externalId) else None,
+          cert
+        )
       write[RegisterDeviceCertifyAPI](registerDevice)
     })
   }
