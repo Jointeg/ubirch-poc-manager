@@ -1,26 +1,32 @@
 package com.ubirch.e2e.controllers
 
+import cats.implicits._
 import com.ubirch.FakeTokenCreator
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.controllers.TenantAdminController.{Paginated_OUT, PocAdmin_OUT}
+import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OUT }
+import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.ValidationErrorsResponse
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.{Tenant, TenantId, TenantName}
-import com.ubirch.services.formats.{CustomFormats, JodaDateTimeFormats}
+import com.ubirch.models.tenant._
+import com.ubirch.models.user.UserId
+import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, pocHeaderLine }
+import com.ubirch.services.poc.{ PocAdminCreator, PocCreator }
+import com.ubirch.services.superadmin.SuperAdminService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s._
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.jackson.JsonMethods._
-import org.json4s.native.Serialization.{ read, write}
+import org.json4s.native.Serialization.{ read, write }
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 import org.scalatra.{ BadRequest, Ok }
@@ -943,19 +949,84 @@ class TenantAdminControllerSpec
   }
 
   "Endpoint PUT /poc-admin/:id/active/:isActive" should {
-    "deactivate user" in withInjector { i =>
+    "deactivate, and activate user" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
+      val keycloakUserService = i.get[KeycloakUserService]
       val tenant = addTenantToDB()
       val poc = addPocToDb(tenant, i.get[PocTable])
-      val id = await(repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id)))
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        CertifyKeycloak))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId.value))
+      val id = await(repository.createPocAdmin(pocAdmin))
 
       put(
         s"/poc-admin/$id/active/0",
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        body should equal("")
+        body shouldBe empty
+        await(repository.getPocAdmin(id)).value.active shouldBe false
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe false
+      }
+
+      put(
+        s"/poc-admin/$id/active/1",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(repository.getPocAdmin(id)).value.active shouldBe true
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+      }
+    }
+
+    "return 404 when poc-admin does not exist" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val tenant = addTenantToDB()
+      val invalidPocAdminId = UUID.randomUUID()
+
+      put(
+        s"/poc-admin/$invalidPocAdminId/active/0",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"Poc admin with id '$invalidPocAdminId' not found"))
+      }
+    }
+
+    "return 400 when isActive is invalid value" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val tenant = addTenantToDB()
+      val invalidPocAdminId = UUID.randomUUID()
+
+      put(
+        s"/poc-admin/$invalidPocAdminId/active/2",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(400)
+        assert(body.contains("Illegal value for ActivateSwitch: 2. Expected 0 or 1"))
+      }
+    }
+
+    "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id/active/1",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
       }
     }
   }

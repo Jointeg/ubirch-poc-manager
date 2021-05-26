@@ -3,16 +3,16 @@ package com.ubirch.e2e.keycloak
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.data.KeycloakTestData.createNewKeycloakGroup
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.keycloak.group.{CreateKeycloakGroup, GroupName, GroupNotFound}
-import com.ubirch.models.keycloak.roles.{CreateKeycloakRole, RoleAlreadyExists, RoleName}
-import com.ubirch.models.keycloak.user.{UserAlreadyExists, UserRequiredAction}
+import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupName, GroupNotFound }
+import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleName }
+import com.ubirch.models.keycloak.user.{ UserAlreadyExists, UserRequiredAction }
 import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.{CertifyKeycloak, DeviceKeycloak}
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import monix.eval.Task
-import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation}
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
 import org.scalactic.StringNormalizations._
 
 import java.util.UUID
@@ -422,12 +422,13 @@ class KeycloakIntegrationTest extends E2ETestBase {
       val r = for {
         create <- keycloakUserService.createUser(newKeycloakUser, instance)
         id <- create match {
-          case Left(err) => Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
+          case Left(err) =>
+            Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
           case Right(id) => Task.pure(id)
         }
         deactivate <- keycloakUserService.deactivate(id.value, instance)
         user <- deactivate match {
-          case Left(e) => Task.raiseError(new RuntimeException(e))
+          case Left(e)  => Task.raiseError(new RuntimeException(e))
           case Right(_) => keycloakUserService.getUserById(id, instance)
         }
       } yield user
@@ -443,17 +444,18 @@ class KeycloakIntegrationTest extends E2ETestBase {
       val r = for {
         create <- keycloakUserService.createUser(newKeycloakUser, instance)
         id <- create match {
-          case Left(err) => Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
+          case Left(err) =>
+            Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
           case Right(id) => Task.pure(id)
         }
         deactivate <- keycloakUserService.deactivate(id.value, instance)
         userDeactivated <- deactivate match {
-          case Left(e) => Task.raiseError(new RuntimeException(e))
+          case Left(e)  => Task.raiseError(new RuntimeException(e))
           case Right(_) => keycloakUserService.getUserById(id, instance)
         }
         activate <- keycloakUserService.activate(id.value, instance)
         userActivated <- activate match {
-          case Left(e) => Task.raiseError(new RuntimeException(e))
+          case Left(e)  => Task.raiseError(new RuntimeException(e))
           case Right(_) => keycloakUserService.getUserById(id, instance)
         }
       } yield (userDeactivated, userActivated)

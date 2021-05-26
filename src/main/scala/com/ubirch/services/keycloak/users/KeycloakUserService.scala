@@ -2,18 +2,22 @@ package com.ubirch.services.keycloak.users
 
 import cats.data.OptionT
 import cats.syntax.either._
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user._
-import com.ubirch.models.user.{UserId, UserName}
-import com.ubirch.services.{DeviceKeycloak, KeycloakConnector, KeycloakInstance}
+import com.ubirch.models.user.{ UserId, UserName }
+import com.ubirch.services.{ DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
 import java.util.UUID
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
-import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{
+  iterableAsScalaIterableConverter,
+  mapAsJavaMapConverter,
+  seqAsJavaListConverter
+}
 
 trait KeycloakUserService {
   /**
@@ -221,10 +225,12 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
 
   override def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
     getUserById(UserId(id), instance).flatMap {
-      case Some(ur) => update(id, {
-        ur.setEnabled(true)
-        ur
-      }, instance).map(_ => ().asRight)
+      case Some(ur) => update(
+          id, {
+            ur.setEnabled(true)
+            ur
+          },
+          instance).map(_ => ().asRight)
       case None => Task.pure(s"user with name $id wasn't found".asLeft)
     }.onErrorHandle { ex =>
       val message = s"Could not activate user with id $id. Reason: ${ex.getMessage}"
@@ -234,10 +240,12 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
 
   override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
     getUserById(UserId(id), instance).flatMap {
-      case Some(ur) => update(id, {
-        ur.setEnabled(false)
-        ur
-      }, instance).map(_ => ().asRight)
+      case Some(ur) => update(
+          id, {
+            ur.setEnabled(false)
+            ur
+          },
+          instance).map(_ => ().asRight)
       case None => Task.pure(s"user with name $id wasn't found".asLeft)
     }.onErrorHandle { ex =>
       val message = s"Could not deactivate user with id $id. Reason: ${ex.getMessage}"

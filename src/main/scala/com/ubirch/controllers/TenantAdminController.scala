@@ -1,22 +1,18 @@
 package com.ubirch.controllers
 
-import cats.data.{ NonEmptyChain, Validated }
+import cats.data.{NonEmptyChain, Validated}
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.concerns.{
-  ControllerBase,
-  KeycloakBearerAuthStrategy,
-  KeycloakBearerAuthenticationSupport,
-  Token
-}
+import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
 import com.ubirch.controllers.validator.CriteriaValidator
-import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
+import com.ubirch.db.tables.{PocAdminRepository, PocRepository, PocStatusRepository, TenantTable}
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
-import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
+import com.ubirch.models.{NOK, Response, ValidationErrorsResponse}
 import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
+import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
 import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.services.tenantadmin.TenantAdminService.{ActivateSwitch, IllegalValueForActivateSwitch}
 import com.ubirch.services.tenantadmin._
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
@@ -27,7 +23,7 @@ import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import org.scalatra._
-import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
+import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
 
 import java.util.UUID
 import javax.inject.Inject
@@ -282,6 +278,26 @@ class TenantAdminController @Inject() (
     }
   }
 
+  put("/poc-admin/:id/active/:isActive") {
+    tenantAdminEndpoint("Get status of PoC Admin") { _ =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+        (for {
+          switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
+          r <- tenantAdminService.switchActiveForPocAdmin(pocAdminId, switch)
+            .map {
+              case Left(e) => e match {
+                case SwitchActiveError.PocAdminNotFound(id) => NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
+                case SwitchActiveError.MissingCertifyUserId(id) => Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+              }
+              case Right(_) => Ok("")
+            }
+        } yield r).onErrorRecover {
+          case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
+        }
+      }
+    }
+  }
+
   private def tenantAdminEndpoint(description: String)(logic: Tenant => Task[ActionResult]) = {
     authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult(description) { _ => _ =>
@@ -293,12 +309,6 @@ class TenantAdminController @Inject() (
             Task(BadRequest(NOK.authenticationError(errorMsg)))
         }
       }
-    }
-  }
-
-  put("/poc-admin/:id/active/:isActive") {
-    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token =>
-      Ok("")
     }
   }
 
