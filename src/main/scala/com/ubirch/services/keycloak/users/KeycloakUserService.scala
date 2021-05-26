@@ -224,34 +224,26 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   }
 
   override def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    switchActive(id, instance, (id, ex) => s"Could not activate user with id $id. Reason: ${ex.getMessage}", enabled = true)
+
+  override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    switchActive(id, instance, (id, ex) => s"Could not deactivate user with id $id. Reason: ${ex.getMessage}", enabled = false)
+
+  private def switchActive(id: UUID, instance: KeycloakInstance, errorMessage: (UUID, Throwable) => String, enabled: Boolean): Task[Either[String, Unit]] =
     getUserById(UserId(id), instance).flatMap {
       case Some(ur) => update(
-          id, {
-            ur.setEnabled(true)
-            ur
-          },
-          instance).map(_ => ().asRight)
+        id, {
+          ur.setEnabled(enabled)
+          ur
+        },
+        instance).map(_ => ().asRight)
       case None => Task.pure(s"user with name $id wasn't found".asLeft)
     }.onErrorHandle { ex =>
-      val message = s"Could not activate user with id $id. Reason: ${ex.getMessage}"
+      val message = errorMessage(id, ex)
       logger.error(message, ex)
       message.asLeft
     }
 
-  override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
-    getUserById(UserId(id), instance).flatMap {
-      case Some(ur) => update(
-          id, {
-            ur.setEnabled(false)
-            ur
-          },
-          instance).map(_ => ().asRight)
-      case None => Task.pure(s"user with name $id wasn't found".asLeft)
-    }.onErrorHandle { ex =>
-      val message = s"Could not deactivate user with id $id. Reason: ${ex.getMessage}"
-      logger.error(message, ex)
-      message.asLeft
-    }
 
   private def processCreationResponse(response: Response, userName: String): Either[UserException, UserId] = {
 
