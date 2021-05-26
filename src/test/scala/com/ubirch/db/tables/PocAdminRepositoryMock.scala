@@ -78,4 +78,10 @@ class PocAdminRepositoryMock @Inject() (
       }
     Task.sequence(all).map(i => PaginatedResult(i.size, i.toSeq))
   }
+  override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocAdmin]] = Task {
+    pocAdminDatastore.find {
+      case (_, pocAdmin) if pocAdmin.certifyUserId.contains(certifyUserId) => true
+      case _                                                               => false
+    }.map(_._2)
+  }
 }
