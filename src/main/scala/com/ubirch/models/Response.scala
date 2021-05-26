@@ -1,5 +1,6 @@
 package com.ubirch.models
 
+import cats.data.NonEmptyChain
 import com.ubirch.models.NOK.BAD_REQUEST
 
 /**
@@ -79,3 +80,6 @@ object ValidationErrorsResponse {
       errorType = BAD_REQUEST,
       validationErrors = validationErrors.map { case (field, error) => FieldError(field, error) }.toSeq)
 }
+
+case class Paginated_OUT[T](total: Long, records: Seq[T])
+case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
