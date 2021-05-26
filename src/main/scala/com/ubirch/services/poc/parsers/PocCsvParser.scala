@@ -1,7 +1,7 @@
 package com.ubirch.services.poc.parsers
 
 import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{ catsSyntaxTuple11Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
+import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocRow
@@ -32,6 +32,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             Left(line + columnSeparator + errors.toList.mkString(comma))
         }
       case Failure(_) =>
+        logger.warn(s"wrong number of columns ${cols.length}; it should be ${pocHeaderColsOrder.length}.")
         Left(line + columnSeparator +
           s"the number of column ${cols.length} is invalid. should be ${pocHeaderColsOrder.length}.")
     }
@@ -54,7 +55,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
-      validateMapContainsStringKey(dataSchemaId, csvPoc.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
     ).mapN {
@@ -67,7 +67,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         pocCertifyApp,
         logoUrl,
         clientCert,
-        dataSchemaId,
         extraConfig,
         manager) =>
         {
@@ -82,7 +81,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             pocCertifyApp,
             logoUrl.map(LogoURL(_)),
             clientCert,
-            dataSchemaId,
             extraConfig.map(JsonConfig(_)),
             manager,
             status = Pending

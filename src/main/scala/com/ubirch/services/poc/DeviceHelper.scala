@@ -18,9 +18,11 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 
-    val groupId = pocConfig.dataSchemaGroupMap.getOrElse(
-      poc.dataSchemaId,
-      throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}"))
+    val groupId = pocConfig.pocTypeDataSchemaMap.getOrElse(
+      poc.pocType,
+      throwError(
+        PocAndStatus(poc, status),
+        s"can't find the dataSchemaId GroupId corresponding the pocType: ${poc.pocType}"))
 
     val status1 =
       addGroupByIdToDevice(groupId, PocAndStatus(poc, status)).map {
@@ -30,11 +32,11 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
           throwError(PocAndStatus(poc, status), s"failed to add data schema group $groupId to device: $errorMsg")
       }
 
-    val trustedPocGroupId = pocConfig.trustedPocGroupMap.getOrElse(
-      poc.dataSchemaId,
+    val trustedPocGroupId = pocConfig.pocTypeTrustedPocMap.getOrElse(
+      poc.pocType,
       throwError(
         PocAndStatus(poc, status),
-        s"can't find the poc group id corresponding the dataSchemaId: ${poc.dataSchemaId}"))
+        s"can't find the trustedPocGroupId corresponding the pocType: ${poc.pocType}"))
 
     val status2 = status1.flatMap { status =>
       addGroupByIdToDevice(trustedPocGroupId, PocAndStatus(poc, status)).map {

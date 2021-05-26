@@ -18,7 +18,6 @@ case class PocRow(
   pocCertifyApp: String,
   logoUrl: String,
   clientCert: String,
-  dataSchemaId: String,
   managerSurname: String,
   managerName: String,
   managerEmail: String,
@@ -48,8 +47,7 @@ object PocRow {
       columns(16),
       columns(17),
       columns(18),
-      columns(19),
-      columns(20)
+      columns(19)
     )
   }
 }

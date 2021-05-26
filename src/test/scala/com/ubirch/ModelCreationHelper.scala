@@ -64,7 +64,6 @@ object ModelCreationHelper {
       certifyApp = true,
       None,
       clientCertRequired,
-      dataSchemaGroupId,
       Some(JsonConfig(parse("""{"test":"hello"}"""))),
       PocManager("surname", "", "", "08023-782137"),
       status

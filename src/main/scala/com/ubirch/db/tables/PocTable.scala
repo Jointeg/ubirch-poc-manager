@@ -167,7 +167,6 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
       case Some("phone")              => dynamic.sortBy(p => quote(p.phone))(ord)
       case Some("certifyApp")         => dynamic.sortBy(p => quote(p.certifyApp))(ord)
       case Some("clientCertRequired") => dynamic.sortBy(p => quote(p.clientCertRequired))(ord)
-      case Some("dataSchemaId")       => dynamic.sortBy(p => quote(p.dataSchemaId))(ord)
       case Some("roleName")           => dynamic.sortBy(p => quote(p.roleName))(ord)
       case Some("deviceId")           => dynamic.sortBy(p => quote(p.deviceId))(ord)
       case Some("clientCertFolder")   => dynamic.sortBy(p => quote(p.clientCertFolder))(ord)

@@ -19,7 +19,6 @@ case class Poc(
   clientCertRequired: Boolean,
   orgUnitId: Option[OrgUnitId] = None,
   clientCert: Option[ClientCert] = None,
-  dataSchemaId: String,
   extraConfig: Option[JsonConfig],
   manager: PocManager,
   roleName: String,
@@ -50,7 +49,6 @@ object Poc {
     certifyApp: Boolean,
     logoUrl: Option[LogoURL],
     clientCertRequired: Boolean,
-    dataSchemaId: String,
     extraConfig: Option[JsonConfig],
     manager: PocManager,
     status: Status
@@ -68,7 +66,6 @@ object Poc {
       certifyApp = certifyApp,
       logoUrl = logoUrl,
       clientCertRequired = clientCertRequired,
-      dataSchemaId = dataSchemaId,
       extraConfig = extraConfig,
       manager = manager,
       roleName = roleName,

@@ -90,7 +90,6 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
       validateBoolean(certifyApp, csvPocAdmin.pocCertifyApp),
       validateURL(logoUrl, csvPocAdmin.logoUrl, csvPocAdmin.logoUrl),
       validateClientCert(clientCert, csvPocAdmin.clientCert, tenant),
-      validateMapContainsStringKey(dataSchemaId, csvPocAdmin.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPocAdmin.extraConfig),
       pocManager
     ).mapN {
@@ -103,7 +102,6 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
         pocCertifyApp,
         logoUrl,
         clientCert,
-        dataSchemaId,
         extraConfig,
         manager) =>
         {
@@ -118,7 +116,6 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
             pocCertifyApp,
             logoUrl.map(LogoURL(_)),
             clientCert,
-            dataSchemaId,
             extraConfig.map(JsonConfig(_)),
             manager,
             status = Pending

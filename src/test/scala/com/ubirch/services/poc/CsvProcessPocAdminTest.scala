@@ -3,7 +3,8 @@ package com.ubirch.services.poc
 import com.ubirch.ModelCreationHelper.{ createTenant, pocTypeValue }
 import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
-import com.ubirch.services.poc.util.CsvConstants.{ pocAdminHeaderLine, pocType }
+import com.ubirch.services.poc.util.CsvConstants.pocAdminHeaderLine
+import monix.eval.Task
 
 import java.util.UUID
 
@@ -12,20 +13,20 @@ class CsvProcessPocAdminTest extends UnitTestBase {
   private val pocId = UUID.randomUUID()
 
   private val invalidHeader =
-    s"""external_id*;poc_type*;poc_name*;street*;street_number*;additional_address;zipcode*;city*;county;federal_state;country*;phone*;certify_app*;logo_url;client_cert*;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config;technician_surname;technician_name*;technician_email*;technician_mobile_phone*;technician_date_of_birth*;web_ident_required*\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;$pocTypeValue;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1: vaccine2\"]};Mustermann;Herr;herr.mustermann@mail.de;0176-543;01.01.1971;TRUE"""
+    s"""external_id_invalid*;poc_type*;poc_name*;street*;street_number*;additional_address;zipcode*;city*;county;federal_state;country*;phone*;certify_app*;logo_url;client_cert*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config;technician_surname;technician_name*;technician_email*;technician_mobile_phone*;technician_date_of_birth*;web_ident_required*\n" +
+      "a5a62b0f-6694-4916-b188-89e69264458f;$pocTypeValue;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1: vaccine2\"]};Mustermann;Herr;herr.mustermann@mail.de;0176-543;01.01.1971;TRUE"""
 
   private val validCsv =
     s"""$pocAdminHeaderLine
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
        |""".stripMargin
 
   private val validHeaderButBadCsvRows =
     s"""$pocAdminHeaderLine
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};;Herr;herr.mustermann@;0176-738786782;01.01.1971;xfalse
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;017782;01.1971;TRUE
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};;Herr;herr.mustermann@;0176-738786782;01.01.1971;xfalse
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;017782;01.1971;TRUE
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
        |""".stripMargin
 
   private val tenant = createTenant()
@@ -48,6 +49,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           pocAdmin = pocAdmins.head
           pocAdminStatusOpt <- pocAdminStatusRepository.getStatus(pocAdmin.id)
         } yield {
+
           assert(result.isRight)
           assert(pocs.length == 1)
           assert(pocStatusOpt.isDefined)
@@ -69,10 +71,11 @@ class CsvProcessPocAdminTest extends UnitTestBase {
 
         (for {
           result <- processPocAdmin.createListOfPoCsAndAdmin(invalidHeader, tenant)
+          _ <- Task(println(result))
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {
-          result.left.get.shouldBe("technician_surname didn't equal expected header technician_surname*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,data_schema_id*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
+          result.left.get.shouldBe("external_id_invalid* didn't equal expected header external_id*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
           assert(pocs.isEmpty)
           assert(pocAdmins.isEmpty)
         }).onErrorHandle(e => fail(e)).runSyncUnsafe()
