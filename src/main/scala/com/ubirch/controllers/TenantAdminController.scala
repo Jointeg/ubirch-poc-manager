@@ -135,6 +135,17 @@ class TenantAdminController @Inject() (
         bodyParam[String]("pocAdminId").description("ID of PocAdmin for which WebInitiateId will be created")
       )
 
+  val switchActiveOnPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Activate or deactivate PoC admin")
+      .summary("Activate or deactivate PoC admin")
+      .description("Activate or deactivate PoC admin")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+      .parameters(
+        queryParam[UUID]("id").description("PoC admin id"),
+        queryParam[Int]("isActive").description("Whether PoC Admin should be active, values: 1 for true, 0 for false.")
+      )
+
   post("/pocs/create", operation(createListOfPocs)) {
     tenantAdminEndpoint("Create poc batch") { tenant =>
       pocBatchHandler
@@ -299,8 +310,8 @@ class TenantAdminController @Inject() (
     }
   }
 
-  put("/poc-admin/:id/active/:isActive") {
-    tenantAdminEndpoint("Get status of PoC Admin") { _ =>
+  put("/poc-admin/:id/active/:isActive", operation(switchActiveOnPocAdmin)) {
+    tenantAdminEndpoint("Switch active flag for PoC Admin") { _ =>
       getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
         (for {
           switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
