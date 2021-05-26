@@ -10,6 +10,7 @@ import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.TenantAdminService.ActivateSwitch
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
@@ -70,7 +71,8 @@ class DefaultTenantAdminService @Inject() (
   tenantRepository: TenantRepository,
   pocAdminRepository: PocAdminRepository,
   pocAdminStatusRepository: PocAdminStatusRepository,
-  keycloakUserService: KeycloakUserService)
+  keycloakUserService: KeycloakUserService,
+  quillMonixJdbcContext: QuillMonixJdbcContext)
   extends TenantAdminService {
   private val simplifiedDeviceInfoCSVHeader = """"externalId"; "pocName"; "deviceId""""
 
@@ -185,22 +187,25 @@ class DefaultTenantAdminService @Inject() (
 
   override def switchActiveForPocAdmin(
     pocAdminId: UUID,
-    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] =
-    for {
-      pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-      result <- pocAdmin match {
-        case Some(pa) => pa.certifyUserId match {
-            case Some(certifyUserId) =>
-              (active match {
-                case TenantAdminService.Activate   => keycloakUserService.activate(certifyUserId, CertifyKeycloak)
-                case TenantAdminService.Deactivate => keycloakUserService.deactivate(certifyUserId, CertifyKeycloak)
-              }) >> pocAdminRepository.updatePocAdmin(pa.copy(active = ActivateSwitch.toBoolean(active))).map(_ =>
-                ().asRight)
-            case None => Task.pure(SwitchActiveError.MissingCertifyUserId(pocAdminId).asLeft)
-          }
-        case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
-      }
-    } yield result
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
+    quillMonixJdbcContext.withTransaction {
+      for {
+        pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+        result <- pocAdmin match {
+          case Some(pa) => pa.certifyUserId match {
+              case Some(certifyUserId) =>
+                (active match {
+                  case TenantAdminService.Activate   => keycloakUserService.activate(certifyUserId, CertifyKeycloak)
+                  case TenantAdminService.Deactivate => keycloakUserService.deactivate(certifyUserId, CertifyKeycloak)
+                }) >> pocAdminRepository.updatePocAdmin(pa.copy(active = ActivateSwitch.toBoolean(active))).map(_ =>
+                  ().asRight)
+              case None => Task.pure(SwitchActiveError.MissingCertifyUserId(pocAdminId).asLeft)
+            }
+          case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
+        }
+      } yield result
+    }
+  }
 
   def addDeviceCreationToken(
     tenant: Tenant,
