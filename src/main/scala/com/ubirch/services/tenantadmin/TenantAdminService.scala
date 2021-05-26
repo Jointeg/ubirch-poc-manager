@@ -9,6 +9,11 @@ import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.TenantAdminService.ActivateSwitch
+import com.ubirch.controllers.AddDeviceCreationTokenRequest
+import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
+import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
+import com.ubirch.models.tenant._
+import com.ubirch.services.auth.AESEncryption
 import monix.eval.Task
 
 import java.util.UUID
@@ -28,6 +33,8 @@ trait TenantAdminService {
     tenant: Tenant,
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
   def switchActiveForPocAdmin(pocAdminId: UUID, active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
+
+  def addDeviceCreationToken(tenant: Tenant, addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
 }
 
 object TenantAdminService {
@@ -57,7 +64,9 @@ object TenantAdminService {
 }
 
 class DefaultTenantAdminService @Inject() (
+  aesEncryption: AESEncryption,
   pocRepository: PocRepository,
+  tenantRepository: TenantRepository,
   pocAdminRepository: PocAdminRepository,
   pocAdminStatusRepository: PocAdminStatusRepository,
   keycloakUserService: KeycloakUserService)
@@ -188,6 +197,21 @@ class DefaultTenantAdminService @Inject() (
         case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
       }
     } yield result
+
+  def addDeviceCreationToken(
+    tenant: Tenant,
+    addDeviceTokenRequest: AddDeviceCreationTokenRequest): Task[Either[String, Unit]] = {
+
+    aesEncryption
+      .encrypt(addDeviceTokenRequest.token)(EncryptedDeviceCreationToken(_))
+      .flatMap { encryptedDeviceCreationToken: EncryptedDeviceCreationToken =>
+        val updatedTenant = tenant.copy(deviceCreationToken = Some(encryptedDeviceCreationToken))
+        tenantRepository
+          .updateTenant(updatedTenant).map(Right(_))
+          .onErrorHandle { ex: Throwable => Left("something went wrong on device token creation") }
+      }
+  }
+
 }
 
 sealed trait CreateWebIdentInitiateIdErrors

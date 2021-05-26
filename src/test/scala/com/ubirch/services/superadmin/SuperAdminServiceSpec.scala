@@ -62,7 +62,6 @@ class SuperAdminServiceSpec extends UnitTestBase {
 
         val superAdminSvc =
           new DefaultSuperAdminService(
-            aesEncryption,
             repo,
             mock[CertHandler],
             mock[TeamDriveService],
@@ -89,7 +88,6 @@ class SuperAdminServiceSpec extends UnitTestBase {
 
         val superAdminSvc =
           new DefaultSuperAdminService(
-            aesEncryption,
             repo,
             certHandlerMock,
             mock[TeamDriveService],
@@ -113,7 +111,6 @@ class SuperAdminServiceSpec extends UnitTestBase {
 
         val superAdminSvc =
           new DefaultSuperAdminService(
-            aesEncryption,
             repo,
             certHandlerMock,
             teamDriveServiceMock,
@@ -139,7 +136,6 @@ class SuperAdminServiceSpec extends UnitTestBase {
 
         val superAdminSvc =
           new DefaultSuperAdminService(
-            aesEncryption,
             repo,
             certHandlerMock,
             teamDriveServiceMock,

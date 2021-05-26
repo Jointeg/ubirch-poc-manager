@@ -37,7 +37,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
   @throws[PocCreationError]
   override def createDevice(poc: Poc, status: PocStatus, tenant: Tenant): Task[StatusAndPW] = {
     if (status.deviceCreated) {
-      decryptToken(tenant)
+      decryptToken(tenant, poc, status)
         .flatMap(token => requestDeviceInfo(token, poc, status))
         .onErrorHandle(ex =>
           throwAndLogError(
@@ -47,7 +47,7 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
             logger))
     } else {
       val body = getBody(poc, status, tenant)
-      decryptToken(tenant)
+      decryptToken(tenant, poc, status)
         .flatMap(token => requestDeviceCreation(token, poc, status, body))
         .onErrorHandle(ex =>
           throwAndLogError(
@@ -132,9 +132,13 @@ class DeviceCreatorImpl @Inject() (conf: Config, aESEncryption: AESEncryption)(i
     write[DeviceRequestBody](body)
   }
 
-  protected def decryptToken(tenant: Tenant): Task[DecryptedData] =
+  protected def decryptToken(tenant: Tenant, poc: Poc, status: PocStatus): Task[DecryptedData] = {
+    if (tenant.deviceCreationToken.isEmpty)
+      throwError(PocAndStatus(poc, status), "poc.deviceGroupId is missing; cannot create device")
     aESEncryption
-      .decrypt(tenant.deviceCreationToken.value)(identity)
+      .decrypt(tenant.deviceCreationToken.get.value)(identity)
+  }
+
 }
 
 case class DeviceRequestBody(
