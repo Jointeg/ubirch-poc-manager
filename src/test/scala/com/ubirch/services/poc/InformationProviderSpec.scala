@@ -5,16 +5,18 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
 import com.ubirch.models.NamespacedUUID
 import com.ubirch.models.poc.{ DeviceId, Poc, PocStatus }
-import com.ubirch.{ Awaits, DefaultUnitTestBinder, InjectorHelper }
+import com.ubirch.services.poc.PocTestHelper.createPocTriple
+import com.ubirch.{ Awaits, Binder, DefaultUnitTestBinder, InjectorHelper }
 import monix.execution.Scheduler
+import org.json4s.Formats
+import org.json4s.native.Serialization.read
 import org.scalatest.TryValues
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
 import java.util.UUID
-import scala.concurrent.duration.DurationInt
-import scala.util.{ Failure, Try }
+import scala.util.Try
 
-class InformationProviderTest extends ScalatraWordSpec with Awaits with TryValues {
+class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValues {
 
   def testInjector(binder: AbstractModule): InjectorHelper = new InjectorHelper(List(binder)) {}
   implicit private val scheduler: Scheduler = monix.execution.Scheduler.global
@@ -55,7 +57,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits with TryValue
     "should not provide goClient if already true" in {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
-      val statusAndPWProvided = statusAndPW.copy(pocStatus = pocStatus.copy(goClientProvided = true))
+      val statusAndPWProvided = statusAndPW.copy(status = pocStatus.copy(goClientProvided = true))
       val r = infoProvider.infoToGoClient(poc, statusAndPWProvided).runSyncUnsafe()
       // assert
       r shouldBe statusAndPWProvided
@@ -74,7 +76,7 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits with TryValue
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
-      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(pocStatus = statusProvided), tenant).runSyncUnsafe()
+      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW.copy(status = statusProvided), tenant).runSyncUnsafe()
       // assert
       r.status shouldBe statusProvided
     }
@@ -135,6 +137,68 @@ class InformationProviderTest extends ScalatraWordSpec with Awaits with TryValue
           case PocCreationError(state, _) =>
             state.status shouldBe errorState
         }.runSyncUnsafe()
+    }
+  }
+
+  "getCertifyApiBody" should {
+    "throw exception if pocType is unknown " in {
+      val injector = testInjector(new Binder())
+      val infoProvider = injector.get[InformationProviderImpl]
+      val (poc, status, tenant) = createPocTriple()
+      val badPocType = poc.copy(pocType = "xxx")
+      assertThrows[PocCreationError](infoProvider.getCertifyApiBody(
+        badPocType,
+        StatusAndPW(status, "devicePassword"),
+        tenant).runSyncUnsafe())
+    }
+
+    "throw exception if clientCert is not required, but tenant doesn't have a cert either " in {
+      val injector = testInjector(new Binder())
+      val infoProvider = injector.get[InformationProviderImpl]
+      val (poc, status, tenant) = createPocTriple()
+      val badPocType = poc.copy(clientCertRequired = false)
+      val badTenant = tenant.copy(sharedAuthCert = None)
+
+      val body = infoProvider.getCertifyApiBody(badPocType, StatusAndPW(status, "devicePassword"), badTenant)
+      assertThrows[PocCreationError](body.runSyncUnsafe())
+    }
+
+    "succeed to create body with tenant's shared auth cert " in {
+      val injector = testInjector(new Binder())
+      val infoProvider = injector.get[InformationProviderImpl]
+      implicit val formats: Formats = injector.get[Formats]
+
+      val (poc, status, tenant) = createPocTriple()
+      val goodPoc = poc.copy(clientCertRequired = false)
+      val pw = "devicePassword"
+
+      val body = infoProvider.getCertifyApiBody(goodPoc, StatusAndPW(status, pw), tenant)
+      val registerDevice = body.runSyncUnsafe()
+      val parsedObject = read[RegisterDeviceCertifyAPI](registerDevice)
+
+      parsedObject.role shouldBe Some(poc.roleName)
+      parsedObject.uuid shouldBe poc.getDeviceId
+      parsedObject.password shouldBe pw
+      parsedObject.cert.isDefined shouldBe true
+      parsedObject.name shouldBe poc.pocName
+      parsedObject.location shouldBe None
+    }
+
+    "succeed to create body without role but with location" in {
+      val injector = testInjector(new Binder())
+      val infoProvider = injector.get[InformationProviderImpl]
+      implicit val formats: Formats = injector.get[Formats]
+
+      val (poc, status, tenant) = createPocTriple()
+      val goodPoc = poc.copy(clientCertRequired = false, pocType = "bmg_vac_api")
+      val pw = "devicePassword"
+
+      val body = infoProvider.getCertifyApiBody(goodPoc, StatusAndPW(status, pw), tenant)
+      val registerDevice = body.runSyncUnsafe()
+      val parsedObject = read[RegisterDeviceCertifyAPI](registerDevice)
+
+      parsedObject.role shouldBe None
+      parsedObject.location shouldBe Some(poc.externalId)
     }
   }
 
