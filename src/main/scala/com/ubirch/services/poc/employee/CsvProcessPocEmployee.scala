@@ -6,10 +6,11 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, TenantRepository }
 import com.ubirch.models.poc.{ Completed, PocAdmin }
-import com.ubirch.models.pocEmployee.{ PocEmployeeFromCsv, PocEmployeeStatus }
+import com.ubirch.models.pocEmployee.PocEmployeeStatus
 import com.ubirch.models.tenant.{ Tenant, TenantId }
-import com.ubirch.services.poc.employee.parsers.PocEmployeeCsvParser
+import com.ubirch.services.poc.employee.parsers.{ PocEmployeeCsvParseResult, PocEmployeeCsvParser }
 import com.ubirch.services.poc.util.CsvConstants
+import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import monix.eval.Task
 
 import java.util.UUID
@@ -39,7 +40,7 @@ class CsvProcessPocEmployeeImpl @Inject() (
       tenant <- EitherT.fromOptionF(tenantRepository.getTenant(pocAdmin.tenantId), UnknownTenant(pocAdmin.tenantId))
       parsingResult <- EitherT.liftF(pocEmployeeCsvParser.parseList(csv, tenant))
       errorCsvRows <- EitherT.liftF(parsingResult.toList.traverseFilter {
-        case Right(rowResult) => storePocEmployee(rowResult.pocEmployeeFromCsv, pocAdmin.pocId, tenant)
+        case Right(rowResult) => storePocEmployee(rowResult, pocAdmin.pocId, tenant)
         case Left(csvRow)     => Task(Some(csvRow))
       })
       response <- EitherT.fromEither[Task](createResponse(errorCsvRows))
@@ -55,16 +56,21 @@ class CsvProcessPocEmployeeImpl @Inject() (
   }
 
   private def storePocEmployee(
-    pocEmployeeFromCsv: PocEmployeeFromCsv,
+    pocEmployeeCsvParseResult: PocEmployeeCsvParseResult,
     pocId: UUID,
     tenant: Tenant): Task[Option[String]] = {
-    val initializedPocEmployee = pocEmployeeFromCsv.toFullPocEmployeeRepresentation(pocId, tenant.id)
+    val initializedPocEmployee =
+      pocEmployeeCsvParseResult.pocEmployeeFromCsv.toFullPocEmployeeRepresentation(pocId, tenant.id)
     val initialPocEmployeeStatus = PocEmployeeStatus(initializedPocEmployee.id)
     quillMonixJdbcContext.withTransaction {
       for {
         _ <- employeeRepository.createPocEmployee(initializedPocEmployee)
         _ <- employeeStatusRepository.createStatus(initialPocEmployeeStatus)
       } yield None
+    }.onErrorHandle { e =>
+      logger.error(s"fail to create poc employee and status. poc: $pocId, pocEmployee: ${pocEmployeeCsvParseResult.pocEmployeeFromCsv}, error: ${e.getMessage}")
+      Some(
+        pocEmployeeCsvParseResult.csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
     }
   }
 
