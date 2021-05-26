@@ -69,7 +69,7 @@ class PocAdminController @Inject() (
   post("/employee/create", operation(createListOfEmployees)) {
     pocAdminEndpoint("Create employees by CSV file") { token =>
       retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
-        csvProcessPocEmployee.createListOfPocEmployees(request.body, pocAdmin.tenantId, pocAdmin.pocId).map {
+        csvProcessPocEmployee.createListOfPocEmployees(request.body, pocAdmin).map {
           case Left(UnknownTenant(tenantId)) =>
             logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
             NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
