@@ -1,13 +1,12 @@
 package com.ubirch.db.tables
 
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
+import com.ubirch.models.poc.Completed
 import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
-import com.ubirch.models.common
 import com.ubirch.models.common.Sort
 import com.ubirch.models.poc.{ Poc, PocAdmin, Status }
 import com.ubirch.models.tenant.TenantId
-import io.getquill.{ EntityQuery, Insert, Ord, Query }
+import io.getquill.{ EntityQuery, Insert, Query }
 import monix.eval.Task
 
 import java.util.UUID
@@ -138,25 +137,21 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       case Some(s) =>
         quote {
           pocByTenantId
-            .filter(_.email.like(lift(s"$s%")))
+            .filter(pocAdmin => pocAdmin.email.like(lift(s"$s%")) || pocAdmin.name.like(lift(s"$s%")))
         }
       case None => pocByTenantId
     }
   }
 
   private def sortedPocAdmins(q: Quoted[Query[PocAdmin]], sort: Sort) = {
-    def ord[T]: Ord[T] = sort.order match {
-      case common.ASC  => Ord.asc[T]
-      case common.DESC => Ord.desc[T]
-    }
     val dynamic =
       quote(q.join(querySchema[Poc]("poc_manager.poc_table")).on { case (pa, p) => pa.pocId == p.id }).dynamic
     sort.field match {
-      case Some("id")      => dynamic.sortBy(r => quote(r._1.id))(ord)
-      case Some("name")    => dynamic.sortBy(r => quote(r._1.name))(ord)
-      case Some("surName") => dynamic.sortBy(r => quote(r._1.surname))(ord)
-      case Some("email")   => dynamic.sortBy(r => quote(r._1.email))(ord)
-      case Some("pocName") => dynamic.sortBy(r => quote(r._2.pocName))(ord)
+      case Some("id")      => dynamic.sortBy(r => quote(r._1.id))(sort.ord)
+      case Some("name")    => dynamic.sortBy(r => quote(r._1.name))(sort.ord)
+      case Some("surName") => dynamic.sortBy(r => quote(r._1.surname))(sort.ord)
+      case Some("email")   => dynamic.sortBy(r => quote(r._1.email))(sort.ord)
+      case Some("pocName") => dynamic.sortBy(r => quote(r._2.pocName))(sort.ord)
       case _               => dynamic
     }
   }
@@ -166,6 +161,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       case Nil => quote(q)
       case _   => quote(q.filter(p => liftQuery(statuses).contains(p.status)))
     }
+
   override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocAdmin]] =
     run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
 }

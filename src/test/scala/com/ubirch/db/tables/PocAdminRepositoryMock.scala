@@ -1,6 +1,6 @@
 package com.ubirch.db.tables
 
-import com.ubirch.models.poc.{ Completed, PocAdmin }
+import com.ubirch.models.poc.Completed
 import com.ubirch.db.tables.model.PaginatedResult
 import com.ubirch.models.poc.{ Poc, PocAdmin }
 import com.ubirch.models.tenant.TenantId

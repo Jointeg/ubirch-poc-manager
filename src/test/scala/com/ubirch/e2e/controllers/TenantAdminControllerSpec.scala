@@ -141,7 +141,7 @@ class TenantAdminControllerSpec
           body = goodCsv.getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
-          assert(body == goodCsv + columnSeparator + "error on persisting objects; maybe duplicated key error")
+          assert(body == goodCsv + columnSeparator + "error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
         }
       }
     }
@@ -271,7 +271,7 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return PoCs for passed search query" in withInjector { Injector =>
+    "return PoCs for passed search by pocName" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB()
@@ -291,6 +291,29 @@ class TenantAdminControllerSpec
         val poC_OUT = read[Paginated_OUT[Poc]](body)
         poC_OUT.total shouldBe 2
         poC_OUT.records shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
+      }
+    }
+
+    "return PoCs for passed search by city" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, city = "Berlin 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, city = "Berlin 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, city = "Berlin 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("search" -> "Berlin 1"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[Paginated_OUT[Poc]](body)
+        poC_OUT.total shouldBe 2
+        poC_OUT.records shouldBe pocs.filter(_.address.city.startsWith("Berlin 1"))
       }
     }
 
@@ -534,7 +557,7 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return PoC admins for passed search query" in withInjector { Injector =>
+    "return PoC admins for passed search by email" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
@@ -558,6 +581,45 @@ class TenantAdminControllerSpec
         val out = read[Paginated_OUT[PocAdmin_OUT]](body)
         out.total shouldBe 2
         out.records shouldBe pocAdmins.filter(_.email.startsWith("admin1"))
+      }
+    }
+
+    "return PoC admins for passed search by name" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val repository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
+      val r = for {
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin1@example.com",
+            name = "PocAdmin 1"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin11@example.com",
+            name = "PocAdmin 11"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin2@example.com",
+            name = "PocAdmin 2"))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).map(_.toPocAdminOut(poc))
+      get(
+        "/poc-admins",
+        params = Map("search" -> "PocAdmin 1"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val out = read[Paginated_OUT[PocAdmin_OUT]](body)
+        out.total shouldBe 2
+        out.records shouldBe pocAdmins.filter(_.firstName.startsWith("PocAdmin 1"))
       }
     }
 

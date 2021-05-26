@@ -52,7 +52,8 @@ object ModelCreationHelper {
     externalId: String = UUID.randomUUID().toString,
     name: String = "pocName",
     status: Status = Pending,
-    clientCertRequired: Boolean = false
+    clientCertRequired: Boolean = false,
+    city: String = ""
   ): Poc =
     Poc(
       id,
@@ -60,7 +61,7 @@ object ModelCreationHelper {
       externalId,
       pocTypeValue,
       name,
-      Address("", "", None, 67832, "", None, None, "France"),
+      Address("", "", None, 67832, city, None, None, "France"),
       "pocPhone",
       certifyApp = true,
       None,
