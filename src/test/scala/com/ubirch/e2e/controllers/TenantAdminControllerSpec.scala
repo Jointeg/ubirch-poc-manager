@@ -10,7 +10,6 @@ import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant._
 import com.ubirch.models.user.UserId
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.services.auth.AESEncryption
@@ -19,8 +18,6 @@ import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, pocHeaderLine }
-import com.ubirch.services.poc.{ PocAdminCreator, PocCreator }
-import com.ubirch.services.superadmin.SuperAdminService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry

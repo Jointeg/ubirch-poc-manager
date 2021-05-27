@@ -11,7 +11,7 @@ import com.ubirch.controllers.concerns.{
   Token
 }
 import com.ubirch.controllers.validator.AdminCriteriaValidator
-import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository }
+import com.ubirch.db.tables.PocAdminRepository
 import com.ubirch.db.tables.model.AdminCriteria
 import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.models.poc.PocAdmin
@@ -45,7 +45,6 @@ class PocAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   pocAdminRepository: PocAdminRepository,
-  employeeRepository: PocEmployeeRepository,
   csvProcessPocEmployee: CsvProcessPocEmployee,
   tokenVerificationService: TokenVerificationService,
   pocAdminService: PocAdminService
@@ -120,23 +119,24 @@ class PocAdminController @Inject() (
   get("/employees", operation(getEmployees)) {
     pocAdminEndpoint("get employees") { token =>
       retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
-        handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees).flatMap { adminCriteria =>
-          pocAdminService.getEmployees(pocAdmin, adminCriteria).map {
-            case Right(employees) => Presenter.toJsonResult(Paginated_OUT(employees.total, employees.records))
-            case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
-              NotFound(NOK.badRequest(s"PocAdmin status is not completed. ${pocAdminId}"))
-            case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
-              logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
-              NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
-          }.onErrorRecoverWith {
-            case ValidationError(e) =>
-              Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
-                .map(BadRequest(_))
-          }.onErrorHandle {
-            case ex =>
-              InternalServerError(NOK.serverError(
-                s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
-          }
+        (for {
+          adminCriteria <- handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees)
+          employees <- pocAdminService.getEmployees(pocAdmin, adminCriteria)
+        } yield employees).map {
+          case Right(employees) => Presenter.toJsonResult(Paginated_OUT(employees.total, employees.records))
+          case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
+            BadRequest(NOK.badRequest(s"PocAdmin status is not completed. ${pocAdminId}"))
+          case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
+            logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
+            NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
+        }.onErrorRecoverWith {
+          case ValidationError(e) =>
+            Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
+              .map(BadRequest(_))
+        }.onErrorHandle {
+          case ex =>
+            InternalServerError(NOK.serverError(
+              s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
         }
       }
     }

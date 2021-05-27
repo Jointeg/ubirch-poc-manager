@@ -1,24 +1,31 @@
 package com.ubirch.e2e.controllers
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createTenant }
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant }
 import com.ubirch.controllers.PocAdminController
 import com.ubirch.db.tables.{ PocAdminTable, PocEmployeeTable, PocTable, TenantTable }
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin }
+import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.poc.{ Completed, Created, Pending, Poc, PocAdmin, Processing, Updated }
+import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import io.prometheus.client.CollectorRegistry
+import org.joda.time.DateTime
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.BeforeAndAfterEach
+import org.json4s.native.Serialization.read
 
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
+import PocAdminControllerSpec._
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach {
+class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with TableDrivenPropertyChecks {
 
   implicit private val formats: Formats =
     DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
@@ -95,6 +102,276 @@ class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach {
     }
   }
 
+  "Endpoint GET /employees" must {
+    val EndPoint = "/employees"
+    "return only pocs of the poc admin" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc1, pocAdmin1) = createTenantWithPocAndPocAdmin(injector)
+        val poc2 = addPocToDb(tenant, injector)
+        val _ = addPocAdminToDB(poc2, tenant, injector)
+        val employee1 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
+        val employee2 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
+        val employee3 = createPocEmployee(pocId = poc2.id, tenantId = tenant.id)
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield (employees)
+        val employees = await(r, 5.seconds).map(_.datesToIsoFormat)
+        employees.size shouldBe 3
+        get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin1.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 2
+          employeeOut.records shouldBe employees.filter(_.pocId == poc1.id)
+        }
+      }
+    }
+
+    "return Bad Request when poc admin doesn't exist" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        get(EndPoint, headers = Map("authorization" -> token.pocAdmin(UUID.randomUUID()).prepare)) {
+          status should equal(404)
+        }
+      }
+    }
+
+    "return Success also when list of Employees is empty" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 0
+          employeeOut.records should have size 0
+        }
+      }
+    }
+
+    "return Employees page for given index and size" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id)
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id)
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id)
+        val employee4 = createPocEmployee(pocId = poc.id, tenantId = tenant.id)
+        val employee5 = createPocEmployee(pocId = poc.id, tenantId = tenant.id)
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          _ <- employeeTable.createPocEmployee(employee4)
+          _ <- employeeTable.createPocEmployee(employee5)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield (employees)
+        val employees = await(r, 5.seconds).map(_.datesToIsoFormat)
+        employees.size shouldBe 5
+        get(
+          EndPoint,
+          params = Map("pageIndex" -> "1", "pageSize" -> "2"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 5
+          employeeOut.records shouldBe employees.slice(2, 4)
+        }
+      }
+    }
+
+    "return Employees for passed search by name" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 11")
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield (employees)
+        val employees = await(r, 5.seconds).map(_.datesToIsoFormat)
+        employees.size shouldBe 3
+        get(
+          EndPoint,
+          params = Map("search" -> "employee 1"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 2
+          employeeOut.records shouldBe employees.filter(_.name.startsWith("employee 1"))
+        }
+      }
+    }
+
+    "return Employees for passed search by email" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee1@test.de")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee11@test.de")
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee2@test.de")
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield (employees)
+        val employees = await(r, 5.seconds).map(_.datesToIsoFormat)
+        employees.size shouldBe 3
+        get(
+          EndPoint,
+          params = Map("search" -> "employee1"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 2
+          employeeOut.records shouldBe employees.filter(_.email.startsWith("employee1"))
+        }
+      }
+    }
+
+    "return Employees ordered asc by field" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 11")
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield (employees)
+        val employees = await(r, 5.seconds).sortBy(_.name).map(_.datesToIsoFormat)
+        employees.size shouldBe 3
+        get(
+          EndPoint,
+          params = Map("sortColumn" -> "name", "sortOrder" -> "asc"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 3
+          employeeOut.records shouldBe employees
+        }
+      }
+    }
+
+    "return Employees ordered desc by field" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 11")
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield (employees)
+        val employees = await(r, 5.seconds).sortBy(_.name).reverse.map(_.datesToIsoFormat)
+        employees.size shouldBe 3
+        get(
+          EndPoint,
+          params = Map("sortColumn" -> "name", "sortOrder" -> "desc"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 3
+          employeeOut.records shouldBe employees
+        }
+      }
+    }
+
+    "return only employees with matching status" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 =
+          createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1").copy(status = Pending)
+        val employee2 =
+          createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 11").copy(status = Processing)
+        val employee3 =
+          createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2").copy(status = Completed)
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield (employees)
+        val employees =
+          await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.datesToIsoFormat)
+        employees.size shouldBe 2
+        get(
+          EndPoint,
+          params = Map("filterColumn[status]" -> "pending,processing"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          val employeeOut = read[Paginated_OUT[PocEmployee]](body)
+          employeeOut.total shouldBe 2
+          employeeOut.records shouldBe employees
+        }
+      }
+    }
+  }
+
+  private val invalidParameter =
+    Table(
+      ("param", "value"),
+      ("filterColumn[status]", "invalid"),
+      ("sortColumn", "invalid"),
+      ("sortColumn", ""),
+      ("sortOrder", "invalid"),
+      ("sortOrder", ""),
+      ("pageIndex", "invalid"),
+      ("pageIndex", "-1"),
+      ("pageIndex", ""),
+      ("pageSize", "invalid"),
+      ("pageSize", "-1"),
+      ("pageSize", "")
+    )
+
+  forAll(invalidParameter) { (param, value) =>
+    s"Endpoint GET /employees must respond with a bad request when provided an invalid value '$value' for '$param'" in {
+      withInjector {
+        injector =>
+          val token = injector.get[FakeTokenCreator]
+          val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+          get(
+            "/employees",
+            params = Map(param -> value),
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+          ) {
+            status should equal(400)
+            val errorResponse = read[ValidationErrorsResponse](body)
+            errorResponse.validationErrors should have size 1
+            errorResponse.validationErrors.filter(_.name == param) should have size 1
+          }
+      }
+    }
+  }
+
   def createTenantWithPocAndPocAdmin(injector: InjectorHelper): (Tenant, Poc, PocAdmin) = {
     val tenant = addTenantToDB(injector)
     val poc = addPocToDb(tenant, injector)
@@ -139,4 +416,15 @@ class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach {
     }
   }
 
+}
+
+object PocAdminControllerSpec {
+  implicit class EmployeeOps(employee: PocEmployee) {
+    def datesToIsoFormat: PocEmployee = {
+      employee.copy(
+        created = Created(DateTime.parse(Instant.ofEpochMilli(employee.created.dateTime.getMillis).toString)),
+        lastUpdated = Updated(DateTime.parse(Instant.ofEpochMilli(employee.lastUpdated.dateTime.getMillis).toString))
+      )
+    }
+  }
 }

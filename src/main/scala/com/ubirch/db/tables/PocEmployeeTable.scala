@@ -74,6 +74,8 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       querySchema[PocEmployee]("poc_manager.poc_employee_table").join(
         querySchema[PocAdmin]("poc_manager.poc_admin_table")).on {
         case (pe, pa) => pe.pocId == pa.pocId
+      }.filter {
+        case (_, pa) => pa.id == lift(criteria.adminId)
       }.map(_._1)
     }
 

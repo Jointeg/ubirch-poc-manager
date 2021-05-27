@@ -78,7 +78,7 @@ object ModelCreationHelper {
     tenantId: TenantId,
     name: String = getRandomString,
     surname: String = getRandomString,
-    email: String = getRandomString,
+    email: String = getRandomString + "@test.de",
     mobilePhone: String = getRandomString,
     webIdentRequired: Boolean = true,
     webIdentInitiateId: Option[UUID] = None,
@@ -164,14 +164,16 @@ object ModelCreationHelper {
   def createPocEmployee(
     employeeId: UUID = UUID.randomUUID(),
     pocId: UUID = UUID.randomUUID(),
-    tenantId: TenantId = tenantId): PocEmployee = {
+    tenantId: TenantId = tenantId,
+    name: String = "Hans",
+    email: String = getRandomString + "@test.de"): PocEmployee = {
     PocEmployee(
       employeeId,
       pocId,
       tenantId,
-      "Hans",
+      name,
       "Welsich",
-      s"${employeeId.toString}@test.de"
+      email
     )
   }
 
