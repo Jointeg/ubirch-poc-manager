@@ -35,11 +35,11 @@ trait PocAuditLogging extends AuditLogging {
   override def auditLoggerName: String = super.auditLoggerName
 
   def logAuditWithTenantContext(msg: String, tenantContext: TenantAdminContext): Unit = {
-    logAuditEventInfo(msg, v("tenantAdminId", tenantContext.userId), v("tenantId", tenantContext.tenantId))
+    logAuditEventInfo(msg + s": tenantAdminId ${tenantContext.userId}; tenantId: ${tenantContext.tenantId}")
   }
 
   def logAuditWithSuperAdminContext(msg: String, superAdminContext: SuperAdminContext): Unit = {
-    logAuditEventInfo(msg, v("superAdminId", superAdminContext.userId))
+    logAuditEventInfo(msg + s": superAdminId ${superAdminContext.userId}")
   }
 
 }
