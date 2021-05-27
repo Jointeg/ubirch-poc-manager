@@ -54,4 +54,11 @@ class PocEmployeeRepositoryMock extends PocEmployeeRepository {
 
   override def deletePocEmployee(employeeId: UUID): Task[Unit] =
     Task(pocEmployeeDatastore.remove(employeeId))
+
+  override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]] =
+    Task {
+      pocEmployeeDatastore.collect {
+        case (_, pocEmployee: PocEmployee) if pocEmployee.certifyUserId.contains(certifyUserId) => pocEmployee
+      }.headOption
+    }
 }

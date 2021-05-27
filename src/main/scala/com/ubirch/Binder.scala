@@ -25,8 +25,13 @@ import com.ubirch.services.keycloak.users.{
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
-import com.ubirch.services.poc.employee.{ CsvProcessPocEmployee, CsvProcessPocEmployeeImpl }
 import com.ubirch.services.poc.util.{ ImageLoader, ImageLoaderImpl }
+import com.ubirch.services.poc.employee.{
+  CsvProcessPocEmployee,
+  CsvProcessPocEmployeeImpl,
+  PocEmployeeService,
+  PocEmployeeServiceImpl
+}
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.teamdrive.{
@@ -208,6 +213,9 @@ class Binder extends AbstractModule {
   def ImageLoader: ScopedBindingBuilder =
     bind(classOf[ImageLoader]).to(classOf[ImageLoaderImpl])
 
+  def PocEmployeeService: ScopedBindingBuilder =
+    bind(classOf[PocEmployeeService]).to(classOf[PocEmployeeServiceImpl])
+
   override def configure(): Unit = {
     Config
     PocConfig
@@ -272,6 +280,7 @@ class Binder extends AbstractModule {
     TeamDriveClientConfig
     CsvProcessPocEmployee
     ImageLoader
+    PocEmployeeService
     ()
   }
 }
