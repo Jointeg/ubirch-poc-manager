@@ -84,7 +84,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPocAdmin.externalId),
-      validatePocTypeForAdminRow(pocType, csvPocAdmin.pocType, pocConfig.pocTypeEndpointMap),
+      validateMapContainsStringKey(pocType, csvPocAdmin.pocType, pocConfig.pocTypeEndpointMap),
       validateString(pocName, csvPocAdmin.pocName),
       pocAddress,
       validatePhone(phone, csvPocAdmin.pocPhone),

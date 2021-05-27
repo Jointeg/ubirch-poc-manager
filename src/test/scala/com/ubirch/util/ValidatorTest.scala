@@ -322,36 +322,6 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     }
   }
 
-  "Validate poc type for admin row" should {
-
-    val map = Map("test_api" -> "xxx", "test_app" -> "yyy", "123_xxx" -> "zzz")
-    "validate valid" in {
-      val validated = validateMapContainsStringKey(dataSchemaId, "test1_app", map)
-      assert(validated.isValid)
-    }
-
-    "validate error if string is empty" in {
-      val validated = validateMapContainsStringKey(dataSchemaId, "12", map)
-      assert(validated.isInvalid)
-      validated
-        .leftMap(_.toList.mkString(comma))
-        .leftMap { error =>
-          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
-        }
-    }
-
-    "validate error if map doesn't contain string" in {
-      val validated = validateMapContainsStringKey(dataSchemaId, "test_api", map)
-      assert(validated.isInvalid)
-      validated
-        .leftMap(_.toList.mkString(comma))
-        .leftMap { error =>
-          assert(error == noAdminAllowedError)
-        }
-    }
-
-  }
-
   "Validator StringOption" should {
 
     "validate String Option valid if not empty" in {

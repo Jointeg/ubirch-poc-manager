@@ -35,7 +35,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         Left(line + columnSeparator +
           s"the number of column ${cols.length} is invalid. should be ${pocHeaderColsOrder.length}.")
     }
-
   }
 
   val headerColOrder: Array[String] = pocHeaderColsOrder
