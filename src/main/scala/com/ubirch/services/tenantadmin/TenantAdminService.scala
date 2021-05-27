@@ -235,11 +235,14 @@ class DefaultTenantAdminService @Inject() (
   override def remove2faToken(pocAdminId: UUID): Task[Either[Remove2faTokenError, Unit]] =
     for {
       pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-      _ <- pocAdmin match {
-        case Some(pa) => Task.unit
-        case None => Task.unit
+      result <- pocAdmin match {
+        case Some(pa) => pa.certifyUserId match {
+          case Some(certifyUserId) => keycloakUserService.remove2faToken(certifyUserId, CertifyKeycloak).map(_ => ().asRight)
+          case None => Task.pure(Remove2faTokenError.MissingCertifyUserId(pocAdminId).asLeft)
+        }
+        case None => Task.pure(Remove2faTokenError.PocAdminNotFound(pocAdminId).asLeft)
       }
-    } yield ().asRight
+    } yield result
 }
 
 sealed trait CreateWebIdentInitiateIdErrors
@@ -278,4 +281,5 @@ object SwitchActiveError {
 sealed trait Remove2faTokenError
 object Remove2faTokenError {
   case class PocAdminNotFound(id: UUID) extends Remove2faTokenError
+  case class MissingCertifyUserId(id: UUID) extends Remove2faTokenError
 }
