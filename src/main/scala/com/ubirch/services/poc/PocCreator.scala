@@ -194,7 +194,7 @@ class PocCreatorImpl @Inject() (
         case Right(pocAndStatus) => pocAndStatus
         case Left(error) =>
           val errorMsg =
-            s"failed to download and store pocLogo: ${pocAndStatus.poc.id}, ${pocAndStatus.poc.logoUrl.getOrElse("")}, $error"
+            s"failed to download and store pocLogo: ${pocAndStatus.poc.logoUrl.getOrElse("")}, $error"
           PocCreator.throwError(pocAndStatus, errorMsg)
       }
     } else Task(pocAndStatus)
