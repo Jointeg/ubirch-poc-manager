@@ -2,6 +2,7 @@ package com.ubirch.services.poc
 
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.UnitTestBase
+import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
 
@@ -10,7 +11,6 @@ import java.util.UUID
 class CsvProcessPocTest extends UnitTestBase {
 
   private val pocId = UUID.randomUUID()
-
   // header has wrong names
   private val invalidHeader =
     "poc_id*;poc_type*;poc_name*;poc_178street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
@@ -30,6 +30,7 @@ class CsvProcessPocTest extends UnitTestBase {
        |${pocId.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   private val tenant = createTenant()
+  private val tenantContext = TenantAdminContext(UUID.randomUUID(), tenant.id.value.asJava())
 
   "ProcessPoc" should {
     "create poc and pocStatus" in {
@@ -39,7 +40,7 @@ class CsvProcessPocTest extends UnitTestBase {
         val pocStatusRepository = injector.get[PocStatusRepository]
 
         (for {
-          result <- processPoc.createListOfPoCs(validCsv, tenant)
+          result <- processPoc.createListOfPoCs(validCsv, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           poc = pocs.head
           pocStatusOpt <- pocStatusRepository.getPocStatus(poc.id)
@@ -58,7 +59,7 @@ class CsvProcessPocTest extends UnitTestBase {
         val pocRepository = injector.get[PocRepository]
 
         (for {
-          result <- processPoc.createListOfPoCs(invalidHeader, tenant)
+          result <- processPoc.createListOfPoCs(invalidHeader, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
         } yield {
           result.left.get.shouldBe("poc_id* didn't equal expected header external_id*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,data_schema_id*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
@@ -73,7 +74,7 @@ class CsvProcessPocTest extends UnitTestBase {
         val pocRepository = injector.get[PocRepository]
 
         (for {
-          result <- processPoc.createListOfPoCs(validHeaderButBadCsvRows, tenant)
+          result <- processPoc.createListOfPoCs(validHeaderButBadCsvRows, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
         } yield {
           assert(result.isLeft)

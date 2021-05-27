@@ -9,9 +9,11 @@ import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
 import org.scalatra.{ ActionResult, BadRequest, NotFound }
 
+import java.util.UUID
 import scala.util.{ Either, Failure, Left, Right, Success }
 
 object EndpointHelpers extends LazyLogging {
+
   def retrieveTenantFromToken(token: Token)(tenantRepository: TenantRepository): Task[Either[String, Tenant]] = {
     token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
       case Some(roleName) =>
@@ -38,3 +40,8 @@ object EndpointHelpers extends LazyLogging {
     }
   }
 }
+
+trait UserContext { val userId: UUID }
+case class SuperAdminContext(userId: UUID)
+case class TenantAdminContext(userId: UUID, tenantId: UUID) extends UserContext
+case class PocAdminContext(userId: UUID, tenantId: UUID, pocId: UUID, pocAdminId: UUID) extends UserContext

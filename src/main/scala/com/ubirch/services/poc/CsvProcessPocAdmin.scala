@@ -2,20 +2,25 @@ package com.ubirch.services.poc
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
+import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
 import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus, PocStatus }
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocAdminCsvParser
-import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, comma }
+import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import monix.execution.Scheduler
 
 import javax.inject.{ Inject, Singleton }
 
 trait CsvProcessPocAdmin {
-  def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]]
+  def createListOfPoCsAndAdmin(
+    csv: String,
+    tenant: Tenant,
+    tenantContext: TenantAdminContext): Task[Either[String, Unit]]
 }
 
 @Singleton
@@ -27,15 +32,19 @@ class CsvProcessPocAdminImpl @Inject() (
   pocStatusRepository: PocStatusRepository,
   pocAdminStatusRepository: PocAdminStatusRepository)(implicit val scheduler: Scheduler)
   extends CsvProcessPocAdmin
-  with LazyLogging {
+  with LazyLogging
+  with PocAuditLogging {
 
   private val pocAdminCsvParser = new PocAdminCsvParser(pocConfig)
 
-  def createListOfPoCsAndAdmin(csv: String, tenant: Tenant): Task[Either[String, Unit]] = {
+  def createListOfPoCsAndAdmin(
+    csv: String,
+    tenant: Tenant,
+    tenantContext: TenantAdminContext): Task[Either[String, Unit]] = {
     pocAdminCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
       val r = parsingResult.map {
         case Right(rowResult) =>
-          storePocAndStatus(rowResult.poc, rowResult.pocAdmin, rowResult.csvRow)
+          storePocAndStatus(rowResult.poc, rowResult.pocAdmin, rowResult.csvRow, tenantContext: TenantAdminContext)
         case Left(csvRow) =>
           Task(Some(csvRow))
       }
@@ -49,7 +58,11 @@ class CsvProcessPocAdminImpl @Inject() (
     }
   }
 
-  private def storePocAndStatus(poc: Poc, pocAdmin: PocAdmin, csvRow: String): Task[Option[String]] = {
+  private def storePocAndStatus(
+    poc: Poc,
+    pocAdmin: PocAdmin,
+    csvRow: String,
+    tenantContext: TenantAdminContext): Task[Option[String]] = {
     val pocStatus = PocStatus.init(poc)
     val pocAdminStatus = PocAdminStatus.init(pocAdmin, poc)
     QuillMonixJdbcContext.withTransaction {
@@ -59,6 +72,9 @@ class CsvProcessPocAdminImpl @Inject() (
         _ <- pocAdminRepository.createPocAdmin(pocAdmin)
         _ <- pocAdminStatusRepository.createStatus(pocAdminStatus)
       } yield {
+        logAuditWithTenantContext(
+          s"created poc and status with id ${poc.id} and pocAdmin and status with id ${pocAdmin.id}",
+          tenantContext)
         None
       }
     }.onErrorHandle { e =>

@@ -34,33 +34,33 @@ case class PocStatus(
   created: Created = Created(DateTime.now())
 ) {
   override def toString: String = {
-    s"pocId:$pocId\n" +
-      s"certifyRoleCreated:$certifyRoleCreated\n" +
-      s"certifyGroupCreated:$certifyGroupCreated\n" +
-      s"certifyGroupRoleAssigned:$certifyGroupRoleAssigned\n" +
-      s"adminGroupCreated:$adminGroupCreated\n" +
-      s"adminRoleAssigned:$adminRoleAssigned\n" +
-      s"employeeGroupCreated:$employeeGroupCreated\n" +
-      s"employeeRoleAssigned:$employeeRoleAssigned\n" +
-      s"deviceRoleCreated:$deviceRoleCreated\n" +
-      s"deviceGroupCreated:$deviceGroupCreated\n" +
-      s"deviceGroupRoleAssigned:$deviceGroupRoleAssigned\n" +
-      s"deviceCreated:$deviceCreated\n" +
-      s"assignedDataSchemaGroup:$assignedDataSchemaGroup\n" +
-      s"assignedTrustedPocGroup:$assignedTrustedPocGroup\n" +
-      s"assignedDeviceGroup:$assignedDeviceGroup\n" +
-      s"clientCertRequired:$clientCertRequired\n" +
-      s"orgUnitCertIdCreated:$orgUnitCertCreated\n" +
-      s"clientCertCreated:$clientCertCreated\n" +
-      s"clientCertProvided:$clientCertProvided\n" +
-      s"logoRequired:$logoRequired\n" +
-      s"logoReceived:$logoReceived\n" +
-      s"logoStored:$logoStored\n" +
-      s"goClientProvided:$goClientProvided\n" +
-      s"certApiProvided:$certifyApiProvided\n" +
-      s"errorMessage:$errorMessage\n" +
-      s"lastUpdated:$lastUpdated\n" +
-      s"created:$created"
+    s"pocId: $pocId\n" +
+      s"certifyRoleCreated: $certifyRoleCreated\n" +
+      s"certifyGroupCreated: $certifyGroupCreated\n" +
+      s"certifyGroupRoleAssigned: $certifyGroupRoleAssigned\n" +
+      s"adminGroupCreated: $adminGroupCreated\n" +
+      s"adminRoleAssigned: $adminRoleAssigned\n" +
+      s"employeeGroupCreated: $employeeGroupCreated\n" +
+      s"employeeRoleAssigned: $employeeRoleAssigned\n" +
+      s"deviceRoleCreated: $deviceRoleCreated\n" +
+      s"deviceGroupCreated: $deviceGroupCreated\n" +
+      s"deviceGroupRoleAssigned: $deviceGroupRoleAssigned\n" +
+      s"deviceCreated: $deviceCreated\n" +
+      s"assignedDataSchemaGroup: $assignedDataSchemaGroup\n" +
+      s"assignedTrustedPocGroup: $assignedTrustedPocGroup\n" +
+      s"assignedDeviceGroup: $assignedDeviceGroup\n" +
+      s"clientCertRequired: $clientCertRequired\n" +
+      s"orgUnitCertIdCreated: $orgUnitCertCreated\n" +
+      s"clientCertCreated: $clientCertCreated\n" +
+      s"clientCertProvided: $clientCertProvided\n" +
+      s"logoRequired: $logoRequired\n" +
+      s"logoReceived: $logoReceived\n" +
+      s"logoStored: $logoStored\n" +
+      s"goClientProvided: $goClientProvided\n" +
+      s"certApiProvided: $certifyApiProvided\n" +
+      s"errorMessage: $errorMessage\n" +
+      s"lastUpdated: $lastUpdated\n" +
+      s"created: $created"
   }
 }
 

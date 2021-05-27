@@ -1,6 +1,7 @@
 package com.ubirch.services.superadmin
 
 import com.ubirch.ModelCreationHelper.{ createTenant, createTenantRequest }
+import com.ubirch.controllers.SuperAdminContext
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.keycloak.group.GroupId
@@ -19,7 +20,7 @@ import java.util.UUID
 class SuperAdminServiceSpec extends UnitTestBase {
 
   private val tenantRequest = createTenantRequest()
-
+  private val superAdminContext = SuperAdminContext(UUID.randomUUID())
   "SuperAdminService" should {
 
     "create tenant with shared cert required successfully" in {
@@ -27,7 +28,7 @@ class SuperAdminServiceSpec extends UnitTestBase {
         val superAdminSvc = injector.get[SuperAdminService]
         val tenantRepo = injector.get[TenantRepository]
         val r = superAdminSvc
-          .createTenant(tenantRequest)
+          .createTenant(tenantRequest, superAdminContext)
           .runSyncUnsafe()
         r.isRight shouldBe true
         val t = tenantRepo.getTenant(r.right.get).runSyncUnsafe()
@@ -42,7 +43,7 @@ class SuperAdminServiceSpec extends UnitTestBase {
         val tenantRepo = injector.get[TenantRepository]
         val request = tenantRequest.copy(sharedAuthCertRequired = false)
         val r = superAdminSvc
-          .createTenant(request)
+          .createTenant(request, superAdminContext)
           .runSyncUnsafe()
         r.isRight shouldBe true
         val t = tenantRepo.getTenant(r.right.get).runSyncUnsafe()
@@ -67,13 +68,14 @@ class SuperAdminServiceSpec extends UnitTestBase {
             mock[TeamDriveService],
             mock[PocConfig],
             keycloakHelperMock)
-        assertThrows[TenantCreationException](superAdminSvc.createTenant(tenantRequest).runSyncUnsafe())
+        assertThrows[TenantCreationException](superAdminSvc.createTenant(
+          tenantRequest,
+          superAdminContext).runSyncUnsafe())
       }
     }
 
     "should throw exception on org cert creation failure" in {
       withInjector { injector =>
-        val aesEncryption = injector.get[AESEncryption]
         val repo = injector.get[TenantRepository]
         val certHandlerMock = mock[CertHandler]
 
@@ -93,13 +95,14 @@ class SuperAdminServiceSpec extends UnitTestBase {
             mock[TeamDriveService],
             mock[PocConfig],
             keycloakHelperMock)
-        assertThrows[TenantCreationException](superAdminSvc.createTenant(tenantRequest).runSyncUnsafe())
+        assertThrows[TenantCreationException](superAdminSvc.createTenant(
+          tenantRequest,
+          superAdminContext).runSyncUnsafe())
       }
     }
 
     "should throw exception on org unit cert creation failure" in {
       withInjector { injector =>
-        val aesEncryption = injector.get[AESEncryption]
         val repo = injector.get[TenantRepository]
         val certHandlerMock = mock[CertHandler]
         val teamDriveServiceMock = mock[TeamDriveService]
@@ -122,14 +125,12 @@ class SuperAdminServiceSpec extends UnitTestBase {
 
     "should throw exception on shared auth cert creation failure" in {
       withInjector { injector =>
-        val aesEncryption = injector.get[AESEncryption]
         val repo = injector.get[TenantRepository]
         val certHandlerMock = mock[CertHandler]
         val teamDriveServiceMock = mock[TeamDriveService]
         val pocConfigMock = mock[PocConfig]
 
         val tenant = createTenant()
-        val orgUnitCertId = UUID.randomUUID()
 
         when(certHandlerMock.createSharedAuthCertificate(any[UUID], any[UUID], any[CertIdentifier]))
           .thenReturn(Task(Left(CertificateCreationError("error"))))
