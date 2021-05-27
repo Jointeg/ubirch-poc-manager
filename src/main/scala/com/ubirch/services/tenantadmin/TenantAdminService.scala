@@ -1,8 +1,18 @@
 package com.ubirch.services.tenantadmin
+
+import cats.syntax.either._
 import cats.Applicative
 import cats.data.EitherT
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, TenantAdminContext }
+import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository }
+import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
+import com.ubirch.models.tenant._
+import com.ubirch.services.CertifyKeycloak
+import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.tenantadmin.TenantAdminService.ActivateSwitch
+import com.ubirch.controllers.AddDeviceCreationTokenRequest
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
@@ -12,7 +22,7 @@ import monix.eval.Task
 
 import java.util.UUID
 import javax.inject.Inject
-import scala.language.higherKinds
+import scala.language.{ existentials, higherKinds }
 
 trait TenantAdminService {
 
@@ -30,6 +40,7 @@ trait TenantAdminService {
   def getPocAdminStatus(
     tenant: Tenant,
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
+  def switchActiveForPocAdmin(pocAdminId: UUID, active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
 
   def addDeviceCreationToken(
     tenant: Tenant,
@@ -37,15 +48,45 @@ trait TenantAdminService {
     addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
 }
 
+object TenantAdminService {
+  sealed trait ActivateSwitch
+
+  object ActivateSwitch {
+    def fromIntUnsafe(activate: Int): ActivateSwitch = {
+      activate match {
+        case 0 => Deactivate
+        case 1 => Activate
+        case _ => throw IllegalValueForActivateSwitch(activate)
+      }
+    }
+
+    def toBoolean(activateSwitch: ActivateSwitch): Boolean =
+      activateSwitch match {
+        case Activate   => true
+        case Deactivate => false
+      }
+  }
+
+  case object Activate extends ActivateSwitch
+
+  case object Deactivate extends ActivateSwitch
+
+  case class IllegalValueForActivateSwitch(value: Int)
+    extends IllegalArgumentException(s"Illegal value for ActivateSwitch: $value. Expected 0 or 1")
+}
+
 class DefaultTenantAdminService @Inject() (
   aesEncryption: AESEncryption,
   pocRepository: PocRepository,
   tenantRepository: TenantRepository,
   pocAdminRepository: PocAdminRepository,
-  pocAdminStatusRepository: PocAdminStatusRepository)
+  pocAdminStatusRepository: PocAdminStatusRepository,
+  keycloakUserService: KeycloakUserService,
+  quillMonixJdbcContext: QuillMonixJdbcContext)
   extends TenantAdminService
   with PocAuditLogging
   with LazyLogging {
+
   private val simplifiedDeviceInfoCSVHeader = """"externalId"; "pocName"; "deviceId""""
 
   override def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String] = {
@@ -167,6 +208,28 @@ class DefaultTenantAdminService @Inject() (
     } yield GetPocAdminStatusResponse.fromPocAdminStatus(pocAdminStatus)).value
   }
 
+  override def switchActiveForPocAdmin(
+    pocAdminId: UUID,
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
+    quillMonixJdbcContext.withTransaction {
+      for {
+        pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+        result <- pocAdmin match {
+          case Some(pa) => pa.certifyUserId match {
+              case Some(certifyUserId) =>
+                (active match {
+                  case TenantAdminService.Activate   => keycloakUserService.activate(certifyUserId, CertifyKeycloak)
+                  case TenantAdminService.Deactivate => keycloakUserService.deactivate(certifyUserId, CertifyKeycloak)
+                }) >> pocAdminRepository.updatePocAdmin(pa.copy(active = ActivateSwitch.toBoolean(active))).map(_ =>
+                  ().asRight)
+              case None => Task.pure(SwitchActiveError.MissingCertifyUserId(pocAdminId).asLeft)
+            }
+          case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
+        }
+      } yield result
+    }
+  }
+
   def addDeviceCreationToken(
     tenant: Tenant,
     tenantContext: TenantAdminContext,
@@ -211,4 +274,10 @@ object GetPocAdminStatusErrors {
   case class PocAdminNotFound(pocAdminId: UUID) extends GetPocAdminStatusErrors
   case class PocAdminAssignedToDifferentTenant(tenantId: TenantId, pocAdminId: UUID) extends GetPocAdminStatusErrors
   case class PocAdminStatusNotFound(pocAdminId: UUID) extends GetPocAdminStatusErrors
+}
+
+sealed trait SwitchActiveError
+object SwitchActiveError {
+  case class PocAdminNotFound(id: UUID) extends SwitchActiveError
+  case class MissingCertifyUserId(id: UUID) extends SwitchActiveError
 }

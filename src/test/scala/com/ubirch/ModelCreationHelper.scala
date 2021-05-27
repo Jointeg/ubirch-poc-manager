@@ -83,22 +83,24 @@ object ModelCreationHelper {
     webIdentId: Option[String] = None,
     certifyUserId: Option[UUID] = None,
     dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
-    status: Status = Pending
+    status: Status = Pending,
+    active: Boolean = true
   ): PocAdmin = {
     PocAdmin(
-      pocAdminId,
-      pocId,
-      tenantId,
-      name,
-      surname,
-      email,
-      mobilePhone,
-      webIdentRequired,
-      webIdentInitiateId,
-      webIdentId,
-      certifyUserId,
-      dateOfBirth,
-      status
+      id = pocAdminId,
+      pocId = pocId,
+      tenantId = tenantId,
+      name = name,
+      surname = surname,
+      email = email,
+      mobilePhone = mobilePhone,
+      webIdentRequired = webIdentRequired,
+      webIdentInitiateId = webIdentInitiateId,
+      webIdentId = webIdentId,
+      certifyUserId = certifyUserId,
+      dateOfBirth = dateOfBirth,
+      status = status,
+      active = active
     )
   }
 

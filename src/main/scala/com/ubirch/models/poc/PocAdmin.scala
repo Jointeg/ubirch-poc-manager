@@ -19,6 +19,7 @@ case class PocAdmin(
   certifyUserId: Option[UUID],
   dateOfBirth: BirthDate,
   status: Status = Pending,
+  active: Boolean = true,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())
 )
