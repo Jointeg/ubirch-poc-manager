@@ -1,25 +1,22 @@
 package com.ubirch.services.tenantadmin
 
-import cats.syntax.either._
 import cats.Applicative
 import cats.data.EitherT
-import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository }
-import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
-import com.ubirch.models.tenant._
-import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.tenantadmin.TenantAdminService.ActivateSwitch
+import cats.syntax.either._
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
+import com.ubirch.db.tables.{PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository}
+import com.ubirch.models.poc.{PocAdmin, PocAdminStatus}
 import com.ubirch.models.tenant._
+import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
+import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.tenantadmin.TenantAdminService.ActivateSwitch
 import monix.eval.Task
 
 import java.util.UUID
 import javax.inject.Inject
-import scala.language.{ existentials, higherKinds }
+import scala.language.{existentials, higherKinds}
 
 trait TenantAdminService {
   def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String]
@@ -34,6 +31,8 @@ trait TenantAdminService {
     tenant: Tenant,
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
   def switchActiveForPocAdmin(pocAdminId: UUID, active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
+
+  def remove2faToken(pocAdminId: UUID): Task[Either[Remove2faTokenError, Unit]]
 
   def addDeviceCreationToken(tenant: Tenant, addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
 }
@@ -185,28 +184,6 @@ class DefaultTenantAdminService @Inject() (
     } yield GetPocAdminStatusResponse.fromPocAdminStatus(pocAdminStatus)).value
   }
 
-  override def switchActiveForPocAdmin(
-    pocAdminId: UUID,
-    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
-    quillMonixJdbcContext.withTransaction {
-      for {
-        pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-        result <- pocAdmin match {
-          case Some(pa) => pa.certifyUserId match {
-              case Some(certifyUserId) =>
-                (active match {
-                  case TenantAdminService.Activate   => keycloakUserService.activate(certifyUserId, CertifyKeycloak)
-                  case TenantAdminService.Deactivate => keycloakUserService.deactivate(certifyUserId, CertifyKeycloak)
-                }) >> pocAdminRepository.updatePocAdmin(pa.copy(active = ActivateSwitch.toBoolean(active))).map(_ =>
-                  ().asRight)
-              case None => Task.pure(SwitchActiveError.MissingCertifyUserId(pocAdminId).asLeft)
-            }
-          case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
-        }
-      } yield result
-    }
-  }
-
   def addDeviceCreationToken(
     tenant: Tenant,
     addDeviceTokenRequest: AddDeviceCreationTokenRequest): Task[Either[String, Unit]] = {
@@ -221,6 +198,34 @@ class DefaultTenantAdminService @Inject() (
       }
   }
 
+  override def switchActiveForPocAdmin(
+    pocAdminId: UUID,
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
+    quillMonixJdbcContext.withTransaction {for {
+      pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+      result <- pocAdmin match {
+        case Some(pa) => pa.certifyUserId match {
+          case Some(certifyUserId) =>
+            (active match {
+              case TenantAdminService.Activate => keycloakUserService.activate(certifyUserId, CertifyKeycloak)
+              case TenantAdminService.Deactivate => keycloakUserService.deactivate(certifyUserId, CertifyKeycloak)
+            }) >> pocAdminRepository.updatePocAdmin(pa.copy(active = ActivateSwitch.toBoolean(active)))
+              .map(_ => ().asRight)
+          case None => Task.pure(SwitchActiveError.MissingCertifyUserId(pocAdminId).asLeft)
+        }
+        case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
+      }
+    } yield result}
+  }
+
+  override def remove2faToken(pocAdminId: UUID): Task[Either[Remove2faTokenError, Unit]] =
+    for {
+      pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+      _ <- pocAdmin match {
+        case Some(pa) => Task.unit
+        case None => Task.unit
+      }
+    } yield ().asRight
 }
 
 sealed trait CreateWebIdentInitiateIdErrors
@@ -253,4 +258,9 @@ sealed trait SwitchActiveError
 object SwitchActiveError {
   case class PocAdminNotFound(id: UUID) extends SwitchActiveError
   case class MissingCertifyUserId(id: UUID) extends SwitchActiveError
+}
+
+sealed trait Remove2faTokenError
+object Remove2faTokenError {
+  case class PocAdminNotFound(id: UUID) extends Remove2faTokenError
 }

@@ -14,10 +14,10 @@ import java.util.UUID
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
 import scala.collection.JavaConverters.{
-  iterableAsScalaIterableConverter,
   mapAsJavaMapConverter,
   seqAsJavaListConverter
 }
+import scala.jdk.CollectionConverters._
 
 trait KeycloakUserService {
   /**
@@ -73,6 +73,8 @@ trait KeycloakUserService {
   def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
 
   def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
 }
 
 @Singleton
@@ -252,6 +254,21 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
       case None => Task.pure(s"user with name $id wasn't found".asLeft)
     }.onErrorHandle { ex =>
       val message = errorMessage(id, ex)
+      logger.error(message, ex)
+      message.asLeft
+    }
+
+  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    getUserById(UserId(id), instance).flatMap {
+      case Some(ur) => update(
+        id, {
+          ur.setRequiredActions(ur.getRequiredActions.asScala.filterNot(_ == UserRequiredAction.WEBAUTHN_REGISTER.toString).asJava)
+          ur
+        },
+        instance).map(_ => ().asRight)
+      case None => Task.pure(s"user with name $id wasn't found".asLeft)
+    }.onErrorHandle { ex =>
+      val message = "Could not remove "
       logger.error(message, ex)
       message.asLeft
     }
