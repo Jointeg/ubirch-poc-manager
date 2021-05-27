@@ -2,9 +2,9 @@ package com.ubirch.services.poc
 
 import com.ubirch.ModelCreationHelper.{ createTenant, pocTypeValue }
 import com.ubirch.UnitTestBase
+import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
 import com.ubirch.services.poc.util.CsvConstants.pocAdminHeaderLine
-import monix.eval.Task
 
 import java.util.UUID
 
@@ -30,6 +30,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
        |""".stripMargin
 
   private val tenant = createTenant()
+  private val tenantContext = TenantAdminContext(UUID.randomUUID(), tenant.id.value.asJava())
 
   "ProcessPoc" should {
     "create poc, admin and status" in {
@@ -41,7 +42,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
         val pocAdminStatusRepository = injector.get[PocAdminStatusRepository]
 
         (for {
-          result <- processPocAdmin.createListOfPoCsAndAdmin(validCsv, tenant)
+          result <- processPocAdmin.createListOfPoCsAndAdmin(validCsv, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           poc = pocs.head
           pocStatusOpt <- pocStatusRepository.getPocStatus(poc.id)
@@ -49,7 +50,6 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           pocAdmin = pocAdmins.head
           pocAdminStatusOpt <- pocAdminStatusRepository.getStatus(pocAdmin.id)
         } yield {
-
           assert(result.isRight)
           assert(pocs.length == 1)
           assert(pocStatusOpt.isDefined)
@@ -70,8 +70,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
         val pocAdminRepository = injector.get[PocAdminRepository]
 
         (for {
-          result <- processPocAdmin.createListOfPoCsAndAdmin(invalidHeader, tenant)
-          _ <- Task(println(result))
+          result <- processPocAdmin.createListOfPoCsAndAdmin(invalidHeader, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {
@@ -89,7 +88,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
         val pocAdminRepository = injector.get[PocAdminRepository]
 
         (for {
-          result <- processPocAdmin.createListOfPoCsAndAdmin(validHeaderButBadCsvRows, tenant)
+          result <- processPocAdmin.createListOfPoCsAndAdmin(validHeaderButBadCsvRows, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {

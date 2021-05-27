@@ -18,6 +18,7 @@ import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.services.tenantadmin.TenantAdminService.{ ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -140,10 +141,21 @@ class TenantAdminController @Inject() (
         bodyParam[String]("pocAdminId").description("ID of PocAdmin for which WebInitiateId will be created")
       )
 
+  val switchActiveOnPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Activate or deactivate PoC admin")
+      .summary("Activate or deactivate PoC admin")
+      .description("Activate or deactivate PoC admin")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+      .parameters(
+        queryParam[UUID]("id").description("PoC admin id"),
+        queryParam[Int]("isActive").description("Whether PoC Admin should be active, values: 1 for true, 0 for false.")
+      )
+
   post("/pocs/create", operation(createListOfPocs)) {
-    tenantAdminEndpoint("Create poc batch") { tenant =>
+    tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
       pocBatchHandler
-        .createListOfPoCs(request.body, tenant)
+        .createListOfPoCs(request.body, tenant, tenantContext)
         .map {
           case Right(_)  => Ok()
           case Left(csv) => Ok(csv)
@@ -172,18 +184,23 @@ class TenantAdminController @Inject() (
   }
 
   post("/deviceToken", operation(deviceToken)) {
-    tenantAdminEndpoint("Get all Devices for all PoCs of tenant") { tenant =>
-      tenantAdminService
-        .addDeviceCreationToken(tenant, Serialization.read[AddDeviceCreationTokenRequest](request.body))
-        .map {
-          case Right(_) => Ok()
-          case Left(errorMessage: String) =>
-            logger.error(s"failed to add deviceCreationToken $errorMessage")
-            InternalServerError("failed to device creation token update")
-        }.onErrorHandle { ex =>
-          logger.error(s"failed to add deviceCreationToken", ex)
-          InternalServerError("something went wrong on device creation token update")
-        }
+    tenantAdminEndpointWithUserContext("Add CREATE DEVICE and GET INFO token to tenant") {
+      (tenant, tenantAdminContext) =>
+        tenantAdminService
+          .addDeviceCreationToken(
+            tenant,
+            tenantAdminContext,
+            Serialization.read[AddDeviceCreationTokenRequest](request.body)
+          )
+          .map {
+            case Right(_) => Ok()
+            case Left(errorMessage: String) =>
+              logger.error(s"failed to add deviceCreationToken $errorMessage")
+              InternalServerError("failed to device creation token update")
+          }.onErrorHandle { ex =>
+            logger.error(s"failed to add deviceCreationToken", ex)
+            InternalServerError("something went wrong on device creation token update")
+          }
     }
   }
 
@@ -312,6 +329,28 @@ class TenantAdminController @Inject() (
     }
   }
 
+  put("/poc-admin/:id/active/:isActive", operation(switchActiveOnPocAdmin)) {
+    tenantAdminEndpoint("Switch active flag for PoC Admin") { _ =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+        (for {
+          switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
+          r <- tenantAdminService.switchActiveForPocAdmin(pocAdminId, switch)
+            .map {
+              case Left(e) => e match {
+                  case SwitchActiveError.PocAdminNotFound(id) =>
+                    NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
+                  case SwitchActiveError.MissingCertifyUserId(id) =>
+                    Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                }
+              case Right(_) => Ok("")
+            }
+        } yield r).onErrorRecover {
+          case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
+        }
+      }
+    }
+  }
+
   private def tenantAdminEndpoint(description: String)(logic: Tenant => Task[ActionResult]) = {
     authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult(description) { _ => _ =>
@@ -322,6 +361,25 @@ class TenantAdminController @Inject() (
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))
         }
+      }
+    }
+  }
+
+  private def tenantAdminEndpointWithUserContext(description: String)(logic: (
+    Tenant,
+    TenantAdminContext) => Task[ActionResult]) = {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult(description) { _ => _ =>
+        retrieveTenantFromToken(token)(tenantTable)
+          .map((token.ownerIdAsUUID, _)).flatMap {
+            case (Success(userId), Right(tenant: Tenant)) =>
+              logic(tenant, TenantAdminContext(userId, tenant.id.value.asJava()))
+            case (Success(_), Left(errorMsg: String)) =>
+              logger.error(errorMsg)
+              Task(BadRequest(NOK.authenticationError(errorMsg)))
+            case (Failure(uuid), Right(_)) =>
+              Task(BadRequest(NOK.badRequest(s"Owner ID $uuid in token is not in UUID format")))
+          }
       }
     }
   }

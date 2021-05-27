@@ -10,6 +10,7 @@ import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
 
 import java.security.Key
+import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 
 @Singleton
@@ -247,6 +248,47 @@ object FakeToken {
       |  "email": "carlos.sanchez@ubirch.com"
       |}""".stripMargin
 
+  def pocAdmin(id: UUID): String =
+    s"""
+       |{
+       |  "exp": 1718338181,
+       |  "iat": 1604336381,
+       |  "jti": "2fb1c61d-2113-4b8e-9432-97c28c697b98",
+       |  "iss": "https://id.dev.ubirch.com/auth/realms/ubirch-default-realm",
+       |  "aud": "account",
+       |  "sub": "${id.toString}",
+       |  "typ": "Bearer",
+       |  "azp": "ubirch-2.0-user-access",
+       |  "session_state": "f334122a-4693-4826-a2c0-546391886eda",
+       |  "acr": "1",
+       |  "allowed-origins": [
+       |    "http://localhost:9101",
+       |    "https://console.dev.ubirch.com"
+       |  ],
+       |  "realm_access": {
+       |    "roles": [
+       |      "poc-admin"
+       |    ]
+       |  },
+       |  "resource_access": {
+       |    "account": {
+       |      "roles": [
+       |        "poc-admin"
+       |      ]
+       |    }
+       |  },
+       |  "scope": "fav_color profile email",
+       |  "email_verified": true,
+       |  "fav_fruit": [
+       |    "/OWN_DEVICES_carlos.sanchez@ubirch.com"
+       |  ],
+       |  "name": "Carlos Sanchez",
+       |  "preferred_username": "carlos.sanchez@ubirch.com",
+       |  "given_name": "Carlos",
+       |  "family_name": "Sanchez",
+       |  "email": "carlos.sanchez@ubirch.com"
+       |}""".stripMargin
+
   val userNoPrincipal: String =
     """
       |{
@@ -366,6 +408,7 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
   val superAdminOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
   val userWithDoubleRoles: FakeToken =
     fakeToken(FakeToken.certifyHeader, FakeToken.userWithDoubleRoles, CertifyKeycloak)
+  def pocAdmin(certifyId: UUID): FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.pocAdmin(certifyId), CertifyKeycloak)
   val userNoPrincipal: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.userNoPrincipal, CertifyKeycloak)
   val admin: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.admin, CertifyKeycloak)
 

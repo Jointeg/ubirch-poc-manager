@@ -12,13 +12,21 @@ import com.ubirch.db.tables.PocAdminRepository
 import com.ubirch.models.NOK
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.poc.employee.{ CsvContainedErrors, CsvProcessPocEmployee, UnknownTenant }
+import com.ubirch.services.poc.employee.{
+  CsvContainedErrors,
+  CsvProcessPocEmployee,
+  EmptyCSVError,
+  HeaderParsingError,
+  PocAdminNotInCompletedStatus,
+  UnknownCsvParsingError,
+  UnknownTenant
+}
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import org.scalatra.{ ActionResult, NotFound, Ok, ScalatraBase }
+import org.scalatra.{ ActionResult, BadRequest, InternalServerError, NotFound, Ok, ScalatraBase }
 
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
@@ -73,6 +81,18 @@ class PocAdminController @Inject() (
           case Left(UnknownTenant(tenantId)) =>
             logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
             NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
+          case Left(PocAdminNotInCompletedStatus(pocAdminId)) =>
+            logger.error(s"Could not create employees because PocAdmin is not in completed state: $pocAdminId")
+            BadRequest(NOK.badRequest("PoC Admin is not fully setup"))
+          case Left(HeaderParsingError(msg)) =>
+            logger.error(s"Error has occurred during header parsing: $msg sent by ${pocAdmin.id}")
+            BadRequest(NOK.badRequest("Header in CSV file is not correct"))
+          case Left(EmptyCSVError(msg)) =>
+            logger.error(s"Empty CSV file received from ${pocAdmin.id} PoC Admin: $msg")
+            BadRequest(NOK.badRequest("Empty CSV body"))
+          case Left(UnknownCsvParsingError(msg)) =>
+            logger.error(s"Unexpected error has occurred while parsing the CSV: $msg")
+            InternalServerError(NOK.serverError("Unknown error has happened while parsing the CSV file"))
           case Left(CsvContainedErrors(errors)) => Ok(errors)
           case Right(_)                         => Ok()
         }
