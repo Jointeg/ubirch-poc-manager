@@ -44,4 +44,3 @@ object EndpointHelpers extends LazyLogging {
 trait UserContext { val userId: UUID }
 case class SuperAdminContext(userId: UUID)
 case class TenantAdminContext(userId: UUID, tenantId: UUID) extends UserContext
-case class PocAdminContext(userId: UUID, tenantId: UUID, pocId: UUID, pocAdminId: UUID) extends UserContext

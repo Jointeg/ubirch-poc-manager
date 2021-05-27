@@ -1,5 +1,6 @@
 package com.ubirch
 
+import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{ PocEmployeeRepositoryMock, PocEmployeeStatusRepositoryMock, PocRepositoryMock }
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
@@ -198,6 +199,10 @@ object ModelCreationHelper {
       _ <- employeeTable.createPocEmployee(employee)
       _ <- statusTable.createStatus(status)
     } yield ()).runSyncUnsafe()
+  }
+
+  def getTenantAdminContext(tenant: Tenant): TenantAdminContext = {
+    TenantAdminContext(UUID.randomUUID(), tenant.id.value.asJava())
   }
 
 }

@@ -9,8 +9,9 @@ import com.ubirch.models.poc.{ Completed, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployeeStatus
 import com.ubirch.models.tenant.{ Tenant, TenantId }
 import com.ubirch.services.poc.employee.parsers.{ PocEmployeeCsvParseResult, PocEmployeeCsvParser }
-import com.ubirch.services.poc.util.{ CsvConstants, EmptyCsvException, HeaderCsvException }
 import com.ubirch.services.poc.util.CsvConstants.columnSeparator
+import com.ubirch.services.poc.util.{ CsvConstants, EmptyCsvException, HeaderCsvException }
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import java.util.UUID
@@ -28,7 +29,8 @@ class CsvProcessPocEmployeeImpl @Inject() (
   employeeStatusRepository: PocEmployeeStatusRepository,
   quillMonixJdbcContext: QuillMonixJdbcContext
 ) extends CsvProcessPocEmployee
-  with LazyLogging {
+  with LazyLogging
+  with PocAuditLogging {
 
   private val pocEmployeeCsvParser = new PocEmployeeCsvParser()
 
@@ -45,7 +47,7 @@ class CsvProcessPocEmployeeImpl @Inject() (
         case exception                       => Left(UnknownCsvParsingError(exception.getMessage))
       })
       errorCsvRows <- EitherT.liftF(parsingResult.toList.traverseFilter {
-        case Right(rowResult) => storePocEmployee(rowResult, pocAdmin.pocId, tenant)
+        case Right(rowResult) => storePocEmployee(rowResult, pocAdmin, tenant)
         case Left(csvRow)     => Task(Some(csvRow))
       })
       response <- EitherT.fromEither[Task](createResponse(errorCsvRows))
@@ -62,18 +64,22 @@ class CsvProcessPocEmployeeImpl @Inject() (
 
   private def storePocEmployee(
     pocEmployeeCsvParseResult: PocEmployeeCsvParseResult,
-    pocId: UUID,
+    pocAdmin: PocAdmin,
     tenant: Tenant): Task[Option[String]] = {
-    val initializedPocEmployee =
-      pocEmployeeCsvParseResult.pocEmployeeFromCsv.toFullPocEmployeeRepresentation(pocId, tenant.id)
-    val initialPocEmployeeStatus = PocEmployeeStatus(initializedPocEmployee.id)
+    val employee =
+      pocEmployeeCsvParseResult.pocEmployeeFromCsv.toFullPocEmployeeRepresentation(pocAdmin.pocId, tenant.id)
+    val employeeStatus = PocEmployeeStatus(employee.id)
     quillMonixJdbcContext.withTransaction {
       for {
-        _ <- employeeRepository.createPocEmployee(initializedPocEmployee)
-        _ <- employeeStatusRepository.createStatus(initialPocEmployeeStatus)
-      } yield None
+        _ <- employeeRepository.createPocEmployee(employee)
+        _ <- employeeStatusRepository.createStatus(employeeStatus)
+      } yield {
+        logAuditByPocAdmin(s"created pocEmployee and status with ${employee.id}", pocAdmin)
+        None
+      }
     }.onErrorHandle { e =>
-      logger.error(s"fail to create poc employee and status. poc: $pocId, pocEmployee: ${pocEmployeeCsvParseResult.pocEmployeeFromCsv}, error: ${e.getMessage}")
+      logger.error(
+        s"fail to create poc employee and status. poc: $pocAdmin.pocId, pocEmployee: ${pocEmployeeCsvParseResult.pocEmployeeFromCsv}, error: ${e.getMessage}")
       Some(
         pocEmployeeCsvParseResult.csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
     }

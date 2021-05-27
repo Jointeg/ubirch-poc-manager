@@ -18,8 +18,6 @@ trait PocRepository {
 
   def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit]
 
-  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit]
-
   def updatePoc(poc: Poc): Task[UUID]
 
   def deletePoc(pocId: UUID): Task[Unit]
@@ -95,16 +93,6 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
       for {
         _ <- run(createPocQuery(poc))
         _ <- run(createPocStatusQuery(pocStatus))
-      } yield {
-        ()
-      }
-    }
-
-  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] =
-    transaction {
-      for {
-        _ <- run(updatePocQuery(poc))
-        _ <- run(updatePocStatusQuery(pocStatus))
       } yield {
         ()
       }

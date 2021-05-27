@@ -1,5 +1,12 @@
 package com.ubirch.services.tenantadmin
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocAdminStatus, createTenant }
+import com.ubirch.ModelCreationHelper.{
+  createPoc,
+  createPocAdmin,
+  createPocAdminStatus,
+  createTenant,
+  getTenantAdminContext
+}
+import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.tenant.{ Tenant, UpdateWebIdentIdRequest }
 import com.ubirch.services.tenantadmin.UpdateWebIdentIdError.{
@@ -31,6 +38,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val pocAdmin =
           createPocAdmin(pocId = poc.id, tenantId = tenant.id).copy(webIdentInitiateId = Some(webIdentInitiateId))
         val pocAdminStatus = createPocAdminStatus(pocAdmin, poc)
+
         val r = for {
           _ <- pocTable.createPoc(poc)
           _ <- pocAdminTable.createPocAdmin(pocAdmin)
@@ -41,8 +49,10 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val result = await(
           tenantAdminService.updateWebIdentId(
             tenant,
+            getTenantAdminContext(tenant),
             UpdateWebIdentIdRequest(pocAdmin.id, webIdentId, webIdentInitiateId)),
-          5.seconds)
+          5.seconds
+        )
         result shouldBe Right(())
 
         val pocAdminAfterUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
@@ -78,8 +88,10 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val result = await(
           tenantAdminService.updateWebIdentId(
             tenant,
+            getTenantAdminContext(tenant),
             UpdateWebIdentIdRequest(unknownPocAdminId, webIdentId, webIdentInitiateId)),
-          5.seconds)
+          5.seconds
+        )
 
         result shouldBe Left(UnknownPocAdmin(unknownPocAdminId))
         val pocAdminAfterFailedUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
@@ -117,8 +129,10 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val result = await(
           tenantAdminService.updateWebIdentId(
             tenant1,
+            getTenantAdminContext(tenant1),
             UpdateWebIdentIdRequest(pocAdmin2.id, webIdentId, webIdentInitiateId)),
-          5.seconds)
+          5.seconds
+        )
 
         result shouldBe Left(PocAdminIsNotAssignedToRequestingTenant(pocAdmin2.tenantId, tenant1.id))
         val pocAdminAfterFailedUpdate1 = await(pocAdminTable.getPocAdmin(pocAdmin1.id), 5.seconds)
@@ -154,8 +168,10 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val result = await(
           tenantAdminService.updateWebIdentId(
             tenant,
+            getTenantAdminContext(tenant),
             UpdateWebIdentIdRequest(pocAdmin.id, webIdentId, unknownWebIdentInitialId)),
-          5.seconds)
+          5.seconds
+        )
 
         result shouldBe Left(DifferentWebIdentInitialId(unknownWebIdentInitialId, tenant, pocAdmin))
         val pocAdminAfterFailedUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
@@ -184,8 +200,10 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         val result = await(
           tenantAdminService.updateWebIdentId(
             tenant,
+            getTenantAdminContext(tenant),
             UpdateWebIdentIdRequest(pocAdmin.id, webIdentId, webIdentInitiateId)),
-          5.seconds)
+          5.seconds
+        )
 
         result shouldBe Left(NotExistingPocAdminStatus(pocAdmin.id))
         val pocAdminAfterFailedUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)

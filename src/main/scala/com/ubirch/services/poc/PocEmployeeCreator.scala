@@ -5,6 +5,7 @@ import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
 import com.ubirch.models.poc.{ Completed, Poc, Processing, Status }
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import javax.inject.Inject
@@ -36,7 +37,8 @@ class PocEmployeeCreatorImpl @Inject() (
   employeeStatusTable: PocEmployeeStatusRepository,
   quillMonixJdbcContext: QuillMonixJdbcContext)
   extends PocEmployeeCreator
-  with LazyLogging {
+  with LazyLogging
+  with PocAuditLogging {
 
   import certifyHelper._
 
@@ -67,7 +69,6 @@ class PocEmployeeCreatorImpl @Inject() (
 
     val creationResult = for {
       employee <- updateStatusOfEmployee(triple.employee, Processing)
-      _ <- employeeTable.updatePocEmployee(employee)
       eAs1 <- createCertifyUserWithRequiredActions(EmployeeAndStatus(employee, triple.status))
       eAs2 <- addGroupsToCertifyUser(eAs1, triple.poc)
       eAs3 <- sendEmailToCertifyUser(eAs2)
@@ -78,7 +79,7 @@ class PocEmployeeCreatorImpl @Inject() (
       _ <- quillMonixJdbcContext.withTransaction {
         updateStatusOfEmployee(eAs.employee, Completed) >>
           employeeStatusTable.updateStatus(eAs.status)
-      }
+      }.map(_ => logAuditEventInfo(s"updated poc employee and status with id ${eAs.employee.id} by service"))
     } yield {
       logger.info(s"finished to create poc employee with id ${eAs.employee.id}")
       Right(eAs.status)
@@ -104,10 +105,13 @@ class PocEmployeeCreatorImpl @Inject() (
     ex match {
       case pace: PocEmployeeCreationError =>
         (for {
-          _ <- quillMonixJdbcContext.withTransaction {
-            employeeTable.updatePocEmployee(pace.employeeAndStatus.employee) >>
-              employeeStatusTable.updateStatus(pace.employeeAndStatus.status)
-          }
+          _ <- quillMonixJdbcContext
+            .withTransaction {
+              employeeTable.updatePocEmployee(pace.employeeAndStatus.employee) >>
+                employeeStatusTable.updateStatus(pace.employeeAndStatus.status)
+            }.map(_ =>
+              logAuditEventInfo(
+                s"updated poc employee and status with id ${pace.employeeAndStatus.employee.id} by service"))
         } yield {
           logAndGetLeft(s"poc employee creation failed; ${pace.employeeAndStatus.status}, error: ${pace.message}")
         }).onErrorHandle { ex =>
