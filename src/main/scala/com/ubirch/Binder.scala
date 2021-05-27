@@ -26,6 +26,7 @@ import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierServ
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
 import com.ubirch.services.poc.employee.{ CsvProcessPocEmployee, CsvProcessPocEmployeeImpl }
+import com.ubirch.services.poc.util.{ ImageLoader, ImageLoaderImpl }
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.teamdrive.{
@@ -159,6 +160,9 @@ class Binder extends AbstractModule {
   def PocEmployeeStatusRepository: ScopedBindingBuilder =
     bind(classOf[PocEmployeeStatusRepository]).to(classOf[PocEmployeeStatusTable])
 
+  def PocLogoRepository: ScopedBindingBuilder =
+    bind(classOf[PocLogoRepository]).to(classOf[PocLogoTable])
+
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
   def DeviceCreator: ScopedBindingBuilder = bind(classOf[DeviceCreator]).to(classOf[DeviceCreatorImpl])
@@ -201,6 +205,9 @@ class Binder extends AbstractModule {
   def CsvProcessPocEmployee: ScopedBindingBuilder =
     bind(classOf[CsvProcessPocEmployee]).to(classOf[CsvProcessPocEmployeeImpl])
 
+  def ImageLoader: ScopedBindingBuilder =
+    bind(classOf[ImageLoader]).to(classOf[ImageLoaderImpl])
+
   override def configure(): Unit = {
     Config
     PocConfig
@@ -238,6 +245,7 @@ class Binder extends AbstractModule {
     PocAdminStatusRepository
     PocEmployeeRepository
     PocEmployeeStatusRepository
+    PocLogoRepository
     TenantRepository
     AESKeyProvider
     AESEncryption
@@ -263,6 +271,7 @@ class Binder extends AbstractModule {
     TeamDriverService
     TeamDriveClientConfig
     CsvProcessPocEmployee
+    ImageLoader
     ()
   }
 }
