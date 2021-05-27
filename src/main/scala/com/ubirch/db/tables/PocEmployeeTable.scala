@@ -26,6 +26,8 @@ trait PocEmployeeRepository {
   def deletePocEmployee(employeeId: UUID): Task[Unit]
 
   def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]]
+
+  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]]
 }
 
 class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocEmployeeRepository {
@@ -99,6 +101,11 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
     }
   }
 
+  private def getByCertifyUserIdQuery(certifyUserId: UUID) =
+    quote {
+      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.certifyUserId == lift(Option(certifyUserId)))
+    }
+
   def createPocEmployee(employee: PocEmployee): Task[UUID] =
     run(createPocEmployeeQuery(employee)).map(_ => employee.id)
 
@@ -132,4 +139,7 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
         PaginatedResult(total, employees)
       }
     }
+
+  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]] =
+    run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
 }
