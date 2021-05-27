@@ -205,20 +205,6 @@ class DefaultTenantAdminService @Inject() (
     } yield GetPocAdminStatusResponse.fromPocAdminStatus(pocAdminStatus)).value
   }
 
-  def addDeviceCreationToken(
-    tenant: Tenant,
-    addDeviceTokenRequest: AddDeviceCreationTokenRequest): Task[Either[String, Unit]] = {
-
-    aesEncryption
-      .encrypt(addDeviceTokenRequest.token)(EncryptedDeviceCreationToken(_))
-      .flatMap { encryptedDeviceCreationToken: EncryptedDeviceCreationToken =>
-        val updatedTenant = tenant.copy(deviceCreationToken = Some(encryptedDeviceCreationToken))
-        tenantRepository
-          .updateTenant(updatedTenant).map(Right(_))
-          .onErrorHandle { ex: Throwable => Left("something went wrong on device token creation") }
-      }
-  }
-
   override def switchActiveForPocAdmin(
     pocAdminId: UUID,
     active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
