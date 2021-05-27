@@ -9,7 +9,7 @@ import com.ubirch.models.poc.{ Completed, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployeeStatus
 import com.ubirch.models.tenant.{ Tenant, TenantId }
 import com.ubirch.services.poc.employee.parsers.{ PocEmployeeCsvParseResult, PocEmployeeCsvParser }
-import com.ubirch.services.poc.util.CsvConstants
+import com.ubirch.services.poc.util.{ CsvConstants, EmptyCsvException, HeaderCsvException }
 import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import monix.eval.Task
 
@@ -38,7 +38,12 @@ class CsvProcessPocEmployeeImpl @Inject() (
     (for {
       _ <- verifyPocAdminStatus(pocAdmin)
       tenant <- EitherT.fromOptionF(tenantRepository.getTenant(pocAdmin.tenantId), UnknownTenant(pocAdmin.tenantId))
-      parsingResult <- EitherT.liftF(pocEmployeeCsvParser.parseList(csv, tenant))
+      parsingResult <- EitherT(pocEmployeeCsvParser.parseList(csv, tenant).map(result =>
+        result.asRight[CreateEmployeeFromCsvError]).onErrorHandle {
+        case HeaderCsvException(msg: String) => Left(HeaderParsingError(msg))
+        case EmptyCsvException(msg: String)  => Left(EmptyCSVError(msg))
+        case exception                       => Left(UnknownCsvParsingError(exception.getMessage))
+      })
       errorCsvRows <- EitherT.liftF(parsingResult.toList.traverseFilter {
         case Right(rowResult) => storePocEmployee(rowResult, pocAdmin.pocId, tenant)
         case Left(csvRow)     => Task(Some(csvRow))
@@ -78,7 +83,7 @@ class CsvProcessPocEmployeeImpl @Inject() (
     if (errorCsvRows.isEmpty) {
       Right(())
     } else {
-      val csvRows = CsvConstants.pocEmployeeHeaderLine :+ errorCsvRows
+      val csvRows = CsvConstants.pocEmployeeHeaderLine +: errorCsvRows
       Left(CsvContainedErrors(csvRows.mkString(CsvConstants.carriageReturn)))
     }
   }
@@ -88,3 +93,6 @@ sealed trait CreateEmployeeFromCsvError
 case class PocAdminNotInCompletedStatus(pocAdminId: UUID) extends CreateEmployeeFromCsvError
 case class UnknownTenant(tenantId: TenantId) extends CreateEmployeeFromCsvError
 case class CsvContainedErrors(csvErrors: String) extends CreateEmployeeFromCsvError
+case class HeaderParsingError(msg: String) extends CreateEmployeeFromCsvError
+case class EmptyCSVError(msg: String) extends CreateEmployeeFromCsvError
+case class UnknownCsvParsingError(msg: String) extends CreateEmployeeFromCsvError
