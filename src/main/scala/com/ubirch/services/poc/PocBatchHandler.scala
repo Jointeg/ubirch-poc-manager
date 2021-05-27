@@ -1,6 +1,7 @@
 package com.ubirch.services.poc
 
 import com.google.inject.Inject
+import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.util.CsvConstants.{
   columnSeparator,
@@ -14,7 +15,7 @@ import monix.execution.Scheduler
 import javax.inject.Singleton
 
 trait PocBatchHandlerTrait {
-  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]]
+  def createListOfPoCs(csv: String, tenant: Tenant, tenantContext: TenantAdminContext): Task[Either[String, Unit]]
 }
 
 @Singleton
@@ -25,7 +26,7 @@ scheduler: Scheduler)
   /**
     * This method dispatches processes for a Poc csv file and a PocAdmin csv file based on the number of csv header.
     */
-  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] =
+  def createListOfPoCs(csv: String, tenant: Tenant, tenantContext: TenantAdminContext): Task[Either[String, Unit]] =
     CsvHelper.openFile(csv).use { source =>
       val lines = source.getLines()
 
@@ -33,9 +34,9 @@ scheduler: Scheduler)
         val header = lines.next()
         val colNum = header.split(columnSeparator).map(_.trim).length
         if (colNum >= pocAdminHeaderColOrderLength) {
-          processPocAdmin.createListOfPoCsAndAdmin(csv, tenant)
+          processPocAdmin.createListOfPoCsAndAdmin(csv, tenant, tenantContext)
         } else if (colNum >= pocHeaderColOrderLength) {
-          processPoc.createListOfPoCs(csv, tenant)
+          processPoc.createListOfPoCs(csv, tenant, tenantContext)
         } else {
           Task(Left(s"$header; the number of header($colNum) is not enough."))
         }

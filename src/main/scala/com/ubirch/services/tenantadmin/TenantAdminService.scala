@@ -3,6 +3,8 @@ package com.ubirch.services.tenantadmin
 import cats.syntax.either._
 import cats.Applicative
 import cats.data.EitherT
+import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, TenantAdminContext }
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository }
 import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
@@ -15,6 +17,7 @@ import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocR
 import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.services.auth.AESEncryption
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import java.util.UUID
@@ -39,7 +42,10 @@ trait TenantAdminService {
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
   def switchActiveForPocAdmin(pocAdminId: UUID, active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
 
-  def addDeviceCreationToken(tenant: Tenant, addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
+  def addDeviceCreationToken(
+    tenant: Tenant,
+    tenantContext: TenantAdminContext,
+    addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
 }
 
 object TenantAdminService {
@@ -77,7 +83,10 @@ class DefaultTenantAdminService @Inject() (
   pocAdminStatusRepository: PocAdminStatusRepository,
   keycloakUserService: KeycloakUserService,
   quillMonixJdbcContext: QuillMonixJdbcContext)
-  extends TenantAdminService {
+  extends TenantAdminService
+  with PocAuditLogging
+  with LazyLogging {
+
   private val simplifiedDeviceInfoCSVHeader = """"externalId"; "pocName"; "deviceId""""
 
   override def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String] = {
@@ -223,6 +232,7 @@ class DefaultTenantAdminService @Inject() (
 
   def addDeviceCreationToken(
     tenant: Tenant,
+    tenantContext: TenantAdminContext,
     addDeviceTokenRequest: AddDeviceCreationTokenRequest): Task[Either[String, Unit]] = {
 
     aesEncryption
@@ -230,8 +240,10 @@ class DefaultTenantAdminService @Inject() (
       .flatMap { encryptedDeviceCreationToken: EncryptedDeviceCreationToken =>
         val updatedTenant = tenant.copy(deviceCreationToken = Some(encryptedDeviceCreationToken))
         tenantRepository
-          .updateTenant(updatedTenant).map(Right(_))
-          .onErrorHandle { ex: Throwable => Left("something went wrong on device token creation") }
+          .updateTenant(updatedTenant).map { _ =>
+            logAuditWithTenantContext("updated tenant with new deviceCreationToken", tenantContext)
+            Right(())
+          }
       }
   }
 
