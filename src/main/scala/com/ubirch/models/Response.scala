@@ -34,8 +34,11 @@ object NOK {
   final val AUTHENTICATION_ERROR = 'AuthenticationError
   final val RESOURCE_NOT_FOUND_ERROR = 'ResourceNotFoundError
   final val BAD_REQUEST = 'BadRequest
+  final val CONFLICT = 'Conflict
 
   def badRequest(errorMessage: String): NOK = NOK(BAD_REQUEST, errorMessage)
+
+  def conflict(errorMessage: String): NOK = NOK(CONFLICT, errorMessage)
 
   def serverError(errorMessage: String): NOK = NOK(SERVER_ERROR, errorMessage)
 

@@ -18,6 +18,7 @@ import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.services.tenantadmin.TenantAdminService.{ ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -138,6 +139,17 @@ class TenantAdminController @Inject() (
       .authorizations()
       .parameters(
         bodyParam[String]("pocAdminId").description("ID of PocAdmin for which WebInitiateId will be created")
+      )
+
+  val switchActiveOnPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Activate or deactivate PoC admin")
+      .summary("Activate or deactivate PoC admin")
+      .description("Activate or deactivate PoC admin")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+      .parameters(
+        queryParam[UUID]("id").description("PoC admin id"),
+        queryParam[Int]("isActive").description("Whether PoC Admin should be active, values: 1 for true, 0 for false.")
       )
 
   post("/pocs/create", operation(createListOfPocs)) {
@@ -307,6 +319,28 @@ class TenantAdminController @Inject() (
           case Left(PocAdminStatusNotFound(pocAdminId)) =>
             logger.error(s"Could not find PoC Admin Status for PoC Admin with id $pocAdminId")
             NotFound(NOK.resourceNotFoundError("Could not find Poc Admin Status assigned to provided PoC Admin"))
+        }
+      }
+    }
+  }
+
+  put("/poc-admin/:id/active/:isActive", operation(switchActiveOnPocAdmin)) {
+    tenantAdminEndpoint("Switch active flag for PoC Admin") { _ =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+        (for {
+          switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
+          r <- tenantAdminService.switchActiveForPocAdmin(pocAdminId, switch)
+            .map {
+              case Left(e) => e match {
+                  case SwitchActiveError.PocAdminNotFound(id) =>
+                    NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
+                  case SwitchActiveError.MissingCertifyUserId(id) =>
+                    Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                }
+              case Right(_) => Ok("")
+            }
+        } yield r).onErrorRecover {
+          case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
         }
       }
     }
