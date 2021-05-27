@@ -31,7 +31,7 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.{ read, write }
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
-import org.scalatra.{ BadRequest, Ok }
+import org.scalatra.{ BadRequest, Conflict, Ok }
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -802,7 +802,7 @@ class TenantAdminControllerSpec
          |}
          |""".stripMargin
 
-    "create new WebInitiateId each time it is called" in {
+    "create WebInitiateId on first time and return conflict on second time" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val pocTable = injector.get[PocRepository]
@@ -835,16 +835,15 @@ class TenantAdminControllerSpec
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
           body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
         ) {
-          status shouldBe Ok().status
-          val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
+          status shouldBe Conflict().status
           body shouldBe
-            s"""{"webInitiateId":"${updatedPocAdmin.value.webIdentInitiateId.value.toString}"}""".stripMargin
+            s"""{"webInitiateId":"${firstWebIdentInitiatedId.toString}"}""".stripMargin
         }
 
         val secondWebIdentInitiatedId =
           await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value.webIdentInitiateId.value
 
-        firstWebIdentInitiatedId shouldNot be(secondWebIdentInitiatedId)
+        firstWebIdentInitiatedId shouldBe secondWebIdentInitiatedId
       }
     }
   }

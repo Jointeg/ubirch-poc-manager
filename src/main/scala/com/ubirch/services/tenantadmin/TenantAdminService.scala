@@ -19,14 +19,18 @@ import javax.inject.Inject
 import scala.language.{existentials, higherKinds}
 
 trait TenantAdminService {
+
   def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String]
+
   def updateWebIdentId(
     tenant: Tenant,
     request: UpdateWebIdentIdRequest): Task[Either[UpdateWebIdentIdError, Unit]]
+
   def createWebIdentInitiateId(
     tenant: Tenant,
     createWebIdentInitiateIdRequest: CreateWebIdentInitiateIdRequest)
     : Task[Either[CreateWebIdentInitiateIdErrors, UUID]]
+
   def getPocAdminStatus(
     tenant: Tenant,
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
@@ -98,20 +102,30 @@ class DefaultTenantAdminService @Inject() (
     def assignWebIdentInitiateId(
       pocAdminId: UUID,
       webIdentInitiateId: UUID): EitherT[Task, CreateWebIdentInitiateIdErrors, Unit] = {
-      EitherT(pocAdminRepository.assignWebIdentInitiateId(pocAdminId, webIdentInitiateId).map(_ =>
-        Right(())).onErrorRecover {
-        case exception: Exception => Left(PocAdminRepositoryError(exception.getMessage))
-      })
+      EitherT(
+        pocAdminRepository
+          .assignWebIdentInitiateId(pocAdminId, webIdentInitiateId)
+          .map(_ => Right(()))
+          .onErrorRecover {
+            case exception: Exception => Left(PocAdminRepositoryError(exception.getMessage))
+          })
     }
+
+    def isWebIdentAlreadyInitiated(admin: PocAdmin): EitherT[Task, WebIdentAlreadyInitiated, Unit] =
+      EitherT(
+        if (admin.webIdentInitiateId.isEmpty) Task(Right(()))
+        else Task(Left(WebIdentAlreadyInitiated(admin.webIdentInitiateId.get)))
+      )
 
     (for {
       pocAdmin <- getPocAdmin(createWebIdentInitiateIdRequest.pocAdminId, PocAdminNotFound)
-      _ <- isWebIdentRequired(tenant, pocAdmin)
       _ <-
         isPocAdminAssignedToTenant[Task, CreateWebIdentInitiateIdErrors](tenant, pocAdmin)(
           PocAdminAssignedToDifferentTenant(
             tenant.id,
             pocAdmin.id))
+      _ <- isWebIdentAlreadyInitiated(pocAdmin)
+      _ <- isWebIdentRequired(tenant, pocAdmin)
       webIdentInitiateId = UUID.randomUUID()
       _ <- assignWebIdentInitiateId(pocAdmin.id, webIdentInitiateId)
     } yield webIdentInitiateId).value
@@ -233,6 +247,7 @@ object CreateWebIdentInitiateIdErrors {
   case class PocAdminNotFound(pocAdminId: UUID) extends CreateWebIdentInitiateIdErrors
   case class PocAdminAssignedToDifferentTenant(tenantId: TenantId, pocAdminId: UUID)
     extends CreateWebIdentInitiateIdErrors
+  case class WebIdentAlreadyInitiated(webIdentInitiateId: UUID) extends CreateWebIdentInitiateIdErrors
   case class WebIdentNotRequired(tenantId: TenantId, pocAdminId: UUID) extends CreateWebIdentInitiateIdErrors
   case class PocAdminRepositoryError(msg: String) extends CreateWebIdentInitiateIdErrors
 }

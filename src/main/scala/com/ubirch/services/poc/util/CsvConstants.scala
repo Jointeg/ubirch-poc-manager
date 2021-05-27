@@ -29,6 +29,9 @@ object CsvConstants {
   val technicianMobilePhone = "technician_mobile_phone*"
   val technicianDateOfBirth = "technician_date_of_birth*"
   val webIdentRequired = "web_ident_required*"
+  val firstName = "first_name"
+  val lastName = "last_name"
+  val email = "email"
 
   val columnSeparator = ";"
   val comma = ","
@@ -70,8 +73,17 @@ object CsvConstants {
     )
   val pocAdminHeaderColOrderLength: Int = pocAdminHeaderColsOrder.length
 
+  val pocEmployeeHeaderColsOrder: Array[String] = Array(
+    firstName,
+    lastName,
+    email
+  )
+
+  val pocEmployeeHeaderColsOrderLength: Int = pocEmployeeHeaderColsOrder.length
+
   val pocHeaderLine: String = pocHeaderColsOrder.mkString(columnSeparator)
   val pocAdminHeaderLine: String = pocAdminHeaderColsOrder.mkString(columnSeparator)
+  val pocEmployeeHeaderLine: String = pocEmployeeHeaderColsOrder.mkString(columnSeparator)
 
   def headerErrorMsg(col: String, header: String): String =
     s"$col didn't equal expected header $header; the right header order would be: ${pocHeaderColsOrder.mkString(comma)}"

@@ -97,6 +97,7 @@ object Token {
   final val USER = 'USER
   final val SUPER_ADMIN = Symbol("super-admin")
   final val TENANT_ADMIN = Symbol("tenant-admin")
+  final val POC_ADMIN = Symbol("poc-admin")
   def apply(value: String): Token = new Token(value, JNothing, sub = "", name = "", email = "", roles = Nil)
 }
 

@@ -3,6 +3,7 @@ package com.ubirch.controllers
 import cats.data.{ NonEmptyChain, Validated }
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
+import com.ubirch.controllers.EndpointHelpers.retrieveTenantFromToken
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -19,7 +20,6 @@ import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService 
 import com.ubirch.services.poc.PocBatchHandlerImpl
 import com.ubirch.services.tenantadmin.TenantAdminService.{ ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.services.tenantadmin._
-import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -82,6 +82,12 @@ class TenantAdminController @Inject() (
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC", "Tenant-Admin")
+
+  val deviceToken: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[Paginated_OUT[Poc]]("update device creation token for tenant")
+      .summary("updated device creation token")
+      .description("receives a CREATE-THING and GET-INFO token and store it encrypted to the tenant object")
+      .tags("Tenant", "device", "token")
 
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[PocStatus]("retrieve PoC Status via pocId")
@@ -157,7 +163,27 @@ class TenantAdminController @Inject() (
     }
   }
 
-  post("/deviceToken", operation(createListOfPocs)) {
+  get("/pocs", operation(getPocs)) {
+    tenantAdminEndpoint("Get all PoCs for a tenant") { tenant =>
+      (for {
+        criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
+        pocs <- pocTable.getAllPocsByCriteria(criteria)
+      } yield Paginated_OUT(pocs.total, pocs.records))
+        .map(toJson)
+        .onErrorRecoverWith {
+          case ValidationError(e) =>
+            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
+              .toJson
+              .map(BadRequest(_))
+        }
+        .onErrorHandle { ex =>
+          InternalServerError(NOK.serverError(
+            s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
+        }
+    }
+  }
+
+  post("/deviceToken", operation(deviceToken)) {
     tenantAdminEndpoint("Get all Devices for all PoCs of tenant") { tenant =>
       tenantAdminService
         .addDeviceCreationToken(tenant, Serialization.read[AddDeviceCreationTokenRequest](request.body))
@@ -185,26 +211,6 @@ class TenantAdminController @Inject() (
             }
         }
       }
-    }
-  }
-
-  get("/pocs", operation(getPocs)) {
-    tenantAdminEndpoint("Get all PoCs for a tenant") { tenant =>
-      (for {
-        criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
-        pocs <- pocTable.getAllPocsByCriteria(criteria)
-      } yield Paginated_OUT(pocs.total, pocs.records))
-        .map(toJson)
-        .onErrorRecoverWith {
-          case ValidationError(e) =>
-            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
-              .toJson
-              .map(BadRequest(_))
-        }
-        .onErrorHandle { ex =>
-          InternalServerError(NOK.serverError(
-            s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
-        }
     }
   }
 
@@ -237,6 +243,14 @@ class TenantAdminController @Inject() (
         case Left(PocAdminRepositoryError(msg)) =>
           logger.error(s"Error has occurred while operating on PocAdmin table: $msg")
           InternalServerError(NOK.serverError("Could not create PoC admin WebInitiateId"))
+        case Left(WebIdentAlreadyInitiated(webIdentInitiateId)) =>
+          Try(write[CreateWebInitiateIdResponse](CreateWebInitiateIdResponse(webIdentInitiateId))) match {
+            case Success(json) => Conflict(json)
+            case Failure(ex) =>
+              val errorMsg = s"Could not parse ${CreateWebInitiateIdResponse.getClass.getSimpleName} to json"
+              logger.error(errorMsg, ex)
+              InternalServerError(NOK.serverError(errorMsg))
+          }
       }
     }
   }
@@ -335,7 +349,7 @@ class TenantAdminController @Inject() (
   private def tenantAdminEndpoint(description: String)(logic: Tenant => Task[ActionResult]) = {
     authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult(description) { _ => _ =>
-        retrieveTenantFromToken(token).flatMap {
+        retrieveTenantFromToken(token)(tenantTable).flatMap {
           case Right(tenant: Tenant) =>
             logic(tenant)
           case Left(errorMsg: String) =>
@@ -354,18 +368,6 @@ class TenantAdminController @Inject() (
         logger.error(errorMsg(id), ex)
         Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
 
-    }
-  }
-
-  private def retrieveTenantFromToken(token: Token): Task[Either[String, Tenant]] = {
-
-    token.roles.find(_.name.startsWith(TENANT_GROUP_PREFIX)) match {
-      case Some(roleName) =>
-        tenantTable.getTenantByName(TenantName(roleName.name.stripPrefix(TENANT_GROUP_PREFIX))).map {
-          case Some(tenant) => Right(tenant)
-          case None         => Left(s"couldn't find tenant in db for ${roleName.name}")
-        }
-      case None => Task(Left("the user's token is missing a tenant role"))
     }
   }
 
