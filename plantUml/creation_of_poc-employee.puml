@@ -1,0 +1,22 @@
+@startuml
+
+box "Browser" #LightBlue
+actor       PocAdmin
+actor       PocEmployee
+participant "Poc Management App" as App
+end box
+
+box "KDO" #LightGreen
+participant "Poc Service" as PocService
+database "Keycloak Users" as Keycloak
+end box
+
+PocAdmin -> App: upload Poc-Employee .csv file
+App -> PocService: forward msg
+PocService -> Keycloak: create user
+Keycloak -> PocService: ACK
+
+Keycloak -> PocEmployee: invitation email
+PocEmployee -> Keycloak: verifies email, add password and 2FA (hardware token)
+
+@enduml

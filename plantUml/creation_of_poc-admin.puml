@@ -1,0 +1,42 @@
+@startuml
+
+box "Browser" #LightBlue
+actor       "Super Admin" as TenantAdmin
+actor       PocAdmin
+participant "Poc App" as App
+end box
+
+box "External"
+participant "WebIdent" as WebIdent
+participant "IdGard" as IdGard
+end box
+
+box "KDO" #LightGreen
+participant "Poc Service" as PocService
+database "Keycloak Users" as Keycloak
+end box
+
+TenantAdmin -> App: upload Poc-Admin-Batch .csv file
+App -> PocService: forward msg
+PocService -> App: ACK
+TenantAdmin -> App: trigger WebIdent
+App -> PocService: forward msg
+PocService -> App: TriggerWebIdentID
+
+TenantAdmin -> WebIdent: Trigger WebIdent process and add TriggerWebIdentID
+WebIdent -> PocAdmin: sends invitation link
+PocAdmin -> WebIdent: concludes WebIdent procedure
+WebIdent -> TenantAdmin: process finished notification Tenant-Admin
+WebIdent -> IdGard: stores related data to IdGard folder
+TenantAdmin -> WebIdent: verifies WebIdent result
+
+
+TenantAdmin -> App: verifies process with WebIdentSuccessID
+App -> PocService: forward msg
+PocService -> Keycloak: create user
+Keycloak -> PocService: ACK
+
+Keycloak -> PocAdmin: invitation email
+PocAdmin -> Keycloak: verifies email, adds a password and 2FA
+
+@enduml

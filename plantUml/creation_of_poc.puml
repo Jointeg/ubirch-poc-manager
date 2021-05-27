@@ -1,0 +1,61 @@
+@startuml
+
+box "Browser" #LightBlue
+actor SuperAdmin
+participant "POC Managment App" as App
+end box
+
+
+box "KDO" #LightGreen
+participant "Go Client" as GoClient
+participant "Certify Api Service" as CertifyApi
+participant "Poc Management Service" as PocService
+participant "Cert Manager" as CertManager
+participant "Keycloak User" as KeycloakU
+end box
+
+box "OTC" #LightYellow
+participant "Thing Api" as ThingApi
+participant "Keycloak Devices" as KeycloakD
+end box
+
+
+box "External" #fdcc9a
+participant "Id Gard" as IdGard
+participant "Any Service" as Any
+end box
+
+
+SuperAdmin -> App: upload Poc-Batch .csv file
+App -> PocService: forward msg
+
+PocService -> KeycloakU: create roles & groups Poc-X
+KeycloakU -> PocService: ACK
+
+PocService -> KeycloakD: create roles & groups Poc-X
+KeycloakD -> PocService: ACK
+
+PocService -> ThingApi: create new device
+ThingApi -> PocService: ACK(hwDeviceId)
+
+PocService -> KeycloakD: assign roles & groups to device
+KeycloakD -> PocService: ACK
+
+PocService -> CertManager: create X.509 cert
+CertManager -> PocService: ACK(cert)
+PocService -> IdGard: add X.509 cert to folder
+IdGard -> PocService: ACK
+
+PocService -> Any: get and store logo (optional)
+Any -> PocService: ACK(logo)
+
+PocService -> GoClient: POST info to GoClient
+GoClient -> PocService: ACK
+
+PocService -> CertifyApi: POST info to CertifyApi
+CertifyApi -> PocService: ACK
+
+PocService -> App: ACK
+App -> SuperAdmin: ACK
+
+@enduml
