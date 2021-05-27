@@ -231,9 +231,10 @@ class TenantAdminController @Inject() (
 
   post("/webident/initiate-id", operation(createWebInitiateId)) {
     import CreateWebIdentInitiateIdErrors._
-    tenantAdminEndpoint("Create web initiate id") { tenant =>
+    tenantAdminEndpointWithUserContext("Create web initiate id") { (tenant, tenantAdminContext) =>
       tenantAdminService.createWebIdentInitiateId(
         tenant,
+        tenantAdminContext,
         Serialization.read[CreateWebIdentInitiateIdRequest](request.body)).map {
         case Right(webInitiateId) => Ok(toJson(CreateWebInitiateIdResponse(webInitiateId)))
         case Left(PocAdminNotFound(pocAdminId)) =>
@@ -261,10 +262,11 @@ class TenantAdminController @Inject() (
   }
 
   post("/webident/id", operation(updateWebIdentId)) {
-    tenantAdminEndpoint("Update Webident identifier") { tenant =>
+    tenantAdminEndpointWithUserContext("Update Webident identifier") { (tenant, tenantAdminContext) =>
       import UpdateWebIdentIdError._
       tenantAdminService.updateWebIdentId(
         tenant,
+        tenantAdminContext,
         Serialization.read[UpdateWebIdentIdRequest](request.body)).map {
         case Right(_) => Ok("")
         case Left(UnknownPocAdmin(id)) =>
@@ -330,11 +332,11 @@ class TenantAdminController @Inject() (
   }
 
   put("/poc-admin/:id/active/:isActive", operation(switchActiveOnPocAdmin)) {
-    tenantAdminEndpoint("Switch active flag for PoC Admin") { _ =>
+    tenantAdminEndpointWithUserContext("Switch active flag for PoC Admin") { (_, tenantContext) =>
       getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
         (for {
           switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
-          r <- tenantAdminService.switchActiveForPocAdmin(pocAdminId, switch)
+          r <- tenantAdminService.switchActiveForPocAdmin(pocAdminId, tenantContext, switch)
             .map {
               case Left(e) => e match {
                   case SwitchActiveError.PocAdminNotFound(id) =>
@@ -368,13 +370,14 @@ class TenantAdminController @Inject() (
   private def tenantAdminEndpointWithUserContext(description: String)(logic: (
     Tenant,
     TenantAdminContext) => Task[ActionResult]) = {
+
     authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
       asyncResult(description) { _ => _ =>
         retrieveTenantFromToken(token)(tenantTable)
           .map((token.ownerIdAsUUID, _)).flatMap {
             case (Success(userId), Right(tenant: Tenant)) =>
               logic(tenant, TenantAdminContext(userId, tenant.id.value.asJava()))
-            case (Success(_), Left(errorMsg: String)) =>
+            case (_, Left(errorMsg: String)) =>
               logger.error(errorMsg)
               Task(BadRequest(NOK.authenticationError(errorMsg)))
             case (Failure(uuid), Right(_)) =>

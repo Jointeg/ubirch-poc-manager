@@ -41,7 +41,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
   private def validatePocAdminInfo(
     csvPocAdmin: PocAdminRow,
     pocV: AllErrorsOr[Poc]
-  ): AllErrorsOr[PocAdmin] =
+  ): AllErrorsOr[PocAdmin] = {
     (
       validateString(technicianName, csvPocAdmin.adminName),
       validateString(technicianSurname, csvPocAdmin.adminSurname),
@@ -75,6 +75,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
           )
         }
     }
+  }
 
   private def validatePoc(
     csvPocAdmin: PocAdminRow,
@@ -124,7 +125,6 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
             status = Pending
           )
         }
-
     }
 
   private def validatePocManager(csvPocAdmin: PocAdminRow): AllErrorsOr[PocManager] =

@@ -52,13 +52,6 @@ class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) exte
     }.map(_ => pocStatusTable.createPocStatus(pocStatus))
   }
 
-  override def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] = {
-    Task {
-      pocDatastore.update(poc.id, poc)
-    }.map(_ => pocStatusTable.updatePocStatus(pocStatus))
-
-  }
-
   override def getAllPocsByCriteria(pocCriteria: Criteria): Task[PaginatedResult[Poc]] =
     Task {
       val pocs = pocDatastore.filter { case (_, poc) => poc.tenantId == pocCriteria.tenantId }.values

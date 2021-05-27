@@ -250,7 +250,7 @@ class PocCreatorTest extends UnitTestBase {
           logoRequired = true,
           logoStored = Some(false),
           errorMessage =
-            Some(s"failed to download and store pocLogo: ${poc.id}, LogoURL(https://www.scala-lang.org), The url seems not to be image."),
+            Some(s"failed to download and store pocLogo: LogoURL(https://www.scala-lang.org), The url seems not to be image."),
           lastUpdated = pocStatus.lastUpdated,
           created = pocStatus.created
         )

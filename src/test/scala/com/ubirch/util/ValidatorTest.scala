@@ -6,13 +6,8 @@ import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.models.tenant.{ API, APP, Both }
 import com.ubirch.services.poc.util.CsvConstants._
-import com.ubirch.services.poc.util.ValidatorConstants.{
-  emptyStringError,
-  listDoesntContainStringError,
-  mapDoesntContainStringKeyError,
-  phoneValidationError
-}
 import com.ubirch.services.poc.util.ValidatorConstants
+import com.ubirch.services.poc.util.ValidatorConstants._
 import com.ubirch.services.util.Validator._
 import org.scalatest.prop.{ TableDrivenPropertyChecks, TableFor1 }
 
@@ -325,7 +320,6 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
           assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
         }
     }
-
   }
 
   "Validator StringOption" should {

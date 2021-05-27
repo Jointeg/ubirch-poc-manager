@@ -56,7 +56,7 @@ class CsvProcessPocImpl @Inject() (
         _ <- pocRepository.createPoc(poc)
         _ <- pocStatusRepository.createPocStatus(status)
       } yield {
-        logAuditWithTenantContext(s"created poc and status with ${poc.id} ", tenantContext)
+        logAuditByTenantAdmin(s"created poc and status with ${poc.id} ", tenantContext)
         None
       }
     }.onErrorHandle { e =>
