@@ -13,10 +13,7 @@ import org.keycloak.representations.idm.UserRepresentation
 import java.util.UUID
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
-import scala.collection.JavaConverters.{
-  mapAsJavaMapConverter,
-  seqAsJavaListConverter
-}
+import scala.collection.JavaConverters.{ mapAsJavaMapConverter, seqAsJavaListConverter }
 import scala.jdk.CollectionConverters._
 
 trait KeycloakUserService {
@@ -261,14 +258,15 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
     getUserById(UserId(id), instance).flatMap {
       case Some(ur) => update(
-        id, {
-          ur.setRequiredActions(ur.getRequiredActions.asScala.filterNot(_ == UserRequiredAction.WEBAUTHN_REGISTER.toString).asJava)
-          ur
-        },
-        instance).map(_ => ().asRight)
-      case None => Task.pure(s"user with name $id wasn't found".asLeft)
+          id, {
+            ur.setRequiredActions(
+              ur.getRequiredActions.asScala.filterNot(_ == UserRequiredAction.WEBAUTHN_REGISTER.toString).asJava)
+            ur
+          },
+          instance).map(_ => ().asRight)
+      case None => Task.pure(s"user with id $id wasn't found".asLeft)
     }.onErrorHandle { ex =>
-      val message = "Could not remove "
+      val message = s"Could not remove 2FA token: ${ex.getMessage}"
       logger.error(message, ex)
       message.asLeft
     }

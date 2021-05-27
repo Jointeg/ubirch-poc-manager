@@ -4,7 +4,7 @@ import cats.implicits._
 import com.ubirch.FakeTokenCreator
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.controllers.TenantAdminController.{Paginated_OUT, PocAdmin_OUT}
+import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OUT }
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
@@ -13,27 +13,27 @@ import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.models.user.UserId
-import com.ubirch.models.tenant.{Tenant, TenantId, TenantName}
+import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.services.auth.AESEncryption
-import com.ubirch.services.formats.{CustomFormats, JodaDateTimeFormats}
+import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.{columnSeparator, pocHeaderLine}
-import com.ubirch.services.poc.{PocAdminCreator, PocCreator}
+import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, pocHeaderLine }
+import com.ubirch.services.poc.{ PocAdminCreator, PocCreator }
 import com.ubirch.services.superadmin.SuperAdminService
-import com.ubirch.services.{CertifyKeycloak, DeviceKeycloak}
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s._
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.jackson.JsonMethods._
-import org.json4s.native.Serialization.{read, write}
+import org.json4s.native.Serialization.{ read, write }
 import org.scalatest.prop.TableDrivenPropertyChecks
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import org.scalatra.{BadRequest, Conflict, Ok}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
+import org.scalatra.{ BadRequest, Conflict, Ok }
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -1106,7 +1106,9 @@ class TenantAdminControllerSpec
       val poc = addPocToDb(tenant, i.get[PocTable])
       val instance = CertifyKeycloak
       val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
-        KeycloakTestData.createNewCertifyKeycloakUser(), instance, List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        instance,
+        List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
         .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId.value))
       val id = await(repository.createPocAdmin(pocAdmin))
@@ -1114,7 +1116,7 @@ class TenantAdminControllerSpec
       val requiredAction = for {
         requiredAction <- keycloakUserService.getUserById(certifyUserId, instance).flatMap {
           case Some(ur) => Task.pure(ur.getRequiredActions)
-          case None => Task.raiseError(new RuntimeException("User not found"))
+          case None     => Task.raiseError(new RuntimeException("User not found"))
         }
       } yield requiredAction
 

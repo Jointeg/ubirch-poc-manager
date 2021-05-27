@@ -5,8 +5,8 @@ import cats.data.EitherT
 import cats.syntax.either._
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.{PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository}
-import com.ubirch.models.poc.{PocAdmin, PocAdminStatus}
+import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
+import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
@@ -16,7 +16,7 @@ import monix.eval.Task
 
 import java.util.UUID
 import javax.inject.Inject
-import scala.language.{existentials, higherKinds}
+import scala.language.{ existentials, higherKinds }
 
 trait TenantAdminService {
 
@@ -35,8 +35,6 @@ trait TenantAdminService {
     tenant: Tenant,
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
   def switchActiveForPocAdmin(pocAdminId: UUID, active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
-
-  def remove2faToken(pocAdminId: UUID): Task[Either[Remove2faTokenError, Unit]]
 
   def addDeviceCreationToken(tenant: Tenant, addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
 }
@@ -215,34 +213,24 @@ class DefaultTenantAdminService @Inject() (
   override def switchActiveForPocAdmin(
     pocAdminId: UUID,
     active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
-    quillMonixJdbcContext.withTransaction {for {
-      pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-      result <- pocAdmin match {
-        case Some(pa) => pa.certifyUserId match {
-          case Some(certifyUserId) =>
-            (active match {
-              case TenantAdminService.Activate => keycloakUserService.activate(certifyUserId, CertifyKeycloak)
-              case TenantAdminService.Deactivate => keycloakUserService.deactivate(certifyUserId, CertifyKeycloak)
-            }) >> pocAdminRepository.updatePocAdmin(pa.copy(active = ActivateSwitch.toBoolean(active)))
-              .map(_ => ().asRight)
-          case None => Task.pure(SwitchActiveError.MissingCertifyUserId(pocAdminId).asLeft)
+    quillMonixJdbcContext.withTransaction {
+      for {
+        pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+        result <- pocAdmin match {
+          case Some(pa) => pa.certifyUserId match {
+              case Some(certifyUserId) =>
+                (active match {
+                  case TenantAdminService.Activate   => keycloakUserService.activate(certifyUserId, CertifyKeycloak)
+                  case TenantAdminService.Deactivate => keycloakUserService.deactivate(certifyUserId, CertifyKeycloak)
+                }) >> pocAdminRepository.updatePocAdmin(pa.copy(active = ActivateSwitch.toBoolean(active)))
+                  .map(_ => ().asRight)
+              case None => Task.pure(SwitchActiveError.MissingCertifyUserId(pocAdminId).asLeft)
+            }
+          case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
         }
-        case None => Task.pure(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
-      }
-    } yield result}
+      } yield result
+    }
   }
-
-  override def remove2faToken(pocAdminId: UUID): Task[Either[Remove2faTokenError, Unit]] =
-    for {
-      pocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-      result <- pocAdmin match {
-        case Some(pa) => pa.certifyUserId match {
-          case Some(certifyUserId) => keycloakUserService.remove2faToken(certifyUserId, CertifyKeycloak).map(_ => ().asRight)
-          case None => Task.pure(Remove2faTokenError.MissingCertifyUserId(pocAdminId).asLeft)
-        }
-        case None => Task.pure(Remove2faTokenError.PocAdminNotFound(pocAdminId).asLeft)
-      }
-    } yield result
 }
 
 sealed trait CreateWebIdentInitiateIdErrors
@@ -276,10 +264,4 @@ sealed trait SwitchActiveError
 object SwitchActiveError {
   case class PocAdminNotFound(id: UUID) extends SwitchActiveError
   case class MissingCertifyUserId(id: UUID) extends SwitchActiveError
-}
-
-sealed trait Remove2faTokenError
-object Remove2faTokenError {
-  case class PocAdminNotFound(id: UUID) extends Remove2faTokenError
-  case class MissingCertifyUserId(id: UUID) extends Remove2faTokenError
 }

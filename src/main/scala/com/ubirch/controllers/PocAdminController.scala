@@ -1,4 +1,5 @@
 package com.ubirch.controllers
+
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
@@ -8,28 +9,23 @@ import com.ubirch.controllers.concerns.{
   KeycloakBearerAuthenticationSupport,
   Token
 }
-import com.ubirch.db.tables.PocAdminRepository
+import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository }
 import com.ubirch.models.NOK
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.poc.employee.{
-  CsvContainedErrors,
-  CsvProcessPocEmployee,
-  EmptyCSVError,
-  HeaderParsingError,
-  PocAdminNotInCompletedStatus,
-  UnknownCsvParsingError,
-  UnknownTenant
-}
+import com.ubirch.services.poc.employee._
+import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenError }
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
+import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import org.scalatra.{ ActionResult, BadRequest, InternalServerError, NotFound, Ok, ScalatraBase }
 
+import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
+import scala.util._
 
 @Singleton
 class PocAdminController @Inject() (
@@ -39,15 +35,26 @@ class PocAdminController @Inject() (
   publicKeyPoolService: PublicKeyPoolService,
   pocAdminRepository: PocAdminRepository,
   csvProcessPocEmployee: CsvProcessPocEmployee,
-  tokenVerificationService: TokenVerificationService
+  tokenVerificationService: TokenVerificationService,
+  certifyUserService: CertifyUserService,
+  pocEmployeeRepository: PocEmployeeRepository
 )(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
-  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
-    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
-
-  override protected def applicationDescription: String = "PoC Admin Controller"
+  val createListOfEmployees: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("create list of employees")
+      .summary("PoC employee batch creation")
+      .description("Receives a semicolon separated .csv with a list of PoC employees." +
+        " In case of not parsable rows, these will be returned in the answer with a specific remark.")
+      .tags("PoC", "PoC-Admin", "PoC-Employee")
+  val delete2FATokenOnPocEmployee: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Delete 2FA token")
+      .summary("Deletes 2FA token for PoC employee")
+      .description("Deletes 2FA token for PoC employee")
+      .tags("Poc-Admin", "Poc-employee")
+      .authorizations()
+      .parameters(queryParam[UUID]("id").description("PoC admin id"))
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -67,12 +74,10 @@ class PocAdminController @Inject() (
     .labelNames("service", "method")
     .register()
 
-  val createListOfEmployees: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("create list of employees")
-      .summary("PoC employee batch creation")
-      .description("Receives a semicolon separated .csv with a list of PoC employees." +
-        " In case of not parsable rows, these will be returned in the answer with a specific remark.")
-      .tags("PoC", "PoC-Admin", "PoC-Employee")
+  override protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy =
+    new KeycloakBearerAuthStrategy(app, CertifyKeycloak, tokenVerificationService, publicKeyPoolService)
+
+  override protected def applicationDescription: String = "PoC Admin Controller"
 
   post("/employee/create", operation(createListOfEmployees)) {
     pocAdminEndpoint("Create employees by CSV file") { token =>
@@ -100,9 +105,39 @@ class PocAdminController @Inject() (
     }
   }
 
+  delete("/poc-employee/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
+    pocAdminEndpoint("Delete 2FA token for PoC admin") { _ =>
+      getParamAsUUID("id", id => s"Invalid poc employee id: '$id'") { id =>
+        for {
+          r <- certifyUserService.remove2FAToken(id, pocEmployeeRepository.getPocEmployee)
+            .map {
+              case Left(e) => e match {
+                  case Remove2faTokenError.CertifyUserNotFound(id) =>
+                    NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' not found'"))
+                  case Remove2faTokenError.MissingCertifyUserId(id) =>
+                    Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId"))
+                }
+              case Right(_) => Ok("")
+            }
+        } yield r
+      }
+    }
+  }
+
   private def pocAdminEndpoint(description: String)(logic: Token => Task[ActionResult]) = {
     authenticated(_.hasRole(Token.POC_ADMIN)) { token: Token =>
       asyncResult(description) { _ => _ => logic(token) }
+    }
+  }
+
+  private def getParamAsUUID(paramName: String, errorMsg: String => String)(logic: UUID => Task[ActionResult]) = {
+    val id = params(paramName)
+    Try(UUID.fromString(id)) match {
+      case Success(uuid) => logic(uuid)
+      case Failure(ex) =>
+        logger.error(errorMsg(id), ex)
+        Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
+
     }
   }
 }

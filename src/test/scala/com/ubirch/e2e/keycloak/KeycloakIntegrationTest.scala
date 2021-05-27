@@ -480,12 +480,12 @@ class KeycloakIntegrationTest extends E2ETestBase {
         }
         userRequiredActionsBefore <- keycloakUserService.getUserById(id, instance).flatMap {
           case Some(ur) => Task.pure(ur.getRequiredActions)
-          case None => Task.raiseError(new RuntimeException("User not found"))
+          case None     => Task.raiseError(new RuntimeException("User not found"))
         }
         _ <- keycloakUserService.remove2faToken(id.value, instance)
         userRequiredActionsAfter <- keycloakUserService.getUserById(id, instance).flatMap {
           case Some(ur) => Task.pure(ur.getRequiredActions)
-          case None => Task.raiseError(new RuntimeException("User not found"))
+          case None     => Task.raiseError(new RuntimeException("User not found"))
         }
       } yield (userRequiredActionsBefore, userRequiredActionsAfter)
       val (requiredActionsBefore, requiredActionsAfter) = await(r)
