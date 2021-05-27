@@ -2,6 +2,8 @@ package com.ubirch.services.tenantadmin
 
 import cats.Applicative
 import cats.data.EitherT
+import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, TenantAdminContext }
 import cats.syntax.either._
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.db.context.QuillMonixJdbcContext
@@ -12,6 +14,7 @@ import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.TenantAdminService.ActivateSwitch
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import java.util.UUID
@@ -36,7 +39,10 @@ trait TenantAdminService {
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
   def switchActiveForPocAdmin(pocAdminId: UUID, active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
 
-  def addDeviceCreationToken(tenant: Tenant, addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
+  def addDeviceCreationToken(
+    tenant: Tenant,
+    tenantContext: TenantAdminContext,
+    addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
 }
 
 object TenantAdminService {
@@ -74,7 +80,10 @@ class DefaultTenantAdminService @Inject() (
   pocAdminStatusRepository: PocAdminStatusRepository,
   keycloakUserService: KeycloakUserService,
   quillMonixJdbcContext: QuillMonixJdbcContext)
-  extends TenantAdminService {
+  extends TenantAdminService
+  with PocAuditLogging
+  with LazyLogging {
+
   private val simplifiedDeviceInfoCSVHeader = """"externalId"; "pocName"; "deviceId""""
 
   override def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String] = {
@@ -231,6 +240,24 @@ class DefaultTenantAdminService @Inject() (
       } yield result
     }
   }
+
+  def addDeviceCreationToken(
+    tenant: Tenant,
+    tenantContext: TenantAdminContext,
+    addDeviceTokenRequest: AddDeviceCreationTokenRequest): Task[Either[String, Unit]] = {
+
+    aesEncryption
+      .encrypt(addDeviceTokenRequest.token)(EncryptedDeviceCreationToken(_))
+      .flatMap { encryptedDeviceCreationToken: EncryptedDeviceCreationToken =>
+        val updatedTenant = tenant.copy(deviceCreationToken = Some(encryptedDeviceCreationToken))
+        tenantRepository
+          .updateTenant(updatedTenant).map { _ =>
+            logAuditWithTenantContext("updated tenant with new deviceCreationToken", tenantContext)
+            Right(())
+          }
+      }
+  }
+
 }
 
 sealed trait CreateWebIdentInitiateIdErrors

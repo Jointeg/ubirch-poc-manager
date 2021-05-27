@@ -162,9 +162,9 @@ class TenantAdminController @Inject() (
       .parameters(queryParam[UUID]("id").description("PoC admin id"))
 
   post("/pocs/create", operation(createListOfPocs)) {
-    tenantAdminEndpoint("Create poc batch") { tenant =>
+    tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
       pocBatchHandler
-        .createListOfPoCs(request.body, tenant)
+        .createListOfPoCs(request.body, tenant, tenantContext)
         .map {
           case Right(_)  => Ok()
           case Left(csv) => Ok(csv)
@@ -193,18 +193,23 @@ class TenantAdminController @Inject() (
   }
 
   post("/deviceToken", operation(deviceToken)) {
-    tenantAdminEndpoint("Get all Devices for all PoCs of tenant") { tenant =>
-      tenantAdminService
-        .addDeviceCreationToken(tenant, Serialization.read[AddDeviceCreationTokenRequest](request.body))
-        .map {
-          case Right(_) => Ok()
-          case Left(errorMessage: String) =>
-            logger.error(s"failed to add deviceCreationToken $errorMessage")
-            InternalServerError("failed to device creation token update")
-        }.onErrorHandle { ex =>
-          logger.error(s"failed to add deviceCreationToken", ex)
-          InternalServerError("something went wrong on device creation token update")
-        }
+    tenantAdminEndpointWithUserContext("Add CREATE DEVICE and GET INFO token to tenant") {
+      (tenant, tenantAdminContext) =>
+        tenantAdminService
+          .addDeviceCreationToken(
+            tenant,
+            tenantAdminContext,
+            Serialization.read[AddDeviceCreationTokenRequest](request.body)
+          )
+          .map {
+            case Right(_) => Ok()
+            case Left(errorMessage: String) =>
+              logger.error(s"failed to add deviceCreationToken $errorMessage")
+              InternalServerError("failed to device creation token update")
+          }.onErrorHandle { ex =>
+            logger.error(s"failed to add deviceCreationToken", ex)
+            InternalServerError("something went wrong on device creation token update")
+          }
     }
   }
 
@@ -384,6 +389,25 @@ class TenantAdminController @Inject() (
             logger.error(errorMsg)
             Task(BadRequest(NOK.authenticationError(errorMsg)))
         }
+      }
+    }
+  }
+
+  private def tenantAdminEndpointWithUserContext(description: String)(logic: (
+    Tenant,
+    TenantAdminContext) => Task[ActionResult]) = {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult(description) { _ => _ =>
+        retrieveTenantFromToken(token)(tenantTable)
+          .map((token.ownerIdAsUUID, _)).flatMap {
+            case (Success(userId), Right(tenant: Tenant)) =>
+              logic(tenant, TenantAdminContext(userId, tenant.id.value.asJava()))
+            case (Success(_), Left(errorMsg: String)) =>
+              logger.error(errorMsg)
+              Task(BadRequest(NOK.authenticationError(errorMsg)))
+            case (Failure(uuid), Right(_)) =>
+              Task(BadRequest(NOK.badRequest(s"Owner ID $uuid in token is not in UUID format")))
+          }
       }
     }
   }
