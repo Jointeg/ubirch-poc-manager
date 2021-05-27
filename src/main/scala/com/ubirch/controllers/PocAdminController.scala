@@ -17,6 +17,7 @@ import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrors
 import com.ubirch.models.poc.PocAdmin
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
+import com.ubirch.services.poc.PocAdminService
 import com.ubirch.services.poc.employee.{
   CsvContainedErrors,
   CsvProcessPocEmployee,
@@ -24,9 +25,9 @@ import com.ubirch.services.poc.employee.{
   HeaderParsingError,
   PocAdminNotInCompletedStatus,
   UnknownCsvParsingError,
-  PocAdminNotInCompletedStatus,
   UnknownTenant
 }
+import com.ubirch.services.poc.GetPocsAdminErrors
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -46,7 +47,8 @@ class PocAdminController @Inject() (
   pocAdminRepository: PocAdminRepository,
   employeeRepository: PocEmployeeRepository,
   csvProcessPocEmployee: CsvProcessPocEmployee,
-  tokenVerificationService: TokenVerificationService
+  tokenVerificationService: TokenVerificationService,
+  pocAdminService: PocAdminService
 )(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
@@ -118,20 +120,24 @@ class PocAdminController @Inject() (
   get("/employees", operation(getEmployees)) {
     pocAdminEndpoint("get employees") { token =>
       retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
-        (for {
-          adminCriteria <- handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees)
-          employees <- employeeRepository.getAllByCriteria(adminCriteria)
-        } yield Paginated_OUT(employees.total, employees.records))
-          .map(Presenter.toJsonResult)
-          .onErrorRecoverWith {
+        handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees).flatMap { adminCriteria =>
+          pocAdminService.getEmployees(pocAdmin, adminCriteria).map {
+            case Right(employees) => Presenter.toJsonResult(Paginated_OUT(employees.total, employees.records))
+            case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
+              NotFound(NOK.badRequest(s"PocAdmin status is not completed. ${pocAdminId}"))
+            case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
+              logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
+              NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
+          }.onErrorRecoverWith {
             case ValidationError(e) =>
               Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
                 .map(BadRequest(_))
+          }.onErrorHandle {
+            case ex =>
+              InternalServerError(NOK.serverError(
+                s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
           }
-          .onErrorHandle { ex =>
-            InternalServerError(NOK.serverError(
-              s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
-          }
+        }
       }
     }
   }

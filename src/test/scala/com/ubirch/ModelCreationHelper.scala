@@ -161,7 +161,10 @@ object ModelCreationHelper {
       createPocEmployeeStatus(employeeId))
   }
 
-  def createPocEmployee(employeeId: UUID = UUID.randomUUID(), pocId: UUID = UUID.randomUUID()): PocEmployee = {
+  def createPocEmployee(
+    employeeId: UUID = UUID.randomUUID(),
+    pocId: UUID = UUID.randomUUID(),
+    tenantId: TenantId = tenantId): PocEmployee = {
     PocEmployee(
       employeeId,
       pocId,

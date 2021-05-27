@@ -77,7 +77,7 @@ class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach {
           body shouldBe
             """first_name;last_name;email
               |firstName2,lastName2,valid2@email.com;the number of column 1 is invalid. should be 3.
-              |firstName2;lastName2;valid2@email.com;error on persisting objects; maybe duplicated key error
+              |firstName2;lastName2;valid2@email.com;error on persisting objects; email already exists.
               |firstName3;lastName3;;the number of column 2 is invalid. should be 3.""".stripMargin
         }
 

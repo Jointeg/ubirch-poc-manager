@@ -62,6 +62,7 @@ class PocEmployeeRepositoryMock @Inject() (pocAdminRepository: PocAdminRepositor
       case Some(pocAdmin) =>
         val employees = pocEmployeeDatastore.values
           .filter(_.pocId == pocAdmin.pocId)
+          .filter(e => criteria.filter.status.contains(e.status))
         PaginatedResult(employees.size, employees.toSeq)
     }
   }
