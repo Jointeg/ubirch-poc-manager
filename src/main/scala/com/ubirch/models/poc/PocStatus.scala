@@ -25,7 +25,6 @@ case class PocStatus(
   clientCertCreated: Option[Boolean],
   clientCertProvided: Option[Boolean],
   logoRequired: Boolean,
-  logoReceived: Option[Boolean],
   logoStored: Option[Boolean],
   goClientProvided: Boolean = false,
   certifyApiProvided: Boolean = false,
@@ -54,7 +53,6 @@ case class PocStatus(
       s"clientCertCreated: $clientCertCreated\n" +
       s"clientCertProvided: $clientCertProvided\n" +
       s"logoRequired: $logoRequired\n" +
-      s"logoReceived: $logoReceived\n" +
       s"logoStored: $logoStored\n" +
       s"goClientProvided: $goClientProvided\n" +
       s"certApiProvided: $certifyApiProvided\n" +
@@ -77,7 +75,6 @@ object PocStatus {
       employeeGroupCreated = if (poc.certifyApp) Some(false) else None,
       employeeRoleAssigned = if (poc.certifyApp) Some(false) else None,
       logoRequired = poc.certifyApp,
-      logoReceived = if (poc.certifyApp) Some(false) else None,
       logoStored = if (poc.certifyApp) Some(false) else None
     )
 }
