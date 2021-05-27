@@ -72,6 +72,9 @@ class DefaultUnitTestBinder extends Binder {
   override def TenantRepository: ScopedBindingBuilder =
     bind(classOf[TenantRepository]).to(classOf[TenantRepositoryMock])
 
+  override def PocLogoRepository: ScopedBindingBuilder =
+    bind(classOf[PocLogoRepository]).to(classOf[PocLogoRepositoryMock])
+
   override def UserPollingService: ScopedBindingBuilder =
     bind(classOf[UserPollingService]).to(classOf[TestUserPollingService])
 

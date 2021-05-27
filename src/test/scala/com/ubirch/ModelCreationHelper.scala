@@ -125,7 +125,6 @@ object ModelCreationHelper {
       clientCertProvided = None,
       orgUnitCertCreated = None,
       logoRequired = false,
-      logoReceived = None,
       logoStored = None
     )
 
