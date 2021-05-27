@@ -109,8 +109,12 @@ class PocAdminCreatorImpl @Inject() (
     if (poc.clientCertRequired && aAs.status.invitedToTeamDrive.contains(false)) {
       val spaceName = SpaceName.forPoc(pocConfig.teamDriveStage, tenant, poc)
       teamDriveClient.getSpaceIdByName(spaceName).flatMap {
-        case Some(spaceId) => teamDriveClient.inviteMember(spaceId, aAs.admin.email, Read)
-        case None          => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+        case Some(spaceId) =>
+          teamDriveClient.inviteMember(spaceId, aAs.admin.email, Read)
+            .map { _ =>
+              logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
+            }
+        case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
       }.map(_ => aAs.copy(status = aAs.status.copy(invitedToTeamDrive = Some(true))))
         .onErrorHandle {
           case ex: PocAdminCreationError => throw ex
