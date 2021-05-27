@@ -122,6 +122,17 @@ object Validator {
   }
 
   /**
+    * string key exists in map
+    */
+  def validatePocTypeForAdminRow(header: String, str: String, map: Map[String, String]): AllErrorsOr[String] = {
+    if (map.contains(str)) {
+      if (str.split("_").last == "api") noAdminAllowedError.invalidNel
+      else str.validNel
+    } else
+      mapDoesntContainStringKeyError(header, map).invalidNel
+  }
+
+  /**
     * None if string empty
     */
   def validateStringOption(str: String): AllErrorsOr[Option[String]] = {

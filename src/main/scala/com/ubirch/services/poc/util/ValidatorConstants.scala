@@ -43,6 +43,8 @@ object ValidatorConstants {
   def listDoesntContainStringError(header: String, list: Seq[String]) =
     s"column $header must contain a valid value from this list $list"
 
+  def noAdminAllowedError = "cannot create poc admin for poc type that is not using the frontend app"
+
   def mapDoesntContainStringKeyError(header: String, map: Map[String, String]) =
     s"column $header must contain a valid value from this map $map"
 

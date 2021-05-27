@@ -6,13 +6,8 @@ import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.models.tenant.{ API, APP, Both }
 import com.ubirch.services.poc.util.CsvConstants._
-import com.ubirch.services.poc.util.ValidatorConstants.{
-  emptyStringError,
-  listDoesntContainStringError,
-  mapDoesntContainStringKeyError,
-  phoneValidationError
-}
 import com.ubirch.services.poc.util.ValidatorConstants
+import com.ubirch.services.poc.util.ValidatorConstants._
 import com.ubirch.services.util.Validator._
 import org.scalatest.prop.{ TableDrivenPropertyChecks, TableFor1 }
 
@@ -323,6 +318,35 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
           assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
+        }
+    }
+  }
+
+  "Validate poc type for admin row" should {
+
+    val map = Map("test_api" -> "xxx", "test_app" -> "yyy", "123_xxx" -> "zzz")
+    "validate valid" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "test1_app", map)
+      assert(validated.isValid)
+    }
+
+    "validate error if string is empty" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "12", map)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
+        }
+    }
+
+    "validate error if map doesn't contain string" in {
+      val validated = validateMapContainsStringKey(dataSchemaId, "test_api", map)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == noAdminAllowedError)
         }
     }
 
