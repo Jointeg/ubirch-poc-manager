@@ -58,9 +58,9 @@ class PocAdminRepositoryMock @Inject() (
   }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentInitiated(pocAdminId, webIdentInitiated = true))
 
   override def updateWebIdentIdAndStatus(
-    webIdentId: UUID,
+    webIdentId: String,
     pocAdminId: UUID): Task[Unit] = Task {
-    pocAdminDatastore.update(pocAdminId, pocAdminDatastore(pocAdminId).copy(webIdentId = Some(webIdentId.toString)))
+    pocAdminDatastore.update(pocAdminId, pocAdminDatastore(pocAdminId).copy(webIdentId = Some(webIdentId)))
   }.flatMap(_ => pocAdminStatusRepositoryMock.updateWebIdentSuccess(pocAdminId, webIdentSuccess = true))
 
   override def getAllByCriteria(criteria: model.Criteria): Task[model.PaginatedResult[(PocAdmin, Poc)]] = {

@@ -23,7 +23,7 @@ trait PocAdminRepository {
 
   def getAllUncompletedPocAdmins(): Task[List[PocAdmin]]
 
-  def updateWebIdentIdAndStatus(webIdentId: UUID, pocAdminId: UUID): Task[Unit]
+  def updateWebIdentIdAndStatus(webIdentId: String, pocAdminId: UUID): Task[Unit]
 
   def getAllByCriteria(criteria: Criteria): Task[PaginatedResult[(PocAdmin, Poc)]]
 
@@ -68,10 +68,10 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       )
     }
 
-  private def updateWebIdentIdQuery(webIdentId: UUID, pocAdminId: UUID) =
+  private def updateWebIdentIdQuery(webIdentId: String, pocAdminId: UUID) =
     quote {
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.id == lift(pocAdminId)).update(
-        _.webIdentId -> lift(Option(webIdentId.toString))
+        _.webIdentId -> lift(Option(webIdentId))
       )
     }
 
@@ -103,7 +103,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
     }
   }
 
-  def updateWebIdentIdAndStatus(webIdentId: UUID, pocAdminId: UUID): Task[Unit] =
+  def updateWebIdentIdAndStatus(webIdentId: String, pocAdminId: UUID): Task[Unit] =
     transaction {
       for {
         _ <- run(updateWebIdentIdQuery(webIdentId, pocAdminId)).void

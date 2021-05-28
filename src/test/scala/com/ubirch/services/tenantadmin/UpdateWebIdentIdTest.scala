@@ -28,7 +28,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
       withInjector { injector =>
         val pocId = UUID.randomUUID()
         val webIdentInitiateId = UUID.randomUUID()
-        val webIdentId = UUID.randomUUID()
+        val webIdentId = UUID.randomUUID().toString
         val tenantAdminService = injector.get[TenantAdminService]
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
@@ -56,7 +56,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         result shouldBe Right(())
 
         val pocAdminAfterUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
-        pocAdminAfterUpdate.value.webIdentId.value shouldBe webIdentId.toString
+        pocAdminAfterUpdate.value.webIdentId.value shouldBe webIdentId
         val statusAfterUpdate = await(pocAdminStatusTable.getStatus(pocAdmin.id), 5.seconds)
         statusAfterUpdate.value.webIdentSuccess shouldBe Some(true)
       }
@@ -66,7 +66,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
       withInjector { injector =>
         val pocId = UUID.randomUUID()
         val webIdentInitiateId = UUID.randomUUID()
-        val webIdentId = UUID.randomUUID()
+        val webIdentId = UUID.randomUUID().toString
         val tenantAdminService = injector.get[TenantAdminService]
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
@@ -103,7 +103,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
       withInjector { injector =>
         val pocId = UUID.randomUUID()
         val webIdentInitiateId = UUID.randomUUID()
-        val webIdentId = UUID.randomUUID()
+        val webIdentId = UUID.randomUUID().toString
         val tenantAdminService = injector.get[TenantAdminService]
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
@@ -146,7 +146,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
       withInjector { injector =>
         val pocId = UUID.randomUUID()
         val webIdentInitiateId = UUID.randomUUID()
-        val webIdentId = UUID.randomUUID()
+        val webIdentId = UUID.randomUUID().toString
         val tenantAdminService = injector.get[TenantAdminService]
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
@@ -183,7 +183,7 @@ class UpdateWebIdentIdTest extends UnitTestBase {
       withInjector { injector =>
         val pocId = UUID.randomUUID()
         val webIdentInitiateId = UUID.randomUUID()
-        val webIdentId = UUID.randomUUID()
+        val webIdentId = UUID.randomUUID().toString
         val tenantAdminService = injector.get[TenantAdminService]
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
