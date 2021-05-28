@@ -65,10 +65,11 @@ class PocEmployeeController @Inject() (
     .register()
 
   val getCertifyConfig: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("retrieve ")
+    apiOperation[String]("retrieve certify config")
       .summary("Get Certify Config of Poc Employee")
       .description("Retrieve Certify Config queried by Poc Id. If it doesn't exist 404 is returned.")
       .tags("Tenant-Admin", "PoC-Employee")
+      .authorizations()
 
   get("/certify-config", operation(getCertifyConfig)) {
     authenticated(_.hasRole(Token.POC_EMPLOYEE)) { token: Token =>

@@ -212,8 +212,8 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
       lazy val pool = injector.get[PublicKeyPoolService]
       await(pool.init(DeviceKeycloak, CertifyKeycloak), 2.seconds)
 
-      lazy val superAdminController = injector.get[PocEmployeeController]
-      addServlet(superAdminController, "/*")
+      lazy val pocEmployeeController = injector.get[PocEmployeeController]
+      addServlet(pocEmployeeController, "/*")
     }
   }
 
