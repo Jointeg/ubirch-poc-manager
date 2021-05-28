@@ -40,15 +40,15 @@ object CentralCsvProvider {
 
   def validPocAdminCsv(pocId: UUID): String =
     s"""$pocAdminHeaderLine
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;http://www.ubirch.com/logo.png;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;http://www.ubirch.com/logo.png;TRUE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
        |""".stripMargin
 
   def validHeaderButBadRowsPocAdminCsv(pocId: UUID): String =
     s"""$pocAdminHeaderLine
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;false;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};;Herr;herr.mustermann@;0176-738786782;01.01.1971;xfalse
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;false;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;017782;01.1971;TRUE
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;false;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;false;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;http://www.ubirch.com/logo.png;TRUE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};;Herr;herr.mustermann@;0176-738786782;01.01.1971;xfalse
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;http://www.ubirch.com/logo.png;TRUE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;017782;01.1971;TRUE
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;http://www.ubirch.com/logo.png;TRUE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;http://www.ubirch.com/logo.png;TRUE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
        |""".stripMargin
 
 }
