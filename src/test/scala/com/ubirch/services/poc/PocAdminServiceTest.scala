@@ -1,6 +1,6 @@
 package com.ubirch.services.poc
 
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant }
+import com.ubirch.ModelCreationHelper.{ addTenantToDB, createPoc, createPocAdmin, createPocEmployee, createTenant }
 import com.ubirch.db.tables.model.{ AdminCriteria, StatusFilter }
 import com.ubirch.{ InjectorHelper, UnitTestBase }
 import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository, PocRepository, TenantRepository }
@@ -17,7 +17,8 @@ class PocAdminServiceTest extends UnitTestBase {
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
         val employeeTable = injector.get[PocEmployeeRepository]
-        val tenant = addTenantToDB(injector)
+        val tenantTable = injector.get[TenantRepository]
+        val tenant = createTenant()
         val pocId1 = UUID.randomUUID()
         val poc1 = createPoc(pocId1, tenant.tenantName)
         val pocAdmin1 = createPocAdmin(pocId = poc1.id, tenantId = tenant.id).copy(status = Completed)
@@ -28,6 +29,7 @@ class PocAdminServiceTest extends UnitTestBase {
         val pocAdmin2 = createPocAdmin(pocId = poc2.id, tenantId = tenant.id).copy(status = Completed)
         val employee3 = createPocEmployee(pocId = poc2.id, tenantId = tenant.id)
         (for {
+          _ <- tenantTable.createTenant(tenant)
           _ <- pocTable.createPoc(poc1)
           _ <- pocTable.createPoc(poc2)
           _ <- pocAdminTable.createPocAdmin(pocAdmin1)
@@ -49,12 +51,4 @@ class PocAdminServiceTest extends UnitTestBase {
       }
     }
   }
-
-  private def addTenantToDB(injector: InjectorHelper, name: String = "tenant") = {
-    val tenantTable = injector.get[TenantRepository]
-    val tenant = createTenant(name = name)
-    await(tenantTable.createTenant(tenant), 5.seconds)
-    tenant
-  }
-
 }

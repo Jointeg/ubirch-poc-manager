@@ -11,6 +11,7 @@ import javax.inject.{ Inject, Singleton }
 trait PocConfig {
 
   val dataSchemaGroupMap: Map[String, String]
+  val pocTypeDataSchemaMap: Map[String, String]
   val trustedPocGroupMap: Map[String, String]
   val pocTypeEndpointMap: Map[String, String]
   val locationNeeded: Seq[String]
@@ -19,6 +20,7 @@ trait PocConfig {
   val teamDriveAdminEmails: Seq[String]
   val teamDriveStage: String
   val pocAdminGroupId: String
+  val pocLogoEndpoint: String
 }
 
 @Singleton
@@ -31,6 +33,15 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     } catch {
       case e: Exception =>
         logger.error(s"can't parse the ${ServicesConfPaths.DATA_SCHEMA_GROUP_MAP} value as Map[String, String]")
+        throw e
+    }
+
+  val pocTypeDataSchemaMap: Map[String, String] =
+    try {
+      parse(config.getString(ServicesConfPaths.POC_TYPE_DATA_SCHEMA_MAP)).extract[Map[String, String]]
+    } catch {
+      case e: Exception =>
+        logger.error(s"can't parse the ${ServicesConfPaths.POC_TYPE_DATA_SCHEMA_MAP} value as Map[String, String]")
         throw e
     }
 
@@ -63,4 +74,5 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
 
   val teamDriveStage: String = config.getString(TeamDrivePaths.STAGE)
   val pocAdminGroupId: String = config.getString(ServicesConfPaths.POC_ADMIN_GROUP_ID)
+  val pocLogoEndpoint: String = config.getString(ServicesConfPaths.POC_LOGO_ENDPOINT)
 }

@@ -6,6 +6,7 @@ import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
   KeycloakBearerAuthenticationSupport,
+  Presenter,
   Token
 }
 import com.ubirch.services.CertifyKeycloak
@@ -69,37 +70,27 @@ class PocEmployeeController @Inject() (
       .tags("Tenant-Admin", "PoC-Employee")
 
   get("/certify-config", operation(getCertifyConfig)) {
-    pocEmployeeEndpoint("Get Certify Config by PocEmployee") { token =>
-      retrieveEmployeeFromToken(token, pocEmployeeRepository) { employee =>
-        pocEmployeeService.getCertifyConfig(employee).map {
-          case Left(UnknownPoc(pocId)) =>
-            logger.error(s"Could not find poc with id $pocId (assigned to ${employee.id} PocEmployee)")
-            NotFound(NOK.resourceNotFoundError("Could not find Poc assigned to given PocEmployee"))
-          case Left(InvalidDataPocType(pocType, pocId)) =>
-            logger.error(
-              s"Invalid pocType $pocType found in poc with id $pocId (assigned to ${employee.id} PocEmployee)")
-            BadRequest(NOK.badRequest("Invalid data found in Poc assigned to given PocEmployee"))
-          case Right(dto) =>
-            toJson(dto)
+    authenticated(_.hasRole(Token.POC_EMPLOYEE)) { token: Token =>
+      asyncResult("Get Certify Config by PocEmployee") { _ => response =>
+        retrieveEmployeeFromToken(token, pocEmployeeRepository) { employee =>
+          pocEmployeeService.getCertifyConfig(employee).map {
+            case Left(UnknownPoc(pocId)) =>
+              logger.error(s"Could not find poc with id $pocId (assigned to ${employee.id} PocEmployee)")
+              NotFound(NOK.resourceNotFoundError("Could not find Poc assigned to given PocEmployee"))
+            case Left(InvalidDataPocType(pocType, pocId)) =>
+              logger.error(
+                s"Invalid pocType $pocType found in poc with id $pocId (assigned to ${employee.id} PocEmployee)")
+              BadRequest(NOK.badRequest("Invalid data found in Poc assigned to given PocEmployee"))
+            case Right(dto) =>
+              response.contentType = Some("application/json")
+              Presenter.toJsonResult(dto)
+          }.onErrorHandle { ex =>
+            logger.error("something went wrong retrieving certify config for poc employee" + ex.getMessage)
+            InternalServerError(NOK.serverError(
+              s"something went wrong retrieving certify config for poc employee with id ${employee.id}"))
+          }
         }
       }
-    }
-  }
-
-  // @todo delete it after merge get employees
-  private def toJson[T](t: T): ActionResult = {
-    Try(write[T](t)) match {
-      case Success(json) => Ok(json)
-      case Failure(ex) =>
-        val errorMsg = s"Could not parse ${t.getClass.getSimpleName} to json"
-        logger.error(errorMsg, ex)
-        InternalServerError(NOK.serverError(errorMsg))
-    }
-  }
-
-  private def pocEmployeeEndpoint(description: String)(logic: Token => Task[ActionResult]) = {
-    authenticated(_.hasRole(Token.POC_EMPLOYEE)) { token: Token =>
-      asyncResult(description) { _ => _ => logic(token) }
     }
   }
 }
