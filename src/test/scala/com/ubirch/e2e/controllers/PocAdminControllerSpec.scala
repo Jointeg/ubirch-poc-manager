@@ -1,13 +1,12 @@
 package com.ubirch.e2e.controllers
-import com.ubirch.{ FakeTokenCreator, InjectorHelper }
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant }
+import com.ubirch.FakeTokenCreator
+import com.ubirch.ModelCreationHelper.createPocEmployee
 import com.ubirch.controllers.PocAdminController
-import com.ubirch.db.tables.{ PocAdminTable, PocEmployeeTable, PocTable, TenantTable }
+import com.ubirch.db.tables.PocEmployeeTable
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
-import com.ubirch.models.poc.{ Completed, Created, Pending, Poc, PocAdmin, Processing, Updated }
+import com.ubirch.models.poc.{ Completed, Created, Pending, Processing, Updated }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
@@ -25,7 +24,11 @@ import scala.concurrent.duration.DurationInt
 import PocAdminControllerSpec._
 import org.scalatest.prop.TableDrivenPropertyChecks
 
-class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with TableDrivenPropertyChecks {
+class PocAdminControllerSpec
+  extends E2ETestBase
+  with BeforeAndAfterEach
+  with TableDrivenPropertyChecks
+  with ControllerSpecHelper {
 
   implicit private val formats: Formats =
     DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
@@ -370,35 +373,6 @@ class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with Ta
           }
       }
     }
-  }
-
-  def createTenantWithPocAndPocAdmin(injector: InjectorHelper): (Tenant, Poc, PocAdmin) = {
-    val tenant = addTenantToDB(injector)
-    val poc = addPocToDb(tenant, injector)
-    val pocAdmin = addPocAdminToDB(poc, tenant, injector)
-    (tenant, poc, pocAdmin)
-  }
-
-  private def addPocAdminToDB(poc: Poc, tenant: Tenant, injector: InjectorHelper): PocAdmin = {
-    val pocAdminTable = injector.get[PocAdminTable]
-    val pocAdmin =
-      createPocAdmin(pocId = poc.id, tenantId = tenant.id, certifyUserId = Some(UUID.randomUUID()), status = Completed)
-    await(pocAdminTable.createPocAdmin(pocAdmin), 5.seconds)
-    pocAdmin
-  }
-
-  private def addTenantToDB(injector: InjectorHelper): Tenant = {
-    val tenantTable = injector.get[TenantTable]
-    val tenant = createTenant()
-    await(tenantTable.createTenant(tenant), 5.seconds)
-    tenant
-  }
-
-  private def addPocToDb(tenant: Tenant, injector: InjectorHelper): Poc = {
-    val pocTable = injector.get[PocTable]
-    val poc = createPoc(tenantName = tenant.tenantName, status = Pending)
-    await(pocTable.createPoc(poc), 5.seconds)
-    poc
   }
 
   override protected def beforeEach(): Unit = {

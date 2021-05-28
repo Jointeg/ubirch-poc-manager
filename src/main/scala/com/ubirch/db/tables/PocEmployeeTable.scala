@@ -25,9 +25,9 @@ trait PocEmployeeRepository {
 
   def deletePocEmployee(employeeId: UUID): Task[Unit]
 
-  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]]
-
   def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]]
+
+  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]]
 }
 
 class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocEmployeeRepository {
@@ -65,11 +65,6 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
         _.id == lift(employeeId)).delete
     }
 
-  private def getByCertifyUserIdQuery(certifyUserId: UUID) =
-    quote {
-      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.certifyUserId == lift(Option(certifyUserId)))
-    }
-
   private def filterByStatuses(q: Quoted[Query[PocEmployee]], statuses: Seq[Status]) =
     statuses match {
       case Nil => quote(q)
@@ -105,6 +100,11 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       case _               => dynamic
     }
   }
+
+  private def getByCertifyUserIdQuery(certifyUserId: UUID) =
+    quote {
+      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.certifyUserId == lift(Option(certifyUserId)))
+    }
 
   def createPocEmployee(employee: PocEmployee): Task[UUID] =
     run(createPocEmployeeQuery(employee)).map(_ => employee.id)
