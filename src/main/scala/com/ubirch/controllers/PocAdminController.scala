@@ -125,7 +125,7 @@ class PocAdminController @Inject() (
         } yield employees).map {
           case Right(employees) => Presenter.toJsonResult(Paginated_OUT(employees.total, employees.records))
           case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
-            BadRequest(NOK.badRequest(s"PocAdmin status is not completed. ${pocAdminId}"))
+            BadRequest(NOK.badRequest(s"PocAdmin status is not completed. $pocAdminId"))
           case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
             logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
             NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
@@ -133,10 +133,9 @@ class PocAdminController @Inject() (
           case ValidationError(e) =>
             Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
               .map(BadRequest(_))
-        }.onErrorHandle {
-          case ex =>
-            InternalServerError(NOK.serverError(
-              s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
+        }.onErrorHandle { ex =>
+          InternalServerError(NOK.serverError(
+            s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
         }
       }
     }

@@ -4,6 +4,7 @@ import cats.effect.Resource
 import monix.eval.Task
 
 import java.io.ByteArrayInputStream
+import java.net.URL
 import java.util.UUID
 import javax.imageio.ImageIO
 
@@ -32,4 +33,18 @@ object PocLogo {
         Left("The url seems not to be image.")
     }
   }
+
+  def getFileExtension(logoUrl: URL): String = {
+    logoUrl.toString.split("\\.").last.toLowerCase() match {
+      case "jpg"     => "jpeg"
+      case jpegOrPng => jpegOrPng
+    }
+  }
+
+  //https://stackoverflow.com/questions/59089118/javax-imageio-imageio-file-format-constants
+  //also possible would be wbmp, gif, bmp, tif and tiff
+  def hasAcceptedFileExtension(logoUrl: URL): Boolean = {
+    List("jpg", "jpeg", "png").contains(logoUrl.toString.split("\\.").last.toLowerCase())
+  }
 }
+

@@ -56,6 +56,13 @@ class PocEmployeeRepositoryMock @Inject() (pocAdminRepository: PocAdminRepositor
   override def deletePocEmployee(employeeId: UUID): Task[Unit] =
     Task(pocEmployeeDatastore.remove(employeeId))
 
+  override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]] =
+    Task {
+      pocEmployeeDatastore.collect {
+        case (_, pocEmployee: PocEmployee) if pocEmployee.certifyUserId.contains(certifyUserId) => pocEmployee
+      }.headOption
+    }
+
   override def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]] = {
     pocAdminRepository.getPocAdmin(criteria.adminId).map {
       case None => PaginatedResult(0, Seq.empty[PocEmployee])

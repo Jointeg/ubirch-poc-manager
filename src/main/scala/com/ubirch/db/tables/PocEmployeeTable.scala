@@ -25,6 +25,8 @@ trait PocEmployeeRepository {
 
   def deletePocEmployee(employeeId: UUID): Task[Unit]
 
+  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]]
+
   def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]]
 }
 
@@ -61,6 +63,11 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
     quote {
       querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(
         _.id == lift(employeeId)).delete
+    }
+
+  private def getByCertifyUserIdQuery(certifyUserId: UUID) =
+    quote {
+      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.certifyUserId == lift(Option(certifyUserId)))
     }
 
   private def filterByStatuses(q: Quoted[Query[PocEmployee]], statuses: Seq[Status]) =
@@ -116,6 +123,9 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
 
   def deletePocEmployee(employeeId: UUID): Task[Unit] =
     run(deleteEmployeeQuery(employeeId)).void
+
+  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]] =
+    run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
 
   def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]] =
     transaction {

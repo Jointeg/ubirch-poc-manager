@@ -119,7 +119,7 @@ class PocAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with Ta
           _ <- employeeTable.createPocEmployee(employee2)
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
-        } yield (employees)
+        } yield employees
         val employees = await(r, 5.seconds).map(_.datesToIsoFormat)
         employees.size shouldBe 3
         get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin1.certifyUserId.value).prepare)) {

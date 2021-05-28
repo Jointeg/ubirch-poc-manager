@@ -1,9 +1,10 @@
 package com.ubirch.controllers
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.concerns.Token
-import com.ubirch.db.tables.{ PocAdminRepository, TenantRepository }
+import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository, TenantRepository }
 import com.ubirch.models.NOK
 import com.ubirch.models.poc.PocAdmin
+import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
@@ -33,6 +34,21 @@ object EndpointHelpers extends LazyLogging {
       case Success(uuid) =>
         pocAdminRepository.getByCertifyUserId(uuid).flatMap {
           case Some(pocAdmin) => logic(pocAdmin)
+          case None =>
+            logger.error(s"Could not find user with CertifyID: $uuid")
+            Task(NotFound(NOK.resourceNotFoundError("Could not find user with provided ID")))
+        }
+    }
+  }
+
+  def retrieveEmployeeFromToken(
+    token: Token,
+    employeeRepository: PocEmployeeRepository)(logic: PocEmployee => Task[ActionResult]): Task[ActionResult] = {
+    token.ownerIdAsUUID match {
+      case Failure(_) => Task(BadRequest(NOK.badRequest("Owner ID in token is not in UUID format")))
+      case Success(uuid) =>
+        employeeRepository.getByCertifyUserId(uuid).flatMap {
+          case Some(employee) => logic(employee)
           case None =>
             logger.error(s"Could not find user with CertifyID: $uuid")
             Task(NotFound(NOK.resourceNotFoundError("Could not find user with provided ID")))
