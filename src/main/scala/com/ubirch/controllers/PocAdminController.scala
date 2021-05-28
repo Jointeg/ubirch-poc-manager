@@ -3,6 +3,7 @@ import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
+import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -14,7 +15,8 @@ import com.ubirch.controllers.validator.AdminCriteriaValidator
 import com.ubirch.db.tables.PocAdminRepository
 import com.ubirch.db.tables.model.AdminCriteria
 import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
-import com.ubirch.models.poc.PocAdmin
+import com.ubirch.models.poc.{ PocAdmin, Status }
+import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocAdminService
@@ -35,6 +37,7 @@ import org.json4s.Formats
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 import org.scalatra.{ ActionResult, BadRequest, InternalServerError, NotFound, Ok, ScalatraBase }
 
+import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
 
@@ -123,7 +126,9 @@ class PocAdminController @Inject() (
           adminCriteria <- handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees)
           employees <- pocAdminService.getEmployees(pocAdmin, adminCriteria)
         } yield employees).map {
-          case Right(employees) => Presenter.toJsonResult(Paginated_OUT(employees.total, employees.records))
+          case Right(employees) =>
+            val paginated_OUT = Paginated_OUT(employees.total, employees.records.map(PocEmployee_OUT.fromPocEmployee))
+            Presenter.toJsonResult(paginated_OUT)
           case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
             BadRequest(NOK.badRequest(s"PocAdmin status is not completed. $pocAdminId"))
           case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
@@ -152,4 +157,22 @@ class PocAdminController @Inject() (
       case Validated.Valid(a)   => Task(a)
       case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
     }
+}
+
+object PocAdminController {
+  case class PocEmployee_OUT(
+    firstName: String,
+    lastName: String,
+    email: String,
+    status: Status)
+
+  object PocEmployee_OUT {
+    def fromPocEmployee(pocEmployee: PocEmployee): PocEmployee_OUT =
+      PocEmployee_OUT(
+        firstName = pocEmployee.name,
+        lastName = pocEmployee.surname,
+        email = pocEmployee.email,
+        status = pocEmployee.status
+      )
+  }
 }
