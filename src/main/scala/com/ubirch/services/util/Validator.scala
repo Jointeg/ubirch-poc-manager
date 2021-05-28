@@ -72,6 +72,27 @@ object Validator {
   /**
     * parsable to Boolean
     */
+  def validateAdminCertifyApp(header: String, str: String): AllErrorsOr[Boolean] = {
+    Try(str.toBoolean) match {
+      case Success(true)  => true.validNel
+      case Success(false) => certifyAppAdminError(header).invalidNel
+      case Failure(_)     => booleanError(header).invalidNel
+    }
+  }
+
+  /**
+    * parsable to Boolean
+    */
+  def validateClientCertAdmin(header: String, str: String): AllErrorsOr[Boolean] = {
+    validateBoolean(header, str) match {
+      case Valid(false)   => clientCertAdminError(header).invalidNel
+      case validOrInvalid => validOrInvalid
+    }
+  }
+
+  /**
+    * parsable to Boolean
+    */
   def validateClientCert(header: String, str: String, tenant: Tenant): AllErrorsOr[Boolean] = {
     validateBoolean(header, str) match {
       case Valid(false) if tenant.sharedAuthCert.isEmpty => clientCertError(header).invalidNel

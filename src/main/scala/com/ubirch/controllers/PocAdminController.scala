@@ -62,16 +62,16 @@ class PocAdminController @Inject() (
 
   implicit override protected def jsonFormats: Formats = jFormats
 
-  override def service: String = config.getString(GenericConfPaths.NAME)
+  override val service: String = config.getString(GenericConfPaths.NAME)
 
-  override def successCounter: Counter = Counter
+  override val successCounter: Counter = Counter
     .build()
     .name("poc_admin_success")
     .help("Represents the number of poc admin operation successes")
     .labelNames("service", "method")
     .register()
 
-  override def errorCounter: Counter = Counter
+  override val errorCounter: Counter = Counter
     .build()
     .name("poc_admin_failures")
     .help("Represents the number of poc admin operation failures")

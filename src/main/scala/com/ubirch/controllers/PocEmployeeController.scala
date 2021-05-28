@@ -48,16 +48,16 @@ class PocEmployeeController @Inject() (
 
   implicit override protected def jsonFormats: Formats = jFormats
 
-  override def service: String = config.getString(GenericConfPaths.NAME)
+  override val service: String = config.getString(GenericConfPaths.NAME)
 
-  override def successCounter: Counter = Counter
+  override val successCounter: Counter = Counter
     .build()
     .name("poc_employee_success")
     .help("Represents the number of poc employee operation successes")
     .labelNames("service", "method")
     .register()
 
-  override def errorCounter: Counter = Counter
+  override val errorCounter: Counter = Counter
     .build()
     .name("poc_employee_failures")
     .help("Represents the number of poc employee operation failures")
