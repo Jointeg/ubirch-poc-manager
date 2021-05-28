@@ -154,6 +154,68 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     }
   }
 
+  "Validator Client Cert Admin" should {
+
+    "validate 'TRUE' valid if " in {
+      val str = "TRUE"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isValid)
+    }
+
+    "validate 'TRUE' valid if tenant usageType == Both" in {
+      val str = "false"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.clientCertAdminError(clientCert))
+        }
+    }
+
+    "validate 'tryx' invalid" in {
+      val str = "tryx"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.booleanError(clientCert))
+        }
+    }
+  }
+
+  "Validator Admin Certify App " should {
+
+    "validate 'TRUE' valid" in {
+      val str = "TRUE"
+      val validated = validateAdminCertifyApp(clientCert, str)
+      assert(validated.isValid)
+    }
+
+    "validate 'False' invalid " in {
+      val str = "False"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == clientCertAdminError(clientCert))
+        }
+    }
+
+    "validate 'tryx' invalid" in {
+      val str = "tryx"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == booleanError(clientCert))
+        }
+    }
+  }
+
   "Validator Client Cert" should {
 
     val tenant = createTenant()
