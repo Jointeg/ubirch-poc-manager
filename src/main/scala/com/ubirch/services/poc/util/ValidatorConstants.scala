@@ -8,7 +8,7 @@ object ValidatorConstants {
 
   //    https://www.regextester.com/97440
   val phoneRegex: Regex =
-    raw"(([+][(]?[0-9]{1,3}[)]?)|([(]?[0-9]{4}[)]?))\s*[)]?[-\s]?[(]?[0-9]{1,3}[)]?([-\s]?[0-9]{3})([-\s]?[0-9]{3,4})".r
+    "^(\\+|00)[0-9]{1,3}[ \\-0-9]{4,14}$".r
 
   val pocNameRegex: Regex =
     "^(?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+([ _.@-](?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+)*$".r
