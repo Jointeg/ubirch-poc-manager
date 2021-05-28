@@ -13,6 +13,7 @@ import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.postgresql.util.PSQLException
 
 import javax.inject.{ Inject, Singleton }
 
@@ -78,8 +79,14 @@ class CsvProcessPocAdminImpl @Inject() (
         None
       }
     }.onErrorHandle { e =>
-      logger.error(s"fail to create poc admin and status. poc: $poc, pocAdmin: $pocAdmin, error: ${e.getMessage}")
-      Some(csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
+      logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
+      e match {
+        case _: PSQLException if e.getMessage.contains("duplicate") =>
+          Some(csvRow + columnSeparator + s"error on persisting objects; email already exists.")
+        case _ =>
+          Some(
+            csvRow + columnSeparator + s"error on persisting objects; something unexpected went wrong ${e.getMessage}")
+      }
     }
   }
 

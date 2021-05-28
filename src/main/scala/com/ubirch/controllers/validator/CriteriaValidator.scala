@@ -3,13 +3,21 @@ package com.ubirch.controllers.validator
 import cats.data.Validated._
 import cats.data._
 import cats.implicits._
-import com.ubirch.controllers.validator.CriteriaValidator.PocCriteriaValidationResult
-import com.ubirch.db.tables.model.{ Criteria, StatusFilter }
+import com.ubirch.controllers.validator.CriteriaValidator.{
+  validateFilterColumnStatus,
+  validatePageIndex,
+  validatePageSize,
+  validateSortColumn,
+  validateSortOrder,
+  PocCriteriaValidationResult
+}
+import com.ubirch.db.tables.model.{ AdminCriteria, Criteria, StatusFilter }
 import com.ubirch.models.common.{ ASC, Order, Page, Sort }
 import com.ubirch.models.poc.Status
 import com.ubirch.models.tenant.TenantId
 import org.scalatra.Params
 
+import java.util.UUID
 import scala.util.{ Failure, Success, Try }
 
 sealed trait CriteriaValidator {
@@ -96,7 +104,7 @@ object CriteriaValidator extends CriteriaValidator {
       "created"
     )
 
-  val validSortColumnsForPocAdmin: Seq[String] = Seq("name", "pocName")
+  val validSortColumnsForPocAdmin: Seq[String] = Seq("id", "surName", "email", "name", "pocName")
 
   def validateParams(
     tenantId: TenantId,
@@ -104,11 +112,31 @@ object CriteriaValidator extends CriteriaValidator {
     validSortColumns: Seq[String]): PocCriteriaValidationResult[Criteria] = {
     val page = (validatePageIndex(params, default = 0), validatePageSize(params, default = 20)).mapN(Page)
     val sort = (validateSortColumn(params, validSortColumns), validateSortOrder(params, default = ASC)).mapN(Sort)
-    val serach: PocCriteriaValidationResult[Option[String]] = params.get("search").validNec
+    val search: PocCriteriaValidationResult[Option[String]] = params.get("search").validNec
 
-    (page, sort, serach, validateFilterColumnStatus(params)).mapN {
+    (page, sort, search, validateFilterColumnStatus(params)).mapN {
       (page, sort, search, filterColumnStatus) =>
         Criteria(tenantId, page, sort, search, StatusFilter(filterColumnStatus))
+    }
+  }
+}
+
+object AdminCriteriaValidator extends CriteriaValidator {
+  type PocCriteriaValidationResult[A] = ValidatedNec[(String, String), A]
+
+  val validSortColumnsForEmployees: Seq[String] = Seq("surName", "email", "name")
+
+  def validateParams(
+    pocAdmin: UUID,
+    params: Params,
+    validSortColumns: Seq[String]): PocCriteriaValidationResult[AdminCriteria] = {
+    val page = (validatePageIndex(params, default = 0), validatePageSize(params, default = 20)).mapN(Page)
+    val sort = (validateSortColumn(params, validSortColumns), validateSortOrder(params, default = ASC)).mapN(Sort)
+    val search: PocCriteriaValidationResult[Option[String]] = params.get("search").validNec
+
+    (page, sort, search, validateFilterColumnStatus(params)).mapN {
+      (page, sort, search, filterColumnStatus) =>
+        AdminCriteria(pocAdmin, page, sort, search, StatusFilter(filterColumnStatus))
     }
   }
 }

@@ -13,6 +13,7 @@ import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import com.ubirch.services.poc.util.{ CsvConstants, EmptyCsvException, HeaderCsvException }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
+import org.postgresql.util.PSQLException
 
 import java.util.UUID
 import javax.inject.Inject
@@ -79,9 +80,14 @@ class CsvProcessPocEmployeeImpl @Inject() (
       }
     }.onErrorHandle { e =>
       logger.error(
-        s"fail to create poc employee and status. poc: $pocAdmin.pocId, pocEmployee: ${pocEmployeeCsvParseResult.pocEmployeeFromCsv}, error: ${e.getMessage}")
-      Some(
-        pocEmployeeCsvParseResult.csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
+        s"fail to create poc employee and status. poc: ${pocAdmin.pocId}, pocEmployee: ${pocEmployeeCsvParseResult.pocEmployeeFromCsv}, error: ${e.getMessage}")
+      e match {
+        case _: PSQLException if e.getMessage.contains("duplicate") =>
+          Some(
+            pocEmployeeCsvParseResult.csvRow + columnSeparator + "error on persisting objects; email already exists.")
+        case _ =>
+          Some(pocEmployeeCsvParseResult.csvRow + columnSeparator + s"error on persisting objects; something unexpected went wrong.")
+      }
     }
   }
 

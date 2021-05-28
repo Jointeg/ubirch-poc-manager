@@ -190,6 +190,9 @@ class Binder extends AbstractModule {
   def PocEmployeeCreationLoop: ScopedBindingBuilder =
     bind(classOf[PocEmployeeCreationLoop]).to(classOf[PocEmployeeCreationLoopImpl])
 
+  def PocAdminService: ScopedBindingBuilder =
+    bind(classOf[PocAdminService]).to(classOf[PocAdminServiceImpl])
+
   def EmployeeCertifyHelper: ScopedBindingBuilder =
     bind(classOf[EmployeeCertifyHelper]).to(classOf[EmployeeCertifyHelperImpl])
 
@@ -265,6 +268,7 @@ class Binder extends AbstractModule {
     AdminCertifyHelper
     PocEmployeeCreator
     PocEmployeeCreationLoop
+    PocAdminService
     EmployeeCertifyHelper
     CertHandler
     TeamDriveClient

@@ -105,9 +105,8 @@ class PocAdminCreatorImpl @Inject() (
   }
 
   private def invitePocAdminToTeamDrive(aAs: PocAdminAndStatus, poc: Poc, tenant: Tenant): Task[PocAdminAndStatus] = {
-
     if (poc.clientCertRequired && aAs.status.invitedToTeamDrive.contains(false)) {
-      val spaceName = SpaceName.forPoc(pocConfig.teamDriveStage, tenant, poc)
+      val spaceName = SpaceName.ofPoc(pocConfig.teamDriveStage, tenant, poc)
       teamDriveClient.getSpaceIdByName(spaceName).flatMap {
         case Some(spaceId) =>
           teamDriveClient.inviteMember(spaceId, aAs.admin.email, Read)
