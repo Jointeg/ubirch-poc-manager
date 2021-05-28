@@ -191,8 +191,17 @@ class DefaultTenantAdminService @Inject() (
       }
     }
 
+    def isWebIdentAlreadyExist(pocAdmin: PocAdmin) = {
+      if (pocAdmin.webIdentId.isDefined) {
+        EitherT.leftT[Task, UpdateWebIdentIdError](WebIdentAlreadyExist(pocAdmin.id))
+      } else {
+        EitherT.rightT[Task, UpdateWebIdentIdError](())
+      }
+    }
+
     (for {
       pocAdmin <- getPocAdmin(request.pocAdminId, UnknownPocAdmin)
+      _ <- isWebIdentAlreadyExist(pocAdmin)
       _ <- isPocAdminAssignedToTenant[Task, UpdateWebIdentIdError](tenant, pocAdmin)(
         PocAdminIsNotAssignedToRequestingTenant(pocAdmin.tenantId, tenant.id))
       _ <- isSameWebIdentInitialId(tenant, pocAdmin)
@@ -288,6 +297,7 @@ object CreateWebIdentInitiateIdErrors {
 sealed trait UpdateWebIdentIdError
 object UpdateWebIdentIdError {
   case class UnknownPocAdmin(id: UUID) extends UpdateWebIdentIdError
+  case class WebIdentAlreadyExist(pocAdminId: UUID) extends UpdateWebIdentIdError
   case class PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId: TenantId, requestingTenantId: TenantId)
     extends UpdateWebIdentIdError
   case class DifferentWebIdentInitialId(requestWebIdentInitialId: UUID, tenant: Tenant, pocAdmin: PocAdmin)

@@ -246,7 +246,7 @@ class TenantAdminController @Inject() (
           NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
         case Left(WebIdentNotRequired(tenantId, pocAdminId)) =>
           logger.error(s"Tenant with ID $tenantId tried to create WebInitiateId but PoC admin with ID $pocAdminId does not require WebIdent")
-          BadRequest("PoC admin does not require WebIdent")
+          BadRequest(NOK.badRequest("PoC admin does not require WebIdent"))
         case Left(PocAdminRepositoryError(msg)) =>
           logger.error(s"Error has occurred while operating on PocAdmin table: $msg")
           InternalServerError(NOK.serverError("Could not create PoC admin WebInitiateId"))
@@ -273,6 +273,9 @@ class TenantAdminController @Inject() (
         case Left(UnknownPocAdmin(id)) =>
           logger.error(s"Could not find PoC Admin with id $id")
           NotFound(NOK.resourceNotFoundError("Could not find PoC Admin with provided ID"))
+        case Left(WebIdentAlreadyExist(pocAdminId)) =>
+          logger.error(s"WebIdent Id already exist $pocAdminId")
+          BadRequest(NOK.badRequest("WebIdent Id already exists"))
         case Left(PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId, requestingTenantId)) =>
           logger.error(
             s"Requesting tenant with ID $requestingTenantId asked to change WebIdent for admin with id $pocAdminTenantId that is not under his assignment")
@@ -280,7 +283,7 @@ class TenantAdminController @Inject() (
         case Left(DifferentWebIdentInitialId(requestWebIdentInitialId, tenant, pocAdmin)) =>
           logger.error(
             s"Requesting Tenant (${tenant.id}) tried to update WebIdent ID of PoC admin (${pocAdmin.id}) but sent WebIdentInitialID ($requestWebIdentInitialId) does not match the one that is assigned to PoC Admin")
-          BadRequest("Wrong WebIdentInitialId")
+          BadRequest(NOK.badRequest("Wrong WebIdentInitialId"))
         case Left(NotExistingPocAdminStatus(id)) =>
           logger.error(s"Could not find PoC Admin status for id $id")
           NotFound(NOK.resourceNotFoundError("Could not find Poc Admin Status assigned to given PoC Admin"))
