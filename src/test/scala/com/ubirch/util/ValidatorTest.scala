@@ -224,6 +224,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
   val validPhoneNumbers = Table(
     "1555555555",
     "+4974339296",
+    "+46-498-313789",
     "+591 74339296",
     "+1 555 555 5554",
     "0001 5555555555",

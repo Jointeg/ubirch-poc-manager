@@ -87,9 +87,6 @@ object Validator {
     * exactly 1 number in this regex https://www.regextester.com/97440
     */
   def validatePhone(header: String, str: String): AllErrorsOr[String] = {
-    val numbers = phoneRegex.findAllIn(str)
-    if (numbers.size != 1)
-      phoneValidationError(header).invalidNel
     str match {
       case phoneRegex(_*) => str.validNel
       case _              => phoneValidationError(header).invalidNel
