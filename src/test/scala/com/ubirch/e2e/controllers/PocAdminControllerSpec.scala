@@ -50,14 +50,14 @@ class PocAdminControllerSpec
        |firstName3;lastName3;
        |""".stripMargin
 
-  "Endpoint POST /employee/create" should {
+  "Endpoint POST /employees/create" should {
     "create employees from provided CSV" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val (tenant, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
 
         post(
-          "/employee/create",
+          "/employees/create",
           body = goodCsv.getBytes(),
           headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status shouldBe 200
@@ -81,7 +81,7 @@ class PocAdminControllerSpec
         val (tenant, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
 
         post(
-          "/employee/create",
+          "/employees/create",
           body = semiCorrectCsv.getBytes(),
           headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status shouldBe 200

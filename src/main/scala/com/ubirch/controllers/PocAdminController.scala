@@ -4,38 +4,23 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
 import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
-import com.ubirch.controllers.concerns.{
-  ControllerBase,
-  KeycloakBearerAuthStrategy,
-  KeycloakBearerAuthenticationSupport,
-  Presenter,
-  Token
-}
+import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.AdminCriteriaValidator
 import com.ubirch.db.tables.PocAdminRepository
 import com.ubirch.db.tables.model.AdminCriteria
-import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.models.poc.{ PocAdmin, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.poc.PocAdminService
-import com.ubirch.services.poc.employee.{
-  CsvContainedErrors,
-  CsvProcessPocEmployee,
-  EmptyCSVError,
-  HeaderParsingError,
-  PocAdminNotInCompletedStatus,
-  UnknownCsvParsingError,
-  UnknownTenant
-}
-import com.ubirch.services.poc.GetPocsAdminErrors
+import com.ubirch.services.poc.employee._
+import com.ubirch.services.poc.{ GetPocsAdminErrors, PocAdminService }
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
+import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import org.scalatra.{ ActionResult, BadRequest, InternalServerError, NotFound, Ok, ScalatraBase }
 
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
@@ -92,7 +77,7 @@ class PocAdminController @Inject() (
       .tags("PoCs", "PoC Admins", "Poc-Employee")
       .authorizations()
 
-  post("/employee/create", operation(createListOfEmployees)) {
+  post("/employees/create", operation(createListOfEmployees)) {
     pocAdminEndpoint("Create employees by CSV file") { token =>
       retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
         csvProcessPocEmployee.createListOfPocEmployees(request.body, pocAdmin).map {
