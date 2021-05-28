@@ -134,8 +134,8 @@ class PocAdminController @Inject() (
             Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
               .map(BadRequest(_))
         }.onErrorHandle { ex =>
-            InternalServerError(NOK.serverError(
-              s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
+          InternalServerError(NOK.serverError(
+            s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
         }
       }
     }

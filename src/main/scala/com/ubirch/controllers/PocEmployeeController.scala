@@ -109,6 +109,9 @@ class PocEmployeeController @Inject() (
             logger.error(s"Could not find logo for poc $pocId")
             BadRequest(NOK.resourceNotFoundError("Could not find Logo assigned to given Poc"))
         }
+      }.onErrorHandle{ ex =>
+        logger.error("something unexpected happened on logo retrieval ", ex)
+        InternalServerError("GET /logo/:pocId failed unexpectedly.")
       }
     }
   }
