@@ -221,47 +221,35 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     }
   }
 
-  "Validator Phone" should {
+  val validPhoneNumbers = Table(
+    "1555555555",
+    "+4974339296",
+    "+591 74339296",
+    "+1 555 555 5554",
+    "0001 5555555555",
+    "+4930-7387862"
+  )
 
-    "validate phone number example 1 valid" in {
-      val str = "+49327387862"
-      val validated = validatePhone(phone, str)
+  val invalidPhoneNumbers = Table(
+    "+(591) 7433433",
+    "+(591) (4) 6434850",
+    "0591 74339296",
+    "(0001) 5555555",
+    "59145678464",
+    "030786862834"
+  )
+
+  forAll(validPhoneNumbers) { phoneNumber =>
+    s"Validator Phone $phoneNumber" in {
+      val validated = validatePhone(phone, phoneNumber)
       assert(validated.isValid)
     }
+  }
 
-    "validate phone number  example 2 valid" in {
-      val str = "+4930-7387862"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number 0187-73878989 valid" in {
-      val str = "0187-73878989"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number +49-301267863 valid" in {
-      val str = "+49-301267863"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number  example 5 valid" in {
-      val str = "030786862834"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number example 1 invalid" in {
-      val str = "+4932738x7862"
-      val validated = validatePhone(phone, str)
+  forAll(invalidPhoneNumbers) { phoneNumber =>
+    s"Validator Phone $phoneNumber" in {
+      val validated = validatePhone(phone, phoneNumber)
       assert(validated.isInvalid)
-      validated
-        .leftMap(_.toList.mkString(comma))
-        .leftMap { error =>
-          assert(error == phoneValidationError(phone))
-        }
     }
   }
 
