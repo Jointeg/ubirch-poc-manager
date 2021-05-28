@@ -1,11 +1,11 @@
 package com.ubirch.services.poc.employee
 
-import cats.Applicative
 import cats.data.EitherT
-import com.ubirch.db.tables.PocRepository
-import com.ubirch.models.poc.{ CustomDataSchemaSetting, Poc }
+import com.ubirch.db.tables.{ PocLogoRepository, PocRepository }
+import com.ubirch.models.poc.{ CustomDataSchemaSetting, Poc, PocLogo }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.services.poc.employee.GetCertifyConfigError.{ InvalidDataPocType, UnknownPoc }
+import com.ubirch.services.poc.employee.GetPocLogoError.{ LogoNotFoundError, PocNotFoundError }
 import monix.eval.Task
 
 import java.util.UUID
@@ -13,10 +13,13 @@ import javax.inject.{ Inject, Singleton }
 
 trait PocEmployeeService {
   def getCertifyConfig(pocEmployee: PocEmployee): Task[Either[GetCertifyConfigError, GetCertifyConfigDTO]]
+
+  def getPocLogo(pocId: UUID): Task[Either[GetPocLogoError, PocLogoResponse]]
 }
 
 @Singleton
-class PocEmployeeServiceImpl @Inject() (pocRepository: PocRepository) extends PocEmployeeService {
+class PocEmployeeServiceImpl @Inject() (pocRepository: PocRepository, pocLogoRepository: PocLogoRepository)
+  extends PocEmployeeService {
   // @todo move it in proper place
   val pocTypeMap: Map[String, String] = Map(
     "ub_cust_app" -> "bvdw-certificate",
@@ -60,12 +63,34 @@ class PocEmployeeServiceImpl @Inject() (pocRepository: PocRepository) extends Po
     }
     EitherT.fromOption[Task](dtoOpt, InvalidDataPocType(poc.pocType, poc.id))
   }
+
+  override def getPocLogo(pocId: UUID): Task[Either[GetPocLogoError, PocLogoResponse]] = {
+    for {
+      poc <- pocRepository.getPoc(pocId)
+      logo <- pocLogoRepository.getPocLogoById(pocId)
+    } yield {
+      (poc, logo) match {
+        case (Some(poc), Some(logo)) if poc.logoUrl.isDefined =>
+          Right(PocLogoResponse(PocLogo.getFileExtension(poc.logoUrl.get.url), logo.img))
+        case (Some(poc), _)  => Left(LogoNotFoundError(poc.id))
+        case (_, Some(logo)) => Left(PocNotFoundError(logo.pocId))
+      }
+    }
+  }
 }
+
+case class PocLogoResponse(fileExtension: String, logo: Array[Byte])
 
 sealed trait GetCertifyConfigError
 object GetCertifyConfigError {
   case class InvalidDataPocType(pocType: String, pocId: UUID) extends GetCertifyConfigError
   case class UnknownPoc(pocId: UUID) extends GetCertifyConfigError
+}
+
+sealed trait GetPocLogoError
+object GetPocLogoError {
+  case class PocNotFoundError(pocId: UUID) extends GetPocLogoError
+  case class LogoNotFoundError(pocId: UUID) extends GetPocLogoError
 }
 
 case class PocContact(email: String, phone: String, mobile: String, fax: String)

@@ -51,7 +51,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
-      validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
+      validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocCertifyApp),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
       validateMapContainsStringKey(dataSchemaId, csvPoc.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPoc.extraConfig),
