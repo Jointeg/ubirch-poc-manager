@@ -13,7 +13,8 @@ import com.ubirch.services.tenantadmin.UpdateWebIdentIdError.{
   DifferentWebIdentInitialId,
   NotExistingPocAdminStatus,
   PocAdminIsNotAssignedToRequestingTenant,
-  UnknownPocAdmin
+  UnknownPocAdmin,
+  WebIdentAlreadyExist
 }
 import com.ubirch.{ InjectorHelper, UnitTestBase }
 
@@ -208,6 +209,43 @@ class UpdateWebIdentIdTest extends UnitTestBase {
         result shouldBe Left(NotExistingPocAdminStatus(pocAdmin.id))
         val pocAdminAfterFailedUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
         pocAdminAfterFailedUpdate.value.webIdentId shouldBe None
+      }
+    }
+
+    "fail to update WebIdentId because WebIdentInitialId already exist" in {
+      withInjector { injector =>
+        val pocId = UUID.randomUUID()
+        val webIdentInitiateId = UUID.randomUUID()
+        val webIdentId = UUID.randomUUID().toString
+        val tenantAdminService = injector.get[TenantAdminService]
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(pocId, tenant.tenantName)
+        val pocAdmin =
+          createPocAdmin(pocId = poc.id, tenantId = tenant.id).copy(
+            webIdentInitiateId = Some(webIdentInitiateId),
+            webIdentId = Some(webIdentId))
+        val pocAdminStatus = createPocAdminStatus(pocAdmin, poc)
+        val r = for {
+          _ <- pocTable.createPoc(poc)
+          _ <- pocAdminTable.createPocAdmin(pocAdmin)
+          _ <- pocAdminStatusTable.createStatus(pocAdminStatus)
+        } yield ()
+        await(r, 5.seconds)
+
+        val result = await(
+          tenantAdminService.updateWebIdentId(
+            tenant,
+            getTenantAdminContext(tenant),
+            UpdateWebIdentIdRequest(pocAdmin.id, webIdentId, webIdentInitiateId)),
+          5.seconds
+        )
+
+        result shouldBe Left(WebIdentAlreadyExist(pocAdmin.id))
+        val pocAdminAfterFailedUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
+        pocAdminAfterFailedUpdate.value.webIdentId shouldBe Some(webIdentId)
       }
     }
   }

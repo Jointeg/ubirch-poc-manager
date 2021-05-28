@@ -951,7 +951,7 @@ class TenantAdminControllerSpec
           body = updateWebIdentIdJson(pocAdmin1.id, UUID.randomUUID(), UUID.randomUUID()).getBytes
         ) {
           status shouldBe BadRequest().status
-          body shouldBe "Wrong WebIdentInitialId"
+          body shouldBe "NOK(1.0,false,'BadRequest,Wrong WebIdentInitialId)"
         }
 
         post(
