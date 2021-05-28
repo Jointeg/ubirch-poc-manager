@@ -80,6 +80,8 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {
+
+          println(result)
           assert(result.isLeft)
           assert(pocs.length == 1)
           assert(pocAdmins.length == 1)
