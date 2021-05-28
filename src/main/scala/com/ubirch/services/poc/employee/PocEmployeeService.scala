@@ -1,6 +1,7 @@
 package com.ubirch.services.poc.employee
 
 import cats.data.EitherT
+import com.ubirch.PocConfig
 import com.ubirch.db.tables.{ PocLogoRepository, PocRepository }
 import com.ubirch.models.poc.{ CustomDataSchemaSetting, Poc, PocLogo }
 import com.ubirch.models.pocEmployee.PocEmployee
@@ -13,12 +14,14 @@ import javax.inject.{ Inject, Singleton }
 
 trait PocEmployeeService {
   def getCertifyConfig(pocEmployee: PocEmployee): Task[Either[GetCertifyConfigError, GetCertifyConfigDTO]]
-
   def getPocLogo(pocId: UUID): Task[Either[GetPocLogoError, PocLogoResponse]]
 }
 
 @Singleton
-class PocEmployeeServiceImpl @Inject() (pocRepository: PocRepository, pocLogoRepository: PocLogoRepository)
+class PocEmployeeServiceImpl @Inject() (
+  pocRepository: PocRepository,
+  pocLogoRepository: PocLogoRepository,
+  pocConfig: PocConfig)
   extends PocEmployeeService {
   // @todo move it in proper place
   val pocTypeMap: Map[String, String] = Map(
@@ -43,21 +46,28 @@ class PocEmployeeServiceImpl @Inject() (pocRepository: PocRepository, pocLogoRep
 
   private def toGetCertifyConfigDTO(poc: Poc): EitherT[Task, GetCertifyConfigError, GetCertifyConfigDTO] = {
     val dtoOpt = for {
-      dataSchemaId <- pocTypeMap.get(poc.pocType)
-      customSetting <- CustomDataSchemaSetting.schemaMap.get(dataSchemaId)
+      dataSchemaId <- pocConfig.pocTypeDataSchemaMap.get(poc.pocType)
     } yield {
+      // @todo These mappings are a temporal solution. these will be configured in the future.
+      val packagingFormat = if (dataSchemaId.contains("bmg")) Some("CBOR") else Some("UPP")
+      val styleTheme =
+        if (dataSchemaId.contains("bmg")) Some("theme-bmg-blue")
+        else if (dataSchemaId == "vaccination-v3") Some("theme-blue")
+        else None
+
+      val logoUrl = s"${pocConfig.pocLogoEndpoint}/${poc.id.toString}"
       GetCertifyConfigDTO(
         poc.id.toString,
         poc.pocName,
-        poc.logoUrl.map(_.url.toString),
+        logoUrl,
+        styleTheme,
+        poc.address.toString,
         None,
-        poc.address.toString, // @todo define it
-        None,
-        DataSchemaSetting(
+        DataSchemaSettings(
           dataSchemaId,
-          Some("CBOR"), // @todo get it properly
+          packagingFormat,
           None,
-          customSetting
+          None
         )
       )
     }
@@ -87,23 +97,23 @@ object GetCertifyConfigError {
   case class UnknownPoc(pocId: UUID) extends GetCertifyConfigError
 }
 
+case class PocContact(email: String, phone: String, mobile: String, fax: String)
+case class DataSchemaSettings(
+  dataSchemaId: String,
+  packagingFormat: Option[String],
+  requiredRole: Option[String],
+  customSettings: Option[CustomDataSchemaSetting])
+case class GetCertifyConfigDTO(
+  pocId: String,
+  pocName: String,
+  logoUrl: String,
+  styleTheme: Option[String],
+  pocAddress: String,
+  pocContact: Option[PocContact],
+  dataSchemaSettings: DataSchemaSettings)
+
 sealed trait GetPocLogoError
 object GetPocLogoError {
   case class PocNotFoundError(pocId: UUID) extends GetPocLogoError
   case class LogoNotFoundError(pocId: UUID) extends GetPocLogoError
 }
-
-case class PocContact(email: String, phone: String, mobile: String, fax: String)
-case class DataSchemaSetting(
-  dataSchemaId: String,
-  packagingFormat: Option[String],
-  requiredRole: Option[String],
-  customSetting: CustomDataSchemaSetting)
-case class GetCertifyConfigDTO(
-  pocId: String,
-  pocName: String,
-  logoUrl: Option[String],
-  styleTheme: Option[String],
-  pocAddress: String,
-  pocContact: Option[PocContact],
-  dataSchemaSetting: DataSchemaSetting)

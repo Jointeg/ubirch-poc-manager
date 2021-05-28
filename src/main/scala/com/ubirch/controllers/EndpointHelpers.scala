@@ -8,7 +8,7 @@ import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
-import org.scalatra.{ ActionResult, BadRequest, NotFound }
+import org.scalatra.{ ActionResult, BadRequest, InternalServerError, NotFound }
 
 import java.util.UUID
 import scala.util.{ Either, Failure, Left, Right, Success }
@@ -37,6 +37,10 @@ object EndpointHelpers extends LazyLogging {
           case None =>
             logger.error(s"Could not find user with CertifyID: $uuid")
             Task(NotFound(NOK.resourceNotFoundError("Could not find user with provided ID")))
+        }.onErrorHandle { ex =>
+          logger.error("something went wrong" + ex.getMessage)
+          InternalServerError(NOK.serverError(
+            "sorry, something went wrong."))
         }
     }
   }
@@ -52,6 +56,10 @@ object EndpointHelpers extends LazyLogging {
           case None =>
             logger.error(s"Could not find user with CertifyID: $uuid")
             Task(NotFound(NOK.resourceNotFoundError("Could not find user with provided ID")))
+        }.onErrorHandle { ex =>
+          logger.error("something went wrong" + ex.getMessage)
+          InternalServerError(NOK.serverError(
+            "sorry, something went wrong."))
         }
     }
   }

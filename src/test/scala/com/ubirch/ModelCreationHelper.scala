@@ -1,17 +1,24 @@
 package com.ubirch
 
 import com.ubirch.controllers.TenantAdminContext
-import com.ubirch.db.tables.{ PocEmployeeRepositoryMock, PocEmployeeStatusRepositoryMock, PocRepositoryMock }
+import com.ubirch.db.tables.{
+  PocEmployeeRepositoryMock,
+  PocEmployeeStatusRepositoryMock,
+  PocRepositoryMock,
+  TenantRepository
+}
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.models.tenant._
+import com.ubirch.services.poc.PocTestHelper.await
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.execution.Scheduler.Implicits.global
 import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
+import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 object ModelCreationHelper {
@@ -53,7 +60,7 @@ object ModelCreationHelper {
     name: String = "pocName",
     status: Status = Pending,
     clientCertRequired: Boolean = false,
-    city: String = ""
+    city: String = "Paris"
   ): Poc =
     Poc(
       id,
@@ -61,7 +68,7 @@ object ModelCreationHelper {
       externalId,
       pocTypeValue,
       name,
-      Address("", "", None, 67832, city, None, None, "France"),
+      Address("An der Heide", "101", None, 67832, city, None, None, "France"),
       "pocPhone",
       certifyApp = true,
       None,
@@ -210,4 +217,10 @@ object ModelCreationHelper {
     TenantAdminContext(UUID.randomUUID(), tenant.id.value.asJava())
   }
 
+  def addTenantToDB(injector: InjectorHelper, name: String = "tenant") = {
+    val tenantTable = injector.get[TenantRepository]
+    val tenant = createTenant(name = name)
+    await(tenantTable.createTenant(tenant), 5.seconds)
+    tenant
+  }
 }

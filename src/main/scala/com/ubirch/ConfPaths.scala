@@ -49,6 +49,7 @@ object ConfPaths {
 
   trait ServicesConfPaths {
     final val DATA_SCHEMA_GROUP_MAP = "system.services.dataSchemaGroupMap"
+    final val POC_TYPE_DATA_SCHEMA_MAP = "system.services.pocTypeDataSchemaMap"
     final val TRUSTED_POC_GROUP_MAP = "system.services.trustedPocGroupMap"
     final val POC_TYPE_ENDPOINT_MAP = "system.services.pocTypeEndpointMap"
     final val POC_TYPES_ROLE_NEEDED = "system.services.pocTypeRoleNeeded"
@@ -65,7 +66,7 @@ object ConfPaths {
     final val GO_CLIENT_URL = "system.services.goClientURL"
     final val GO_CLIENT_TOKEN = "system.services.goClientToken"
     final val POC_CREATION_INTERVAL = "system.services.pocCreationInterval"
-    final val TEAM_DRIVE_ADMIN_EMAILS = "system.services.teamDriveAdminEmails"
+    final val POC_LOGO_ENDPOINT = "system.services.pocLogoEndpoint"
   }
 
   trait AESEncryption {
