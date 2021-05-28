@@ -135,7 +135,7 @@ class TenantAdminControllerSpec
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body == validPocOnlyCsv(
-            poc1id) + columnSeparator + "the pair of (external_id and data_schema_id) already exists.")
+            poc1id) + columnSeparator + "error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
         }
       }
     }
