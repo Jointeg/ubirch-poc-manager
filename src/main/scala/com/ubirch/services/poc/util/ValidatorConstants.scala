@@ -23,13 +23,13 @@ object ValidatorConstants {
     s"column $header must be either 'TRUE' or 'FALSE'"
 
   def certifyAppAdminError(header: String) =
-    s"column $header cannot be false, if admin shall be created"
+    s"column $header cannot be false, if poc admin shall be created"
 
   def clientCertError(header: String) =
     s"column $header can only be false, if tenant has client cert"
 
   def clientCertAdminError(header: String) =
-    s"column $header cannot be false, if tenant admin shall be created"
+    s"column $header cannot be false, if poc admin shall be created"
 
   def organisationalUnitCertError(userType: UsageType, clientCertRequired: Boolean) =
     s"Could not create organisational unit because Tenant usage type is set to $userType but clientCertRequired is set to $clientCertRequired"
