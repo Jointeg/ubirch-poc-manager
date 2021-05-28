@@ -7,7 +7,7 @@ import com.ubirch.ModelCreationHelper.{
   getTenantAdminContext
 }
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.tenant.{ CreateWebIdentInitiateIdRequest, TenantName }
+import com.ubirch.models.tenant.CreateWebIdentInitiateIdRequest
 import com.ubirch.{ InjectorHelper, UnitTestBase }
 
 import java.util.UUID

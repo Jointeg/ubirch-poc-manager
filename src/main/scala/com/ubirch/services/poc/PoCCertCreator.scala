@@ -38,7 +38,7 @@ object PoCCertCreator extends LazyLogging {
           case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
           case Right(keystore) => Task(keystore)
         }
-      name = SpaceName.forPoc(stage, tenant, poc)
+      name = SpaceName.ofPoc(stage, tenant, poc)
       _ <- teamDriveService.shareCert(
         name,
         ubirchAdmins :+ poc.manager.managerEmail,

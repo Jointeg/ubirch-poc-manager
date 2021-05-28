@@ -1,15 +1,16 @@
 package com.ubirch.db.tables
+import com.ubirch.db.tables.model.{ AdminCriteria, PaginatedResult }
 import com.ubirch.models.poc.Completed
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
 import java.util.UUID
-import javax.inject.Singleton
+import javax.inject.{ Inject, Singleton }
 import scala.collection.mutable
 
 @Singleton
-class PocEmployeeRepositoryMock extends PocEmployeeRepository {
+class PocEmployeeRepositoryMock @Inject() (pocAdminRepository: PocAdminRepository) extends PocEmployeeRepository {
 
   private val pocEmployeeDatastore = mutable.Map[UUID, PocEmployee]()
 
@@ -61,4 +62,15 @@ class PocEmployeeRepositoryMock extends PocEmployeeRepository {
         case (_, pocEmployee: PocEmployee) if pocEmployee.certifyUserId.contains(certifyUserId) => pocEmployee
       }.headOption
     }
+
+  override def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]] = {
+    pocAdminRepository.getPocAdmin(criteria.adminId).map {
+      case None => PaginatedResult(0, Seq.empty[PocEmployee])
+      case Some(pocAdmin) =>
+        val employees = pocEmployeeDatastore.values
+          .filter(_.pocId == pocAdmin.pocId)
+          .filter(e => criteria.filter.status.contains(e.status))
+        PaginatedResult(employees.size, employees.toSeq)
+    }
+  }
 }

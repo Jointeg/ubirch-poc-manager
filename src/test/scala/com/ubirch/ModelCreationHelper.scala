@@ -52,7 +52,8 @@ object ModelCreationHelper {
     externalId: String = UUID.randomUUID().toString,
     name: String = "pocName",
     status: Status = Pending,
-    clientCertRequired: Boolean = false
+    clientCertRequired: Boolean = false,
+    city: String = ""
   ): Poc =
     Poc(
       id,
@@ -60,7 +61,7 @@ object ModelCreationHelper {
       externalId,
       pocTypeValue,
       name,
-      Address("", "", None, 67832, "", None, None, "France"),
+      Address("", "", None, 67832, city, None, None, "France"),
       "pocPhone",
       certifyApp = true,
       None,
@@ -77,7 +78,7 @@ object ModelCreationHelper {
     tenantId: TenantId,
     name: String = getRandomString,
     surname: String = getRandomString,
-    email: String = getRandomString,
+    email: String = getRandomString + "@test.de",
     mobilePhone: String = getRandomString,
     webIdentRequired: Boolean = true,
     webIdentInitiateId: Option[UUID] = None,
@@ -160,14 +161,19 @@ object ModelCreationHelper {
       createPocEmployeeStatus(employeeId))
   }
 
-  def createPocEmployee(employeeId: UUID = UUID.randomUUID(), pocId: UUID = UUID.randomUUID()): PocEmployee = {
+  def createPocEmployee(
+    employeeId: UUID = UUID.randomUUID(),
+    pocId: UUID = UUID.randomUUID(),
+    tenantId: TenantId = tenantId,
+    name: String = "Hans",
+    email: String = getRandomString + "@test.de"): PocEmployee = {
     PocEmployee(
       employeeId,
       pocId,
       tenantId,
-      "Hans",
+      name,
       "Welsich",
-      s"${employeeId.toString}@test.de"
+      email
     )
   }
 

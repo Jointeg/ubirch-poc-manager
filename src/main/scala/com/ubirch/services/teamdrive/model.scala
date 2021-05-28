@@ -29,9 +29,9 @@ object model {
   case class LoginInformation(isLoginRequired: Boolean)
 
   object SpaceName {
-    def forTenant(stage: String, tenant: Tenant): SpaceName =
+    def ofTenant(stage: String, tenant: Tenant): SpaceName =
       SpaceName(s"${stage}_${tenant.tenantName.value}")
-    def forPoc(stage: String, tenant: Tenant, poc: Poc): SpaceName =
+    def ofPoc(stage: String, tenant: Tenant, poc: Poc): SpaceName =
       SpaceName(s"${stage}_${poc.pocType.split("_")(1)}_${tenant.tenantName.value}_${poc.pocName}_${poc.externalId}")
   }
 

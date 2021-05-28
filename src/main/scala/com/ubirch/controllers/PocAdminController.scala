@@ -1,4 +1,5 @@
 package com.ubirch.controllers
+import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
@@ -6,12 +7,17 @@ import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
   KeycloakBearerAuthenticationSupport,
+  Presenter,
   Token
 }
+import com.ubirch.controllers.validator.AdminCriteriaValidator
 import com.ubirch.db.tables.PocAdminRepository
-import com.ubirch.models.NOK
+import com.ubirch.db.tables.model.AdminCriteria
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
+import com.ubirch.models.poc.PocAdmin
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
+import com.ubirch.services.poc.PocAdminService
 import com.ubirch.services.poc.employee.{
   CsvContainedErrors,
   CsvProcessPocEmployee,
@@ -21,6 +27,7 @@ import com.ubirch.services.poc.employee.{
   UnknownCsvParsingError,
   UnknownTenant
 }
+import com.ubirch.services.poc.GetPocsAdminErrors
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -39,7 +46,8 @@ class PocAdminController @Inject() (
   publicKeyPoolService: PublicKeyPoolService,
   pocAdminRepository: PocAdminRepository,
   csvProcessPocEmployee: CsvProcessPocEmployee,
-  tokenVerificationService: TokenVerificationService
+  tokenVerificationService: TokenVerificationService,
+  pocAdminService: PocAdminService
 )(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
@@ -73,6 +81,14 @@ class PocAdminController @Inject() (
       .description("Receives a semicolon separated .csv with a list of PoC employees." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC", "PoC-Admin", "PoC-Employee")
+      .authorizations()
+
+  val getEmployees: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve all employees of the requesting employee")
+      .summary("Get Employees")
+      .description("Retrieve Employees that belong to the querying employee.")
+      .tags("PoCs", "PoC Admins", "Poc-Employee")
+      .authorizations()
 
   post("/employee/create", operation(createListOfEmployees)) {
     pocAdminEndpoint("Create employees by CSV file") { token =>
@@ -100,9 +116,40 @@ class PocAdminController @Inject() (
     }
   }
 
+  get("/employees", operation(getEmployees)) {
+    pocAdminEndpoint("get employees") { token =>
+      retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
+        (for {
+          adminCriteria <- handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees)
+          employees <- pocAdminService.getEmployees(pocAdmin, adminCriteria)
+        } yield employees).map {
+          case Right(employees) => Presenter.toJsonResult(Paginated_OUT(employees.total, employees.records))
+          case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
+            BadRequest(NOK.badRequest(s"PocAdmin status is not completed. $pocAdminId"))
+          case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
+            logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
+            NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
+        }.onErrorRecoverWith {
+          case ValidationError(e) =>
+            Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
+              .map(BadRequest(_))
+        }.onErrorHandle { ex =>
+            InternalServerError(NOK.serverError(
+              s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
+        }
+      }
+    }
+  }
+
   private def pocAdminEndpoint(description: String)(logic: Token => Task[ActionResult]) = {
     authenticated(_.hasRole(Token.POC_ADMIN)) { token: Token =>
       asyncResult(description) { _ => _ => logic(token) }
     }
   }
+
+  private def handleValidation(pocAdmin: PocAdmin, validSortColumns: Seq[String]): Task[AdminCriteria] =
+    AdminCriteriaValidator.validateParams(pocAdmin.id, params, validSortColumns) match {
+      case Validated.Valid(a)   => Task(a)
+      case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
+    }
 }

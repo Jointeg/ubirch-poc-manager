@@ -1,6 +1,6 @@
 package com.ubirch.controllers
 
-import cats.data.{ NonEmptyChain, Validated }
+import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers.retrieveTenantFromToken
@@ -8,13 +8,14 @@ import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
   KeycloakBearerAuthenticationSupport,
+  Presenter,
   Token
 }
 import com.ubirch.controllers.validator.CriteriaValidator
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
-import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
@@ -29,6 +30,7 @@ import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
+import GetPocAdminStatusErrors._
 
 import java.util.UUID
 import javax.inject.Inject
@@ -169,11 +171,10 @@ class TenantAdminController @Inject() (
         criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
         pocs <- pocTable.getAllPocsByCriteria(criteria)
       } yield Paginated_OUT(pocs.total, pocs.records))
-        .map(toJson)
+        .map(Presenter.toJsonResult)
         .onErrorRecoverWith {
           case ValidationError(e) =>
-            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
-              .toJson
+            Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
               .map(BadRequest(_))
         }
         .onErrorHandle { ex =>
@@ -211,7 +212,7 @@ class TenantAdminController @Inject() (
           pocStatusTable
             .getPocStatus(uuid)
             .map {
-              case Some(pocStatus) => toJson(pocStatus)
+              case Some(pocStatus) => Presenter.toJsonResult(pocStatus)
               case None            => NotFound(NOK.resourceNotFoundError(s"pocStatus with $uuid couldn't be found"))
             }
         }
@@ -236,7 +237,7 @@ class TenantAdminController @Inject() (
         tenant,
         tenantAdminContext,
         Serialization.read[CreateWebIdentInitiateIdRequest](request.body)).map {
-        case Right(webInitiateId) => Ok(toJson(CreateWebInitiateIdResponse(webInitiateId)))
+        case Right(webInitiateId) => Ok(Presenter.toJsonResult(CreateWebInitiateIdResponse(webInitiateId)))
         case Left(PocAdminNotFound(pocAdminId)) =>
           logger.error(s"Could not find PocAdmin with id: $pocAdminId")
           NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
@@ -295,11 +296,10 @@ class TenantAdminController @Inject() (
       } yield Paginated_OUT(
         pocAdmins.total,
         pocAdmins.records.map { case (pa, p) => PocAdmin_OUT.fromPocAdmin(pa, p) }))
-        .map(toJson)
+        .map(Presenter.toJsonResult)
         .onErrorRecoverWith {
           case ValidationError(e) =>
-            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
-              .toJson
+            Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
               .map(BadRequest(_))
         }
         .onErrorHandle { ex =>
@@ -312,10 +312,9 @@ class TenantAdminController @Inject() (
   get("/poc-admin/status/:id", operation(getPocAdminStatus)) {
     tenantAdminEndpoint("Get status of PoC Admin") { tenant =>
       getParamAsUUID("id", id => s"Could not convert provided ID ($id) to UUID") { pocAdminId =>
-        import GetPocAdminStatusErrors._
         tenantAdminService.getPocAdminStatus(tenant, pocAdminId).map {
           case Right(getPocAdminStatusResponse) =>
-            toJson(getPocAdminStatusResponse)
+            Presenter.toJsonResult(getPocAdminStatusResponse)
           case Left(PocAdminNotFound(pocAdminId)) =>
             logger.error(s"Could not find PoC Admin with id $pocAdminId")
             NotFound(NOK.resourceNotFoundError("Could not find PoC Admin"))
@@ -398,16 +397,6 @@ class TenantAdminController @Inject() (
     }
   }
 
-  private def toJson[T](t: T): ActionResult = {
-    Try(write[T](t)) match {
-      case Success(json) => Ok(json)
-      case Failure(ex) =>
-        val errorMsg = s"Could not parse ${t.getClass.getSimpleName} to json"
-        logger.error(errorMsg, ex)
-        InternalServerError(NOK.serverError(errorMsg))
-    }
-  }
-
   private def handleValidation(tenant: Tenant, validSortColumns: Seq[String]) =
     CriteriaValidator.validateParams(tenant.id, params, validSortColumns) match {
       case Validated.Valid(a)   => Task(a)
@@ -418,9 +407,6 @@ class TenantAdminController @Inject() (
 case class AddDeviceCreationTokenRequest(token: String)
 
 object TenantAdminController {
-  case class Paginated_OUT[T](total: Long, records: Seq[T])
-  case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
-
   case class PocAdmin_OUT(
     id: UUID,
     firstName: String,
@@ -448,9 +434,5 @@ object TenantAdminController {
         webIdentInitiateId = pocAdmin.webIdentInitiateId,
         webIdentSuccessId = pocAdmin.webIdentId
       )
-  }
-
-  implicit class ResponseOps[T](r: Response[T]) {
-    def toJson(implicit f: Formats): Task[String] = Task(write[Response[T]](r))
   }
 }
