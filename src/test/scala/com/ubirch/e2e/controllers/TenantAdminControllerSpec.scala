@@ -12,13 +12,16 @@ import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.models.poc._
 import com.ubirch.models.user.UserId
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.user.UserId
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
+import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, pocHeaderLine }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -48,16 +51,6 @@ class TenantAdminControllerSpec
   implicit private val formats: Formats =
     DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
 
-  private val badCsv =
-    "poc_id*;poc_type*;poc_name*;poc_street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12A636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12A636;Wunschstadt;;;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}"
-
-  private val goodCsv =
-    s"""$pocHeaderLine
-       |${poc1id.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
-
   private val addDeviceCreationToken: String =
     s"""
        |{
@@ -72,7 +65,7 @@ class TenantAdminControllerSpec
         val tenant = addTenantToDB()
         post(
           "/pocs/create",
-          body = goodCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body.isEmpty)
@@ -87,7 +80,10 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
         addTenantToDB()
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.superAdmin.prepare)) {
+        post(
+          "/pocs/create",
+          body = validPocOnlyCsv(poc1id).getBytes(),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
           status should equal(403)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
@@ -99,7 +95,7 @@ class TenantAdminControllerSpec
         val token = Injector.get[FakeTokenCreator]
         post(
           "/pocs/create",
-          body = badCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)) {
           status should equal(400)
           assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
@@ -113,7 +109,7 @@ class TenantAdminControllerSpec
         val tenant = addTenantToDB()
         post(
           "/pocs/create",
-          body = badCsv.getBytes(),
+          body = invalidHeaderPocOnlyCsv.getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
@@ -127,7 +123,7 @@ class TenantAdminControllerSpec
         val tenant = addTenantToDB()
         post(
           "/pocs/create",
-          body = goodCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body.isEmpty)
@@ -135,10 +131,11 @@ class TenantAdminControllerSpec
 
         post(
           "/pocs/create",
-          body = goodCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
-          assert(body == goodCsv + columnSeparator + "error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
+          assert(body == validPocOnlyCsv(
+            poc1id) + columnSeparator + "error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
         }
       }
     }

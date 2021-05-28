@@ -64,26 +64,49 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   "Validator URL" should {
 
-    "validate URL valid" in {
-      val str = "http://www.ubirch.com"
-      val validated = validateURL(logoUrl, str, "true")
+    "validate URL invalid" in {
+      val str = "anyurl"
+      val validated = validateLogoURL(logoUrl, str, "false")
       assert(validated.isValid)
     }
 
-    "validate broken URL invalid" in {
-      val str = "www.ubirch.comX"
-      val validated = validateURL(logoUrl, str, "true")
+    "validate URL valid" in {
+      val str = "http://www.ubirch.com/logo.png"
+      val validated = validateLogoURL(logoUrl, str, "true")
+      assert(validated.isValid)
+    }
+
+    "validate URL invalid, if schema is missing " in {
+      val str = "www.ubirch.com"
+      val validated = validateLogoURL(logoUrl, str, "true")
+      assert(validated.isInvalid)
+    }
+
+    "validate URL invalid if wrong file extension" in {
+      val str = "http://www.ubirch.com/"
+      val validated = validateLogoURL(logoUrl, str, "true")
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == "column logo_url must contain a proper url")
+          assert(error == logoUrlNoValidFileFormatError(logoUrl))
+        }
+    }
+
+    "validate broken URL invalid" in {
+      val str = "www.ubirch.comX"
+      val validated = validateLogoURL(logoUrl, str, "true")
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == logoUrlNoValidUrlError(logoUrl))
         }
     }
 
     "validate URL valid, if certifyApp column contains errors " in {
       val str = "www.ubirch.com"
-      val validated = validateURL(logoUrl, str, "CtrueX")
+      val validated = validateLogoURL(logoUrl, str, "CtrueX")
       assert(validated.isValid)
     }
   }

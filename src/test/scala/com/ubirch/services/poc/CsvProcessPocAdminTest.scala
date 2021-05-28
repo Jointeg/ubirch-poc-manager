@@ -1,33 +1,20 @@
 package com.ubirch.services.poc
 
-import com.ubirch.ModelCreationHelper.{ createTenant, pocTypeValue }
+import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.UnitTestBase
 import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, PocStatusRepository }
-import com.ubirch.services.poc.util.CsvConstants.pocAdminHeaderLine
+import com.ubirch.testutils.CentralCsvProvider.{
+  invalidHeaderPocAdminCsv,
+  validHeaderButBadRowsPocAdminCsv,
+  validPocAdminCsv
+}
 
 import java.util.UUID
 
 class CsvProcessPocAdminTest extends UnitTestBase {
 
   private val pocId = UUID.randomUUID()
-
-  private val invalidHeader =
-    s"""external_id*;poc_type*;poc_name*;street*;street_number*;additional_address;zipcode*;city*;county;federal_state;country*;phone*;certify_app*;logo_url;client_cert*;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config;technician_surname;technician_name*;technician_email*;technician_mobile_phone*;technician_date_of_birth*;web_ident_required*\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;$pocTypeValue;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1: vaccine2\"]};Mustermann;Herr;herr.mustermann@mail.de;0176-543;01.01.1971;TRUE"""
-
-  private val validCsv =
-    s"""$pocAdminHeaderLine
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
-       |""".stripMargin
-
-  private val validHeaderButBadCsvRows =
-    s"""$pocAdminHeaderLine
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};;Herr;herr.mustermann@;0176-738786782;01.01.1971;xfalse
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;017782;01.1971;TRUE
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030786862834;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0176-738786782;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;0176-738786782;01.01.1971;TRUE
-       |""".stripMargin
 
   private val tenant = createTenant()
   private val tenantContext = TenantAdminContext(UUID.randomUUID(), tenant.id.value.asJava())
@@ -42,7 +29,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
         val pocAdminStatusRepository = injector.get[PocAdminStatusRepository]
 
         (for {
-          result <- processPocAdmin.createListOfPoCsAndAdmin(validCsv, tenant, tenantContext)
+          result <- processPocAdmin.createListOfPoCsAndAdmin(validPocAdminCsv(pocId), tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           poc = pocs.head
           pocStatusOpt <- pocStatusRepository.getPocStatus(poc.id)
@@ -70,7 +57,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
         val pocAdminRepository = injector.get[PocAdminRepository]
 
         (for {
-          result <- processPocAdmin.createListOfPoCsAndAdmin(invalidHeader, tenant, tenantContext)
+          result <- processPocAdmin.createListOfPoCsAndAdmin(invalidHeaderPocAdminCsv, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {
@@ -88,7 +75,8 @@ class CsvProcessPocAdminTest extends UnitTestBase {
         val pocAdminRepository = injector.get[PocAdminRepository]
 
         (for {
-          result <- processPocAdmin.createListOfPoCsAndAdmin(validHeaderButBadCsvRows, tenant, tenantContext)
+          result <-
+            processPocAdmin.createListOfPoCsAndAdmin(validHeaderButBadRowsPocAdminCsv(pocId), tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {

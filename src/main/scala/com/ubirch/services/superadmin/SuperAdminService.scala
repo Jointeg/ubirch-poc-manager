@@ -80,7 +80,7 @@ class DefaultSuperAdminService @Inject() (
     tenantRepository
       .createTenant(updatedTenant)
       .map { tenantId =>
-        logAuditBySuperAdmin("created tenant", superAdminContext)
+        logAuditBySuperAdmin(s"created tenant ${updatedTenant.id}", superAdminContext)
         Right.apply(tenantId)
       }
       .onErrorHandle(ex => {

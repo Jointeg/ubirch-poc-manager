@@ -124,6 +124,9 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
   def deletePocEmployee(employeeId: UUID): Task[Unit] =
     run(deleteEmployeeQuery(employeeId)).void
 
+  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]] =
+    run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
+
   def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]] =
     transaction {
       val pocEmployeesByCriteria = filterByStatuses(getAllByCriteriaQuery(criteria), criteria.filter.status)
@@ -139,7 +142,4 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
         PaginatedResult(total, employees)
       }
     }
-
-  def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]] =
-    run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
 }
