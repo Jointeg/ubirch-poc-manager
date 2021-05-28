@@ -37,7 +37,6 @@ import org.json4s.Formats
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 import org.scalatra.{ ActionResult, BadRequest, InternalServerError, NotFound, Ok, ScalatraBase }
 
-import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
 
