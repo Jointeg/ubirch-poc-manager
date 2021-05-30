@@ -1,6 +1,6 @@
 package com.ubirch.services.poc.parsers
 
-import cats.data.Validated.{Invalid, Valid}
+import cats.data.Validated.{ Invalid, Valid }
 import cats.syntax.apply._
 import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocAdminRow
@@ -12,7 +12,7 @@ import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
 import java.util.UUID
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 case class PocAdminParseResult(poc: Poc, pocAdmin: PocAdmin, csvRow: String) extends ParseRowResult
 
