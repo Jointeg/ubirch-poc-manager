@@ -1,12 +1,20 @@
 package com.ubirch.services.poc
 
 import cats.data.EitherT
-import com.ubirch.db.tables.{ PocEmployeeRepository, TenantRepository }
+import cats.implicits.catsSyntaxEitherId
+import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError }
+import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
+import com.ubirch.controllers.SwitchActiveError.{ MissingCertifyUserId, NotAllowedError, PocEmployeeNotFound }
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.model.{ AdminCriteria, PaginatedResult }
+import com.ubirch.db.tables.{ PocEmployeeRepository, TenantRepository }
 import com.ubirch.models.poc.{ Completed, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.tenant.{ Tenant, TenantId }
+import com.ubirch.models.tenant.TenantId
+import com.ubirch.services.CertifyKeycloak
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.GetPocsAdminErrors.{ PocAdminNotInCompletedStatus, UnknownTenant }
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import java.util.UUID
@@ -16,11 +24,22 @@ trait PocAdminService {
   def getEmployees(
     pocAdmin: PocAdmin,
     criteria: AdminCriteria): Task[Either[GetPocsAdminErrors, PaginatedResult[PocEmployee]]]
+
+  def switchActiveForPocEmployee(
+    employeeId: UUID,
+    pocAdmin: PocAdmin,
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
+
 }
 
 @Singleton
-class PocAdminServiceImpl @Inject() (employeeRepository: PocEmployeeRepository, tenantRepository: TenantRepository)
-  extends PocAdminService {
+class PocAdminServiceImpl @Inject() (
+  employeeRepository: PocEmployeeRepository,
+  tenantRepository: TenantRepository,
+  keycloakUserService: KeycloakUserService,
+  quillMonixJdbcContext: QuillMonixJdbcContext)
+  extends PocAdminService
+  with PocAuditLogging {
 
   override def getEmployees(
     pocAdmin: PocAdmin,
@@ -43,6 +62,32 @@ class PocAdminServiceImpl @Inject() (employeeRepository: PocEmployeeRepository, 
     }
   }
 
+  override def switchActiveForPocEmployee(
+    employeeId: UUID,
+    pocAdmin: PocAdmin,
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
+
+    employeeRepository
+      .getPocEmployee(employeeId)
+      .flatMap {
+        case None                                               => Task(PocEmployeeNotFound(employeeId).asLeft)
+        case Some(employee) if employee.pocId != pocAdmin.pocId => Task(NotAllowedError.asLeft)
+        case Some(employee) if employee.certifyUserId.isEmpty   => Task(MissingCertifyUserId(employeeId).asLeft)
+
+        case Some(employee) =>
+          val userId = employee.certifyUserId.get
+
+          quillMonixJdbcContext.withTransaction {
+            (active match {
+              case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
+              case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
+            }) >> employeeRepository.updatePocEmployee(employee.copy(active = ActivateSwitch.toBoolean(active)))
+          }.map { _ =>
+            logAuditByPocAdmin(s"$active poc employee ${employee.id} of poc ${employee.pocId}.", pocAdmin)
+            Right(())
+          }
+      }
+  }
 }
 
 sealed trait GetPocsAdminErrors

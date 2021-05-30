@@ -1148,6 +1148,27 @@ class TenantAdminControllerSpec
         assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
       }
     }
+
+    "return 401 when poc of poc-admin doesn't belong to tenant " in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      val tenantTable = i.get[TenantTable]
+      val unrelatedTenant = createTenant("unrelated tenant")
+      await(tenantTable.createTenant(unrelatedTenant), 5.seconds)
+
+      put(
+        s"/poc-admin/$id/active/0",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(unrelatedTenant.tenantName).prepare)
+      ) {
+        status should equal(401)
+        assert(body.contains(s"Poc admin with id '$id' doesn't belong to requesting tenant admin."))
+      }
+    }
   }
 
   override protected def beforeEach(): Unit = {

@@ -3,7 +3,7 @@ package com.ubirch.controllers
 import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.EndpointHelpers.retrieveTenantFromToken
+import com.ubirch.controllers.EndpointHelpers.{ retrieveTenantFromToken, ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -19,7 +19,6 @@ import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrors
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
-import com.ubirch.services.tenantadmin.TenantAdminService.{ ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -31,6 +30,7 @@ import org.json4s.native.Serialization.write
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 import GetPocAdminStatusErrors._
+import com.ubirch.controllers.SwitchActiveError.{ MissingCertifyUserId, NotAllowedError }
 
 import java.util.UUID
 import javax.inject.Inject
@@ -343,8 +343,11 @@ class TenantAdminController @Inject() (
               case Left(e) => e match {
                   case SwitchActiveError.PocAdminNotFound(id) =>
                     NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
-                  case SwitchActiveError.MissingCertifyUserId(id) =>
+                  case MissingCertifyUserId(id) =>
                     Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                  case NotAllowedError =>
+                    Unauthorized(NOK.authenticationError(
+                      s"Poc admin with id '$pocAdminId' doesn't belong to requesting tenant admin."))
                 }
               case Right(_) => Ok("")
             }

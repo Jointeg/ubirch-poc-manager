@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
 import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
+import com.ubirch.controllers.SwitchActiveError.NotAllowedError
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.AdminCriteriaValidator
 import com.ubirch.db.tables.PocAdminRepository
@@ -22,8 +23,10 @@ import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
+import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Left, Right, Success, Try }
 
 @Singleton
 class PocAdminController @Inject() (
@@ -77,62 +80,109 @@ class PocAdminController @Inject() (
       .tags("PoCs", "PoC Admins", "Poc-Employee")
       .authorizations()
 
+  val switchActiveOnPocEmployee: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Activate or deactivate PoC employee")
+      .summary("De- and activation")
+      .description("Activate or deactivate PoC admin")
+      .tags("Poc-Employee", "Poc-Admin")
+      .authorizations()
+      .parameters(
+        queryParam[UUID]("id").description("PoC employee id"),
+        queryParam[Int]("isActive").description(
+          "Whether PoC Employee should be active, values: 1 for true, 0 for false.")
+      )
+
   post("/employees/create", operation(createListOfEmployees)) {
-    pocAdminEndpoint("Create employees by CSV file") { token =>
-      retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
-        csvProcessPocEmployee.createListOfPocEmployees(request.body, pocAdmin).map {
-          case Left(UnknownTenant(tenantId)) =>
-            logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
-            NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
-          case Left(PocAdminNotInCompletedStatus(pocAdminId)) =>
-            logger.error(s"Could not create employees because PocAdmin is not in completed state: $pocAdminId")
-            BadRequest(NOK.badRequest("PoC Admin is not fully setup"))
-          case Left(HeaderParsingError(msg)) =>
-            logger.error(s"Error has occurred during header parsing: $msg sent by ${pocAdmin.id}")
-            BadRequest(NOK.badRequest("Header in CSV file is not correct"))
-          case Left(EmptyCSVError(msg)) =>
-            logger.error(s"Empty CSV file received from ${pocAdmin.id} PoC Admin: $msg")
-            BadRequest(NOK.badRequest("Empty CSV body"))
-          case Left(UnknownCsvParsingError(msg)) =>
-            logger.error(s"Unexpected error has occurred while parsing the CSV: $msg")
-            InternalServerError(NOK.serverError("Unknown error has happened while parsing the CSV file"))
-          case Left(CsvContainedErrors(errors)) => Ok(errors)
-          case Right(_)                         => Ok()
-        }
+    pocAdminEndpoint("Create employees by CSV file") { pocAdmin =>
+      csvProcessPocEmployee.createListOfPocEmployees(request.body, pocAdmin).map {
+        case Left(UnknownTenant(tenantId)) =>
+          logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
+          NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
+        case Left(PocAdminNotInCompletedStatus(pocAdminId)) =>
+          logger.error(s"Could not create employees because PocAdmin is not in completed state: $pocAdminId")
+          BadRequest(NOK.badRequest("PoC Admin is not fully setup"))
+        case Left(HeaderParsingError(msg)) =>
+          logger.error(s"Error has occurred during header parsing: $msg sent by ${pocAdmin.id}")
+          BadRequest(NOK.badRequest("Header in CSV file is not correct"))
+        case Left(EmptyCSVError(msg)) =>
+          logger.error(s"Empty CSV file received from ${pocAdmin.id} PoC Admin: $msg")
+          BadRequest(NOK.badRequest("Empty CSV body"))
+        case Left(UnknownCsvParsingError(msg)) =>
+          logger.error(s"Unexpected error has occurred while parsing the CSV: $msg")
+          InternalServerError(NOK.serverError("Unknown error has happened while parsing the CSV file"))
+        case Left(CsvContainedErrors(errors)) => Ok(errors)
+        case Right(_)                         => Ok()
       }
     }
   }
 
   get("/employees", operation(getEmployees)) {
-    pocAdminEndpoint("get employees") { token =>
-      retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
+    pocAdminEndpoint("get employees") { pocAdmin =>
+      (for {
+        adminCriteria <- handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees)
+        employees <- pocAdminService.getEmployees(pocAdmin, adminCriteria)
+      } yield employees).map {
+        case Right(employees) =>
+          val paginated_OUT = Paginated_OUT(employees.total, employees.records.map(PocEmployee_OUT.fromPocEmployee))
+          Presenter.toJsonResult(paginated_OUT)
+        case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
+          BadRequest(NOK.badRequest(s"PocAdmin status is not completed. $pocAdminId"))
+        case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
+          logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
+          NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
+      }.onErrorRecoverWith {
+        case ValidationError(e) =>
+          Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
+            .map(BadRequest(_))
+      }.onErrorHandle { ex =>
+        InternalServerError(NOK.serverError(
+          s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
+      }
+    }
+  }
+
+  put("/poc-employee/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
+    pocAdminEndpoint("Switch active flag for PoC Employee") { pocAdmin =>
+      getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { pocEmployeeId =>
         (for {
-          adminCriteria <- handleValidation(pocAdmin, AdminCriteriaValidator.validSortColumnsForEmployees)
-          employees <- pocAdminService.getEmployees(pocAdmin, adminCriteria)
-        } yield employees).map {
-          case Right(employees) =>
-            val paginated_OUT = Paginated_OUT(employees.total, employees.records.map(PocEmployee_OUT.fromPocEmployee))
-            Presenter.toJsonResult(paginated_OUT)
-          case Left(GetPocsAdminErrors.PocAdminNotInCompletedStatus(pocAdminId)) =>
-            BadRequest(NOK.badRequest(s"PocAdmin status is not completed. $pocAdminId"))
-          case Left(GetPocsAdminErrors.UnknownTenant(tenantId)) =>
-            logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
-            NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
-        }.onErrorRecoverWith {
-          case ValidationError(e) =>
-            Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
-              .map(BadRequest(_))
-        }.onErrorHandle { ex =>
-          InternalServerError(NOK.serverError(
-            s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
+          switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
+          r <- pocAdminService.switchActiveForPocEmployee(pocEmployeeId, pocAdmin, switch)
+            .map {
+              case Left(e) => e match {
+                  case SwitchActiveError.PocEmployeeNotFound(id) =>
+                    NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
+                  case SwitchActiveError.MissingCertifyUserId(id) =>
+                    Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId yet"))
+                  case NotAllowedError =>
+                    Unauthorized(NOK.authenticationError(
+                      s"Poc employee with id '$pocEmployeeId' doesn't belong to poc of requesting poc admin."))
+                }
+              case Right(_) => Ok("")
+            }
+        } yield r).onErrorRecover {
+          case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
         }
       }
     }
   }
 
-  private def pocAdminEndpoint(description: String)(logic: Token => Task[ActionResult]) = {
+  private def getParamAsUUID(paramName: String, errorMsg: String => String)(logic: UUID => Task[ActionResult]) = {
+    val id = params(paramName)
+    Try(UUID.fromString(id)) match {
+      case Success(uuid) => logic(uuid)
+      case Failure(ex) =>
+        logger.error(errorMsg(id), ex)
+        Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
+    }
+  }
+
+  private def pocAdminEndpoint(description: String)(logic: PocAdmin => Task[ActionResult]) = {
     authenticated(_.hasRole(Token.POC_ADMIN)) { token: Token =>
-      asyncResult(description) { _ => _ => logic(token) }
+      asyncResult(description) { _ => _ =>
+        retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
+          logic(pocAdmin)
+        }
+      }
     }
   }
 

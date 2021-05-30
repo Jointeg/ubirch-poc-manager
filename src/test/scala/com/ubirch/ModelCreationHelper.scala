@@ -33,12 +33,12 @@ object ModelCreationHelper {
   val dataSchemaGroupId = "data-schema-id"
   val pocTypeValue = "ub_vac_app"
 
-  private val tenantName = "tenantName"
+  val globalTenantName = "tenantName"
   private val tenantNameObj = TenantName("tenantName")
-  private val tenantId = TenantId(TenantName(tenantName))
+  private val tenantId = TenantId(TenantName(globalTenantName))
 
   def createTenant(
-    name: String = tenantName,
+    name: String = globalTenantName,
     sharedAuthCert: Option[SharedAuthCert] = Some(SharedAuthCert(cert))): Tenant = {
 
     Tenant(
@@ -46,8 +46,8 @@ object ModelCreationHelper {
       TenantName(name),
       API,
       Some(deviceCreationToken),
-      TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
-      TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
+      TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
+      TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       OrgId(TenantId(TenantName(name)).value),
       sharedAuthCertRequired = true
     ).copy(sharedAuthCert = sharedAuthCert)
@@ -217,7 +217,7 @@ object ModelCreationHelper {
     TenantAdminContext(UUID.randomUUID(), tenant.id.value.asJava())
   }
 
-  def addTenantToDB(injector: InjectorHelper, name: String = "tenant") = {
+  def addTenantToDB(injector: InjectorHelper, name: String = "tenant"): Tenant = {
     val tenantTable = injector.get[TenantRepository]
     val tenant = createTenant(name = name)
     await(tenantTable.createTenant(tenant), 5.seconds)

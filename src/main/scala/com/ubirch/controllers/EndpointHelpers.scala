@@ -63,8 +63,45 @@ object EndpointHelpers extends LazyLogging {
         }
     }
   }
+
+  sealed trait ActivateSwitch
+
+  object ActivateSwitch {
+    def fromIntUnsafe(activate: Int): ActivateSwitch = {
+      activate match {
+        case 0 => Deactivate
+        case 1 => Activate
+        case _ => throw IllegalValueForActivateSwitch(activate)
+      }
+    }
+
+    def toBoolean(activateSwitch: ActivateSwitch): Boolean =
+      activateSwitch match {
+        case Activate   => true
+        case Deactivate => false
+      }
+  }
+
+  case object Activate extends ActivateSwitch {
+    override def toString: String = "activated"
+  }
+
+  case object Deactivate extends ActivateSwitch {
+    override def toString: String = "deactivated"
+  }
+
+  case class IllegalValueForActivateSwitch(value: Int)
+    extends IllegalArgumentException(s"Illegal value for ActivateSwitch: $value. Expected 0 or 1")
 }
 
 trait UserContext { val userId: UUID }
 case class SuperAdminContext(userId: UUID)
 case class TenantAdminContext(userId: UUID, tenantId: UUID) extends UserContext
+
+sealed trait SwitchActiveError
+object SwitchActiveError {
+  case class PocAdminNotFound(id: UUID) extends SwitchActiveError
+  case class PocEmployeeNotFound(id: UUID) extends SwitchActiveError
+  object NotAllowedError extends SwitchActiveError
+  case class MissingCertifyUserId(id: UUID) extends SwitchActiveError
+}

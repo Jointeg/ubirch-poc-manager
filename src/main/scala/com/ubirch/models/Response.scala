@@ -33,6 +33,7 @@ object NOK {
   final val NO_ROUTE_FOUND_ERROR = 'NoRouteFound
   final val DELETE_ERROR = 'TokenDeleteError
   final val AUTHENTICATION_ERROR = 'AuthenticationError
+  final val NOT_ALLOWED_ERROR = 'NotAllowedError
   final val RESOURCE_NOT_FOUND_ERROR = 'ResourceNotFoundError
   final val BAD_REQUEST = 'BadRequest
   final val CONFLICT = 'Conflict
@@ -46,6 +47,8 @@ object NOK {
   def parsingError(errorMessage: String): NOK = NOK(PARSING_ERROR, errorMessage)
 
   def noRouteFound(errorMessage: String): NOK = NOK(NO_ROUTE_FOUND_ERROR, errorMessage)
+
+  def notAllowedError(errorMessage: String): NOK = NOK(NOT_ALLOWED_ERROR, errorMessage)
 
   def authenticationError(errorMessage: String): NOK = NOK(AUTHENTICATION_ERROR, errorMessage)
 
