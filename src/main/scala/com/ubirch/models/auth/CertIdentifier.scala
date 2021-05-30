@@ -13,7 +13,8 @@ object CertIdentifier {
   }
 
   def pocClientCert(tenantName: TenantName, pocName: String, randomId: UUID): CertIdentifier = {
-    new CertIdentifier(s"${tenantName.value} $pocName ${randomId.toString.take(5)}")
+    new CertIdentifier(s"${randomId.toString.take(20)}")
+//    new CertIdentifier(s"${tenantName.value} $pocName ${randomId.toString.take(5)}")
   }
 
   def tenantOrgCert(tenantName: TenantName): CertIdentifier = new CertIdentifier(tenantName.value)
