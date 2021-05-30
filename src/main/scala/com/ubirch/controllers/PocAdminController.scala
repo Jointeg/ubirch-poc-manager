@@ -165,6 +165,9 @@ class PocAdminController @Inject() (
                       s"Poc employee with id '$employeeId' doesn't belong to poc of requesting poc admin."))
                 }
               case Right(_) => Ok("")
+            }.onErrorHandle { ex =>
+              logger.error("something unexpected happened during de-/ activating the poc employee", ex)
+              InternalServerError(NOK.serverError("unexpected error"))
             }
         } yield r).onErrorRecover {
           case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
