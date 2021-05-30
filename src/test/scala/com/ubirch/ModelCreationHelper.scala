@@ -173,6 +173,7 @@ object ModelCreationHelper {
     pocId: UUID = UUID.randomUUID(),
     tenantId: TenantId = tenantId,
     name: String = "Hans",
+    surname: String = "Welsich",
     status: Status = Pending,
     email: String = getRandomString + "@test.de"): PocEmployee = {
     PocEmployee(
@@ -180,7 +181,7 @@ object ModelCreationHelper {
       pocId,
       tenantId,
       name,
-      "Welsich",
+      surname,
       email,
       status = status
     )

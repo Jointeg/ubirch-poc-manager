@@ -137,7 +137,9 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       case Some(s) =>
         quote {
           pocByTenantId
-            .filter(pocAdmin => pocAdmin.email.like(lift(s"$s%")) || pocAdmin.name.like(lift(s"$s%")))
+            .filter(pocAdmin =>
+              pocAdmin.email.like(lift(s"$s%")) || pocAdmin.name.like(lift(s"$s%")) || pocAdmin.surname.like(
+                lift(s"$s%")))
         }
       case None => pocByTenantId
     }
