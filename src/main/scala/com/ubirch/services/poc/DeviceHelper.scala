@@ -18,23 +18,17 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
 
   override def addGroupsToDevice(poc: Poc, status: PocStatus): Task[PocStatus] = {
 
-    val groupId = pocConfig.dataSchemaGroupMap.getOrElse(
-      poc.dataSchemaId,
-      throwError(PocAndStatus(poc, status), s"can't find the uuid corresponding the dataSchemaId: ${poc.dataSchemaId}"))
+    val (dataSchemaGroupId, trustedPocGroupId) = getDataSchemaAndTrustedPocGroupId(poc, status)
 
     val status1 =
-      addGroupByIdToDevice(groupId, PocAndStatus(poc, status)).map {
+      addGroupByIdToDevice(dataSchemaGroupId, PocAndStatus(poc, status)).map {
         case Right(_) =>
           status.copy(assignedDataSchemaGroup = true)
         case Left(errorMsg) =>
-          throwError(PocAndStatus(poc, status), s"failed to add data schema group $groupId to device: $errorMsg")
+          throwError(
+            PocAndStatus(poc, status),
+            s"failed to add data schema group with id $dataSchemaGroupId to device: $errorMsg")
       }
-
-    val trustedPocGroupId = pocConfig.trustedPocGroupMap.getOrElse(
-      poc.dataSchemaId,
-      throwError(
-        PocAndStatus(poc, status),
-        s"can't find the poc group id corresponding the dataSchemaId: ${poc.dataSchemaId}"))
 
     val status2 = status1.flatMap { status =>
       addGroupByIdToDevice(trustedPocGroupId, PocAndStatus(poc, status)).map {
@@ -42,7 +36,7 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
         case Left(errorMsg) =>
           throwError(
             PocAndStatus(poc, status),
-            s"failed to add trusted poc group $trustedPocGroupId to device $errorMsg")
+            s"failed to add trusted poc group with id $trustedPocGroupId to device $errorMsg")
       }
     }
 
@@ -59,6 +53,27 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
           throwError(PocAndStatus(poc, status), s"failed to add poc group $pocDeviceGroup to device $errorMsg")
       }
     }
+  }
+
+  private def getDataSchemaAndTrustedPocGroupId(poc: Poc, status: PocStatus): (String, String) = {
+    val dataSchemaId = pocConfig.pocTypeDataSchemaMap.getOrElse(
+      poc.pocType,
+      throwError(
+        PocAndStatus(poc, status),
+        s"can't find pocType ${poc.pocType} in pocTypeDataSchemaMap: ${poc.pocType}"))
+
+    val dataSchemaGroupId = pocConfig.dataSchemaGroupMap.getOrElse(
+      dataSchemaId,
+      throwError(
+        PocAndStatus(poc, status),
+        s"can't find the dataSchemaId $dataSchemaId in dataSchemaGroupMap"))
+
+    val trustedPocGroupId = pocConfig.trustedPocGroupMap.getOrElse(
+      dataSchemaId,
+      throwError(
+        PocAndStatus(poc, status),
+        s"can't find the dataSchemaId $dataSchemaId in trustedPocGroupMap"))
+    (dataSchemaGroupId, trustedPocGroupId)
   }
 
   private def addGroupByIdToDevice(groupId: String, pocAndStatus: PocAndStatus): Task[Either[String, Unit]] = {

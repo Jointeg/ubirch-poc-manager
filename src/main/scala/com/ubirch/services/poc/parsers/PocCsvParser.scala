@@ -1,7 +1,7 @@
 package com.ubirch.services.poc.parsers
 
 import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{ catsSyntaxTuple11Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
+import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocRow
@@ -53,7 +53,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocCertifyApp),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
-      validateMapContainsStringKey(dataSchemaId, csvPoc.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
     ).mapN {
@@ -66,7 +65,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         pocCertifyApp,
         logoUrl,
         clientCert,
-        dataSchemaId,
         extraConfig,
         manager) =>
         {
@@ -81,10 +79,9 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             pocCertifyApp,
             logoUrl.map(LogoURL(_)),
             clientCert,
-            dataSchemaId,
             extraConfig.map(JsonConfig(_)),
             manager,
-            status = Pending
+            Pending
           )
         }
 

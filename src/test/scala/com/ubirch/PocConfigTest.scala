@@ -6,11 +6,10 @@ class PocConfigTest extends UnitTestBase {
       withInjector { injector =>
         val pocConfig = injector.get[PocConfig]
         val expected = Map(
-          "group-name1" -> "uuid1",
-          "group-name2" -> "uuid2",
-          "certification-vaccination" -> "a784b7cf-d798-49c8-adb1-c91a122904f5",
-          "data-schema-id" -> "a784b7cf-d798-49c8-adb1-c91a122904f5"
-        )
+          "bvdw-certificate" -> "uuid0",
+          "vaccination-v3" -> "uuid1",
+          "corona-test" -> "uuid2",
+          "vaccination-bmg-v2" -> "uuid3")
         pocConfig.dataSchemaGroupMap shouldBe expected
       }
     }

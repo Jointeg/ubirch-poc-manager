@@ -139,7 +139,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       httpStub.loginWillBeOk(username, password)
 
       // expect
-      client.login().unwrap mustBe ()
+      client.login().unwrap mustBe ((): Unit)
     }
 
     "fail when TeamDrive responds with an error" in httpTest { httpStub =>

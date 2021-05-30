@@ -63,20 +63,19 @@ object ModelCreationHelper {
     city: String = "Paris"
   ): Poc =
     Poc(
-      id,
-      TenantId(tenantName),
-      externalId,
-      pocTypeValue,
-      name,
-      Address("An der Heide", "101", None, 67832, city, None, None, "France"),
-      "pocPhone",
+      id = id,
+      tenantId = TenantId(tenantName),
+      externalId = externalId,
+      pocType = pocTypeValue,
+      pocName = name,
+      address = Address("An der Heide", "101", None, 67832, city, None, None, "France"),
+      phone = "pocPhone",
       certifyApp = true,
-      None,
-      clientCertRequired,
-      dataSchemaGroupId,
-      Some(JsonConfig(parse("""{"test":"hello"}"""))),
-      PocManager("surname", "", "", "08023-782137"),
-      status
+      logoUrl = None,
+      clientCertRequired = clientCertRequired,
+      extraConfig = Some(JsonConfig(parse("""{"test":"hello"}"""))),
+      manager = PocManager("surname", "", "", "08023-782137"),
+      status = status
     )
 
   def createPocAdmin(
