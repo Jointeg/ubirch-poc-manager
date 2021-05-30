@@ -85,7 +85,7 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       case Some(s) =>
         quote {
           employeeByPocId
-            .filter(e => e.email.like(lift(s"$s%")) || e.name.like(lift(s"$s%")))
+            .filter(e => e.email.like(lift(s"$s%")) || e.name.like(lift(s"$s%")) || e.surname.like(lift(s"$s%")))
         }
       case None => employeeByPocId
     }

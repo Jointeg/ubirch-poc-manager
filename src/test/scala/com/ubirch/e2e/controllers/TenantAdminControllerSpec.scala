@@ -617,6 +617,45 @@ class TenantAdminControllerSpec
       }
     }
 
+    "return PoC admins for passed search by surname" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val repository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
+      val r = for {
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin1@example.com",
+            surname = "PocAdmin 1"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin11@example.com",
+            surname = "PocAdmin 11"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin2@example.com",
+            surname = "PocAdmin 2"))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).map(_.toPocAdminOut(poc))
+      get(
+        "/poc-admins",
+        params = Map("search" -> "PocAdmin 1"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val out = read[Paginated_OUT[PocAdmin_OUT]](body)
+        out.total shouldBe 2
+        out.records shouldBe pocAdmins.filter(_.lastName.startsWith("PocAdmin 1"))
+      }
+    }
+
     "return PoC admins ordered asc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
