@@ -3,7 +3,7 @@ package com.ubirch.controllers
 import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.EndpointHelpers.retrieveTenantFromToken
+import com.ubirch.controllers.EndpointHelpers.{ retrieveTenantFromToken, ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
@@ -19,7 +19,6 @@ import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrors
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.PocBatchHandlerImpl
-import com.ubirch.services.tenantadmin.TenantAdminService.{ ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -31,6 +30,12 @@ import org.json4s.native.Serialization.write
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 import GetPocAdminStatusErrors._
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  UserNotCompleted,
+  UserNotFound
+}
 
 import java.util.UUID
 import javax.inject.Inject
@@ -335,16 +340,21 @@ class TenantAdminController @Inject() (
 
   put("/poc-admin/:id/active/:isActive", operation(switchActiveOnPocAdmin)) {
     tenantAdminEndpointWithUserContext("Switch active flag for PoC Admin") { (_, tenantContext) =>
-      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { adminId =>
         (for {
           switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
-          r <- tenantAdminService.switchActiveForPocAdmin(pocAdminId, tenantContext, switch)
+          r <- tenantAdminService.switchActiveForPocAdmin(adminId, tenantContext, switch)
             .map {
               case Left(e) => e match {
-                  case SwitchActiveError.PocAdminNotFound(id) =>
-                    NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
-                  case SwitchActiveError.MissingCertifyUserId(id) =>
+                  case UserNotFound(id) => NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
+                  case UserNotCompleted =>
+                    Conflict(NOK.conflict(
+                      s"Poc admin with id '$adminId' cannot be de/-activated before status is Completed."))
+                  case MissingCertifyUserId(id) =>
                     Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                  case NotAllowedError =>
+                    Unauthorized(NOK.authenticationError(
+                      s"Poc admin with id '$adminId' doesn't belong to requesting tenant admin."))
                 }
               case Right(_) => Ok("")
             }

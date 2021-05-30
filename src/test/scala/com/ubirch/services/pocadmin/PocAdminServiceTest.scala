@@ -1,8 +1,8 @@
-package com.ubirch.services.poc
+package com.ubirch.services.pocadmin
 
-import com.ubirch.ModelCreationHelper.{ addTenantToDB, createPoc, createPocAdmin, createPocEmployee, createTenant }
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant }
+import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.model.{ AdminCriteria, StatusFilter }
-import com.ubirch.{ InjectorHelper, UnitTestBase }
 import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository, PocRepository, TenantRepository }
 import com.ubirch.models.common.{ ASC, Page, Sort }
 import com.ubirch.models.poc.Completed

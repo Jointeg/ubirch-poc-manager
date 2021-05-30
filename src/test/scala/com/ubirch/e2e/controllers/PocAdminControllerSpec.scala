@@ -2,28 +2,31 @@ package com.ubirch.e2e.controllers
 import com.ubirch.FakeTokenCreator
 import com.ubirch.ModelCreationHelper.createPocEmployee
 import com.ubirch.controllers.PocAdminController
+import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
+import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.PocEmployeeTable
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
-import com.ubirch.models.poc.{ Completed, Created, Pending, Processing, Updated }
+import com.ubirch.e2e.controllers.PocAdminControllerSpec._
+import com.ubirch.models.poc._
 import com.ubirch.models.pocEmployee.PocEmployee
+import com.ubirch.models.user.UserId
+import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.DateTime
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.native.Serialization.read
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.BeforeAndAfterEach
-import org.json4s.native.Serialization.read
+import org.scalatest.prop.TableDrivenPropertyChecks
 
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
-import PocAdminControllerSpec._
-import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
-import org.scalatest.prop.TableDrivenPropertyChecks
 
 class PocAdminControllerSpec
   extends E2ETestBase
@@ -175,7 +178,7 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee4)
           _ <- employeeTable.createPocEmployee(employee5)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
-        } yield (employees)
+        } yield employees
         val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
         employees.size shouldBe 5
         get(
@@ -204,7 +207,7 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee2)
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
-        } yield (employees)
+        } yield employees
         val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
         employees.size shouldBe 3
         get(
@@ -233,7 +236,7 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee2)
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
-        } yield (employees)
+        } yield employees
         val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
         employees.size shouldBe 3
         get(
@@ -262,7 +265,7 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee2)
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
-        } yield (employees)
+        } yield employees
         val employees = await(r, 5.seconds).sortBy(_.name).map(_.toPocEmployeeOut)
         employees.size shouldBe 3
         get(
@@ -291,7 +294,7 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee2)
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
-        } yield (employees)
+        } yield employees
         val employees = await(r, 5.seconds).sortBy(_.name).reverse.map(_.toPocEmployeeOut)
         employees.size shouldBe 3
         get(
@@ -323,7 +326,7 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee2)
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
-        } yield (employees)
+        } yield employees
         val employees =
           await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.toPocEmployeeOut)
         employees.size shouldBe 2
@@ -337,6 +340,139 @@ class PocAdminControllerSpec
           employeeOut.total shouldBe 2
           employeeOut.records shouldBe employees
         }
+      }
+    }
+  }
+
+  "Endpoint PUT /poc-employee/:id/active/:isActive" should {
+    "deactivate, and activate user" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val (tenant, poc, admin) = createTenantWithPocAndPocAdmin(i)
+
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        CertifyKeycloak))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id).copy(
+          certifyUserId = Some(certifyUserId.value),
+          status = Completed)
+      val id = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        s"/poc-employee/$id/active/0",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(repository.getPocEmployee(id)).value.active shouldBe false
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe false
+      }
+
+      put(
+        s"/poc-employee/$id/active/1",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(repository.getPocEmployee(id)).value.active shouldBe true
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+      }
+    }
+
+    "fail deactivating employee, when employee not completed" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val (tenant, poc, admin) = createTenantWithPocAndPocAdmin(i)
+
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        CertifyKeycloak))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id).copy(certifyUserId = Some(certifyUserId.value))
+      val id = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        s"/poc-employee/$id/active/0",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(409)
+        body.contains(s"Poc employee with id '$id' cannot be de/-activated before status is Completed.") shouldBe true
+        await(repository.getPocEmployee(id)).value.active shouldBe true
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+      }
+    }
+
+    "return 404 when poc-admin does not exist" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val (_, _, admin) = createTenantWithPocAndPocAdmin(i)
+      val invalidPocEmployeeId = UUID.randomUUID()
+
+      put(
+        s"/poc-employee/$invalidPocEmployeeId/active/0",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"Poc employee with id '$invalidPocEmployeeId' not found"))
+      }
+    }
+
+    "return 400 when isActive is invalid value" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val (_, _, admin) = createTenantWithPocAndPocAdmin(i)
+      val invalidPocEmployeeId = UUID.randomUUID()
+
+      put(
+        s"/poc-employee/$invalidPocEmployeeId/active/2",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(400)
+        assert(body.contains("Illegal value for ActivateSwitch: 2. Expected 0 or 1"))
+      }
+    }
+
+    "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, admin) = createTenantWithPocAndPocAdmin(i)
+
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Completed)
+      val id = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        s"/poc-employee/$id/active/0",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc employee '$id' does not have certifyUserId yet"))
+      }
+    }
+
+    "return 401 when poc of poc-employee and admin don't belong to same tenant " in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, _) = createTenantWithPocAndPocAdmin(i)
+
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+      val id = await(repository.createPocEmployee(pocEmployee))
+
+      val (_, _, unrelatedAdmin) = createTenantWithPocAndPocAdmin(i, "unrelated tenantName")
+
+      put(
+        s"/poc-employee/$id/active/0",
+        headers = Map("authorization" -> token.pocAdmin(unrelatedAdmin.certifyUserId.value).prepare)
+      ) {
+        status should equal(401)
+        assert(body.contains(s"Poc employee with id '$id' doesn't belong to poc of requesting poc admin."))
       }
     }
   }
