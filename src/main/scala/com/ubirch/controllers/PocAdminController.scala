@@ -202,17 +202,21 @@ class PocAdminController @Inject() (
 
 object PocAdminController {
   case class PocEmployee_OUT(
+    id: String,
     firstName: String,
     lastName: String,
     email: String,
+    active: Boolean,
     status: Status)
 
   object PocEmployee_OUT {
     def fromPocEmployee(pocEmployee: PocEmployee): PocEmployee_OUT =
       PocEmployee_OUT(
+        id = pocEmployee.id.toString,
         firstName = pocEmployee.name,
         lastName = pocEmployee.surname,
         email = pocEmployee.email,
+        active = pocEmployee.active,
         status = pocEmployee.status
       )
   }

@@ -428,6 +428,7 @@ object TenantAdminController {
     email: String,
     phone: String,
     pocName: String,
+    active: Boolean,
     state: Status,
     webIdentInitiateId: Option[UUID],
     webIdentSuccessId: Option[String]
@@ -443,6 +444,7 @@ object TenantAdminController {
         email = pocAdmin.email,
         phone = pocAdmin.mobilePhone,
         pocName = poc.pocName,
+        active = pocAdmin.active,
         state = pocAdmin.status,
         webIdentInitiateId = pocAdmin.webIdentInitiateId,
         webIdentSuccessId = pocAdmin.webIdentId
