@@ -1,10 +1,15 @@
-package com.ubirch.services.poc
+package com.ubirch.services.pocadmin
 
 import cats.data.EitherT
 import cats.implicits.catsSyntaxEitherId
-import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError }
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
-import com.ubirch.controllers.SwitchActiveError.{ MissingCertifyUserId, NotAllowedError, PocEmployeeNotFound }
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  UserNotCompleted,
+  UserNotFound
+}
+import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.model.{ AdminCriteria, PaginatedResult }
 import com.ubirch.db.tables.{ PocEmployeeRepository, TenantRepository }
@@ -13,7 +18,7 @@ import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.poc.GetPocsAdminErrors.{ PocAdminNotInCompletedStatus, UnknownTenant }
+import com.ubirch.services.pocadmin.GetPocsAdminErrors.{ PocAdminNotInCompletedStatus, UnknownTenant }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
@@ -67,26 +72,28 @@ class PocAdminServiceImpl @Inject() (
     pocAdmin: PocAdmin,
     active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
 
-    employeeRepository
-      .getPocEmployee(employeeId)
-      .flatMap {
-        case None                                               => Task(PocEmployeeNotFound(employeeId).asLeft)
-        case Some(employee) if employee.pocId != pocAdmin.pocId => Task(NotAllowedError.asLeft)
-        case Some(employee) if employee.certifyUserId.isEmpty   => Task(MissingCertifyUserId(employeeId).asLeft)
+    quillMonixJdbcContext.withTransaction {
+      employeeRepository
+        .getPocEmployee(employeeId)
+        .flatMap {
+          case None                                               => Task(UserNotFound(employeeId).asLeft)
+          case Some(employee) if employee.pocId != pocAdmin.pocId => Task(NotAllowedError.asLeft)
+          case Some(employee) if employee.status != Completed     => Task(UserNotCompleted.asLeft)
+          case Some(employee) if employee.certifyUserId.isEmpty   => Task(MissingCertifyUserId(employeeId).asLeft)
 
-        case Some(employee) =>
-          val userId = employee.certifyUserId.get
+          case Some(employee) =>
+            val userId = employee.certifyUserId.get
 
-          quillMonixJdbcContext.withTransaction {
             (active match {
               case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
               case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
             }) >> employeeRepository.updatePocEmployee(employee.copy(active = ActivateSwitch.toBoolean(active)))
-          }.map { _ =>
-            logAuditByPocAdmin(s"$active poc employee ${employee.id} of poc ${employee.pocId}.", pocAdmin)
-            Right(())
-          }
-      }
+              .map { _ =>
+                logAuditByPocAdmin(s"$active poc employee ${employee.id} of poc ${employee.pocId}.", pocAdmin)
+                Right(())
+              }
+        }
+    }
   }
 }
 

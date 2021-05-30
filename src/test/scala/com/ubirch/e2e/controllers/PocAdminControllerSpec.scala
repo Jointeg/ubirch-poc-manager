@@ -356,7 +356,9 @@ class PocAdminControllerSpec
         CertifyKeycloak))
         .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
       val pocEmployee =
-        createPocEmployee(tenantId = tenant.id, pocId = poc.id).copy(certifyUserId = Some(certifyUserId.value))
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id).copy(
+          certifyUserId = Some(certifyUserId.value),
+          status = Completed)
       val id = await(repository.createPocEmployee(pocEmployee))
 
       put(
@@ -382,6 +384,32 @@ class PocAdminControllerSpec
       }
     }
 
+    "fail deactivating employee, when employee not completed" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val (tenant, poc, admin) = createTenantWithPocAndPocAdmin(i)
+
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        CertifyKeycloak))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id).copy(certifyUserId = Some(certifyUserId.value))
+      val id = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        s"/poc-employee/$id/active/0",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(409)
+        body.contains(s"Poc employee with id '$id' cannot be de/-activated before status is Completed.") shouldBe true
+        await(repository.getPocEmployee(id)).value.active shouldBe true
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+      }
+    }
+
     "return 404 when poc-admin does not exist" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val (_, _, admin) = createTenantWithPocAndPocAdmin(i)
@@ -392,7 +420,7 @@ class PocAdminControllerSpec
         headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
       ) {
         status should equal(404)
-        assert(body.contains(s"Poc admin with id '$invalidPocEmployeeId' not found"))
+        assert(body.contains(s"Poc employee with id '$invalidPocEmployeeId' not found"))
       }
     }
 
@@ -416,7 +444,7 @@ class PocAdminControllerSpec
       val (tenant, poc, admin) = createTenantWithPocAndPocAdmin(i)
 
       val pocEmployee =
-        createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Completed)
       val id = await(repository.createPocEmployee(pocEmployee))
 
       put(

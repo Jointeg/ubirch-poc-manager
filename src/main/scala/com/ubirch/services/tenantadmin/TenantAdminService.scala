@@ -5,11 +5,16 @@ import cats.data.EitherT
 import cats.syntax.either._
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
-import com.ubirch.controllers.SwitchActiveError.{ MissingCertifyUserId, NotAllowedError }
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  UserNotCompleted,
+  UserNotFound
+}
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
+import com.ubirch.models.poc.{ Completed, PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
@@ -216,26 +221,27 @@ class DefaultTenantAdminService @Inject() (
     tenantContext: TenantAdminContext,
     active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
 
-    pocAdminRepository
-      .getPocAdmin(pocAdminId)
-      .flatMap {
-        case None => Task(SwitchActiveError.PocAdminNotFound(pocAdminId).asLeft)
-        case Some(admin) if admin.tenantId.value.value.asJava() != tenantContext.tenantId =>
-          Task(NotAllowedError.asLeft)
-        case Some(admin) if admin.certifyUserId.isEmpty => Task(MissingCertifyUserId(pocAdminId).asLeft)
+    quillMonixJdbcContext.withTransaction {
+      pocAdminRepository
+        .getPocAdmin(pocAdminId)
+        .flatMap {
+          case None                                                                   => Task(UserNotFound(pocAdminId).asLeft)
+          case Some(admin) if admin.tenantId.value.asJava() != tenantContext.tenantId => Task(NotAllowedError.asLeft)
+          case Some(admin) if admin.status != Completed                               => Task(UserNotCompleted.asLeft)
+          case Some(admin) if admin.certifyUserId.isEmpty                             => Task(MissingCertifyUserId(pocAdminId).asLeft)
 
-        case Some(admin) =>
-          val userId = admin.certifyUserId.get
-          quillMonixJdbcContext.withTransaction {
+          case Some(admin) =>
+            val userId = admin.certifyUserId.get
             (active match {
               case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
               case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
             }) >> pocAdminRepository.updatePocAdmin(admin.copy(active = ActivateSwitch.toBoolean(active)))
-          }.map { _ =>
-            logAuditByTenantAdmin(s"$active poc admin ${admin.id} of poc ${admin.pocId}.", tenantContext)
-            Right(())
-          }
-      }
+              .map { _ =>
+                logAuditByTenantAdmin(s"$active poc admin ${admin.id} of poc ${admin.pocId}.", tenantContext)
+                Right(())
+              }
+        }
+    }
   }
 
   def addDeviceCreationToken(

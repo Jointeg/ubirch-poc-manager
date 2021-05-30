@@ -32,6 +32,7 @@ import com.ubirch.services.poc.employee.{
   PocEmployeeService,
   PocEmployeeServiceImpl
 }
+import com.ubirch.services.pocadmin.{ PocAdminService, PocAdminServiceImpl }
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.teamdrive.{

@@ -100,8 +100,8 @@ case class TenantAdminContext(userId: UUID, tenantId: UUID) extends UserContext
 
 sealed trait SwitchActiveError
 object SwitchActiveError {
-  case class PocAdminNotFound(id: UUID) extends SwitchActiveError
-  case class PocEmployeeNotFound(id: UUID) extends SwitchActiveError
+  case class UserNotFound(id: UUID) extends SwitchActiveError
+  object UserNotCompleted extends SwitchActiveError
   object NotAllowedError extends SwitchActiveError
   case class MissingCertifyUserId(id: UUID) extends SwitchActiveError
 }

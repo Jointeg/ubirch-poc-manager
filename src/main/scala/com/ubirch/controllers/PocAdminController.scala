@@ -4,7 +4,12 @@ import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
 import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
-import com.ubirch.controllers.SwitchActiveError.NotAllowedError
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  UserNotCompleted,
+  UserNotFound
+}
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.AdminCriteriaValidator
 import com.ubirch.db.tables.PocAdminRepository
@@ -15,7 +20,7 @@ import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrors
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.poc.employee._
-import com.ubirch.services.poc.{ GetPocsAdminErrors, PocAdminService }
+import com.ubirch.services.pocadmin.{ GetPocsAdminErrors, PocAdminService }
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -26,7 +31,7 @@ import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Left, Right, Success, Try }
+import scala.util._
 
 @Singleton
 class PocAdminController @Inject() (
@@ -143,19 +148,21 @@ class PocAdminController @Inject() (
 
   put("/poc-employee/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
     pocAdminEndpoint("Switch active flag for PoC Employee") { pocAdmin =>
-      getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { pocEmployeeId =>
+      getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { employeeId =>
         (for {
           switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
-          r <- pocAdminService.switchActiveForPocEmployee(pocEmployeeId, pocAdmin, switch)
+          r <- pocAdminService.switchActiveForPocEmployee(employeeId, pocAdmin, switch)
             .map {
               case Left(e) => e match {
-                  case SwitchActiveError.PocEmployeeNotFound(id) =>
-                    NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
-                  case SwitchActiveError.MissingCertifyUserId(id) =>
+                  case UserNotFound(id) =>
+                    NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' not found'"))
+                  case UserNotCompleted => Conflict(NOK.conflict(
+                      s"Poc employee with id '$employeeId' cannot be de/-activated before status is Completed."))
+                  case MissingCertifyUserId(id) =>
                     Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId yet"))
                   case NotAllowedError =>
                     Unauthorized(NOK.authenticationError(
-                      s"Poc employee with id '$pocEmployeeId' doesn't belong to poc of requesting poc admin."))
+                      s"Poc employee with id '$employeeId' doesn't belong to poc of requesting poc admin."))
                 }
               case Right(_) => Ok("")
             }

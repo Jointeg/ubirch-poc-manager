@@ -24,9 +24,9 @@
     </appender>
 
     <logger name="io.netty" level="ERROR"/>
-    <logger name="com.ubirch" level="ERROR"/>
+    <logger name="com.ubirch" level="INFO"/>
 
-    <root level="ERROR">
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 
