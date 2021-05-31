@@ -86,7 +86,23 @@ sealed trait CriteriaValidator {
 object CriteriaValidator extends CriteriaValidator {
   type PocCriteriaValidationResult[A] = ValidatedNec[(String, String), A]
 
-  val validSortColumnsForPoc: Seq[String] = Seq("id", "pocName", "status", "lastUpdated", "created")
+  val validSortColumnsForPoc: Seq[String] =
+    Seq(
+      "id",
+      "tenantId",
+      "externalId",
+      "pocName",
+      "phone",
+      "certifyApp",
+      "clientCertRequired",
+      "dataSchemaId",
+      "roleName",
+      "deviceId",
+      "clientCertFolder",
+      "status",
+      "lastUpdated",
+      "created"
+    )
 
   val validSortColumnsForPocAdmin: Seq[String] =
     Seq("id", "firstName", "email", "lastName", "pocName", "active", "status")

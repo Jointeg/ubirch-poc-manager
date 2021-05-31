@@ -144,6 +144,7 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
     val dynamic = q.dynamic
     sort.field match {
       case Some("id")          => dynamic.sortBy(p => quote(p.id))(sort.ord)
+      case Some("externalId")  => dynamic.sortBy(p => quote(p.externalId))(sort.ord)
       case Some("pocName")     => dynamic.sortBy(p => quote(p.pocName))(sort.ord)
       case Some("status")      => dynamic.sortBy(p => quote(p.status))(sort.ord)
       case Some("lastUpdated") => dynamic.sortBy(p => quote(p.lastUpdated))(sort.ord)
