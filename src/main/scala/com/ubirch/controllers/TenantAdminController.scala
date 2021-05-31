@@ -165,6 +165,7 @@ class TenantAdminController @Inject() (
 
   post("/pocs/create", operation(createListOfPocs)) {
     tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
+      logger.info(s"encoding: ${request.getCharacterEncoding}")
       pocBatchHandler
         .createListOfPoCs(request.body, tenant, tenantContext)
         .map {

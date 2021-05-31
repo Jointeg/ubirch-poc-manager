@@ -21,6 +21,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
   protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, PocAdminParseResult] = {
     PocAdminRow.fromCsv(cols) match {
       case Success(csvPocAdmin) =>
+        println(csvPocAdmin)
         val pocAddress = validatePocAddress(csvPocAdmin)
         val pocManager = validatePocManager(csvPocAdmin)
         val pocV = validatePoc(csvPocAdmin, pocAddress, pocManager, tenant)
