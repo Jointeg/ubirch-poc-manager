@@ -50,7 +50,7 @@ class CsvProcessPocAdminTest extends UnitTestBase {
       }
     }
 
-    "fail to create create poc, admin and status when the header is invalid" in {
+    "fail to create poc, admin and status when the header is invalid" in {
       withInjector { injector =>
         val processPocAdmin = injector.get[CsvProcessPocAdmin]
         val pocRepository = injector.get[PocRepository]
@@ -61,7 +61,8 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {
-          result.left.get.shouldBe("technician_surname didn't equal expected header technician_surname*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,data_schema_id*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
+          println(result)
+          result.left.get shouldBe "poc_type_invalid* didn't equal expected header poc_type*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config"
           assert(pocs.isEmpty)
           assert(pocAdmins.isEmpty)
         }).onErrorHandle(e => fail(e)).runSyncUnsafe()

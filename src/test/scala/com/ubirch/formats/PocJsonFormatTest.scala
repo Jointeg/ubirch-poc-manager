@@ -45,7 +45,6 @@ class PocJsonFormatTest extends UnitTestBase {
           |  "phone":"pocPhone",
           |  "certifyApp":true,
           |  "clientCertRequired":false,
-          |  "dataSchemaId":"data-schema-id",
           |  "extraConfig":{
           |    "test":"hello"
           |  },
@@ -78,7 +77,6 @@ class PocJsonFormatTest extends UnitTestBase {
       certifyApp = true,
       logoUrl = None,
       clientCertRequired = false,
-      dataSchemaId = "data-schema-id",
       extraConfig = Some(JsonConfig(parse(""" { "test":"hello" } """))),
       manager = PocManager("surname", "", "", "08023-782137"),
       status = Pending

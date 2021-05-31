@@ -283,7 +283,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     }
   }
 
-  val validPhoneNumbers = Table(
+  val validPhoneNumbers: TableFor1[String] = Table(
     "1555555555",
     "+4974339296",
     "+46-498-313789",
@@ -293,7 +293,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     "+4930-7387862"
   )
 
-  val invalidPhoneNumbers = Table(
+  val invalidPhoneNumbers: TableFor1[String] = Table(
     "+(591) 7433433",
     "+(591) (4) 6434850",
     "0591 74339296",
@@ -336,62 +336,31 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     }
   }
 
-  "Validator list contains string" should {
-
-    val list = Seq("test", "test1", "123")
-
-    "validate valid" in {
-      val validated = validateListContainsString(dataSchemaId, "test1", list)
-      assert(validated.isValid)
-    }
-
-    "validate error if string is empty" in {
-      val validated = validateListContainsString(dataSchemaId, "", list)
-      assert(validated.isInvalid)
-      validated
-        .leftMap(_.toList.mkString(comma))
-        .leftMap { error =>
-          assert(error == listDoesntContainStringError(dataSchemaId, list))
-        }
-    }
-
-    "validate error if list doesn't contain string" in {
-      val validated = validateListContainsString(dataSchemaId, "set1", list)
-      assert(validated.isInvalid)
-      validated
-        .leftMap(_.toList.mkString(comma))
-        .leftMap { error =>
-          assert(error == listDoesntContainStringError(dataSchemaId, list))
-        }
-    }
-
-  }
-
   "Validator map contains key string" should {
 
     val map = Map("test" -> "xxx", "test1" -> "yyy", "123" -> "zzz")
     "validate valid" in {
-      val validated = validateMapContainsStringKey(dataSchemaId, "test1", map)
+      val validated = validateMapContainsStringKey(pocType, "test1", map)
       assert(validated.isValid)
     }
 
     "validate error if string is empty" in {
-      val validated = validateMapContainsStringKey(dataSchemaId, "", map)
+      val validated = validateMapContainsStringKey(pocType, "", map)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
+          assert(error == mapDoesntContainStringKeyError(pocType, map))
         }
     }
 
     "validate error if map doesn't contain string" in {
-      val validated = validateMapContainsStringKey(dataSchemaId, "set1", map)
+      val validated = validateMapContainsStringKey(pocType, "set1", map)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
+          assert(error == mapDoesntContainStringKeyError(pocType, map))
         }
     }
   }

@@ -95,7 +95,6 @@ object CriteriaValidator extends CriteriaValidator {
       "phone",
       "certifyApp",
       "clientCertRequired",
-      "dataSchemaId",
       "roleName",
       "deviceId",
       "clientCertFolder",
