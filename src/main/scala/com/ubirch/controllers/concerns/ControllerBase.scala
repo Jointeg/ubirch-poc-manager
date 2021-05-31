@@ -123,6 +123,9 @@ abstract class ControllerBase
     logger.info("Path[{}]:{} {}", method, path, headers)
   }
 
+  /**
+    * This methods parse a request body with the charset because the body method of HttpServletRequest is using UTF-8 for only application/json.
+    */
   def readBodyWithCharset(request: HttpServletRequest, charset: Charset): Task[String] =
     Task(Source.fromInputStream(request.getInputStream, charset.name()).mkString)
 }
