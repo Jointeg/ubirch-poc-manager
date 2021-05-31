@@ -76,7 +76,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             tenant.id,
             externalId,
             pocType,
-            new String(pocName.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8),
+            new String(pocName.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8),
             address,
             pocPhone,
             pocCertifyApp,
