@@ -103,15 +103,15 @@ class PocAdminController @Inject() (
         case Left(UnknownTenant(tenantId)) =>
           logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
           Ok("Could not find tenant assigned to given PocAdmin")
-        case Left(PocAdminNotInCompletedStatus(pocAdminId)) =>
-          logger.error(s"Could not create employees because PocAdmin is not in completed state: $pocAdminId")
-          Ok("PoC Admin is not fully setup")
         case Left(HeaderParsingError(msg)) =>
           logger.error(s"Error has occurred during header parsing: $msg sent by ${pocAdmin.id}")
           Ok(s"Header in CSV file is not correct. $msg")
         case Left(EmptyCSVError(msg)) =>
           logger.error(s"Empty CSV file received from ${pocAdmin.id} PoC Admin: $msg")
           Ok("Empty CSV body")
+        case Left(PocAdminNotInCompletedStatus(pocAdminId)) =>
+          logger.error(s"Could not create employees because PocAdmin is not in completed state: $pocAdminId")
+          InternalServerError(NOK.serverError("PoC Admin is not fully setup"))
         case Left(UnknownCsvParsingError(msg)) =>
           logger.error(s"Unexpected error has occurred while parsing the CSV: $msg")
           InternalServerError(NOK.serverError("Unknown error has happened while parsing the CSV file"))

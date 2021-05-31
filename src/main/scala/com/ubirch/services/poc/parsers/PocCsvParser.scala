@@ -12,6 +12,7 @@ import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.util.{ Failure, Success }
 
@@ -75,7 +76,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             tenant.id,
             externalId,
             pocType,
-            pocName,
+            new String(pocName.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8),
             address,
             pocPhone,
             pocCertifyApp,
