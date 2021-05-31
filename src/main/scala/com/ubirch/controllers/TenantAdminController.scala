@@ -36,7 +36,6 @@ import java.nio.charset.StandardCharsets
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.io.Source
 import scala.util._
 
 class TenantAdminController @Inject() (
@@ -167,7 +166,7 @@ class TenantAdminController @Inject() (
 
   post("/pocs/create", operation(createListOfPocs)) {
     tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
-      Task(Source.fromInputStream(request.getInputStream, StandardCharsets.UTF_8.name()).mkString).flatMap { body =>
+      readBodyWithCharset(request, StandardCharsets.UTF_8).flatMap { body =>
         pocBatchHandler
           .createListOfPoCs(body, tenant, tenantContext)
           .map {
