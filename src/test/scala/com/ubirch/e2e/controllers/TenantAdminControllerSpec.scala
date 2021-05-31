@@ -674,7 +674,7 @@ class TenantAdminControllerSpec
       val pocAdmins = await(r, 5.seconds).sortBy(_.name).map(_.toPocAdminOut(poc))
       get(
         "/poc-admins",
-        params = Map("sortColumn" -> "name", "sortOrder" -> "asc"),
+        params = Map("sortColumn" -> "firstName", "sortOrder" -> "asc"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
@@ -698,7 +698,7 @@ class TenantAdminControllerSpec
       val pocAdmins = await(r, 5.seconds).sortBy(_.name).reverse.map(_.toPocAdminOut(poc))
       get(
         "/poc-admins",
-        params = Map("sortColumn" -> "name", "sortOrder" -> "desc"),
+        params = Map("sortColumn" -> "firstName", "sortOrder" -> "desc"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)

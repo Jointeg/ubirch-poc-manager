@@ -310,7 +310,7 @@ class PocAdminControllerSpec
         employees.size shouldBe 3
         get(
           EndPoint,
-          params = Map("sortColumn" -> "name", "sortOrder" -> "asc"),
+          params = Map("sortColumn" -> "firstName", "sortOrder" -> "asc"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
@@ -406,7 +406,7 @@ class PocAdminControllerSpec
         employees.size shouldBe 3
         get(
           EndPoint,
-          params = Map("sortColumn" -> "name", "sortOrder" -> "desc"),
+          params = Map("sortColumn" -> "firstName", "sortOrder" -> "desc"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)

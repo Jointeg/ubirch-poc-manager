@@ -143,20 +143,12 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
   private def sortPocs(q: Quoted[Query[Poc]], sort: Sort) = {
     val dynamic = q.dynamic
     sort.field match {
-      case Some("id")                 => dynamic.sortBy(p => quote(p.id))(sort.ord)
-      case Some("tenantId")           => dynamic.sortBy(p => quote(p.tenantId))(sort.ord)
-      case Some("externalId")         => dynamic.sortBy(p => quote(p.externalId))(sort.ord)
-      case Some("pocName")            => dynamic.sortBy(p => quote(p.pocName))(sort.ord)
-      case Some("phone")              => dynamic.sortBy(p => quote(p.phone))(sort.ord)
-      case Some("certifyApp")         => dynamic.sortBy(p => quote(p.certifyApp))(sort.ord)
-      case Some("clientCertRequired") => dynamic.sortBy(p => quote(p.clientCertRequired))(sort.ord)
-      case Some("roleName")           => dynamic.sortBy(p => quote(p.roleName))(sort.ord)
-      case Some("deviceId")           => dynamic.sortBy(p => quote(p.deviceId))(sort.ord)
-      case Some("clientCertFolder")   => dynamic.sortBy(p => quote(p.clientCertFolder))(sort.ord)
-      case Some("status")             => dynamic.sortBy(p => quote(p.status))(sort.ord)
-      case Some("lastUpdated")        => dynamic.sortBy(p => quote(p.lastUpdated))(sort.ord)
-      case Some("created")            => dynamic.sortBy(p => quote(p.created))(sort.ord)
-      case _                          => dynamic
+      case Some("id")          => dynamic.sortBy(p => quote(p.id))(sort.ord)
+      case Some("pocName")     => dynamic.sortBy(p => quote(p.pocName))(sort.ord)
+      case Some("status")      => dynamic.sortBy(p => quote(p.status))(sort.ord)
+      case Some("lastUpdated") => dynamic.sortBy(p => quote(p.lastUpdated))(sort.ord)
+      case Some("created")     => dynamic.sortBy(p => quote(p.created))(sort.ord)
+      case _                   => dynamic
     }
   }
 
