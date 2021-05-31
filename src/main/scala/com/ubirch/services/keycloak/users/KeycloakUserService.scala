@@ -71,7 +71,7 @@ trait KeycloakUserService {
 
   def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
 
-  def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+  def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]]
 }
 
 @Singleton
@@ -255,7 +255,7 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
       message.asLeft
     }
 
-  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
     getUserById(UserId(id), instance).flatMap {
       case Some(ur) => update(
           id, {
@@ -264,11 +264,11 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
             ur
           },
           instance).map(_ => ().asRight)
-      case None => Task.pure(s"user with id $id wasn't found".asLeft)
+      case None => Task.pure(Remove2faTokenKeycloakError.UserNotFound(s"user with id $id wasn't found").asLeft)
     }.onErrorHandle { ex =>
       val message = s"Could not remove 2FA token: ${ex.getMessage}"
       logger.error(message, ex)
-      message.asLeft
+      Remove2faTokenKeycloakError.KeycloakError(message).asLeft
     }
 
   private def processCreationResponse(response: Response, userName: String): Either[UserException, UserId] = {
@@ -299,4 +299,11 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
         .update(userRepresentation)
     )
   }
+}
+
+sealed trait Remove2faTokenKeycloakError
+
+object Remove2faTokenKeycloakError {
+  case class UserNotFound(error: String) extends Remove2faTokenKeycloakError
+  case class KeycloakError(error: String) extends Remove2faTokenKeycloakError
 }
