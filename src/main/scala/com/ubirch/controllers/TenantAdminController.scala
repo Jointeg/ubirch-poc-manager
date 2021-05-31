@@ -32,9 +32,11 @@ import org.json4s.native.Serialization.write
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.io.Source
 import scala.util._
 
 class TenantAdminController @Inject() (
@@ -165,13 +167,17 @@ class TenantAdminController @Inject() (
 
   post("/pocs/create", operation(createListOfPocs)) {
     tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
-      logger.info(s"encoding: ${request.getCharacterEncoding}")
-      pocBatchHandler
-        .createListOfPoCs(request.body, tenant, tenantContext)
-        .map {
-          case Right(_)  => Ok()
-          case Left(csv) => Ok(csv)
-        }
+      Task(Source.fromInputStream(request.getInputStream, StandardCharsets.UTF_8.name()).mkString).flatMap { body =>
+        pocBatchHandler
+          .createListOfPoCs(body, tenant, tenantContext)
+          .map {
+            case Right(_)  => Ok()
+            case Left(csv) => Ok(csv)
+          }
+      }.onErrorHandle { ex =>
+        InternalServerError(NOK.serverError(
+          s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
+      }
     }
   }
 
