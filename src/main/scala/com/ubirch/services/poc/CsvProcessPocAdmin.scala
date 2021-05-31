@@ -82,7 +82,7 @@ class CsvProcessPocAdminImpl @Inject() (
       logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
       e match {
         case _: PSQLException if e.getMessage.contains("duplicate") =>
-          Some(csvRow + columnSeparator + s"error on persisting objects; email already exists.")
+          Some(csvRow + columnSeparator + s"error on persisting objects; admin email or the pair of (external_id and data_schema_id) already exist.")
         case _ =>
           Some(
             csvRow + columnSeparator + s"error on persisting objects; something unexpected went wrong ${e.getMessage}")

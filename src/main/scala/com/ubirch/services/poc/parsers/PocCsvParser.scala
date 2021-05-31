@@ -22,6 +22,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
   protected def parseRow(cols: Array[String], line: String, tenant: Tenant): Either[String, PocParseResult] = {
     PocRow.fromCsv(cols) match {
       case Success(csvPoc) =>
+        println(csvPoc)
         val pocAddress = validatePocAddress(csvPoc)
         val pocManager = validatePocManager(csvPoc)
         val poc = validatePoc(csvPoc, pocAddress, pocManager, tenant)
@@ -76,7 +77,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             tenant.id,
             externalId,
             pocType,
-            new String(pocName.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8),
+            pocName,
             address,
             pocPhone,
             pocCertifyApp,
