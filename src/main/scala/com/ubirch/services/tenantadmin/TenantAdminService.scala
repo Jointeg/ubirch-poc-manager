@@ -21,10 +21,8 @@ import com.ubirch.models.poc.{ Completed, PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
-import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.tenantadmin.TenantAdminService.ActivateSwitch
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
@@ -241,7 +239,8 @@ class DefaultTenantAdminService @Inject() (
               case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
               case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
             }) >> pocAdminRepository.updatePocAdmin(admin.copy(active = ActivateSwitch.toBoolean(active)))
-                  .map{_ => logAuditByTenantAdmin(s"$active poc admin ${admin.id} of poc ${admin.pocId}.", tenantContext)
+              .map { _ =>
+                logAuditByTenantAdmin(s"$active poc admin ${admin.id} of poc ${admin.pocId}.", tenantContext)
                 Right(())
               }
         }

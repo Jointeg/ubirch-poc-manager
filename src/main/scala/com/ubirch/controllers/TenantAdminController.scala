@@ -1,23 +1,25 @@
 package com.ubirch.controllers
 
-import cats.data. Validated
+import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers.{ retrieveTenantFromToken, ActivateSwitch, IllegalValueForActivateSwitch }
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
-  NotAllowedError, UserNotCompleted, UserNotFound
+  NotAllowedError,
+  UserNotCompleted,
+  UserNotFound
 }
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.CriteriaValidator
-import com.ubirch.db.tables.{PocAdminRepository, PocRepository, PocStatusRepository, TenantTable}
+import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
-import com.ubirch.models.{NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse}
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
+import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
-import com.ubirch.services.poc.{CertifyUserService, PocBatchHandlerImpl, Remove2faTokenError}
+import com.ubirch.services.poc.{ CertifyUserService, PocBatchHandlerImpl, Remove2faTokenError }
 import com.ubirch.services.tenantadmin.GetPocAdminStatusErrors._
 import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
@@ -28,7 +30,7 @@ import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import org.scalatra._
-import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
 import java.util.UUID
 import javax.inject.Inject
@@ -378,20 +380,20 @@ class TenantAdminController @Inject() (
           r <- maybePocAdmin match {
             case None => Task.pure(NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$pocAdminId' not found'")))
             case Some(pocAdmin) => certifyUserService.remove2FAToken(pocAdmin)
-              .map {
-                case Left(e) => e match {
-                  case Remove2faTokenError.KeycloakError(id, error) =>
-                    error match {
-                      case Remove2faTokenKeycloakError.UserNotFound(error) =>
-                        NotFound(NOK.resourceNotFoundError(error))
-                      case Remove2faTokenKeycloakError.KeycloakError(error) =>
-                        InternalServerError(NOK.serverError(error))
+                .map {
+                  case Left(e) => e match {
+                      case Remove2faTokenError.KeycloakError(id, error) =>
+                        error match {
+                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                            NotFound(NOK.resourceNotFoundError(error))
+                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                            InternalServerError(NOK.serverError(error))
+                        }
+                      case Remove2faTokenError.MissingCertifyUserId(id) =>
+                        Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
                     }
-                  case Remove2faTokenError.MissingCertifyUserId(id) =>
-                    Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                  case Right(_) => Ok("")
                 }
-                case Right(_) => Ok("")
-              }
           }
         } yield r
       }
