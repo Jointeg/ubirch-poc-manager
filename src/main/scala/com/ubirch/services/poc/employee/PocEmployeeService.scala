@@ -23,15 +23,6 @@ class PocEmployeeServiceImpl @Inject() (
   pocLogoRepository: PocLogoRepository,
   pocConfig: PocConfig)
   extends PocEmployeeService {
-  // @todo move it in proper place
-  val pocTypeMap: Map[String, String] = Map(
-    "ub_cust_app" -> "bvdw-certificate",
-    "ub_vac_app" -> "vaccination-v3",
-    "ub_test_app" -> "corona-test",
-    "ub_test_api" -> "corona-test",
-    "bmg_vac_app" -> "vaccination-bmg-v2",
-    "bmg_vac_api" -> "vaccination-bmg-v2"
-  )
 
   def getCertifyConfig(pocEmployee: PocEmployee): Task[Either[GetCertifyConfigError, GetCertifyConfigDTO]] = {
     (for {

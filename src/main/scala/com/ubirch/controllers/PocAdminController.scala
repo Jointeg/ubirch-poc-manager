@@ -102,21 +102,24 @@ class PocAdminController @Inject() (
       csvProcessPocEmployee.createListOfPocEmployees(request.body, pocAdmin).map {
         case Left(UnknownTenant(tenantId)) =>
           logger.error(s"Could not find tenant with id $tenantId (assigned to ${pocAdmin.id} PocAdmin)")
-          NotFound(NOK.resourceNotFoundError("Could not find tenant assigned to given PocAdmin"))
-        case Left(PocAdminNotInCompletedStatus(pocAdminId)) =>
-          logger.error(s"Could not create employees because PocAdmin is not in completed state: $pocAdminId")
-          BadRequest(NOK.badRequest("PoC Admin is not fully setup"))
+          Ok("Could not find tenant assigned to given PocAdmin")
         case Left(HeaderParsingError(msg)) =>
           logger.error(s"Error has occurred during header parsing: $msg sent by ${pocAdmin.id}")
-          BadRequest(NOK.badRequest("Header in CSV file is not correct"))
+          Ok(s"Header in CSV file is not correct. $msg")
         case Left(EmptyCSVError(msg)) =>
           logger.error(s"Empty CSV file received from ${pocAdmin.id} PoC Admin: $msg")
-          BadRequest(NOK.badRequest("Empty CSV body"))
+          Ok("Empty CSV body")
+        case Left(PocAdminNotInCompletedStatus(pocAdminId)) =>
+          logger.error(s"Could not create employees because PocAdmin is not in completed state: $pocAdminId")
+          InternalServerError(NOK.serverError("PoC Admin is not fully setup"))
         case Left(UnknownCsvParsingError(msg)) =>
           logger.error(s"Unexpected error has occurred while parsing the CSV: $msg")
           InternalServerError(NOK.serverError("Unknown error has happened while parsing the CSV file"))
         case Left(CsvContainedErrors(errors)) => Ok(errors)
         case Right(_)                         => Ok()
+      }.onErrorHandle { ex =>
+        InternalServerError(NOK.serverError(
+          s"something went wrong retrieving employees for admin with id ${pocAdmin.id}" + ex.getMessage))
       }
     }
   }

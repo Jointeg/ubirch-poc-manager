@@ -6,7 +6,6 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.ConfPaths.TeamDrivePaths
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
 import com.ubirch.db.tables.{ PocLogoRepository, PocRepository, PocStatusRepository, TenantRepository }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
