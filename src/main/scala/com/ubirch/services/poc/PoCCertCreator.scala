@@ -41,7 +41,7 @@ object PoCCertCreator extends LazyLogging {
       name = SpaceName.ofPoc(stage, tenant, poc)
       _ <- teamDriveService.shareCert(
         name,
-        ubirchAdmins :+ poc.manager.managerEmail,
+        ubirchAdmins,
         sharedAuthResponse.passphrase,
         sharedAuthResponse.pkcs12
       )
