@@ -149,12 +149,14 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
     val dynamic =
       quote(q.join(querySchema[Poc]("poc_manager.poc_table")).on { case (pa, p) => pa.pocId == p.id }).dynamic
     sort.field match {
-      case Some("id")      => dynamic.sortBy(r => quote(r._1.id))(sort.ord)
-      case Some("name")    => dynamic.sortBy(r => quote(r._1.name))(sort.ord)
-      case Some("surName") => dynamic.sortBy(r => quote(r._1.surname))(sort.ord)
-      case Some("email")   => dynamic.sortBy(r => quote(r._1.email))(sort.ord)
-      case Some("pocName") => dynamic.sortBy(r => quote(r._2.pocName))(sort.ord)
-      case _               => dynamic
+      case Some("id")        => dynamic.sortBy(r => quote(r._1.id))(sort.ord)
+      case Some("lastName")  => dynamic.sortBy(r => quote(r._1.surname))(sort.ord)
+      case Some("firstName") => dynamic.sortBy(r => quote(r._1.name))(sort.ord)
+      case Some("email")     => dynamic.sortBy(r => quote(r._1.email))(sort.ord)
+      case Some("active")    => dynamic.sortBy(r => quote(r._1.active))(sort.ord)
+      case Some("status")    => dynamic.sortBy(r => quote(r._1.status))(sort.ord)
+      case Some("pocName")   => dynamic.sortBy(r => quote(r._2.pocName))(sort.ord)
+      case _                 => dynamic
     }
   }
 

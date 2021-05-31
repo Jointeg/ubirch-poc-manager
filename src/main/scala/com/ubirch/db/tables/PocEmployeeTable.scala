@@ -94,10 +94,12 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
   private def sortPocEmployees(q: Quoted[Query[PocEmployee]], sort: Sort): DynamicQuery[PocEmployee] = {
     val dynamic = q.dynamic
     sort.field match {
-      case Some("name")    => dynamic.sortBy(p => quote(p.name))(sort.ord)
-      case Some("surname") => dynamic.sortBy(p => quote(p.surname))(sort.ord)
-      case Some("email")   => dynamic.sortBy(p => quote(p.email))(sort.ord)
-      case _               => dynamic
+      case Some("firstName") => dynamic.sortBy(p => quote(p.name))(sort.ord)
+      case Some("lastName")  => dynamic.sortBy(p => quote(p.surname))(sort.ord)
+      case Some("email")     => dynamic.sortBy(p => quote(p.email))(sort.ord)
+      case Some("status")    => dynamic.sortBy(p => quote(p.status))(sort.ord)
+      case Some("active")    => dynamic.sortBy(p => quote(p.active))(sort.ord)
+      case _                 => dynamic
     }
   }
 
