@@ -35,7 +35,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         Left(line + columnSeparator +
           s"the number of column ${cols.length} is invalid. should be ${pocHeaderColsOrder.length}.")
     }
-
   }
 
   val headerColOrder: Array[String] = pocHeaderColsOrder
@@ -52,7 +51,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
-      validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
+      validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocCertifyApp),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
       validateMapContainsStringKey(dataSchemaId, csvPoc.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPoc.extraConfig),

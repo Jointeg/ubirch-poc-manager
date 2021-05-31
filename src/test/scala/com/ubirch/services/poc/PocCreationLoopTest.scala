@@ -3,7 +3,7 @@ import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, Tenant
 import com.ubirch.UnitTestBase
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
 import com.ubirch.models.keycloak.user.CreateBasicKeycloakUser
-import com.ubirch.models.poc.{ Poc, PocStatus }
+import com.ubirch.models.poc.{ LogoURL, Poc, PocStatus }
 import com.ubirch.models.user.{ Email, FirstName, LastName, UserName }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
@@ -14,6 +14,7 @@ import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.reactive.Observable
 import org.scalatest.Assertion
 
+import java.net.URL
 import scala.concurrent.duration.DurationInt
 
 class PocCreationLoopTest extends UnitTestBase {
@@ -47,7 +48,10 @@ class PocCreationLoopTest extends UnitTestBase {
         val pocCreation = loop.startPocCreationLoop(resp => Observable(resp)).subscribe()
         Thread.sleep(4000)
         await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds) shouldBe None
-        addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, updatedTenant)
+        val updatedPoc = poc.copy(logoUrl = Some(LogoURL(
+          new URL("https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png"))))
+        val updatedStatus = pocStatus.copy(logoRequired = true, logoStored = Some(true))
+        addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, updatedStatus, updatedTenant)
         Thread.sleep(3000)
         val status = await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds).get
         assertStatusAllTrue(status)
@@ -73,5 +77,6 @@ class PocCreationLoopTest extends UnitTestBase {
     status.deviceCreated shouldBe true
     status.goClientProvided shouldBe true
     status.certifyApiProvided shouldBe true
+    status.logoStored shouldBe Some(true)
   }
 }

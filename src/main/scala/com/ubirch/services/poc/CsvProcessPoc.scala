@@ -13,6 +13,7 @@ import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.postgresql.util.PSQLException
 
 import javax.inject.{ Inject, Singleton }
 
@@ -56,12 +57,18 @@ class CsvProcessPocImpl @Inject() (
         _ <- pocRepository.createPoc(poc)
         _ <- pocStatusRepository.createPocStatus(status)
       } yield {
-        logAuditWithTenantContext(s"created poc and status with ${poc.id} ", tenantContext)
+        logAuditByTenantAdmin(s"created poc and status with ${poc.id} ", tenantContext)
         None
       }
     }.onErrorHandle { e =>
       logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
-      Some(csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
+      e match {
+        case _: PSQLException if e.getMessage.contains("duplicate") =>
+          Some(csvRow + columnSeparator + s"error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
+        case _ =>
+          Some(
+            csvRow + columnSeparator + s"error on persisting objects; something unexpected went wrong ${e.getMessage}")
+      }
     }
   }
 

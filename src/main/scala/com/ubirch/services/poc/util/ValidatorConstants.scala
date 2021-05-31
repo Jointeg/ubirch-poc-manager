@@ -8,7 +8,7 @@ object ValidatorConstants {
 
   //    https://www.regextester.com/97440
   val phoneRegex: Regex =
-    raw"(([+][(]?[0-9]{1,3}[)]?)|([(]?[0-9]{4}[)]?))\s*[)]?[-\s]?[(]?[0-9]{1,3}[)]?([-\s]?[0-9]{3})([-\s]?[0-9]{3,4})".r
+    "^(\\+|00)[0-9]{1,3}[ \\-0-9]{4,14}$".r
 
   val pocNameRegex: Regex =
     "^(?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+([ _.@-](?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+)*$".r
@@ -22,14 +22,23 @@ object ValidatorConstants {
   def booleanError(header: String) =
     s"column $header must be either 'TRUE' or 'FALSE'"
 
+  def certifyAppAdminError(header: String) =
+    s"column $header cannot be false, if poc admin shall be created"
+
   def clientCertError(header: String) =
     s"column $header can only be false, if tenant has client cert"
+
+  def clientCertAdminError(header: String) =
+    s"column $header cannot be false, if poc admin shall be created"
 
   def organisationalUnitCertError(userType: UsageType, clientCertRequired: Boolean) =
     s"Could not create organisational unit because Tenant usage type is set to $userType but clientCertRequired is set to $clientCertRequired"
 
-  def urlError(header: String) =
-    s"column $header must contain a proper url"
+  def logoUrlNoValidUrlError(header: String) =
+    s"column $header must contain a valid url http://www.ubirch.com if certifyApp is set to true"
+
+  def logoUrlNoValidFileFormatError(header: String) =
+    s"column $header must contain a valid file extension (jpg, jpeg, png)"
 
   def emailError(header: String) =
     s"column $header must contain a proper mail address"

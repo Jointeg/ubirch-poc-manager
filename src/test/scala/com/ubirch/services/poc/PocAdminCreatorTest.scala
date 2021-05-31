@@ -29,7 +29,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = SpaceName.forPoc("local", tenant, poc)
+        val spaceName = SpaceName.ofPoc("local", tenant, poc)
         val updatedPoc =
           poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
@@ -71,7 +71,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = SpaceName.forPoc("local", tenant, poc)
+        val spaceName = SpaceName.ofPoc("local", tenant, poc)
         val updatedPoc =
           poc.copy(certifyGroupId = Some(UUID.randomUUID().toString), adminGroupId = Some(UUID.randomUUID().toString))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
@@ -130,7 +130,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = SpaceName.forPoc("local", tenant, poc)
+        val spaceName = SpaceName.ofPoc("local", tenant, poc)
         val webIdentSuccessPocAdminStatus =
           pocAdminStatus.copy(webIdentInitiated = Some(true), webIdentSuccess = Some(true))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, tenant)

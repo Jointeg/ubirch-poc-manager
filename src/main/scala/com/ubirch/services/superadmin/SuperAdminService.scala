@@ -61,7 +61,7 @@ class DefaultSuperAdminService @Inject() (
   }
 
   private def createShareCertIntoTD(tenant: Tenant, sharedAuthResult: SharedAuthResult): Task[SharedCertificate] = {
-    val spaceName = SpaceName.forTenant(pocConfig.teamDriveStage, tenant)
+    val spaceName = SpaceName.ofTenant(pocConfig.teamDriveStage, tenant)
     teamDriveService.shareCert(
       spaceName,
       pocConfig.teamDriveAdminEmails,
@@ -80,7 +80,7 @@ class DefaultSuperAdminService @Inject() (
     tenantRepository
       .createTenant(updatedTenant)
       .map { tenantId =>
-        logAuditWithSuperAdminContext("created tenant", superAdminContext)
+        logAuditBySuperAdmin(s"created tenant ${updatedTenant.id}", superAdminContext)
         Right.apply(tenantId)
       }
       .onErrorHandle(ex => {

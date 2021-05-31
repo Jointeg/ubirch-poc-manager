@@ -3,6 +3,6 @@ import java.util.UUID
 
 case class UpdateWebIdentIdRequest(
   pocAdminId: UUID,
-  webIdentId: UUID,
+  webIdentId: String,
   webIdentInitiateId: UUID
 )

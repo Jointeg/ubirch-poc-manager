@@ -6,13 +6,8 @@ import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.models.tenant.{ API, APP, Both }
 import com.ubirch.services.poc.util.CsvConstants._
-import com.ubirch.services.poc.util.ValidatorConstants.{
-  emptyStringError,
-  listDoesntContainStringError,
-  mapDoesntContainStringKeyError,
-  phoneValidationError
-}
 import com.ubirch.services.poc.util.ValidatorConstants
+import com.ubirch.services.poc.util.ValidatorConstants._
 import com.ubirch.services.util.Validator._
 import org.scalatest.prop.{ TableDrivenPropertyChecks, TableFor1 }
 
@@ -69,26 +64,49 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   "Validator URL" should {
 
-    "validate URL valid" in {
-      val str = "http://www.ubirch.com"
-      val validated = validateURL(logoUrl, str, "true")
+    "validate URL invalid" in {
+      val str = "anyurl"
+      val validated = validateLogoURL(logoUrl, str, "false")
       assert(validated.isValid)
     }
 
-    "validate broken URL invalid" in {
-      val str = "www.ubirch.comX"
-      val validated = validateURL(logoUrl, str, "true")
+    "validate URL valid" in {
+      val str = "http://www.ubirch.com/logo.png"
+      val validated = validateLogoURL(logoUrl, str, "true")
+      assert(validated.isValid)
+    }
+
+    "validate URL invalid, if schema is missing " in {
+      val str = "www.ubirch.com"
+      val validated = validateLogoURL(logoUrl, str, "true")
+      assert(validated.isInvalid)
+    }
+
+    "validate URL invalid if wrong file extension" in {
+      val str = "http://www.ubirch.com/"
+      val validated = validateLogoURL(logoUrl, str, "true")
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == "column logo_url must contain a proper url")
+          assert(error == logoUrlNoValidFileFormatError(logoUrl))
+        }
+    }
+
+    "validate broken URL invalid" in {
+      val str = "www.ubirch.comX"
+      val validated = validateLogoURL(logoUrl, str, "true")
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == logoUrlNoValidUrlError(logoUrl))
         }
     }
 
     "validate URL valid, if certifyApp column contains errors " in {
       val str = "www.ubirch.com"
-      val validated = validateURL(logoUrl, str, "CtrueX")
+      val validated = validateLogoURL(logoUrl, str, "CtrueX")
       assert(validated.isValid)
     }
   }
@@ -132,6 +150,68 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
           assert(error == ValidatorConstants.booleanError(certifyApp))
+        }
+    }
+  }
+
+  "Validator Client Cert Admin" should {
+
+    "validate 'TRUE' valid if " in {
+      val str = "TRUE"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isValid)
+    }
+
+    "validate 'TRUE' valid if tenant usageType == Both" in {
+      val str = "false"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.clientCertAdminError(clientCert))
+        }
+    }
+
+    "validate 'tryx' invalid" in {
+      val str = "tryx"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.booleanError(clientCert))
+        }
+    }
+  }
+
+  "Validator Admin Certify App " should {
+
+    "validate 'TRUE' valid" in {
+      val str = "TRUE"
+      val validated = validateAdminCertifyApp(clientCert, str)
+      assert(validated.isValid)
+    }
+
+    "validate 'False' invalid " in {
+      val str = "False"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == clientCertAdminError(clientCert))
+        }
+    }
+
+    "validate 'tryx' invalid" in {
+      val str = "tryx"
+      val validated = validateClientCertAdmin(clientCert, str)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == booleanError(clientCert))
         }
     }
   }
@@ -203,47 +283,36 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     }
   }
 
-  "Validator Phone" should {
+  val validPhoneNumbers = Table(
+    "1555555555",
+    "+4974339296",
+    "+46-498-313789",
+    "+591 74339296",
+    "+1 555 555 5554",
+    "0001 5555555555",
+    "+4930-7387862"
+  )
 
-    "validate phone number example 1 valid" in {
-      val str = "+49327387862"
-      val validated = validatePhone(phone, str)
+  val invalidPhoneNumbers = Table(
+    "+(591) 7433433",
+    "+(591) (4) 6434850",
+    "0591 74339296",
+    "(0001) 5555555",
+    "59145678464",
+    "030786862834"
+  )
+
+  forAll(validPhoneNumbers) { phoneNumber =>
+    s"Validator Phone $phoneNumber" in {
+      val validated = validatePhone(phone, phoneNumber)
       assert(validated.isValid)
     }
+  }
 
-    "validate phone number  example 2 valid" in {
-      val str = "+4930-7387862"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number 0187-73878989 valid" in {
-      val str = "0187-73878989"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number +49-301267863 valid" in {
-      val str = "+49-301267863"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number  example 5 valid" in {
-      val str = "030786862834"
-      val validated = validatePhone(phone, str)
-      assert(validated.isValid)
-    }
-
-    "validate phone number example 1 invalid" in {
-      val str = "+4932738x7862"
-      val validated = validatePhone(phone, str)
+  forAll(invalidPhoneNumbers) { phoneNumber =>
+    s"Validator Phone $phoneNumber" in {
+      val validated = validatePhone(phone, phoneNumber)
       assert(validated.isInvalid)
-      validated
-        .leftMap(_.toList.mkString(comma))
-        .leftMap { error =>
-          assert(error == phoneValidationError(phone))
-        }
     }
   }
 
@@ -325,7 +394,6 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
           assert(error == mapDoesntContainStringKeyError(dataSchemaId, map))
         }
     }
-
   }
 
   "Validator StringOption" should {

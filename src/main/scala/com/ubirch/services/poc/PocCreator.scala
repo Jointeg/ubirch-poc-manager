@@ -1,13 +1,18 @@
 package com.ubirch.services.poc
 
+import cats.data.EitherT
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.ConfPaths.TeamDrivePaths
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
+import com.ubirch.db.tables.{ PocLogoRepository, PocRepository, PocStatusRepository, TenantRepository }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
+import com.ubirch.services.poc.util.ImageLoader
 import com.ubirch.services.teamdrive.TeamDriveService
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
@@ -40,9 +45,13 @@ class PocCreatorImpl @Inject() (
   pocStatusTable: PocStatusRepository,
   tenantTable: TenantRepository,
   teamDriveService: TeamDriveService,
+  quillMonixJdbcContext: QuillMonixJdbcContext,
+  imageLoader: ImageLoader,
+  pocLogoRepository: PocLogoRepository,
   config: Config)(implicit formats: Formats)
   extends PocCreator
-  with LazyLogging {
+  with LazyLogging
+  with PocAuditLogging {
 
   private val ubirchAdminsEmails: Seq[String] =
     config.getString(TeamDrivePaths.UBIRCH_ADMINS).trim.split(",").map(_.trim)
@@ -117,7 +126,6 @@ class PocCreatorImpl @Inject() (
   }
 
   //Todo: create and provide client certs
-  //Todo: download and store logo
   private def process(pocAndStatus: PocAndStatus, tenant: Tenant): Task[Either[String, PocStatus]] = {
     logger.info(s"starting to process poc with id ${pocAndStatus.poc.id}")
     val creationResult = for {
@@ -128,14 +136,17 @@ class PocCreatorImpl @Inject() (
       pocAndStatus3 <- doOrganisationUnitCertificateTasks(tenant, PocAndStatus(pocAndStatus2.poc, status4))
       pocAndStatus4 <- doSharedAuthCertificateTasks(tenant, pocAndStatus3)
       statusAndPW5 <- infoToGoClient(pocAndStatus4.poc, statusAndPW3.copy(status = pocAndStatus4.status))
-      completeStatus <- infoToCertifyAPI(pocAndStatus4.poc, statusAndPW5, tenant)
+      pocAndStatus6 <- infoToCertifyAPI(pocAndStatus4.poc, statusAndPW5, tenant)
+      completeStatus <- downloadAndStoreLogoImage(pocAndStatus6)
     } yield completeStatus
 
     (for {
       completePocAndStatus <- creationResult
-      newPoc = completePocAndStatus.poc.copy(status = Completed)
-      _ <- pocTable.updatePoc(newPoc)
-      _ <- pocStatusTable.updatePocStatus(completePocAndStatus.status.copy(errorMessage = None))
+      _ <- quillMonixJdbcContext
+        .withTransaction {
+          updateStatusOfPoc(completePocAndStatus.poc, Completed) >>
+            pocStatusTable.updatePocStatus(completePocAndStatus.status.copy(errorMessage = None))
+        }.map(_ => logAuditEventInfo(s"updated poc and status with id ${completePocAndStatus.poc.id} by service"))
     } yield {
       logger.info(s"finished to create poc with id ${pocAndStatus.poc.id}")
       Right(completePocAndStatus.status)
@@ -172,12 +183,38 @@ class PocCreatorImpl @Inject() (
     } yield pocAndStatusFinal
   }
 
+  private def downloadAndStoreLogoImage(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    if (pocAndStatus.status.logoRequired && pocAndStatus.status.logoStored.contains(false)) {
+      (for {
+        logoUrl <-
+          EitherT.fromOption[Task](pocAndStatus.poc.logoUrl, s"logoUrl is missing, when it should be added to Poc")
+        imageByte <- EitherT.liftF(imageLoader.getImage(logoUrl.url))
+        pocLogo <- EitherT[Task, String, PocLogo](PocLogo.create(pocAndStatus.poc.id, imageByte))
+        _ <- EitherT.liftF[Task, String, Unit](pocLogoRepository.createPocLogo(pocLogo))
+      } yield {
+        pocAndStatus.copy(status = pocAndStatus.status.copy(logoStored = Some(true)))
+      }).value.onErrorHandle {
+        case e: ImageLoader =>
+          Left(s"can't download logo. ${e.getMessage}")
+        case e => Left(e.getMessage)
+      }.map {
+        case Right(pocAndStatus) => pocAndStatus
+        case Left(error) =>
+          val errorMsg =
+            s"failed to download and store pocLogo: ${pocAndStatus.poc.logoUrl.getOrElse("")}, $error"
+          PocCreator.throwError(pocAndStatus, errorMsg)
+      }
+    } else Task(pocAndStatus)
+  }
+
   private def handlePocCreationError[A](ex: Throwable): Task[Either[String, A]] = {
     ex match {
       case pce: PocCreationError =>
         (for {
-          _ <- pocTable.updatePoc(pce.pocAndStatus.poc)
-          _ <- pocStatusTable.updatePocStatus(pce.pocAndStatus.status)
+          _ <- quillMonixJdbcContext
+            .withTransaction {
+              pocTable.updatePoc(pce.pocAndStatus.poc) >> pocStatusTable.updatePocStatus(pce.pocAndStatus.status)
+            }.map(_ => logAuditEventInfo(s"updated poc and status with id ${pce.pocAndStatus.poc.id} by service"))
         } yield {
           val msg = s"updated poc status after poc creation failed; ${pce.pocAndStatus.status}, error: ${pce.message}"
           logger.error(msg)

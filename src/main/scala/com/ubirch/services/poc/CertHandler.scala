@@ -59,34 +59,36 @@ class CertCreatorImpl @Inject() (conf: Config)(implicit formats: Formats) extend
         .auth.bearer(certManagerToken)
         .header("Content-Type", "application/json")
         .response(ignore)
-        .send())
-      .map(response =>
-        if (response.code == StatusCode.Created || response.code == StatusCode.Conflict)
-          Right(())
-        else
-          Left(CertificateCreationError(
-            s"Could not create organisational certificate with orgId: $orgUUID because received ${response.code} from CertManager")))
-      .onErrorHandle(handleException(_, s"creation of org cert failed for tenant $orgUUID; "))
+        .send().map {
+          _.code match {
+            case StatusCode.Created | StatusCode.Conflict =>
+              Right(())
+            case code =>
+              Left(CertificateCreationError(
+                s"Could not create organisational certificate with orgId: $orgUUID because received $code from CertManager"))
+          }
+        }
+    ).onErrorHandle(handleException(_, s"creation of org cert failed for tenant $orgUUID; "))
 
   override def createOrganisationalUnitCertificate(
     orgUUID: UUID,
     orgUnitId: UUID,
     identifier: CertIdentifier): Task[Either[CertificateCreationError, Unit]] = {
-    val response = Task.deferFuture(basicRequest
+    Task.deferFuture(basicRequest
       .post(uri"$certManagerUrl/orgs/${orgUUID.toString}/units/${orgUnitId.toString}")
       .body(write[CreateOrganisationalUnitCertRequest](CreateOrganisationalUnitCertRequest(identifier.value)))
       .header("Content-Type", "application/json")
       .auth.bearer(certManagerToken)
       .response(ignore)
-      .send())
-
-    response.flatMap(response =>
-      if (response.code == StatusCode.Created || response.code == StatusCode.Conflict)
-        Task(Right(()))
-      else
-        Task(Left(CertificateCreationError(
-          s"Could not create organisational unit certificate with orgUnitId: $orgUnitId because received ${response.code} from CertManager"))))
-
+      .send().map {
+        _.code match {
+          case StatusCode.Created | StatusCode.Conflict =>
+            Right(())
+          case code =>
+            Left(CertificateCreationError(
+              s"Could not create organisational unit certificate with orgUnitId: $orgUnitId because received $code from CertManager"))
+        }
+      }).onErrorHandle(handleException(_, s"POST orgs/${orgUUID.toString}/units/${orgUnitId.toString} failed; "))
   }
 
   override def createSharedAuthCertificate(

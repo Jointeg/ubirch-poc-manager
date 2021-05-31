@@ -34,7 +34,7 @@ trait KeycloakUserService {
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]]
 
   /**
-    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def addGroupToUserByName(
     userName: String,
@@ -47,7 +47,7 @@ trait KeycloakUserService {
     instance: KeycloakInstance): Task[Either[String, Unit]]
 
   /**
-    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def deleteUserByUserName(username: UserName, instance: KeycloakInstance): Task[Unit]
 
@@ -56,7 +56,7 @@ trait KeycloakUserService {
     instance: KeycloakInstance): Task[Option[UserRepresentation]]
 
   /**
-    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def getUserByUserName(
     username: UserName,
@@ -241,19 +241,18 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     instance: KeycloakInstance,
     errorMessage: (UUID, Throwable) => String,
     enabled: Boolean): Task[Either[String, Unit]] =
-    getUserById(UserId(id), instance).flatMap {
-      case Some(ur) => update(
-          id, {
-            ur.setEnabled(enabled)
-            ur
-          },
-          instance).map(_ => ().asRight)
-      case None => Task.pure(s"user with name $id wasn't found".asLeft)
-    }.onErrorHandle { ex =>
-      val message = errorMessage(id, ex)
-      logger.error(message, ex)
-      message.asLeft
-    }
+    getUserById(UserId(id), instance)
+      .flatMap {
+        case Some(ur) =>
+          ur.setEnabled(enabled)
+          update(id, ur, instance)
+            .map(_ => ().asRight)
+        case None => Task.pure(s"user with name $id wasn't found".asLeft)
+      }.onErrorHandle { ex =>
+        val message = errorMessage(id, ex)
+        logger.error(message, ex)
+        message.asLeft
+      }
 
   override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
     getUserById(UserId(id), instance).flatMap {

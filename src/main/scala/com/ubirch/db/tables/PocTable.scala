@@ -3,11 +3,10 @@ package com.ubirch.db.tables
 import com.google.inject.Inject
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
-import com.ubirch.models.common
-import com.ubirch.models.common.{ Page, Sort }
+import com.ubirch.models.common.Sort
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
-import io.getquill.{ Insert, Ord, Query, Update }
+import io.getquill.{ Insert, Query, Update }
 import monix.eval.Task
 
 import java.util.UUID
@@ -17,8 +16,6 @@ trait PocRepository {
   def createPoc(poc: Poc): Task[UUID]
 
   def createPocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit]
-
-  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit]
 
   def updatePoc(poc: Poc): Task[UUID]
 
@@ -100,16 +97,6 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
       }
     }
 
-  def updatePocAndStatus(poc: Poc, pocStatus: PocStatus): Task[Unit] =
-    transaction {
-      for {
-        _ <- run(updatePocQuery(poc))
-        _ <- run(updatePocStatusQuery(pocStatus))
-      } yield {
-        ()
-      }
-    }
-
   override def updatePoc(poc: Poc): Task[UUID] = run(updatePocQuery(poc)).map(_ => poc.id)
 
   override def deletePoc(pocId: UUID): Task[Unit] = run(removePocQuery(pocId)).void
@@ -147,33 +134,29 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
       case Some(s) =>
         quote {
           pocByTenantId
-            .filter(_.pocName.like(lift(s"$s%")))
+            .filter(poc => poc.pocName.like(lift(s"$s%")) || poc.address.city.like(lift(s"$s%")))
         }
       case None => pocByTenantId
     }
   }
 
   private def sortPocs(q: Quoted[Query[Poc]], sort: Sort) = {
-    def ord[T]: Ord[T] = sort.order match {
-      case common.ASC  => Ord.asc[T]
-      case common.DESC => Ord.desc[T]
-    }
     val dynamic = q.dynamic
     sort.field match {
-      case Some("id")                 => dynamic.sortBy(p => quote(p.id))(ord)
-      case Some("tenantId")           => dynamic.sortBy(p => quote(p.tenantId))(ord)
-      case Some("externalId")         => dynamic.sortBy(p => quote(p.externalId))(ord)
-      case Some("pocName")            => dynamic.sortBy(p => quote(p.pocName))(ord)
-      case Some("phone")              => dynamic.sortBy(p => quote(p.phone))(ord)
-      case Some("certifyApp")         => dynamic.sortBy(p => quote(p.certifyApp))(ord)
-      case Some("clientCertRequired") => dynamic.sortBy(p => quote(p.clientCertRequired))(ord)
-      case Some("dataSchemaId")       => dynamic.sortBy(p => quote(p.dataSchemaId))(ord)
-      case Some("roleName")           => dynamic.sortBy(p => quote(p.roleName))(ord)
-      case Some("deviceId")           => dynamic.sortBy(p => quote(p.deviceId))(ord)
-      case Some("clientCertFolder")   => dynamic.sortBy(p => quote(p.clientCertFolder))(ord)
-      case Some("status")             => dynamic.sortBy(p => quote(p.status))(ord)
-      case Some("lastUpdated")        => dynamic.sortBy(p => quote(p.lastUpdated))(ord)
-      case Some("created")            => dynamic.sortBy(p => quote(p.created))(ord)
+      case Some("id")                 => dynamic.sortBy(p => quote(p.id))(sort.ord)
+      case Some("tenantId")           => dynamic.sortBy(p => quote(p.tenantId))(sort.ord)
+      case Some("externalId")         => dynamic.sortBy(p => quote(p.externalId))(sort.ord)
+      case Some("pocName")            => dynamic.sortBy(p => quote(p.pocName))(sort.ord)
+      case Some("phone")              => dynamic.sortBy(p => quote(p.phone))(sort.ord)
+      case Some("certifyApp")         => dynamic.sortBy(p => quote(p.certifyApp))(sort.ord)
+      case Some("clientCertRequired") => dynamic.sortBy(p => quote(p.clientCertRequired))(sort.ord)
+      case Some("dataSchemaId")       => dynamic.sortBy(p => quote(p.dataSchemaId))(sort.ord)
+      case Some("roleName")           => dynamic.sortBy(p => quote(p.roleName))(sort.ord)
+      case Some("deviceId")           => dynamic.sortBy(p => quote(p.deviceId))(sort.ord)
+      case Some("clientCertFolder")   => dynamic.sortBy(p => quote(p.clientCertFolder))(sort.ord)
+      case Some("status")             => dynamic.sortBy(p => quote(p.status))(sort.ord)
+      case Some("lastUpdated")        => dynamic.sortBy(p => quote(p.lastUpdated))(sort.ord)
+      case Some("created")            => dynamic.sortBy(p => quote(p.created))(sort.ord)
       case _                          => dynamic
     }
   }

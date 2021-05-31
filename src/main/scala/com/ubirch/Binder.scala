@@ -25,7 +25,14 @@ import com.ubirch.services.keycloak.users.{
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
-import com.ubirch.services.poc.employee.{ CsvProcessPocEmployee, CsvProcessPocEmployeeImpl }
+import com.ubirch.services.poc.util.{ ImageLoader, ImageLoaderImpl }
+import com.ubirch.services.poc.employee.{
+  CsvProcessPocEmployee,
+  CsvProcessPocEmployeeImpl,
+  PocEmployeeService,
+  PocEmployeeServiceImpl
+}
+import com.ubirch.services.pocadmin.{ PocAdminService, PocAdminServiceImpl }
 import com.ubirch.services.rest.SwaggerProvider
 import com.ubirch.services.superadmin.{ DefaultSuperAdminService, SuperAdminService }
 import com.ubirch.services.teamdrive.{
@@ -159,6 +166,9 @@ class Binder extends AbstractModule {
   def PocEmployeeStatusRepository: ScopedBindingBuilder =
     bind(classOf[PocEmployeeStatusRepository]).to(classOf[PocEmployeeStatusTable])
 
+  def PocLogoRepository: ScopedBindingBuilder =
+    bind(classOf[PocLogoRepository]).to(classOf[PocLogoTable])
+
   def FlywayProvider: ScopedBindingBuilder = bind(classOf[FlywayProvider]).to(classOf[FlywayProviderImpl])
 
   def DeviceCreator: ScopedBindingBuilder = bind(classOf[DeviceCreator]).to(classOf[DeviceCreatorImpl])
@@ -186,6 +196,9 @@ class Binder extends AbstractModule {
   def PocEmployeeCreationLoop: ScopedBindingBuilder =
     bind(classOf[PocEmployeeCreationLoop]).to(classOf[PocEmployeeCreationLoopImpl])
 
+  def PocAdminService: ScopedBindingBuilder =
+    bind(classOf[PocAdminService]).to(classOf[PocAdminServiceImpl])
+
   def EmployeeCertifyHelper: ScopedBindingBuilder =
     bind(classOf[EmployeeCertifyHelper]).to(classOf[EmployeeCertifyHelperImpl])
 
@@ -200,6 +213,12 @@ class Binder extends AbstractModule {
 
   def CsvProcessPocEmployee: ScopedBindingBuilder =
     bind(classOf[CsvProcessPocEmployee]).to(classOf[CsvProcessPocEmployeeImpl])
+
+  def ImageLoader: ScopedBindingBuilder =
+    bind(classOf[ImageLoader]).to(classOf[ImageLoaderImpl])
+
+  def PocEmployeeService: ScopedBindingBuilder =
+    bind(classOf[PocEmployeeService]).to(classOf[PocEmployeeServiceImpl])
 
   override def configure(): Unit = {
     Config
@@ -238,6 +257,7 @@ class Binder extends AbstractModule {
     PocAdminStatusRepository
     PocEmployeeRepository
     PocEmployeeStatusRepository
+    PocLogoRepository
     TenantRepository
     AESKeyProvider
     AESEncryption
@@ -257,12 +277,15 @@ class Binder extends AbstractModule {
     AdminCertifyHelper
     PocEmployeeCreator
     PocEmployeeCreationLoop
+    PocAdminService
     EmployeeCertifyHelper
     CertHandler
     TeamDriveClient
     TeamDriverService
     TeamDriveClientConfig
     CsvProcessPocEmployee
+    ImageLoader
+    PocEmployeeService
     ()
   }
 }

@@ -1,5 +1,6 @@
 package com.ubirch.services.poc.parsers
 
+import cats.data.Validated.{ Invalid, Valid }
 import cats.syntax.apply._
 import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocAdminRow
@@ -22,15 +23,14 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
         val pocAddress = validatePocAddress(csvPocAdmin)
         val pocManager = validatePocManager(csvPocAdmin)
         val pocV = validatePoc(csvPocAdmin, pocAddress, pocManager, tenant)
-        val pocAdminV = validatePocAdminInfo(csvPocAdmin, pocV)
+        val pocAndAdminV = validatePocAdminInfo(csvPocAdmin, pocV)
 
-        (pocV, pocAdminV).mapN {
-          (poc, pocAdmin) =>
-            PocAdminParseResult(poc, pocAdmin, line)
-        }.fold(
-          errors => Left(line + columnSeparator + errors.toList.mkString(comma)),
-          result => Right(result)
-        )
+        pocAndAdminV match {
+          case Valid((poc, pocAdmin)) =>
+            Right(PocAdminParseResult(poc, pocAdmin, line))
+          case Invalid(errors) =>
+            Left(line + columnSeparator + errors.toList.mkString(comma))
+        }
       case Failure(_) =>
         Left(line + columnSeparator + s"the number of columns ${cols.length} is invalid. should be $pocAdminHeaderColOrderLength.")
     }
@@ -41,7 +41,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
   private def validatePocAdminInfo(
     csvPocAdmin: PocAdminRow,
     pocV: AllErrorsOr[Poc]
-  ): AllErrorsOr[PocAdmin] =
+  ): AllErrorsOr[(Poc, PocAdmin)] = {
     (
       validateString(technicianName, csvPocAdmin.adminName),
       validateString(technicianSurname, csvPocAdmin.adminSurname),
@@ -62,7 +62,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
       ) =>
         {
           val uuid = UUID.randomUUID()
-          PocAdmin(
+          val pocAdmin = PocAdmin(
             uuid,
             poc.id,
             poc.tenantId,
@@ -73,8 +73,10 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
             webIdentRequired,
             adminDateOfBirth
           )
+          (poc, pocAdmin)
         }
     }
+  }
 
   private def validatePoc(
     csvPocAdmin: PocAdminRow,
@@ -87,9 +89,9 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
       validateString(pocName, csvPocAdmin.pocName),
       pocAddress,
       validatePhone(phone, csvPocAdmin.pocPhone),
-      validateBoolean(certifyApp, csvPocAdmin.pocCertifyApp),
-      validateURL(logoUrl, csvPocAdmin.logoUrl, csvPocAdmin.logoUrl),
-      validateClientCert(clientCert, csvPocAdmin.clientCert, tenant),
+      validateAdminCertifyApp(certifyApp, csvPocAdmin.pocCertifyApp),
+      validateLogoURL(logoUrl, csvPocAdmin.logoUrl, csvPocAdmin.pocCertifyApp),
+      validateClientCertAdmin(clientCert, csvPocAdmin.clientCert),
       validateMapContainsStringKey(dataSchemaId, csvPocAdmin.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPocAdmin.extraConfig),
       pocManager
@@ -124,7 +126,6 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
             status = Pending
           )
         }
-
     }
 
   private def validatePocManager(csvPocAdmin: PocAdminRow): AllErrorsOr[PocManager] =

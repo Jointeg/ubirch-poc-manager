@@ -16,7 +16,7 @@ case class PocEmployee(
   email: String,
   certifyUserId: Option[UUID] = None,
   status: Status = Pending,
-  active: Boolean = false,
+  active: Boolean = true,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())
 ) extends HasCertifyUserId

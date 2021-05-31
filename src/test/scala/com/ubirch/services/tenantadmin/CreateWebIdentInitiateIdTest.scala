@@ -1,7 +1,13 @@
 package com.ubirch.services.tenantadmin
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocAdminStatus, createTenant }
+import com.ubirch.ModelCreationHelper.{
+  createPoc,
+  createPocAdmin,
+  createPocAdminStatus,
+  createTenant,
+  getTenantAdminContext
+}
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.tenant.{ CreateWebIdentInitiateIdRequest, TenantName }
+import com.ubirch.models.tenant.CreateWebIdentInitiateIdRequest
 import com.ubirch.{ InjectorHelper, UnitTestBase }
 
 import java.util.UUID
@@ -30,7 +36,10 @@ class CreateWebIdentInitiateIdTest extends UnitTestBase {
         val tenantAdminService = injector.get[TenantAdminService]
 
         val result = await(
-          tenantAdminService.createWebIdentInitiateId(tenant, CreateWebIdentInitiateIdRequest(pocAdmin.id)),
+          tenantAdminService.createWebIdentInitiateId(
+            tenant,
+            getTenantAdminContext(tenant),
+            CreateWebIdentInitiateIdRequest(pocAdmin.id)),
           5.seconds)
         val pocAdminAfterUpdate = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
         val statusAfterUpdate = await(pocAdminStatusTable.getStatus(pocAdmin.id), 5.seconds)
@@ -61,7 +70,10 @@ class CreateWebIdentInitiateIdTest extends UnitTestBase {
         val randomPocAdminId = UUID.randomUUID()
 
         val result = await(
-          tenantAdminService.createWebIdentInitiateId(tenant, CreateWebIdentInitiateIdRequest(randomPocAdminId)),
+          tenantAdminService.createWebIdentInitiateId(
+            tenant,
+            getTenantAdminContext(tenant),
+            CreateWebIdentInitiateIdRequest(randomPocAdminId)),
           5.seconds)
 
         result shouldBe Left(CreateWebIdentInitiateIdErrors.PocAdminNotFound(randomPocAdminId))
@@ -95,7 +107,10 @@ class CreateWebIdentInitiateIdTest extends UnitTestBase {
         val tenantAdminService = injector.get[TenantAdminService]
 
         val result = await(
-          tenantAdminService.createWebIdentInitiateId(tenant1, CreateWebIdentInitiateIdRequest(pocAdmin2.id)),
+          tenantAdminService.createWebIdentInitiateId(
+            tenant1,
+            getTenantAdminContext(tenant1),
+            CreateWebIdentInitiateIdRequest(pocAdmin2.id)),
           5.seconds)
 
         result shouldBe Left(CreateWebIdentInitiateIdErrors.PocAdminAssignedToDifferentTenant(tenant1.id, pocAdmin2.id))
@@ -123,7 +138,10 @@ class CreateWebIdentInitiateIdTest extends UnitTestBase {
         val tenantAdminService = injector.get[TenantAdminService]
 
         val result = await(
-          tenantAdminService.createWebIdentInitiateId(tenant, CreateWebIdentInitiateIdRequest(pocAdmin.id)),
+          tenantAdminService.createWebIdentInitiateId(
+            tenant,
+            getTenantAdminContext(tenant),
+            CreateWebIdentInitiateIdRequest(pocAdmin.id)),
           5.seconds)
 
         result shouldBe Left(CreateWebIdentInitiateIdErrors.WebIdentNotRequired(tenant.id, pocAdmin.id))
