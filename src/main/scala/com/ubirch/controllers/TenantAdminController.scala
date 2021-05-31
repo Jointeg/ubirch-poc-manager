@@ -18,7 +18,8 @@ import com.ubirch.models.tenant._
 import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
+import com.ubirch.services.poc.{ CertifyUserService, PocBatchHandlerImpl, Remove2faTokenError }
 import com.ubirch.services.tenantadmin.GetPocAdminStatusErrors._
 import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
@@ -47,7 +48,8 @@ class TenantAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
-  tenantAdminService: TenantAdminService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  tenantAdminService: TenantAdminService,
+  certifyUserService: CertifyUserService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
@@ -152,6 +154,14 @@ class TenantAdminController @Inject() (
         queryParam[UUID]("id").description("PoC admin id"),
         queryParam[Int]("isActive").description("Whether PoC Admin should be active, values: 1 for true, 0 for false.")
       )
+
+  val delete2FATokenOnPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Delete 2FA token")
+      .summary("Deletes 2FA token for PoC admin")
+      .description("Deletes 2FA token for PoC admin")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+      .parameters(queryParam[UUID]("id").description("PoC admin id"))
 
   post("/pocs/create", operation(createListOfPocs)) {
     tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
@@ -358,6 +368,34 @@ class TenantAdminController @Inject() (
         } yield r).onErrorRecover {
           case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
         }
+      }
+    }
+  }
+
+  delete("/poc-admin/:id/2fa-token", operation(delete2FATokenOnPocAdmin)) {
+    tenantAdminEndpoint("Delete 2FA token for PoC admin") { _ =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+        for {
+          maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+          r <- maybePocAdmin match {
+            case None => Task.pure(NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$pocAdminId' not found'")))
+            case Some(pocAdmin) => certifyUserService.remove2FAToken(pocAdmin)
+                .map {
+                  case Left(e) => e match {
+                      case Remove2faTokenError.KeycloakError(id, error) =>
+                        error match {
+                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                            NotFound(NOK.resourceNotFoundError(error))
+                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                            InternalServerError(NOK.serverError(error))
+                        }
+                      case Remove2faTokenError.MissingCertifyUserId(id) =>
+                        Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                    }
+                  case Right(_) => Ok("")
+                }
+          }
+        } yield r
       }
     }
   }

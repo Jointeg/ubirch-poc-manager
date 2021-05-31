@@ -464,6 +464,35 @@ class KeycloakIntegrationTest extends E2ETestBase {
       result._1.value.isEnabled shouldBe false
       result._2.value.isEnabled shouldBe true
     }
+
+    "remove 2fa token" in withInjector { injector =>
+      val keycloakUserService = injector.get[KeycloakUserService]
+      val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
+      val instance = CertifyKeycloak
+      val requiredAction = List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
+
+      val r = for {
+        create <- keycloakUserService.createUser(newKeycloakUser, instance, requiredAction)
+        id <- create match {
+          case Left(err) =>
+            Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
+          case Right(id) => Task.pure(id)
+        }
+        userRequiredActionsBefore <- keycloakUserService.getUserById(id, instance).flatMap {
+          case Some(ur) => Task.pure(ur.getRequiredActions)
+          case None     => Task.raiseError(new RuntimeException("User not found"))
+        }
+        _ <- keycloakUserService.remove2faToken(id.value, instance)
+        userRequiredActionsAfter <- keycloakUserService.getUserById(id, instance).flatMap {
+          case Some(ur) => Task.pure(ur.getRequiredActions)
+          case None     => Task.raiseError(new RuntimeException("User not found"))
+        }
+      } yield (userRequiredActionsBefore, userRequiredActionsAfter)
+      val (requiredActionsBefore, requiredActionsAfter) = await(r)
+
+      requiredActionsBefore should contain theSameElementsAs List("UPDATE_PASSWORD", "webauthn-register")
+      requiredActionsAfter should contain theSameElementsAs List("UPDATE_PASSWORD")
+    }
   }
 
   "Double Keycloak integration" should {

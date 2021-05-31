@@ -13,11 +13,8 @@ import org.keycloak.representations.idm.UserRepresentation
 import java.util.UUID
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
-import scala.collection.JavaConverters.{
-  iterableAsScalaIterableConverter,
-  mapAsJavaMapConverter,
-  seqAsJavaListConverter
-}
+import scala.collection.JavaConverters.{ mapAsJavaMapConverter, seqAsJavaListConverter }
+import scala.jdk.CollectionConverters._
 
 trait KeycloakUserService {
   /**
@@ -73,6 +70,8 @@ trait KeycloakUserService {
   def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
 
   def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]]
 }
 
 @Singleton
@@ -255,6 +254,22 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
         message.asLeft
       }
 
+  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
+    getUserById(UserId(id), instance).flatMap {
+      case Some(ur) => update(
+          id, {
+            ur.setRequiredActions(
+              ur.getRequiredActions.asScala.filterNot(_ == UserRequiredAction.WEBAUTHN_REGISTER.toString).asJava)
+            ur
+          },
+          instance).map(_ => ().asRight)
+      case None => Task.pure(Remove2faTokenKeycloakError.UserNotFound(s"user with id $id wasn't found").asLeft)
+    }.onErrorHandle { ex =>
+      val message = s"Could not remove 2FA token: ${ex.getMessage}"
+      logger.error(message, ex)
+      Remove2faTokenKeycloakError.KeycloakError(message).asLeft
+    }
+
   private def processCreationResponse(response: Response, userName: String): Either[UserException, UserId] = {
 
     if (response.getStatusInfo.equals(Status.CREATED)) {
@@ -283,4 +298,11 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
         .update(userRepresentation)
     )
   }
+}
+
+sealed trait Remove2faTokenKeycloakError
+
+object Remove2faTokenKeycloakError {
+  case class UserNotFound(error: String) extends Remove2faTokenKeycloakError
+  case class KeycloakError(error: String) extends Remove2faTokenKeycloakError
 }

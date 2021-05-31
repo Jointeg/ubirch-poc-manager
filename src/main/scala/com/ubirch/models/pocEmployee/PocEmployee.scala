@@ -2,6 +2,7 @@ package com.ubirch.models.pocEmployee
 
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
+import com.ubirch.services.poc.CertifyUserService.HasCertifyUserId
 import org.joda.time.DateTime
 
 import java.util.UUID
@@ -18,4 +19,4 @@ case class PocEmployee(
   active: Boolean = true,
   lastUpdated: Updated = Updated(DateTime.now()),
   created: Created = Created(DateTime.now())
-)
+) extends HasCertifyUserId

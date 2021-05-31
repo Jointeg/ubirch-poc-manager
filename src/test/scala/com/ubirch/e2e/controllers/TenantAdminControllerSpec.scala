@@ -9,6 +9,8 @@ import com.ubirch.controllers.TenantAdminController.PocAdmin_OUT
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.ValidationErrorsResponse
+import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
 import com.ubirch.models.user.UserId
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
@@ -24,6 +26,7 @@ import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
+import monix.eval.Task
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s._
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
@@ -37,6 +40,7 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
+import scala.jdk.CollectionConverters._
 
 class TenantAdminControllerSpec
   extends E2ETestBase
@@ -1235,6 +1239,71 @@ class TenantAdminControllerSpec
       ) {
         status should equal(401)
         assert(body.contains(s"Poc admin with id '$id' doesn't belong to requesting tenant admin."))
+      }
+    }
+  }
+
+  "Endpoint DELETE /poc-admin/:id/2fa-token" should {
+    "delete 2FA token for poc admin" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val instance = CertifyKeycloak
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        instance,
+        List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId.value))
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      val requiredAction = for {
+        requiredAction <- keycloakUserService.getUserById(certifyUserId, instance).flatMap {
+          case Some(ur) => Task.pure(ur.getRequiredActions)
+          case None     => Task.raiseError(new RuntimeException("User not found"))
+        }
+      } yield requiredAction
+
+      delete(
+        s"/poc-admin/$id/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(requiredAction) should contain theSameElementsAs List("UPDATE_PASSWORD")
+      }
+    }
+
+    "return 404 when poc-admin does not exist" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val tenant = addTenantToDB()
+      val invalidPocAdminId = UUID.randomUUID()
+
+      delete(
+        s"/poc-admin/$invalidPocAdminId/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"Poc admin with id '$invalidPocAdminId' not found"))
+      }
+    }
+
+    "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      delete(
+        s"/poc-admin/$id/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
       }
     }
   }

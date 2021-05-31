@@ -12,14 +12,17 @@ import com.ubirch.controllers.SwitchActiveError.{
   UserNotFound
 }
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
+import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, TenantAdminContext }
+import cats.syntax.either._
+import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.poc.{ Completed, PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
-import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 

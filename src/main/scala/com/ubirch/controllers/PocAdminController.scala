@@ -1,4 +1,5 @@
 package com.ubirch.controllers
+
 import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
@@ -12,14 +13,23 @@ import com.ubirch.controllers.SwitchActiveError.{
 }
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.AdminCriteriaValidator
-import com.ubirch.db.tables.PocAdminRepository
 import com.ubirch.db.tables.model.AdminCriteria
 import com.ubirch.models.poc.{ PocAdmin, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
+import com.ubirch.controllers.concerns.{
+  ControllerBase,
+  KeycloakBearerAuthStrategy,
+  KeycloakBearerAuthenticationSupport,
+  Token
+}
+import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository }
+import com.ubirch.models.NOK
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.poc.employee._
+import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
+import com.ubirch.services.poc.employee.{ EmptyCSVError, _ }
+import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenError }
 import com.ubirch.services.pocadmin.{ GetPocsAdminErrors, PocAdminService }
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -42,7 +52,9 @@ class PocAdminController @Inject() (
   pocAdminRepository: PocAdminRepository,
   csvProcessPocEmployee: CsvProcessPocEmployee,
   tokenVerificationService: TokenVerificationService,
-  pocAdminService: PocAdminService
+  pocAdminService: PocAdminService,
+  certifyUserService: CertifyUserService,
+  pocEmployeeRepository: PocEmployeeRepository
 )(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
@@ -96,6 +108,14 @@ class PocAdminController @Inject() (
         queryParam[Int]("isActive").description(
           "Whether PoC Employee should be active, values: 1 for true, 0 for false.")
       )
+
+  val delete2FATokenOnPocEmployee: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Delete 2FA token")
+      .summary("Deletes 2FA token for PoC employee")
+      .description("Deletes 2FA token for PoC employee")
+      .tags("Poc-Admin", "Poc-employee")
+      .authorizations()
+      .parameters(queryParam[UUID]("id").description("PoC admin id"))
 
   post("/employees/create", operation(createListOfEmployees)) {
     pocAdminEndpoint("Create employees by CSV file") { pocAdmin =>
@@ -179,13 +199,31 @@ class PocAdminController @Inject() (
     }
   }
 
-  private def getParamAsUUID(paramName: String, errorMsg: String => String)(logic: UUID => Task[ActionResult]) = {
-    val id = params(paramName)
-    Try(UUID.fromString(id)) match {
-      case Success(uuid) => logic(uuid)
-      case Failure(ex) =>
-        logger.error(errorMsg(id), ex)
-        Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
+  delete("/poc-employee/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
+    pocAdminEndpoint("Delete 2FA token for PoC admin") { _ =>
+      getParamAsUUID("id", id => s"Invalid poc employee id: '$id'") { id =>
+        for {
+          maybePocEmployee <- pocEmployeeRepository.getPocEmployee(id)
+          r <- maybePocEmployee match {
+            case None => Task.pure(NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' not found'")))
+            case Some(certifyUser) => certifyUserService.remove2FAToken(certifyUser)
+                .map {
+                  case Left(e) => e match {
+                      case Remove2faTokenError.KeycloakError(id, keyCloakError) =>
+                        keyCloakError match {
+                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                            NotFound(NOK.resourceNotFoundError(error))
+                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                            InternalServerError(NOK.serverError(error))
+                        }
+                      case Remove2faTokenError.MissingCertifyUserId(id) =>
+                        Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId"))
+                    }
+                  case Right(_) => Ok("")
+                }
+          }
+        } yield r
+      }
     }
   }
 
@@ -204,6 +242,17 @@ class PocAdminController @Inject() (
       case Validated.Valid(a)   => Task(a)
       case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
     }
+
+  private def getParamAsUUID(paramName: String, errorMsg: String => String)(logic: UUID => Task[ActionResult]) = {
+    val id = params(paramName)
+    Try(UUID.fromString(id)) match {
+      case Success(uuid) => logic(uuid)
+      case Failure(ex) =>
+        logger.error(errorMsg(id), ex)
+        Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
+
+    }
+  }
 }
 
 object PocAdminController {
