@@ -2,7 +2,7 @@ package com.ubirch.services.poc
 
 import com.google.inject.Inject
 import com.ubirch.controllers.TenantAdminContext
-import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.tenant.{ API, Tenant }
 import com.ubirch.services.poc.util.CsvConstants.{
   columnSeparator,
   pocAdminHeaderColOrderLength,
@@ -32,16 +32,19 @@ scheduler: Scheduler)
 
       if (lines.hasNext) {
         val header = lines.next()
-        val colNum = header.split(columnSeparator).map(_.trim).length
-        if (colNum >= pocAdminHeaderColOrderLength) {
-          processPocAdmin.createListOfPoCsAndAdmin(csv, tenant, tenantContext)
-        } else if (colNum >= pocHeaderColOrderLength) {
-          processPoc.createListOfPoCs(csv, tenant, tenantContext)
-        } else {
-          Task(Left(s"$header; the number of header($colNum) is not enough."))
+
+        header.split(columnSeparator).map(_.trim).length match {
+          case colNum if colNum >= pocAdminHeaderColOrderLength && tenant.usageType == API =>
+            Task(Left("cannot parse admin creation for a tenant with usageType API"))
+          case colNum if colNum >= pocAdminHeaderColOrderLength =>
+            processPocAdmin.createListOfPoCsAndAdmin(csv, tenant, tenantContext)
+          case colNum if colNum >= pocHeaderColOrderLength =>
+            processPoc.createListOfPoCs(csv, tenant, tenantContext)
+          case colNum =>
+            Task(Left(s"The number of header columns $colNum is not enough."))
         }
       } else {
-        Task(Left("the csv is empty."))
+        Task(Left("The provided csv is empty."))
       }
     }
 }
