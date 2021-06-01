@@ -30,8 +30,7 @@ class Service @Inject() (
   keyHashVerifierService: KeyHashVerifierService,
   pocCreationLoop: PocCreationLoop,
   adminCreationLoop: PocAdminCreationLoop,
-  employeeCreationLoop: PocEmployeeCreationLoop
-  /*keycloakUserPollingService: UserPollingService*/ )(implicit scheduler: Scheduler)
+  employeeCreationLoop: PocEmployeeCreationLoop)(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
@@ -62,13 +61,6 @@ class Service @Inject() (
     keyHashVerifierService
       .verifyHash(Base64String(config.getString(ConfPaths.AESEncryptionPaths.SECRET_KEY)))
       .runSyncUnsafe(15.seconds)
-
-    //    val pollingService = keycloakUserPollingService.via(resp => Observable(resp)).subscribe()
-    //
-    //    sys.addShutdownHook {
-    //      logger.info("Shutdown of polling service")
-    //      pollingService.cancel()
-    //    }
 
     val pocCreation = pocCreationLoop.startPocCreationLoop(resp => Observable(resp)).subscribe()
 

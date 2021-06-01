@@ -464,8 +464,9 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
   val superAdminOnDevicesKeycloak: FakeToken = fakeToken(FakeToken.deviceHeader, FakeToken.superAdmin, DeviceKeycloak)
   val userWithDoubleRoles: FakeToken =
     fakeToken(FakeToken.certifyHeader, FakeToken.userWithDoubleRoles, CertifyKeycloak)
-  def pocAdmin(certifyId: UUID) = fakeToken(FakeToken.certifyHeader, FakeToken.pocAdmin(certifyId), CertifyKeycloak)
-  def pocEmployee(certifyId: UUID) =
+  def pocAdmin(certifyId: UUID): FakeToken =
+    fakeToken(FakeToken.certifyHeader, FakeToken.pocAdmin(certifyId), CertifyKeycloak)
+  def pocEmployee(certifyId: UUID): FakeToken =
     fakeToken(FakeToken.certifyHeader, FakeToken.pocEmployee(certifyId), CertifyKeycloak)
   val userNoPrincipal: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.userNoPrincipal, CertifyKeycloak)
   val admin: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.admin, CertifyKeycloak)

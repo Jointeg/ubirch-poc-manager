@@ -13,15 +13,9 @@ import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
-import com.ubirch.services.keycloak.auth.{ AuthClient, KeycloakAuthzClient }
 import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, KeycloakGroupService }
 import com.ubirch.services.keycloak.roles.{ DefaultKeycloakRolesService, KeycloakRolesService }
-import com.ubirch.services.keycloak.users.{
-  DefaultKeycloakUserService,
-  KeycloakUserPollingService,
-  KeycloakUserService,
-  UserPollingService
-}
+import com.ubirch.services.keycloak.users.{ DefaultKeycloakUserService, KeycloakUserService }
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
@@ -113,12 +107,6 @@ class Binder extends AbstractModule {
 
   def KeycloakGroupService: ScopedBindingBuilder =
     bind(classOf[KeycloakGroupService]).to(classOf[DefaultKeycloakGroupService])
-
-  def AuthClient: ScopedBindingBuilder =
-    bind(classOf[AuthClient]).to(classOf[KeycloakAuthzClient])
-
-  def UserPollingService: ScopedBindingBuilder =
-    bind(classOf[UserPollingService]).to(classOf[KeycloakUserPollingService])
 
   def QuillMonixJdbcContext: ScopedBindingBuilder =
     bind(classOf[QuillMonixJdbcContext]).to(classOf[PostgresQuillMonixJdbcContext])
@@ -244,8 +232,6 @@ class Binder extends AbstractModule {
     KeycloakGroupService
     SuperAdminService
     TenantKeycloakHelper
-    AuthClient
-    UserPollingService
     QuillMonixJdbcContext
     UserRepository
     PocBatchHandler

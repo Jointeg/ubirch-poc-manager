@@ -3,9 +3,7 @@ package com.ubirch.e2e.controllers
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.auth.{ Base64String, EncryptedData }
-import com.ubirch.models.tenant.{ API, EncryptedDeviceCreationToken, SharedAuthCert, Tenant, TenantName }
-import com.ubirch.services.auth.AESEncryption
+import com.ubirch.models.tenant.{ API, SharedAuthCert, TenantName }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.{ FakeTokenCreator, ModelCreationHelper }
