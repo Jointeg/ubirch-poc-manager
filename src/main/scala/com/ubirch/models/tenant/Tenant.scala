@@ -1,6 +1,7 @@
 package com.ubirch.models.tenant
 
-import com.ubirch.models.poc.{ Created, Updated }
+import com.ubirch.models.poc.{Created, Updated}
+import com.ubirch.services.keycloak.{CertifyBmgRealm, CertifyUbirchRealm, KeycloakRealm}
 import org.joda.time.DateTime
 
 import java.util.UUID
@@ -23,9 +24,9 @@ case class Tenant(
 ) {
   def getOrgId: UUID = orgId.value.value.asJava()
 
-  def getRealm: String = tenantType match {
-    case TenantType.ubirch => "default-certify"
-    case TenantType.bmg    => "bmg-certify"
+  def getRealm: KeycloakRealm = tenantType match {
+    case TenantType.ubirch => CertifyUbirchRealm
+    case TenantType.bmg    => CertifyBmgRealm
   }
 }
 
