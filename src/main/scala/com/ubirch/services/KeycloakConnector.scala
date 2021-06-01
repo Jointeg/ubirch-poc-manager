@@ -1,11 +1,6 @@
 package com.ubirch.services
 
-import com.ubirch.services.keycloak.{
-  CertifyKeycloakConnector,
-  DeviceKeycloakConnector,
-  KeycloakCertifyConfig,
-  KeycloakDeviceConfig
-}
+import com.ubirch.services.keycloak.{CertifyDefaultRealm, CertifyKeycloakConnector, DeviceDefaultRealm, DeviceKeycloakConnector, KeycloakCertifyConfig, KeycloakDeviceConfig, KeycloakRealm}
 import org.keycloak.admin.client.Keycloak
 
 import javax.inject.Inject
@@ -38,15 +33,15 @@ class DefaultKeycloakConnector @Inject() (
 
 sealed trait KeycloakInstance {
   val name: String
-  val defaultRealm: String
+  val defaultRealm: KeycloakRealm
 }
 
 case object CertifyKeycloak extends KeycloakInstance {
   val name = "certify keycloak"
-  val defaultRealm = "poc-certify"
+  val defaultRealm = CertifyDefaultRealm
 }
 
 case object DeviceKeycloak extends KeycloakInstance {
   val name = "device keycloak"
-  val defaultRealm = "ubirch-default"
+  val defaultRealm = DeviceDefaultRealm
 }
