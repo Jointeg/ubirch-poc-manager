@@ -127,7 +127,7 @@ class KeycloakHelperTest extends UnitTestBase {
     "create poc admin group and assign role in certify realm" in {
       withInjector { injector =>
         val roles = injector.get[KeycloakRolesService]
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_ADMIN))).runSyncUnsafe(3.seconds).isRight shouldBe true
+        roles.createNewRole(CreateKeycloakRole(RoleName(POC_ADMIN)), CertifyKeycloak).runSyncUnsafe(3.seconds).isRight shouldBe true
 
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]
@@ -162,7 +162,7 @@ class KeycloakHelperTest extends UnitTestBase {
     "create poc employee group and assign role in certify realm" in {
       withInjector { injector =>
         val roles = injector.get[KeycloakRolesService]
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_EMPLOYEE))).runSyncUnsafe(3.seconds)
+        roles.createNewRole(CreateKeycloakRole(RoleName(POC_EMPLOYEE)), CertifyKeycloak).runSyncUnsafe(3.seconds)
 
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]

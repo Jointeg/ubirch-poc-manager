@@ -53,14 +53,14 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val res1 = for {
 
           //create tenant role and group
-          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(tenantName)))
-          tenantRole <- roles.findRoleRepresentation(RoleName(tenantName))
+          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(tenantName)), CertifyKeycloak)
+          tenantRole <- roles.findRoleRepresentation(RoleName(tenantName), CertifyKeycloak)
           tenantGroup <- groups.createGroup(CreateKeycloakGroup(GroupName(tenantName)))
           - <- groups.assignRoleToGroup(tenantGroup.right.value, tenantRole.get)
 
           //create poc role and create as subGroup of tenantgroup
-          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(pocName)))
-          pocRole <- roles.findRoleRepresentation(RoleName(pocName))
+          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(pocName)), CertifyKeycloak)
+          pocRole <- roles.findRoleRepresentation(RoleName(pocName), CertifyKeycloak)
           pocGroup <- groups.addSubGroup(tenantGroup.right.value, GroupName(pocName))
           - <- groups.assignRoleToGroup(pocGroup.right.value, pocRole.get)
 
@@ -100,8 +100,8 @@ class KeycloakIntegrationTest extends E2ETestBase {
         roleRepr.setName(roleName)
 
         val res = for {
-          _ <- roles.createNewRole(role)
-          role <- roles.findRoleRepresentation(RoleName(roleName))
+          _ <- roles.createNewRole(role, CertifyKeycloak)
+          role <- roles.findRoleRepresentation(RoleName(roleName), CertifyKeycloak)
           createdGroup <- groups.createGroup(group)
           _ <- groups.assignRoleToGroup(createdGroup.right.get, role.get)
           foundGroup <- groups.findGroupById(createdGroup.right.get)
@@ -185,10 +185,10 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val newRole = KeycloakTestData.createNewKeycloakRole()
 
         val response = for {
-          _ <- keycloakRolesService.createNewRole(newRole)
-          foundRole <- keycloakRolesService.findRole(newRole.roleName)
-          _ <- keycloakRolesService.deleteRole(newRole.roleName)
-          roleAfterDeletion <- keycloakRolesService.findRole(newRole.roleName)
+          _ <- keycloakRolesService.createNewRole(newRole, CertifyKeycloak)
+          foundRole <- keycloakRolesService.findRole(newRole.roleName, CertifyKeycloak)
+          _ <- keycloakRolesService.deleteRole(newRole.roleName, CertifyKeycloak)
+          roleAfterDeletion <- keycloakRolesService.findRole(newRole.roleName, CertifyKeycloak)
         } yield (foundRole, roleAfterDeletion)
 
         val (maybeCreatedRole, roleAfterDeletion) = await(response, 2.seconds)
@@ -203,8 +203,8 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val newRole = KeycloakTestData.createNewKeycloakRole()
 
         val response = for {
-          firstCreationResult <- keycloakRolesService.createNewRole(newRole)
-          secondCreationResult <- keycloakRolesService.createNewRole(newRole)
+          firstCreationResult <- keycloakRolesService.createNewRole(newRole, CertifyKeycloak)
+          secondCreationResult <- keycloakRolesService.createNewRole(newRole, CertifyKeycloak)
         } yield (firstCreationResult, secondCreationResult)
 
         val (firstCreationResult, secondCreationResult) = await(response, 2.seconds)
@@ -217,7 +217,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
 
-        val response = keycloakRolesService.findRole(RoleName("Unknown role"))
+        val response = keycloakRolesService.findRole(RoleName("Unknown role"), CertifyKeycloak)
 
         val maybeFoundRole = await(response, 2.seconds)
         maybeFoundRole should not be defined
@@ -230,9 +230,9 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val newRole = KeycloakTestData.createNewKeycloakRole()
 
         val response = for {
-          _ <- keycloakRolesService.createNewRole(newRole)
-          _ <- keycloakRolesService.deleteRole(RoleName("Unknown role"))
-          retrievedRole <- keycloakRolesService.findRole(newRole.roleName)
+          _ <- keycloakRolesService.createNewRole(newRole, CertifyKeycloak)
+          _ <- keycloakRolesService.deleteRole(RoleName("Unknown role"),CertifyKeycloak)
+          retrievedRole <- keycloakRolesService.findRole(newRole.roleName, CertifyKeycloak)
         } yield retrievedRole
         val maybeFoundRole = await(response, 2.seconds)
 

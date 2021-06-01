@@ -12,15 +12,15 @@ import javax.ws.rs.{ ClientErrorException, NotFoundException }
 trait KeycloakRolesService {
   def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[RolesException, Unit]]
+    instance: KeycloakInstance): Task[Either[RolesException, Unit]]
 
-  def findRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[KeycloakRole]]
+  def findRole(roleName: RoleName, instance: KeycloakInstance): Task[Option[KeycloakRole]]
 
-  def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit]
+  def deleteRole(roleName: RoleName, instance: KeycloakInstance): Task[Unit]
 
   def findRoleRepresentation(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]]
+    instance: KeycloakInstance): Task[Option[RoleRepresentation]]
 }
 
 @Singleton
@@ -30,14 +30,14 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[RolesException, Unit]] = {
+    instance: KeycloakInstance): Task[Either[RolesException, Unit]] = {
     val roleRepresentation = createKeycloakRole.toKeycloakRepresentation
 
     Task(
       Right(
         keycloakConnector
-          .getKeycloak(keycloakInstance)
-          .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+          .getKeycloak(instance)
+          .realm(keycloakConnector.getKeycloakRealm(instance))
           .roles()
           .create(roleRepresentation)
       )
@@ -51,11 +51,11 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
     }
   }
 
-  override def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] = {
+  override def deleteRole(roleName: RoleName, instance: KeycloakInstance): Task[Unit] = {
     Task(
       keycloakConnector
-        .getKeycloak(keycloakInstance)
-        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
         .roles()
         .deleteRole(roleName.value)
     ).onErrorRecover {
@@ -69,14 +69,15 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findRole(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[KeycloakRole]] = {
+    instance: KeycloakInstance): Task[Option[KeycloakRole]] = {
     Task {
-      val keycloakRoleRepresentation = keycloakConnector
-        .getKeycloak(keycloakInstance)
-        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
-        .roles()
-        .get(roleName.value)
-        .toRepresentation
+      val keycloakRoleRepresentation =
+        keycloakConnector
+          .getKeycloak(instance)
+          .realm(keycloakConnector.getKeycloakRealm(instance))
+          .roles()
+          .get(roleName.value)
+          .toRepresentation
       Some(KeycloakRole(RoleId(keycloakRoleRepresentation.getId), RoleName(keycloakRoleRepresentation.getName)))
     }.onErrorRecover {
       case ex: NotFoundException =>
@@ -90,11 +91,11 @@ class DefaultKeycloakRolesService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findRoleRepresentation(
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]] = {
+    instance: KeycloakInstance): Task[Option[RoleRepresentation]] = {
     Task {
       val keycloakRoleRepresentation = keycloakConnector
-        .getKeycloak(keycloakInstance)
-        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
         .roles()
         .get(roleName.value)
         .toRepresentation
