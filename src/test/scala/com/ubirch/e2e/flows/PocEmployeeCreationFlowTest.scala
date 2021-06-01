@@ -44,7 +44,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     s"""
        |{
        |    "tenantName": "$tenantName",
-       |    "usageType": "API",
+       |    "usageType": "APP",
        |    "deviceCreationToken": "1234567890",
        |    "sharedAuthCertRequired": true
        |}
@@ -53,7 +53,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   private val createPocWithPocAdminCSV =
     s"""$pocAdminHeaderLine
-       |${poc1Id.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]};admin-surname;admin-name;admin-email@email.com;+46-498-313789;01.01.1990;FALSE""".stripMargin
+       |${poc1Id.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;FALSE""".stripMargin
 
   private val addDeviceCreationToken: String =
     s"""
@@ -160,14 +160,14 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
       employee.pocId shouldBe poc.id
       employee.tenantId shouldBe tenant.id
       employee.certifyUserId shouldBe None
-      employee.active shouldBe false
+      employee.active shouldBe true
       employee.status shouldBe Pending
     }
   }
 
   private def createPoCEmployees(pocAdminToken: String, tenant: Tenant, injector: InjectorHelper) = {
     post(
-      "/poc-admin/employee/create",
+      "/poc-admin/employees/create",
       body = pocEmployeeCsv.getBytes(),
       headers = Map("authorization" -> pocAdminToken)) {
       status shouldBe 200
@@ -185,7 +185,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     pocAdminStatus.certifyUserCreated shouldBe true
     pocAdminStatus.keycloakEmailSent shouldBe true
     pocAdminStatus.pocAdminGroupAssigned shouldBe true
-    pocAdminStatus.invitedToTeamDrive shouldBe None
+    pocAdminStatus.invitedToTeamDrive shouldBe Some(true)
     pocAdminStatus.errorMessage shouldBe None
   }
 

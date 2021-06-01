@@ -36,7 +36,6 @@ class DefaultPublicKeyPoolService @Inject() (
   override def getKey(kid: String): Option[Key] = cache.get(kid)
 
   override def getDefaultKey(keycloakInstance: KeycloakInstance): Option[Key] = {
-    val kids = acceptedKids(keycloakInstance)
     acceptedKids(keycloakInstance).find(kid => getKey(kid).isDefined).flatMap(x => getKey(x))
   }
 

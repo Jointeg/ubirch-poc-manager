@@ -36,11 +36,11 @@ class TestPocConfig @Inject() (
   extends PocConfigImpl(conf) {
 
   val groupRepresentation = new GroupRepresentation()
-  groupRepresentation.setName("certification-vaccination")
+  groupRepresentation.setName("vaccination-v3")
   keycloakConnector.keycloak.realm("device-realm").groups().add(groupRepresentation)
   val id = keycloakConnector.keycloak.realm("device-realm").groups().groups().asScala.head
-  override val dataSchemaGroupMap = Map("certification-vaccination" -> id.getId)
-  override val trustedPocGroupMap: Map[String, String] = Map("certification-vaccination" -> id.getId)
+  override val dataSchemaGroupMap = Map("vaccination-v3" -> id.getId)
+  override val trustedPocGroupMap: Map[String, String] = Map("vaccination-v3" -> id.getId)
 }
 
 @Singleton
