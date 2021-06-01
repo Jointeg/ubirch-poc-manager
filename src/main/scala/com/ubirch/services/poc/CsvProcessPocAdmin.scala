@@ -42,21 +42,24 @@ class CsvProcessPocAdminImpl @Inject() (
     csv: String,
     tenant: Tenant,
     tenantContext: TenantAdminContext): Task[Either[String, Unit]] = {
-    pocAdminCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
-      val r = parsingResult.map {
-        case Right(rowResult) =>
-          storePocAndStatus(rowResult.poc, rowResult.pocAdmin, rowResult.csvRow, tenantContext: TenantAdminContext)
-        case Left(csvRow) =>
-          Task(Some(csvRow))
-      }
-      createResponse(r)
-    }.onErrorRecover {
-      case ex: HeaderCsvException =>
-        Left(ex.errorMsg)
 
-      case ex: Throwable =>
-        Left(s"something unexpected went wrong ${ex.getMessage}")
-    }
+    pocAdminCsvParser
+      .parseList(csv, tenant)
+      .flatMap { parsingResult =>
+        val r = parsingResult.map {
+          case Right(rowResult) =>
+            storePocAndStatus(rowResult.poc, rowResult.pocAdmin, rowResult.csvRow, tenantContext: TenantAdminContext)
+          case Left(csvRow) =>
+            Task(Some(csvRow))
+        }
+        createResponse(r)
+      }.onErrorRecover {
+        case ex: HeaderCsvException =>
+          Left(ex.errorMsg)
+
+        case ex: Throwable =>
+          Left(s"something unexpected went wrong ${ex.getMessage}")
+      }
   }
 
   private def storePocAndStatus(
