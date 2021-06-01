@@ -16,7 +16,7 @@ class CertifyUserService @Inject() (keycloakUserService: KeycloakUserService) {
     for {
       result <- certifyUser.certifyUserId match {
         case Some(certifyUserId) =>
-          keycloakUserService.remove2faToken(certifyUserId, CertifyKeycloak).flatMap {
+          keycloakUserService.remove2faToken(CertifyKeycloak.defaultRealm, certifyUserId, CertifyKeycloak).flatMap {
             case Left(error) => Task.pure(Remove2faTokenError.KeycloakError(certifyUser.id, error).asLeft)
             case Right(_)    => Task.pure(().asRight)
           }

@@ -6,6 +6,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user._
 import com.ubirch.models.user.{ UserId, UserName }
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
@@ -21,6 +22,7 @@ trait KeycloakUserService {
     * A keycloak user is created with setting the actions of UserRequiredActions parameter
     */
   def createUser(
+    realm: KeycloakRealm,
     createBasicKeycloakUser: CreateBasicKeycloakUser,
     instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]]
@@ -29,6 +31,7 @@ trait KeycloakUserService {
     * A keycloak user is created with setting the actions of UserRequiredActions parameter
     */
   def createUserWithoutUserName(
+    realm: KeycloakRealm,
     createKeycloakUserWithoutUserName: CreateKeycloakUserWithoutUserName,
     instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]]
@@ -37,11 +40,13 @@ trait KeycloakUserService {
     * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def addGroupToUserByName(
+    realm: KeycloakRealm,
     userName: String,
     groupId: String,
     instance: KeycloakInstance): Task[Either[String, Unit]]
 
   def addGroupToUserById(
+    realm: KeycloakRealm,
     userId: UserId,
     groupId: String,
     instance: KeycloakInstance): Task[Either[String, Unit]]
@@ -49,29 +54,34 @@ trait KeycloakUserService {
   /**
     * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
-  def deleteUserByUserName(username: UserName, instance: KeycloakInstance): Task[Unit]
+  def deleteUserByUserName(realm: KeycloakRealm, username: UserName, instance: KeycloakInstance): Task[Unit]
 
-  def getUserById(
-    userId: UserId,
-    instance: KeycloakInstance): Task[Option[UserRepresentation]]
+  def getUserById(realm: KeycloakRealm, userId: UserId, instance: KeycloakInstance): Task[Option[UserRepresentation]]
 
   /**
     * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def getUserByUserName(
+    realm: KeycloakRealm,
     username: UserName,
     instance: KeycloakInstance = DeviceKeycloak): Task[Option[UserRepresentation]]
 
   /**
     * Send an email to user with actions set to the user
     */
-  def sendRequiredActionsEmail(userId: UserId, instance: KeycloakInstance): Task[Either[String, Unit]]
+  def sendRequiredActionsEmail(
+    realm: KeycloakRealm,
+    userId: UserId,
+    instance: KeycloakInstance): Task[Either[String, Unit]]
 
-  def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+  def activate(realm: KeycloakRealm, id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
 
-  def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+  def deactivate(realm: KeycloakRealm, id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
 
-  def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]]
+  def remove2faToken(
+    realm: KeycloakRealm,
+    id: UUID,
+    instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]]
 }
 
 @Singleton
@@ -80,20 +90,23 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   with LazyLogging {
 
   override def createUser(
+    realm: KeycloakRealm,
     createBasicKeycloakUser: CreateBasicKeycloakUser,
     instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
-    _createUser(createBasicKeycloakUser, instance, userRequiredActions)
+    _createUser(realm, createBasicKeycloakUser, instance, userRequiredActions)
   }
 
   override def createUserWithoutUserName(
+    realm: KeycloakRealm,
     createKeycloakUserWithoutUserName: CreateKeycloakUserWithoutUserName,
     instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value]): Task[Either[UserException, UserId]] = {
-    _createUser(createKeycloakUserWithoutUserName, instance, userRequiredActions)
+    _createUser(realm, createKeycloakUserWithoutUserName, instance, userRequiredActions)
   }
 
   private def _createUser(
+    realm: KeycloakRealm,
     createKeycloakUser: CreateKeycloakUser,
     instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value]): Task[Either[UserException, UserId]] = {
@@ -106,7 +119,7 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
       val resp =
         keycloakConnector
           .getKeycloak(instance)
-          .realm(keycloakConnector.getKeycloakRealm(instance))
+          .realm(realm.name)
           .users()
           .create(keycloakUser)
       processCreationResponse(resp, keycloakUser.getUsername)
@@ -118,12 +131,13 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   }
 
   override def getUserById(
+    realm: KeycloakRealm,
     userId: UserId,
     instance: KeycloakInstance): Task[Option[UserRepresentation]] = {
     Task(
       Option(keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(realm.name)
         .users()
         .get(userId.value.toString)
         .toRepresentation)
@@ -131,12 +145,13 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   }
 
   override def getUserByUserName(
+    realm: KeycloakRealm,
     username: UserName,
     instance: KeycloakInstance = DeviceKeycloak): Task[Option[UserRepresentation]] = {
     Task(
       keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(realm.name)
         .users()
         .search(username.value)
         .asScala
@@ -145,16 +160,17 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   }
 
   override def addGroupToUserByName(
+    realm: KeycloakRealm,
     userName: String,
     groupId: String,
     instance: KeycloakInstance): Task[Either[String, Unit]] = {
 
-    getUserByUserName(UserName(userName), instance).map {
+    getUserByUserName(realm, UserName(userName), instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         Right(
           keycloakConnector
             .getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .realm(realm.name)
             .users()
             .get(userRepresentation.getId)
             .joinGroup(groupId))
@@ -167,16 +183,17 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
   }
 
   override def addGroupToUserById(
+    realm: KeycloakRealm,
     userId: UserId,
     groupId: String,
     instance: KeycloakInstance): Task[Either[String, Unit]] = {
 
-    getUserById(userId, instance).map {
+    getUserById(realm, userId, instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         Right(
           keycloakConnector
             .getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .realm(realm.name)
             .users()
             .get(userRepresentation.getId)
             .joinGroup(groupId))
@@ -188,27 +205,33 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
   }
 
-  override def deleteUserByUserName(username: UserName, instance: KeycloakInstance = DeviceKeycloak): Task[Unit] = {
+  override def deleteUserByUserName(
+    realm: KeycloakRealm,
+    username: UserName,
+    instance: KeycloakInstance = DeviceKeycloak): Task[Unit] = {
     (for {
-      user <- OptionT(getUserByUserName(username, instance))
+      user <- OptionT(getUserByUserName(realm, username, instance))
       _ <- OptionT.liftF(
         Task(
           keycloakConnector
             .getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .realm(realm.name)
             .users()
             .delete(user.getId)))
       _ = logger.debug(s"Successfully deleted $username user")
     } yield ()).value.void
   }
 
-  override def sendRequiredActionsEmail(userId: UserId, instance: KeycloakInstance): Task[Either[String, Unit]] = {
-    getUserById(userId, instance).map {
+  override def sendRequiredActionsEmail(
+    realm: KeycloakRealm,
+    userId: UserId,
+    instance: KeycloakInstance): Task[Either[String, Unit]] = {
+    getUserById(realm, userId, instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         val actions = userRepresentation.getRequiredActions
         if (!actions.isEmpty) {
           Right(keycloakConnector.getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance)).users()
+            .realm(realm.name).users()
             .get(userRepresentation.getId)
             .executeActionsEmail(actions))
         } else {
@@ -222,30 +245,33 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
   }
 
-  override def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+  override def activate(realm: KeycloakRealm, id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
     switchActive(
+      realm,
       id,
       instance,
       (id, ex) => s"Could not activate user with id $id. Reason: ${ex.getMessage}",
       enabled = true)
 
-  override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+  override def deactivate(realm: KeycloakRealm, id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
     switchActive(
+      realm,
       id,
       instance,
       (id, ex) => s"Could not deactivate user with id $id. Reason: ${ex.getMessage}",
       enabled = false)
 
   private def switchActive(
+    realm: KeycloakRealm,
     id: UUID,
     instance: KeycloakInstance,
     errorMessage: (UUID, Throwable) => String,
     enabled: Boolean): Task[Either[String, Unit]] =
-    getUserById(UserId(id), instance)
+    getUserById(realm, UserId(id), instance)
       .flatMap {
         case Some(ur) =>
           ur.setEnabled(enabled)
-          update(id, ur, instance)
+          update(realm, id, ur, instance)
             .map(_ => ().asRight)
         case None => Task.pure(s"user with name $id wasn't found".asLeft)
       }.onErrorHandle { ex =>
@@ -254,9 +280,13 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
         message.asLeft
       }
 
-  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
-    getUserById(UserId(id), instance).flatMap {
+  override def remove2faToken(
+    realm: KeycloakRealm,
+    id: UUID,
+    instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
+    getUserById(realm, UserId(id), instance).flatMap {
       case Some(ur) => update(
+          realm,
           id, {
             ur.setRequiredActions(
               ur.getRequiredActions.asScala.filterNot(_ == UserRequiredAction.WEBAUTHN_REGISTER.toString).asJava)
@@ -288,11 +318,15 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     UserId(UUID.fromString(path.substring(path.lastIndexOf('/') + 1)))
   }
 
-  private def update(id: UUID, userRepresentation: UserRepresentation, instance: KeycloakInstance): Task[Unit] = {
+  private def update(
+    realm: KeycloakRealm,
+    id: UUID,
+    userRepresentation: UserRepresentation,
+    instance: KeycloakInstance): Task[Unit] = {
     Task(
       keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(realm.name)
         .users()
         .get(id.toString)
         .update(userRepresentation)

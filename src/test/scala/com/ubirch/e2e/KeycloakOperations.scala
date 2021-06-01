@@ -59,7 +59,7 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
     credentialRepresentation.setTemporary(false)
 
     for {
-      maybeUser <- userService.getUserById(userId, CertifyKeycloak)
+      maybeUser <- userService.getUserById(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
       user = maybeUser.getOrElse(fail(s"Expected to get user with username $userId"))
       _ = user.setCredentials(List(credentialRepresentation).asJava)
       _ <- Task(keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(user.getId).update(user))
@@ -191,7 +191,7 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
     userService: KeycloakUserService,
     keycloakConnector: CertifyKeycloakConnector): Task[Unit] = {
     for {
-      maybeUser <- userService.getUserById(userId, CertifyKeycloak)
+      maybeUser <- userService.getUserById(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
       user = maybeUser.getOrElse(fail(s"Expected to find user with username $userId in Keycloak"))
       _ = user.setAttributes(Map("confirmation_mail_sent" -> List(value.toString).asJava).asJava)
       _ <- Task(keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(user.getId).update(user))
@@ -201,7 +201,7 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
   def setEmailVerified(
     userId: UserId)(userService: KeycloakUserService, keycloakConnector: CertifyKeycloakConnector): Task[Unit] = {
     for {
-      maybeUser <- userService.getUserById(userId, CertifyKeycloak)
+      maybeUser <- userService.getUserById(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
       user = maybeUser.getOrElse(fail(s"Expected to find user with username $userId in Keycloak"))
       _ = user.setEmailVerified(true)
       _ <- Task(keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(user.getId).update(user))

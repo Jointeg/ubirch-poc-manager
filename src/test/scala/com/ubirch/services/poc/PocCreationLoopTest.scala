@@ -64,6 +64,7 @@ class PocCreationLoopTest extends UnitTestBase {
 
   private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
     users.createUser(
+      DeviceKeycloak.defaultRealm,
       CreateBasicKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
       DeviceKeycloak).runSyncUnsafe()
   }

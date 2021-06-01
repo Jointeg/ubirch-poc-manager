@@ -325,7 +325,9 @@ class PocAdminControllerSpec
         val token = injector.get[FakeTokenCreator]
         val keycloakUserService = injector.get[KeycloakUserService]
         val instance = CertifyKeycloak
+        val realm = CertifyKeycloak.defaultRealm
         val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+          realm,
           KeycloakTestData.createNewCertifyKeycloakUser(),
           instance,
           List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
@@ -335,7 +337,7 @@ class PocAdminControllerSpec
         await(injector.get[PocEmployeeTable].createPocEmployee(employee))
 
         val requiredAction = for {
-          requiredAction <- keycloakUserService.getUserById(certifyUserId, instance).flatMap {
+          requiredAction <- keycloakUserService.getUserById(realm, certifyUserId, instance).flatMap {
             case Some(ur) => Task.pure(ur.getRequiredActions)
             case None     => Task.raiseError(new RuntimeException("User not found"))
           }
@@ -457,8 +459,10 @@ class PocAdminControllerSpec
       val repository = i.get[PocEmployeeTable]
       val keycloakUserService = i.get[KeycloakUserService]
       val (tenant, poc, admin) = createTenantWithPocAndPocAdmin(i)
+      val realm = CertifyKeycloak.defaultRealm
 
       val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        realm,
         KeycloakTestData.createNewCertifyKeycloakUser(),
         CertifyKeycloak))
         .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
@@ -476,7 +480,10 @@ class PocAdminControllerSpec
         body shouldBe empty
         await(repository.getPocEmployee(id)).value.active shouldBe false
         await(
-          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe false
+          keycloakUserService.getUserById(
+            realm,
+            UserId(certifyUserId.value),
+            CertifyKeycloak)).value.isEnabled shouldBe false
       }
 
       put(
@@ -487,7 +494,10 @@ class PocAdminControllerSpec
         body shouldBe empty
         await(repository.getPocEmployee(id)).value.active shouldBe true
         await(
-          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+          keycloakUserService.getUserById(
+            realm,
+            UserId(certifyUserId.value),
+            CertifyKeycloak)).value.isEnabled shouldBe true
       }
     }
 
@@ -498,6 +508,7 @@ class PocAdminControllerSpec
       val (tenant, poc, admin) = createTenantWithPocAndPocAdmin(i)
 
       val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        CertifyKeycloak.defaultRealm,
         KeycloakTestData.createNewCertifyKeycloakUser(),
         CertifyKeycloak))
         .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
@@ -513,7 +524,10 @@ class PocAdminControllerSpec
         body.contains(s"Poc employee with id '$id' cannot be de/-activated before status is Completed.") shouldBe true
         await(repository.getPocEmployee(id)).value.active shouldBe true
         await(
-          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+          keycloakUserService.getUserById(
+            CertifyKeycloak.defaultRealm,
+            UserId(certifyUserId.value),
+            CertifyKeycloak)).value.isEnabled shouldBe true
       }
     }
 

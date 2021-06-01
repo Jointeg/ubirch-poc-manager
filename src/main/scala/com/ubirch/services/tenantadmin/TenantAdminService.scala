@@ -236,8 +236,10 @@ class DefaultTenantAdminService @Inject() (
           case Some(admin) =>
             val userId = admin.certifyUserId.get
             (active match {
-              case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
-              case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
+              case EndpointHelpers.Activate =>
+                keycloakUserService.activate(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
+              case EndpointHelpers.Deactivate =>
+                keycloakUserService.deactivate(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
             }) >> pocAdminRepository.updatePocAdmin(admin.copy(active = ActivateSwitch.toBoolean(active)))
               .map { _ =>
                 logAuditByTenantAdmin(s"$active poc admin ${admin.id} of poc ${admin.pocId}.", tenantContext)
