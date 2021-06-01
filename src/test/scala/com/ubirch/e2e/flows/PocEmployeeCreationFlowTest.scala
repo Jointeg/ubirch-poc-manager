@@ -286,9 +286,6 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     withInjector { injector =>
-      lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init(DeviceKeycloak, CertifyKeycloak), 2.seconds)
-
       lazy val superAdminController = injector.get[SuperAdminController]
       addServlet(superAdminController, "/super-admin")
       lazy val tenantAdminController = injector.get[TenantAdminController]

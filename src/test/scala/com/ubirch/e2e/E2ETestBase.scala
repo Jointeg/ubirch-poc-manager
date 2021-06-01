@@ -3,16 +3,22 @@ package com.ubirch.e2e
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch._
 import com.ubirch.models.user.UserName
+import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{
   CertifyKeycloakConnector,
   DeviceKeycloakConnector,
   KeycloakCertifyConfig,
   KeycloakDeviceConfig
 }
+import com.ubirch.services.poc.PocTestHelper.await
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import monix.execution.Scheduler
 import org.flywaydb.core.Flyway
 import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
+import java.security.Key
+import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
 import scala.util.Random
 
@@ -37,6 +43,7 @@ trait E2ETestBase
         superAdminEmail,
         Random.alphanumeric.take(10).mkString(""))
     val injector = new E2EInjectorHelperImpl(superAdmin, tenantAdmin, useMockKeyDiscoveryService)
+    KeyPoolServiceInitialization.initPool(injector)
     cleanupDB()
     performFlywayMigration()
     try {
@@ -81,6 +88,20 @@ trait E2ETestBase
     keycloakDeviceRealm.roles().list().asScala.filterNot(role =>
       role.getName == "super-admin" || role.getName == "tenant-admin" || role.getName == "admin").foreach(role =>
       keycloakDeviceRealm.roles().deleteRole(role.getName))
+  }
+}
+
+object KeyPoolServiceInitialization {
+  private var pool: List[(String, Key)] = List.empty
+  def initPool(injector: InjectorHelper)(implicit scheduler: Scheduler): List[(String, Key)] = {
+    if (pool.isEmpty) {
+      val publicKeyPoolService = injector.get[PublicKeyPoolService]
+      val initialization = await(publicKeyPoolService.init(DeviceKeycloak, CertifyKeycloak), 2.seconds)
+      pool = initialization
+      pool
+    } else {
+      pool
+    }
   }
 }
 
