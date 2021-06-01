@@ -8,7 +8,7 @@ import com.ubirch.db.tables.{
   PocStatusRepositoryMock,
   TenantRepositoryMock
 }
-import com.ubirch.models.poc.PocAdminStatus
+import com.ubirch.models.poc.{ Completed, PocAdminStatus }
 import com.ubirch.services.poc.PocAdminTestHelper.{ addPocAndStatusToRepository, createPocAdminAndStatus }
 import com.ubirch.services.poc.PocTestHelper.{ addPocTripleToRepository, createPocStatusAllTrue, createPocTriple }
 import com.ubirch.services.teamdrive.model.SpaceName
@@ -47,6 +47,10 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
+
+        Thread.sleep(3000)
+        // not processed yet because poc is not completed yet
+        pocTable.updatePoc(updatedPoc.copy(status = Completed)).runSyncUnsafe()
 
         Thread.sleep(4000)
         // not process because web ident is not successful yet
