@@ -56,7 +56,7 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient)
 
   /**
     * This method creates a space with the space name.
-    * If the space is already exist, get the spaceId with the space name.
+    * If the space already exists, retrieves the spaceId with the space name.
     */
   private def createSpace(spaceName: SpaceName): Task[SpaceId] = {
     client.createSpace(spaceName, spaceName.v) // use space name as path
@@ -66,10 +66,13 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient)
       }.onErrorHandleWith {
         case ex if ex.getMessage.contains("exists") =>
           logger.warn(s"$spaceName was already created.")
-          client.getSpaceIdByName(spaceName).map { spaceIdOpt =>
-            spaceIdOpt.getOrElse(throw TeamDriveError(s"$spaceName was not found."))
+          client.getSpaceIdByName(spaceName).attempt.map {
+            case Right(spaceIdOpt) =>
+              spaceIdOpt.getOrElse(throw TeamDriveError(s"$spaceName was not found."))
+            case Left(exception) =>
+              logger.error(s"unexpected error occurred when retrieving space: $spaceName. ${exception.getMessage}")
+              throw exception
           }
-      }.onErrorHandleWith {
         case ex =>
           logger.error(s"unexpected error occurred when creating space: $spaceName. ${ex.getMessage}")
           Task.raiseError(ex)
