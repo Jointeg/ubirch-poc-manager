@@ -28,14 +28,14 @@ import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
-import org.joda.time.DateTime
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization.read
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.prop.TableDrivenPropertyChecks
 
-import java.time.Instant
+import java.time.{ Clock, Instant }
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
@@ -323,8 +323,10 @@ class PocAdminControllerSpec
     "Endpoint DELETE /poc-employee/:id/2fa-token" should {
       "delete 2FA token for poc employee" in withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
+        val clock = injector.get[Clock]
         val keycloakUserService = injector.get[KeycloakUserService]
         val instance = CertifyKeycloak
+        val repository = injector.get[PocEmployeeTable]
         val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
           KeycloakTestData.createNewCertifyKeycloakUser(),
           instance,
@@ -332,7 +334,8 @@ class PocAdminControllerSpec
           .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
         val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         val employee = createPocEmployee(pocId = poc.id).copy(certifyUserId = certifyUserId.value.some)
-        await(injector.get[PocEmployeeTable].createPocEmployee(employee))
+        val id = await(repository.createPocEmployee(employee))
+        val getPocEmployee = repository.getPocEmployee(id)
 
         val requiredAction = for {
           requiredAction <- keycloakUserService.getUserById(certifyUserId, instance).flatMap {
@@ -348,6 +351,9 @@ class PocAdminControllerSpec
           status should equal(200)
           body shouldBe empty
           await(requiredAction) should contain theSameElementsAs List("UPDATE_PASSWORD")
+          await(getPocEmployee).value.webAuthnDisconnected shouldBe Some(new DateTime(
+            clock.instant().toString,
+            DateTimeZone.forID(clock.getZone.getId)))
         }
       }
 

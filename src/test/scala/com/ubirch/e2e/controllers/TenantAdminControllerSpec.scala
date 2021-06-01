@@ -37,7 +37,7 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 import org.scalatra.{ BadRequest, Conflict, Ok }
 
 import java.nio.charset.StandardCharsets
-import java.time.Instant
+import java.time.{ Clock, Instant }
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters._
@@ -1246,6 +1246,7 @@ class TenantAdminControllerSpec
   "Endpoint DELETE /poc-admin/:id/2fa-token" should {
     "delete 2FA token for poc admin" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
+      val clock = i.get[Clock]
       val repository = i.get[PocAdminRepository]
       val keycloakUserService = i.get[KeycloakUserService]
       val tenant = addTenantToDB()
@@ -1258,6 +1259,7 @@ class TenantAdminControllerSpec
         .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId.value))
       val id = await(repository.createPocAdmin(pocAdmin))
+      val getPocAdmin = repository.getPocAdmin(id)
 
       val requiredAction = for {
         requiredAction <- keycloakUserService.getUserById(certifyUserId, instance).flatMap {
@@ -1273,6 +1275,9 @@ class TenantAdminControllerSpec
         status should equal(200)
         body shouldBe empty
         await(requiredAction) should contain theSameElementsAs List("UPDATE_PASSWORD")
+        await(getPocAdmin).value.webAuthnDisconnected shouldBe Some(new DateTime(
+          clock.instant().toString,
+          DateTimeZone.forID(clock.getZone.getId)))
       }
     }
 

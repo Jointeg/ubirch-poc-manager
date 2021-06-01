@@ -3,16 +3,18 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.ubirch._
 import com.ubirch.db.context.QuillMonixJdbcContext
+import com.ubirch.services.clock.ClockProvider
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{ KeycloakCertifyConfig, KeycloakDeviceConfig }
 import com.ubirch.services.poc.{ CertHandler, TestCertHandler }
 import com.ubirch.services.teamdrive.model.TeamDriveClient
-import com.ubirch.test.FakeTeamDriveClient
+import com.ubirch.test.{ FakeTeamDriveClient, FixedClockProvider }
 import io.getquill.{ PostgresJdbcContext, SnakeCase }
 import io.getquill.context.monix.MonixJdbcContext.Runner
 import io.getquill.{ PostgresJdbcContext, PostgresMonixJdbcContext, SnakeCase }
 import monix.eval.Task
 
+import java.time.Clock
 import javax.inject.{ Inject, Singleton }
 
 case class KeycloakUsersRuntimeConfig(tenantAdmin: TenantAdmin)
@@ -53,10 +55,12 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
 }
 
 @Singleton
-class TestPostgresQuillMonixJdbcContext @Inject() () extends QuillMonixJdbcContext {
+class TestPostgresQuillMonixJdbcContext @Inject() (clock: Clock) extends QuillMonixJdbcContext {
   override val ctx: PostgresMonixJdbcContext[SnakeCase] = StaticTestPostgresJdbcContext.ctx
 
   override def withTransaction[T](f: => Task[T]): Task[T] = f
+
+  override val systemClock: Clock = clock
 }
 
 object StaticTestPostgresJdbcContext {
@@ -107,4 +111,5 @@ class E2EInjectorHelperImpl(val superAdmin: SuperAdmin, val tenantAdmin: TenantA
     override def TeamDriveClient: ScopedBindingBuilder =
       bind(classOf[TeamDriveClient]).to(classOf[FakeTeamDriveClient])
 
+    override def Clock: ScopedBindingBuilder = bind(classOf[Clock]).toProvider(classOf[FixedClockProvider])
   }))

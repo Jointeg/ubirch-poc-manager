@@ -18,5 +18,6 @@ case class PocEmployee(
   status: Status = Pending,
   active: Boolean = true,
   lastUpdated: Updated = Updated(DateTime.now()),
-  created: Created = Created(DateTime.now())
+  created: Created = Created(DateTime.now()),
+  webAuthnDisconnected: Option[DateTime] = None
 ) extends HasCertifyUserId

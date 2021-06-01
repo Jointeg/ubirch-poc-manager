@@ -34,7 +34,8 @@ trait PocAdminRepository {
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, pocAdminStatusTable: PocAdminStatusTable)
   extends PocAdminRepository {
-  import QuillMonixJdbcContext.ctx._
+  import QuillMonixJdbcContext._
+  import ctx._
 
   private def createPocAdminQuery(pocAdmin: PocAdmin): Quoted[Insert[PocAdmin]] =
     quote {
