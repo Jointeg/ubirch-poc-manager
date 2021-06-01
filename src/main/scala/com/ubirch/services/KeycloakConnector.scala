@@ -28,6 +28,7 @@ class DefaultKeycloakConnector @Inject() (
       case DeviceKeycloak  => deviceKeycloakConnector.keycloak
     }
 
+  // @todo delete it
   override def getKeycloakRealm(keycloakInstance: KeycloakInstance): String =
     keycloakInstance match {
       case CertifyKeycloak => keycloakCertifyConfig.realm
@@ -37,12 +38,15 @@ class DefaultKeycloakConnector @Inject() (
 
 sealed trait KeycloakInstance {
   val name: String
+  val defaultRealm: String
 }
 
 case object CertifyKeycloak extends KeycloakInstance {
-  val name = "certify realm"
+  val name = "certify keycloak"
+  val defaultRealm = "poc-certify"
 }
 
 case object DeviceKeycloak extends KeycloakInstance {
-  val name = "device realm"
+  val name = "device keycloak"
+  val defaultRealm = "ubirch-default"
 }
