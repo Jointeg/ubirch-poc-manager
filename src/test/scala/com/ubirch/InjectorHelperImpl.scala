@@ -1,10 +1,11 @@
 package com.ubirch
 
-import com.typesafe.config.Config
 import com.ubirch.crypto.utils.Curve
 import com.ubirch.crypto.{ GeneratorKeyFactory, PrivKey }
+import com.ubirch.e2e.DiscoveryServiceType
 import com.ubirch.models.tenant.TenantName
 import com.ubirch.services.jwt.{ DefaultPublicKeyPoolService, PublicKeyDiscoveryService, TokenCreationService }
+import com.ubirch.services.keycloak.{ KeycloakCertifyConfig, KeycloakDeviceConfig }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.eval.Task
@@ -14,24 +15,38 @@ import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 
 @Singleton
-class FakeDefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
-  extends DefaultPublicKeyPoolService(config, publicKeyDiscoveryService) {
+class FakeDefaultPublicKeyPoolService @Inject() (
+  keycloakDeviceConfig: KeycloakDeviceConfig,
+  keycloakCertifyConfig: KeycloakCertifyConfig,
+  publicKeyDiscoveryService: PublicKeyDiscoveryService,
+  useMockKeyDiscoveryService: DiscoveryServiceType)
+  extends DefaultPublicKeyPoolService(keycloakCertifyConfig, keycloakDeviceConfig, publicKeyDiscoveryService) {
+
+  override protected def acceptedKids(keycloakInstance: KeycloakInstance): List[String] = {
+    if (useMockKeyDiscoveryService.isMock) {
+      keycloakInstance match {
+        case CertifyKeycloak => List("6dMHOUfu7v6howP2WH5bkp-j9UgUYdyEQbWJp8cb8IY")
+        case DeviceKeycloak  => List("tgxjDoFtQP7tzzO6byck4X8vsFRaM5EVz0N66O9CSTg")
+      }
+    } else {
+      keycloakInstance match {
+        case CertifyKeycloak => List(keycloakCertifyConfig.acceptedKid)
+        case DeviceKeycloak  => List(keycloakDeviceConfig.acceptedKid)
+      }
+    }
+  }
 
   override def getKeyFromDiscoveryService(keycloakInstance: KeycloakInstance, kid: String): Task[Option[Key]] =
     keycloakInstance match {
       case CertifyKeycloak =>
-        Task {
-          kid match {
-            case "6dMHOUfu7v6howP2WH5bkp-j9UgUYdyEQbWJp8cb8IY" => Some(CertifyKeyPairProvider.privKey.getPublicKey)
-            case _                                             => throw new Exception("Check certify keycloak kid!")
-          }
+        kid match {
+          case "6dMHOUfu7v6howP2WH5bkp-j9UgUYdyEQbWJp8cb8IY" => Task(Some(CertifyKeyPairProvider.privKey.getPublicKey))
+          case _                                             => super.getKeyFromDiscoveryService(keycloakInstance, kid)
         }
       case DeviceKeycloak =>
-        Task {
-          kid match {
-            case "tgxjDoFtQP7tzzO6byck4X8vsFRaM5EVz0N66O9CSTg" => Some(DeviceKeyPairProvider.privKey.getPublicKey)
-            case _                                             => throw new Exception("Check device keycloak kid!")
-          }
+        kid match {
+          case "tgxjDoFtQP7tzzO6byck4X8vsFRaM5EVz0N66O9CSTg" => Task(Some(DeviceKeyPairProvider.privKey.getPublicKey))
+          case _                                             => super.getKeyFromDiscoveryService(keycloakInstance, kid)
         }
     }
 }

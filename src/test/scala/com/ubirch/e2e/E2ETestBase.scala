@@ -24,13 +24,19 @@ trait E2ETestBase
   with EitherValues
   with StrictLogging {
 
+  protected def useMockKeyDiscoveryService: DiscoveryServiceType = MockDiscoveryService
+
   def withInjector[A](testCode: E2EInjectorHelperImpl => A): A = {
     val tenantAdminEmail = s"$getRandomString@email.com"
+    val superAdminEmail = s"$getRandomString@email.com"
     val tenantAdmin: TenantAdmin =
       TenantAdmin(UserName(tenantAdminEmail), tenantAdminEmail, Random.alphanumeric.take(10).mkString(""))
     val superAdmin: SuperAdmin =
-      SuperAdmin(UserName(Random.alphanumeric.take(10).mkString("")), Random.alphanumeric.take(10).mkString(""))
-    val injector = new E2EInjectorHelperImpl(superAdmin, tenantAdmin)
+      SuperAdmin(
+        UserName(Random.alphanumeric.take(10).mkString("")),
+        superAdminEmail,
+        Random.alphanumeric.take(10).mkString(""))
+    val injector = new E2EInjectorHelperImpl(superAdmin, tenantAdmin, useMockKeyDiscoveryService)
     cleanupDB()
     performFlywayMigration()
     try {
@@ -62,7 +68,19 @@ trait E2ETestBase
     val keycloakDeviceRealm = keycloakDevice.keycloak.realm(keycloakDeviceConfig.realm)
 
     keycloakCertifyRealm.users().list().asScala.foreach(user => keycloakCertifyRealm.users().delete(user.getId))
+    keycloakCertifyRealm.groups().groups().asScala.foreach(group => {
+      keycloakCertifyRealm.groups().group(group.getId).remove()
+    })
+    keycloakCertifyRealm.roles().list().asScala.filterNot(role =>
+      role.getName == "super-admin" || role.getName == "tenant-admin" || role.getName == "admin").foreach(role =>
+      keycloakCertifyRealm.roles().deleteRole(role.getName))
     keycloakDeviceRealm.users().list().asScala.foreach(user => keycloakDeviceRealm.users().delete(user.getId))
+    keycloakDeviceRealm.groups().groups().asScala.foreach(group => {
+      keycloakDeviceRealm.groups().group(group.getId).remove()
+    })
+    keycloakDeviceRealm.roles().list().asScala.filterNot(role =>
+      role.getName == "super-admin" || role.getName == "tenant-admin" || role.getName == "admin").foreach(role =>
+      keycloakDeviceRealm.roles().deleteRole(role.getName))
   }
 }
 
@@ -89,3 +107,12 @@ object PostgresDbContainer {
     .schemas("poc_manager")
     .load()
 }
+
+sealed trait DiscoveryServiceType {
+  def isMock: Boolean = this match {
+    case MockDiscoveryService => true
+    case RealDiscoverService  => false
+  }
+}
+case object MockDiscoveryService extends DiscoveryServiceType
+case object RealDiscoverService extends DiscoveryServiceType

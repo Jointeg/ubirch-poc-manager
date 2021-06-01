@@ -7,8 +7,8 @@ import com.ubirch.models.keycloak.user.{ CreateBasicKeycloakUser, UserException 
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId }
 import com.ubirch.models.user._
-import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
-import com.ubirch.services.keycloak.users.TestKeycloakUserService
+import com.ubirch.services.keycloak.groups.KeycloakGroupService
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.execution.Scheduler.Implicits.global
@@ -25,7 +25,7 @@ object PocTestHelper extends Awaits {
     (poc, pocStatus, tenant)
   }
 
-  def createNeededTenantGroups(tenant: Tenant, groups: TestKeycloakGroupsService): Tenant = {
+  def createNeededTenantGroups(tenant: Tenant, groups: KeycloakGroupService): Tenant = {
     val tenantGroup = CreateKeycloakGroup(GroupName(TENANT_GROUP_PREFIX + tenant.tenantName.value))
     val deviceGroup: GroupId = await(groups.createGroup(tenantGroup, DeviceKeycloak), 1.seconds).right.get
     val userGroup: GroupId = await(groups.createGroup(tenantGroup, CertifyKeycloak), 1.seconds).right.get
@@ -47,7 +47,7 @@ object PocTestHelper extends Awaits {
     await(pocStatusTable.createPocStatus(pocStatus), 1.seconds)
   }
 
-  def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc): Either[UserException, UserId] = {
+  def createNeededDeviceUser(users: KeycloakUserService, poc: Poc): Either[UserException, UserId] = {
     users.createUser(
       CreateBasicKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
       DeviceKeycloak).runSyncUnsafe()

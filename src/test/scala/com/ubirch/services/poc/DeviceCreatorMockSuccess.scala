@@ -21,6 +21,13 @@ class DeviceCreatorMockSuccess @Inject() (conf: Config, aESEncryption: AESEncryp
     Task(StatusAndPW(status.copy(deviceCreated = true), UUID.randomUUID().toString))
   }
 
+  override protected def requestDeviceInfo(
+    token: DecryptedData,
+    poc: Poc,
+    status: PocStatus): Task[StatusAndPW] = {
+    Task(StatusAndPW(status, "devicePwd"))
+  }
+
   override protected def decryptToken(tenant: Tenant, poc: Poc, status: PocStatus): Task[DecryptedData] =
     Task(DecryptedData(tenant.deviceCreationToken.get.value.value.value))
 

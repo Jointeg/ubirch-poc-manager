@@ -1,15 +1,15 @@
 package com.ubirch.services.jwt
 
 import cats.effect.{ ExitCode, Resource }
-import com.typesafe.config.Config
-import com.ubirch.ConfPaths.KeycloakPaths
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.keycloak.{
+  KeycloakCertifyConfig,
+  KeycloakDeviceConfig,
+  RealKeycloakCertifyConfig,
+  RealKeycloakDeviceConfig
+}
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
-import monix.eval.{ Task, TaskApp }
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
-import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import monix.eval.{ Task, TaskApp }
 import monix.reactive.Observable
 import org.jose4j.jwk.PublicJsonWebKey
@@ -26,13 +26,16 @@ trait PublicKeyDiscoveryService {
 }
 
 @Singleton
-class DefaultPublicKeyDiscoveryService @Inject() (config: Config, jsonConverterService: JsonConverterService)
+class DefaultPublicKeyDiscoveryService @Inject() (
+  keycloakCertifyConfig: KeycloakCertifyConfig,
+  keycloakDeviceConfig: KeycloakDeviceConfig,
+  jsonConverterService: JsonConverterService)
   extends PublicKeyDiscoveryService {
 
   def getConfigUrlString(keycloakInstance: KeycloakInstance): String =
     keycloakInstance match {
-      case CertifyKeycloak => config.getString(KeycloakPaths.CertifyKeycloak.CONFIG_URL)
-      case DeviceKeycloak  => config.getString(KeycloakPaths.DeviceKeycloak.CONFIG_URL)
+      case CertifyKeycloak => keycloakCertifyConfig.configUrl
+      case DeviceKeycloak  => keycloakDeviceConfig.configUrl
     }
 
   final val JWKS_URI = "jwks_uri"
@@ -118,8 +121,11 @@ object DefaultPublicKeyDiscoveryService extends TaskApp {
 
     implicit val formats: Formats = new JsonFormatsProvider().get()
     val config = new ConfigProvider().get()
+    val keycloakCertifyConfig = new RealKeycloakCertifyConfig(config)
+    val keycloakDeviceConfig = new RealKeycloakDeviceConfig(config)
     val jsonConverterService: JsonConverterService = new DefaultJsonConverterService()
-    val pk: PublicKeyDiscoveryService = new DefaultPublicKeyDiscoveryService(config, jsonConverterService)
+    val pk: PublicKeyDiscoveryService =
+      new DefaultPublicKeyDiscoveryService(keycloakCertifyConfig, keycloakDeviceConfig, jsonConverterService)
 
     for {
       key <- pk.getKey(DeviceKeycloak, "F3gD13bFD2vOQjtHYESGoZUUK7XMIqwE-juSNIeLui0")

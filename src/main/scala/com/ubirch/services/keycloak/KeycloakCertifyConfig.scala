@@ -19,11 +19,15 @@ trait KeycloakCertifyConfig {
 
   def clientConfig: String
 
+  def configUrl: String
+
   def clientAdminUsername: String
 
   def clientAdminPassword: String
 
   def userPollingInterval: Int
+
+  def acceptedKid: String
 }
 
 @Singleton
@@ -39,5 +43,6 @@ class RealKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
   val clientAdminUsername: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ADMIN_USER)
   val clientAdminPassword: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ADMIN_PASSWORD)
   val userPollingInterval: Int = conf.getInt(ConfPaths.KeycloakPaths.CertifyKeycloak.USER_POLLING_INTERVAL)
-
+  val configUrl: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CONFIG_URL)
+  val acceptedKid: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.KID)
 }
