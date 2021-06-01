@@ -16,11 +16,17 @@ case class Tenant(
   sharedAuthCertRequired: Boolean,
   orgUnitId: OrgUnitId,
   groupId: GroupId,
+  tenantType: TenantType.Value,
   sharedAuthCert: Option[SharedAuthCert] = None,
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
   def getOrgId: UUID = orgId.value.value.asJava()
+
+  def getRealm: String = tenantType match {
+    case TenantType.ubirch => "default-certify"
+    case TenantType.bmg    => "bmg-certify"
+  }
 }
 
 object Tenant {
@@ -44,7 +50,8 @@ object Tenant {
       orgId,
       sharedAuthCertRequired,
       getNamespacedOrgUnitId(id),
-      getNamespacedGroupId(id)
+      getNamespacedGroupId(id),
+      TenantType.bmg // @todo fix
     )
 
   private def getNamespacedOrgUnitId(tenantId: TenantId) = {
