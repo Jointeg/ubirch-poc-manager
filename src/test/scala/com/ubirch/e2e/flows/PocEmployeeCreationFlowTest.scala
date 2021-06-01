@@ -70,6 +70,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   "It should be possible to create Tenant, PoC, Poc Admin and in the end PoC employees" in {
     withInjector { injector =>
+      performKeycloakCleanup(injector)
       val certifyKeycloakConnector = injector.get[CertifyKeycloakConnector]
       val certifyConfig = injector.get[KeycloakCertifyConfig]
       val users = injector.get[KeycloakUserService]

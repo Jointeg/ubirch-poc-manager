@@ -2,6 +2,7 @@ package com.ubirch.e2e
 
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch._
+import com.ubirch.db.tables.PocAdminRepository
 import com.ubirch.models.user.UserName
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.{
@@ -12,8 +13,10 @@ import com.ubirch.services.keycloak.{
 }
 import com.ubirch.services.poc.PocTestHelper.await
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import monix.eval.Task
 import monix.execution.Scheduler
 import org.flywaydb.core.Flyway
+import org.flywaydb.core.api.output.MigrateResult
 import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
@@ -44,13 +47,9 @@ trait E2ETestBase
         Random.alphanumeric.take(10).mkString(""))
     val injector = new E2EInjectorHelperImpl(superAdmin, tenantAdmin, useMockKeyDiscoveryService)
     KeyPoolServiceInitialization.initPool(injector)
+    InitDatabase.migration
     cleanupDB()
-    performFlywayMigration()
-    try {
-      testCode(injector)
-    } finally {
-      performKeycloakCleanup(injector)
-    }
+    testCode(injector)
   }
 
   private def getRandomString[A] = {
@@ -58,14 +57,15 @@ trait E2ETestBase
   }
 
   private def cleanupDB() = {
-    PostgresDbContainer.flyway.clean()
+    await(
+      StaticTestPostgresJdbcContext.ctx.executeAction(
+        "TRUNCATE poc_manager.poc_admin_table, poc_manager.poc_employee_table, poc_manager.poc_table, poc_manager.tenant_table, poc_manager.user_table, poc_manager.poc_admin_status_table, poc_manager.poc_employee_status_table, poc_manager.poc_status_table CASCADE"
+      ),
+      2.seconds
+    )
   }
 
-  private def performFlywayMigration() = {
-    PostgresDbContainer.flyway.migrate()
-  }
-
-  private def performKeycloakCleanup(injector: E2EInjectorHelperImpl): Unit = {
+  def performKeycloakCleanup(injector: E2EInjectorHelperImpl): Unit = {
     val keycloakUsers = injector.get[CertifyKeycloakConnector]
     val keycloakCertifyConfig = injector.get[KeycloakCertifyConfig]
     val keycloakDevice = injector.get[DeviceKeycloakConnector]
@@ -89,6 +89,10 @@ trait E2ETestBase
       role.getName == "super-admin" || role.getName == "tenant-admin" || role.getName == "admin").foreach(role =>
       keycloakDeviceRealm.roles().deleteRole(role.getName))
   }
+}
+
+object InitDatabase {
+  lazy val migration: MigrateResult = PostgresDbContainer.flyway.migrate()
 }
 
 object KeyPoolServiceInitialization {
