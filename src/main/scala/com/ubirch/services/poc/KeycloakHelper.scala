@@ -218,7 +218,7 @@ class KeycloakHelperImpl @Inject() (
     pocAndStatus: PocAndStatus,
     keycloak: KeycloakInstance): Task[GroupId] =
     groups
-      .addSubGroup(GroupId(parentGroupId), GroupName(subGroupName), keycloak)
+      .addSubGroup(keycloak.defaultRealm, GroupId(parentGroupId), GroupName(subGroupName), keycloak)
       .map {
         case Right(groupId)               => groupId
         case Left(ex: GroupCreationError) => throwError(pocAndStatus, ex.errorMsg)
@@ -234,7 +234,7 @@ class KeycloakHelperImpl @Inject() (
     roles
       .findRoleRepresentation(instance.defaultRealm, RoleName(roleName), instance)
       .flatMap {
-        case Some(role) => groups.assignRoleToGroup(GroupId(groupId), role, instance)
+        case Some(role) => groups.assignRoleToGroup(instance.defaultRealm, GroupId(groupId), role, instance)
         case None =>
           throwError(
             PocAndStatus(poc, status),
