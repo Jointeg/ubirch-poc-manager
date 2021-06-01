@@ -1,6 +1,7 @@
 package com.ubirch.services.keycloak.roles
 
 import com.ubirch.models.keycloak.roles._
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.RoleRepresentation
@@ -15,6 +16,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   private val rolesDeviceDatastore = mutable.Map[RoleName, KeycloakRole]()
 
   override def createNewRole(
+    realm: KeycloakRealm,
     createKeycloakRole: CreateKeycloakRole,
     instance: KeycloakInstance): Task[Either[RoleAlreadyExists, Unit]] =
     instance match {
@@ -38,6 +40,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   }
 
   override def findRole(
+    realm: KeycloakRealm,
     roleName: RoleName,
     instance: KeycloakInstance): Task[Option[KeycloakRole]] =
     instance match {
@@ -45,7 +48,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
       case DeviceKeycloak  => Task(rolesDeviceDatastore.get(roleName))
     }
 
-  override def deleteRole(roleName: RoleName, instance: KeycloakInstance): Task[Unit] =
+  override def deleteRole(realm: KeycloakRealm, roleName: RoleName, instance: KeycloakInstance): Task[Unit] =
     instance match {
       case CertifyKeycloak =>
         Task {
@@ -60,6 +63,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
     }
 
   override def findRoleRepresentation(
+    realm: KeycloakRealm,
     roleName: RoleName,
     instance: KeycloakInstance): Task[Option[RoleRepresentation]] = {
     val opt = instance match {

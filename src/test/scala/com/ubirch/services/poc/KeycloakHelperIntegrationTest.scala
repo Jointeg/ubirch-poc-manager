@@ -25,11 +25,13 @@ class KeycloakHelperIntegrationTest extends E2ETestBase {
         val groups = injector.get[DefaultKeycloakGroupService]
         val roles = injector.get[DefaultKeycloakRolesService]
         val tenantRole = TENANT_GROUP_PREFIX + tenant.tenantName.value
-        roles.createNewRole(CreateKeycloakRole(RoleName(tenantRole)), CertifyKeycloak).runSyncUnsafe()
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_ADMIN)), CertifyKeycloak).runSyncUnsafe()
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_EMPLOYEE)), CertifyKeycloak).runSyncUnsafe()
+        val realm = CertifyKeycloak.defaultRealm
+
+        roles.createNewRole(realm, CreateKeycloakRole(RoleName(tenantRole)), CertifyKeycloak).runSyncUnsafe()
+        roles.createNewRole(realm, CreateKeycloakRole(RoleName(POC_ADMIN)), CertifyKeycloak).runSyncUnsafe()
+        roles.createNewRole(realm, CreateKeycloakRole(RoleName(POC_EMPLOYEE)), CertifyKeycloak).runSyncUnsafe()
         val groupId = groups.createGroup(CreateKeycloakGroup(GroupName(tenantRole)), CertifyKeycloak).runSyncUnsafe()
-        val role = roles.findRoleRepresentation(RoleName(tenantRole), CertifyKeycloak).runSyncUnsafe()
+        val role = roles.findRoleRepresentation(realm, RoleName(tenantRole), CertifyKeycloak).runSyncUnsafe()
         groups.assignRoleToGroup(groupId.right.get, role.get, CertifyKeycloak).runSyncUnsafe()
         val updatedTenant = tenant.copy(certifyGroupId = TenantCertifyGroupId(groupId.right.get.value))
         val helper: KeycloakHelper = injector.get[KeycloakHelper]

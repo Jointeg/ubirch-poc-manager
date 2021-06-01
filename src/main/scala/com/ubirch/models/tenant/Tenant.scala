@@ -1,7 +1,7 @@
 package com.ubirch.models.tenant
 
-import com.ubirch.models.poc.{Created, Updated}
-import com.ubirch.services.keycloak.{CertifyBmgRealm, CertifyUbirchRealm, KeycloakRealm}
+import com.ubirch.models.poc.{ Created, Updated }
+import com.ubirch.services.keycloak.{ CertifyBmgRealm, CertifyUbirchRealm, KeycloakRealm }
 import org.joda.time.DateTime
 
 import java.util.UUID

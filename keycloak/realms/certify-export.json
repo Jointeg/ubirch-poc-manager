@@ -1,6 +1,6 @@
 {
-  "id": "certify-realm",
-  "realm": "certify-realm",
+  "id": "poc-certify",
+  "realm": "poc-certify",
   "notBefore": 0,
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
@@ -48,7 +48,7 @@
         "description": "${role_offline-access}",
         "composite": false,
         "clientRole": false,
-        "containerId": "certify-realm",
+        "containerId": "poc-certify",
         "attributes": {}
       },
       {
@@ -57,7 +57,7 @@
         "description": "${role_uma_authorization}",
         "composite": false,
         "clientRole": false,
-        "containerId": "certify-realm",
+        "containerId": "poc-certify",
         "attributes": {}
       },
       {
@@ -65,7 +65,7 @@
         "name": "admin",
         "composite": false,
         "clientRole": false,
-        "containerId": "certify-realm",
+        "containerId": "poc-certify",
         "attributes": {}
       },
       {
@@ -81,7 +81,7 @@
         "name": "tenant-admin",
         "composite": false,
         "clientRole": false,
-        "containerId": "certify-realm",
+        "containerId": "poc-certify",
         "attributes": {}
       }
     ],
@@ -497,7 +497,7 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/certify-realm/account/",
+      "baseUrl": "/realms/poc-certify/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
@@ -508,7 +508,7 @@
         "manage-account"
       ],
       "redirectUris": [
-        "/realms/certify-realm/account/*"
+        "/realms/poc-certify/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -544,14 +544,14 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/certify-realm/account/",
+      "baseUrl": "/realms/poc-certify/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "**********",
       "redirectUris": [
-        "/realms/certify-realm/account/*"
+        "/realms/poc-certify/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -716,14 +716,14 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/certify-realm/console/",
+      "baseUrl": "/admin/poc-certify/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "**********",
       "redirectUris": [
-        "/admin/certify-realm/console/*"
+        "/admin/poc-certify/console/*"
       ],
       "webOrigins": [
         "+"

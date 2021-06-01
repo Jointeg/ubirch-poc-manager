@@ -469,6 +469,5 @@ class FakeTokenCreator @Inject() (tokenCreationService: TokenCreationService) {
   def pocEmployee(certifyId: UUID): FakeToken =
     fakeToken(FakeToken.certifyHeader, FakeToken.pocEmployee(certifyId), CertifyKeycloak)
   val userNoPrincipal: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.userNoPrincipal, CertifyKeycloak)
-  val admin: FakeToken = fakeToken(FakeToken.certifyHeader, FakeToken.admin, CertifyKeycloak)
 
 }

@@ -54,7 +54,10 @@ class KeycloakHelperImpl @Inject() (
   override def createCertifyRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.status.certifyRoleCreated) Task(pocAndStatus)
     else {
-      roles.createNewRole(CreateKeycloakRole(RoleName(pocAndStatus.poc.roleName)), CertifyKeycloak)
+      roles.createNewRole(
+        CertifyKeycloak.defaultRealm,
+        CreateKeycloakRole(RoleName(pocAndStatus.poc.roleName)),
+        CertifyKeycloak)
         .map {
           case Right(_) => pocAndStatus.copy(status = pocAndStatus.status.copy(certifyRoleCreated = true))
           case Left(_: RoleAlreadyExists) =>
@@ -162,7 +165,10 @@ class KeycloakHelperImpl @Inject() (
   override def createDeviceRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.status.deviceRoleCreated) Task(pocAndStatus)
     else {
-      roles.createNewRole(CreateKeycloakRole(RoleName(pocAndStatus.poc.roleName)), DeviceKeycloak)
+      roles.createNewRole(
+        DeviceKeycloak.defaultRealm,
+        CreateKeycloakRole(RoleName(pocAndStatus.poc.roleName)),
+        DeviceKeycloak)
         .map {
           case Right(_) => pocAndStatus.copy(status = pocAndStatus.status.copy(deviceRoleCreated = true))
           case Left(_: RoleAlreadyExists) =>
@@ -226,7 +232,7 @@ class KeycloakHelperImpl @Inject() (
     status: PocStatus,
     instance: KeycloakInstance): Task[Either[String, Unit]] = {
     roles
-      .findRoleRepresentation(RoleName(roleName), instance)
+      .findRoleRepresentation(instance.defaultRealm, RoleName(roleName), instance)
       .flatMap {
         case Some(role) => groups.assignRoleToGroup(GroupId(groupId), role, instance)
         case None =>

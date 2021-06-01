@@ -254,7 +254,12 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   private def correctRoleAndGroupIsCreatedForTenantAdmin(tenant: Tenant, injector: InjectorHelper): Unit = {
     val keycloakRolesService = injector.get[KeycloakRolesService]
-    await(keycloakRolesService.findRole(RoleName(s"TEN_${tenant.tenantName.value}"), CertifyKeycloak), 5.seconds).value
+    await(
+      keycloakRolesService.findRole(
+        CertifyKeycloak.defaultRealm,
+        RoleName(s"TEN_${tenant.tenantName.value}"),
+        CertifyKeycloak),
+      5.seconds).value
     val keycloakGroupsService = injector.get[KeycloakGroupService]
     await(
       keycloakGroupsService.findGroupByName(GroupName(s"TEN_${tenant.tenantName.value}"), CertifyKeycloak),

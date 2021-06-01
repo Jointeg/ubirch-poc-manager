@@ -32,7 +32,7 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
     val tenantRole = CreateKeycloakRole(RoleName(tenantRoleName))
 
     def createRole(instance: KeycloakInstance): Task[Unit] =
-      roles.createNewRole(tenantRole, instance).map {
+      roles.createNewRole(instance.defaultRealm, tenantRole, instance).map {
         case Left(_: RoleCreationException) =>
           throw TenantCreationException(s"failed to create role in ${instance.name} realm with name $tenantRoleName ")
         case _ => ()
@@ -62,7 +62,7 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
   private def assignRolesToGroups(deviceAndCertifyGroup: DeviceAndCertifyGroups, keycloakName: String): Task[Unit] = {
 
     def assignRoleToGroup(groupId: group.GroupId, instance: KeycloakInstance): Task[Unit] = {
-      roles.findRoleRepresentation(RoleName(keycloakName), instance).flatMap {
+      roles.findRoleRepresentation(instance.defaultRealm, RoleName(keycloakName), instance).flatMap {
         case Some(role) =>
           groups.assignRoleToGroup(groupId, role, instance).map {
             case Right(_) =>

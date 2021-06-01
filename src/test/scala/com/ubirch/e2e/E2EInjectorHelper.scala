@@ -37,8 +37,8 @@ class TestPocConfig @Inject() (
 
   val groupRepresentation = new GroupRepresentation()
   groupRepresentation.setName("vaccination-v3")
-  keycloakConnector.keycloak.realm("device-realm").groups().add(groupRepresentation)
-  val id: GroupRepresentation = keycloakConnector.keycloak.realm("device-realm").groups().groups().asScala.head
+  keycloakConnector.keycloak.realm("ubirch-default-realm").groups().add(groupRepresentation)
+  val id: GroupRepresentation = keycloakConnector.keycloak.realm("ubirch-default-realm").groups().groups().asScala.head
   override val dataSchemaGroupMap = Map("vaccination-v3" -> id.getId)
   override val trustedPocGroupMap: Map[String, String] = Map("vaccination-v3" -> id.getId)
 }
@@ -54,7 +54,7 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
 
   private lazy val kid = {
     basicRequest
-      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/certify-realm/protocol/openid-connect/certs")
+      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/poc-certify/protocol/openid-connect/certs")
       .response(asJson[KeycloakKidResponse])
       .send()
   }
@@ -66,7 +66,7 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ID)
   val realm: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.REALM)
   val configUrl: String =
-    s"http://$keycloakServer:$keycloakPort/auth/realms/certify-realm/.well-known/openid-configuration"
+    s"http://$keycloakServer:$keycloakPort/auth/realms/poc-certify/.well-known/openid-configuration"
   lazy val acceptedKid: String = kid.body
     .right
     .get
@@ -86,7 +86,7 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
 
   private lazy val kid = {
     basicRequest
-      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/device-realm/protocol/openid-connect/certs")
+      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/ubirch-default-realm/protocol/openid-connect/certs")
       .response(asJson[KeycloakKidResponse])
       .send()
   }
@@ -98,7 +98,7 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_ID)
   val realm: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.REALM)
   val configUrl: String =
-    s"http://$keycloakServer:$keycloakPort/auth/realms/device-realm/.well-known/openid-configuration"
+    s"http://$keycloakServer:$keycloakPort/auth/realms/ubirch-default-realm/.well-known/openid-configuration"
   lazy val acceptedKid: String = kid.body
     .right
     .get

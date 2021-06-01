@@ -29,10 +29,11 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.deviceRoleCreated shouldBe false
         pocAndStatus.status.certifyRoleCreated shouldBe true
 
-        roles.findRoleRepresentation(RoleName(poc.roleName), CertifyKeycloak).map { role =>
-          role.isDefined shouldBe true
-          role.get.getName shouldBe poc.roleName
-          role.get.getId shouldBe poc.deviceGroupId.get
+        roles.findRoleRepresentation(CertifyKeycloak.defaultRealm, RoleName(poc.roleName), CertifyKeycloak).map {
+          role =>
+            role.isDefined shouldBe true
+            role.get.getName shouldBe poc.roleName
+            role.get.getId shouldBe poc.deviceGroupId.get
         }
       }
     }
@@ -46,10 +47,11 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.deviceRoleCreated shouldBe true
         pocAndStatus.status.certifyRoleCreated shouldBe false
 
-        roles.findRoleRepresentation(RoleName(poc.roleName), CertifyKeycloak).map { role =>
-          role.isDefined shouldBe true
-          role.get.getName shouldBe poc.roleName
-          role.get.getId shouldBe poc.deviceGroupId.get
+        roles.findRoleRepresentation(CertifyKeycloak.defaultRealm, RoleName(poc.roleName), CertifyKeycloak).map {
+          role =>
+            role.isDefined shouldBe true
+            role.get.getName shouldBe poc.roleName
+            role.get.getId shouldBe poc.deviceGroupId.get
         }
       }
     }
@@ -119,7 +121,7 @@ class KeycloakHelperTest extends UnitTestBase {
             case Right(group) =>
               group.getName shouldBe poc.roleName
               group.getId shouldBe poc.certifyGroupId.get
-            case Left(_) => assert( false)
+            case Left(_) => assert(false)
           }
       }
     }
@@ -127,7 +129,10 @@ class KeycloakHelperTest extends UnitTestBase {
     "create poc admin group and assign role in certify realm" in {
       withInjector { injector =>
         val roles = injector.get[KeycloakRolesService]
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_ADMIN)), CertifyKeycloak).runSyncUnsafe(
+        roles.createNewRole(
+          CertifyKeycloak.defaultRealm,
+          CreateKeycloakRole(RoleName(POC_ADMIN)),
+          CertifyKeycloak).runSyncUnsafe(
           3.seconds).isRight shouldBe true
 
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
@@ -163,7 +168,10 @@ class KeycloakHelperTest extends UnitTestBase {
     "create poc employee group and assign role in certify realm" in {
       withInjector { injector =>
         val roles = injector.get[KeycloakRolesService]
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_EMPLOYEE)), CertifyKeycloak).runSyncUnsafe(3.seconds)
+        roles.createNewRole(
+          CertifyKeycloak.defaultRealm,
+          CreateKeycloakRole(RoleName(POC_EMPLOYEE)),
+          CertifyKeycloak).runSyncUnsafe(3.seconds)
 
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]
