@@ -20,7 +20,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     */
   override def createGroup(
     createKeycloakGroup: CreateKeycloakGroup,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]] = {
+    instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]] = {
 
     val groupName = createKeycloakGroup.groupName.value
     Task {
@@ -45,11 +45,11 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findGroupById(
     groupId: GroupId,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, GroupRepresentation]] = {
+    instance: KeycloakInstance): Task[Either[String, GroupRepresentation]] = {
     Task(
       Right(keycloakConnector
-        .getKeycloak(keycloakInstance)
-        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
         .groups()
         .group(groupId.value)
         .toRepresentation)
@@ -62,13 +62,13 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
 
   override def findGroupByName(
     groupName: GroupName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupNotFound, GroupRepresentation]] = {
-    getGroupIdByName(groupName, keycloakInstance).flatMap {
+    instance: KeycloakInstance): Task[Either[GroupNotFound, GroupRepresentation]] = {
+    getGroupIdByName(groupName, instance).flatMap {
       case Some(groupId) =>
         Task(
           Right(keycloakConnector
-            .getKeycloak(keycloakInstance)
-            .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+            .getKeycloak(instance)
+            .realm(keycloakConnector.getKeycloakRealm(instance))
             .groups()
             .group(groupId.value)
             .toRepresentation))
@@ -88,7 +88,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
   override def addSubGroup(
     parentGroupId: GroupId,
     childGroupName: GroupName,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]] = {
+    instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]] = {
 
     Task {
       val group = CreateKeycloakGroup(childGroupName).toKeycloakRepresentation
@@ -135,11 +135,11 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
   override def assignRoleToGroup(
     groupId: GroupId,
     role: RoleRepresentation,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]] =
+    instance: KeycloakInstance): Task[Either[String, Unit]] =
     Task(
       Right(keycloakConnector
-        .getKeycloak(keycloakInstance)
-        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
         .groups()
         .group(groupId.value)
         .roles()
@@ -154,12 +154,12 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
   override def addMemberToGroup(
     groupId: GroupId,
     user: UserRepresentation,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Boolean]] = {
+    instance: KeycloakInstance): Task[Either[String, Boolean]] = {
 
     Task(
       Right(keycloakConnector
-        .getKeycloak(keycloakInstance)
-        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
         .groups()
         .group(groupId.value)
         .members()
@@ -171,13 +171,13 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
       }
   }
 
-  override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
-    getGroupIdByName(groupName, keycloakInstance).flatMap {
+  override def deleteGroup(groupName: GroupName, instance: KeycloakInstance): Task[Unit] =
+    getGroupIdByName(groupName, instance).flatMap {
       case Some(groupId: GroupId) =>
         Task {
           keycloakConnector
-            .getKeycloak(keycloakInstance)
-            .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+            .getKeycloak(instance)
+            .realm(keycloakConnector.getKeycloakRealm(instance))
             .groups()
             .group(groupId.value)
             .remove()

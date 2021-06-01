@@ -30,7 +30,7 @@ class KeycloakHelperIntegrationTest extends E2ETestBase {
         roles.createNewRole(CreateKeycloakRole(RoleName(POC_EMPLOYEE)), CertifyKeycloak).runSyncUnsafe()
         val groupId = groups.createGroup(CreateKeycloakGroup(GroupName(tenantRole)), CertifyKeycloak).runSyncUnsafe()
         val role = roles.findRoleRepresentation(RoleName(tenantRole), CertifyKeycloak).runSyncUnsafe()
-        groups.assignRoleToGroup(groupId.right.get, role.get).runSyncUnsafe()
+        groups.assignRoleToGroup(groupId.right.get, role.get, CertifyKeycloak).runSyncUnsafe()
         val updatedTenant = tenant.copy(certifyGroupId = TenantCertifyGroupId(groupId.right.get.value))
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         import helper._
@@ -45,9 +45,12 @@ class KeycloakHelperIntegrationTest extends E2ETestBase {
           pocAndStatusFinal <- assignEmployeeRole(pocAndStatus6)
         } yield pocAndStatusFinal
         val pocAndStatus = r.runSyncUnsafe()
-        val certifyGroup = groups.findGroupById(GroupId(pocAndStatus.poc.certifyGroupId.get)).runSyncUnsafe(2.seconds)
-        val adminGroup = groups.findGroupById(GroupId(pocAndStatus.poc.adminGroupId.get)).runSyncUnsafe(2.seconds)
-        val employeeGroup = groups.findGroupById(GroupId(pocAndStatus.poc.employeeGroupId.get)).runSyncUnsafe(2.seconds)
+        val certifyGroup =
+          groups.findGroupById(GroupId(pocAndStatus.poc.certifyGroupId.get), CertifyKeycloak).runSyncUnsafe(2.seconds)
+        val adminGroup =
+          groups.findGroupById(GroupId(pocAndStatus.poc.adminGroupId.get), CertifyKeycloak).runSyncUnsafe(2.seconds)
+        val employeeGroup =
+          groups.findGroupById(GroupId(pocAndStatus.poc.employeeGroupId.get), CertifyKeycloak).runSyncUnsafe(2.seconds)
         certifyGroup.isRight shouldBe true
         adminGroup.isRight shouldBe true
         employeeGroup.isRight shouldBe true

@@ -1,32 +1,32 @@
 package com.ubirch.e2e.flows
 
 import com.ubirch.InjectorHelper
-import com.ubirch.controllers.{PocAdminController, SuperAdminController, TenantAdminController}
+import com.ubirch.controllers.{ PocAdminController, SuperAdminController, TenantAdminController }
 import com.ubirch.db.tables._
-import com.ubirch.e2e.{DiscoveryServiceType, E2ETestBase, KeycloakOperations, RealDiscoverService, TenantAdmin}
+import com.ubirch.e2e.{ DiscoveryServiceType, E2ETestBase, KeycloakOperations, RealDiscoverService, TenantAdmin }
 import com.ubirch.formats.TestFormats
 import com.ubirch.models.keycloak.group.GroupName
 import com.ubirch.models.keycloak.roles.RoleName
-import com.ubirch.models.poc.{Completed, Pending, Poc, PocAdmin}
+import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.tenant.{Tenant, TenantName}
+import com.ubirch.models.tenant.{ Tenant, TenantName }
 import com.ubirch.models.user.UserName
-import com.ubirch.services.formats.{CustomFormats, JodaDateTimeFormats}
+import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.keycloak.{CertifyKeycloakConnector, KeycloakCertifyConfig}
+import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, KeycloakCertifyConfig }
 import com.ubirch.services.poc.PocTestHelper.createNeededDeviceUser
-import com.ubirch.services.poc.util.CsvConstants.{pocAdminHeaderLine, pocEmployeeHeaderLine}
-import com.ubirch.services.poc.{PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop}
-import com.ubirch.services.{CertifyKeycloak, DeviceKeycloak}
+import com.ubirch.services.poc.util.CsvConstants.{ pocAdminHeaderLine, pocEmployeeHeaderLine }
+import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
 import monix.reactive.Observable
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
-import org.json4s.{DefaultFormats, Formats}
-import org.scalatest.{Assertion, BeforeAndAfterEach}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.{ DefaultFormats, Formats }
+import org.scalatest.{ Assertion, BeforeAndAfterEach }
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -165,7 +165,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     }
   }
 
-  private def createPoCEmployees(pocAdminToken: String, tenant: Tenant, injector: InjectorHelper): Seq[PocEmployee] = {
+  private def createPoCEmployees(pocAdminToken: String, tenant: Tenant, injector: InjectorHelper): List[PocEmployee] = {
     post(
       "/poc-admin/employees/create",
       body = pocEmployeeCsv.getBytes(),
@@ -257,7 +257,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     await(keycloakRolesService.findRole(RoleName(s"TEN_${tenant.tenantName.value}"), CertifyKeycloak), 5.seconds).value
     val keycloakGroupsService = injector.get[KeycloakGroupService]
     await(
-      keycloakGroupsService.findGroupByName(GroupName(s"TEN_${tenant.tenantName.value}")),
+      keycloakGroupsService.findGroupByName(GroupName(s"TEN_${tenant.tenantName.value}"), CertifyKeycloak),
       5.seconds).right.value
     ()
   }

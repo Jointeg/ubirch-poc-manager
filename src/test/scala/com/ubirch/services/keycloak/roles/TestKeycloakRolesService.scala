@@ -16,7 +16,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
 
   override def createNewRole(
     createKeycloakRole: CreateKeycloakRole,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[RoleAlreadyExists, Unit]] =
+    instance: KeycloakInstance): Task[Either[RoleAlreadyExists, Unit]] =
     instance match {
       case CertifyKeycloak => insertIfNotExists(rolesCertifyDatastore, createKeycloakRole)
       case DeviceKeycloak  => insertIfNotExists(rolesDeviceDatastore, createKeycloakRole)
@@ -39,13 +39,13 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
 
   override def findRole(
     roleName: RoleName,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Option[KeycloakRole]] =
+    instance: KeycloakInstance): Task[Option[KeycloakRole]] =
     instance match {
       case CertifyKeycloak => Task(rolesCertifyDatastore.get(roleName))
       case DeviceKeycloak  => Task(rolesDeviceDatastore.get(roleName))
     }
 
-  override def deleteRole(roleName: RoleName, instance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
+  override def deleteRole(roleName: RoleName, instance: KeycloakInstance): Task[Unit] =
     instance match {
       case CertifyKeycloak =>
         Task {
@@ -61,7 +61,7 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
 
   override def findRoleRepresentation(
     roleName: RoleName,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]] = {
+    instance: KeycloakInstance): Task[Option[RoleRepresentation]] = {
     val opt = instance match {
       case CertifyKeycloak => rolesCertifyDatastore.get(roleName)
       case DeviceKeycloak  => rolesDeviceDatastore.get(roleName)

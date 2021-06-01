@@ -29,7 +29,7 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.deviceRoleCreated shouldBe false
         pocAndStatus.status.certifyRoleCreated shouldBe true
 
-        roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
+        roles.findRoleRepresentation(RoleName(poc.roleName), CertifyKeycloak).map { role =>
           role.isDefined shouldBe true
           role.get.getName shouldBe poc.roleName
           role.get.getId shouldBe poc.deviceGroupId.get
@@ -46,7 +46,7 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.deviceRoleCreated shouldBe true
         pocAndStatus.status.certifyRoleCreated shouldBe false
 
-        roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
+        roles.findRoleRepresentation(RoleName(poc.roleName), CertifyKeycloak).map { role =>
           role.isDefined shouldBe true
           role.get.getName shouldBe poc.roleName
           role.get.getId shouldBe poc.deviceGroupId.get
@@ -114,12 +114,12 @@ class KeycloakHelperTest extends UnitTestBase {
 
         //assert
         groups
-          .findGroupById(GroupId(pocAndStatus.poc.certifyGroupId.value))
+          .findGroupById(GroupId(pocAndStatus.poc.certifyGroupId.value), CertifyKeycloak)
           .map {
             case Right(group) =>
               group.getName shouldBe poc.roleName
               group.getId shouldBe poc.certifyGroupId.get
-            case Left(_) => assert(false)
+            case Left(_) => assert( false)
           }
       }
     }
@@ -127,7 +127,8 @@ class KeycloakHelperTest extends UnitTestBase {
     "create poc admin group and assign role in certify realm" in {
       withInjector { injector =>
         val roles = injector.get[KeycloakRolesService]
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_ADMIN)), CertifyKeycloak).runSyncUnsafe(3.seconds).isRight shouldBe true
+        roles.createNewRole(CreateKeycloakRole(RoleName(POC_ADMIN)), CertifyKeycloak).runSyncUnsafe(
+          3.seconds).isRight shouldBe true
 
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]
@@ -148,7 +149,7 @@ class KeycloakHelperTest extends UnitTestBase {
 
         //assert
         val groupEither = groups
-          .findGroupById(GroupId(pocAndStatus.poc.adminGroupId.value)).runSyncUnsafe()
+          .findGroupById(GroupId(pocAndStatus.poc.adminGroupId.value), CertifyKeycloak).runSyncUnsafe()
         groupEither match {
           case Right(group) =>
             group.getName shouldBe POC_ADMIN
@@ -183,7 +184,7 @@ class KeycloakHelperTest extends UnitTestBase {
 
         //assert
         val groupEither = groups
-          .findGroupById(GroupId(pocAndStatus.poc.employeeGroupId.value)).runSyncUnsafe()
+          .findGroupById(GroupId(pocAndStatus.poc.employeeGroupId.value), CertifyKeycloak).runSyncUnsafe()
         groupEither match {
           case Right(group) =>
             group.getName shouldBe POC_EMPLOYEE
