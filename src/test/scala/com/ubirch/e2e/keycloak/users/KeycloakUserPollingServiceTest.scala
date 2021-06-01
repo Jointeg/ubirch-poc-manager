@@ -56,7 +56,7 @@ class KeycloakUserPollingServiceTest extends E2ETestBase with KeycloakOperations
         val certifyKeycloakConnector = injector.get[CertifyKeycloakConnector]
         val deviceKeycloakConnector = injector.get[DeviceKeycloakConnector]
 
-        createKeycloakAdminUser(injector.tenantAdmin)(certifyKeycloakConnector)
+        createKeycloakTenantAdminUser(injector.tenantAdmin)(certifyKeycloakConnector)
         val keycloakUser1 = KeycloakTestData.createNewCertifyKeycloakUser()
         val keycloakUser2 = KeycloakTestData.createNewCertifyKeycloakUser()
         val keycloakUser3 = KeycloakTestData.createNewCertifyKeycloakUser()

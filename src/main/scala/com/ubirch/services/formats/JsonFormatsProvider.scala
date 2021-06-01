@@ -11,7 +11,7 @@ import javax.inject._
 @Singleton
 class JsonFormatsProvider extends Provider[Formats] {
 
-  private val formats: Formats =
+  protected val formats: Formats =
     DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
   override def get(): Formats = formats
 
