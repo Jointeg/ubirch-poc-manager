@@ -34,7 +34,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
 
         val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
-        val spaceName = SpaceName.forPoc("local", tenant, poc)
+        val spaceName = SpaceName.ofPoc("local", tenant, poc)
         //start process
         val pocAdminCreation = loop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
         Thread.sleep(4000)

@@ -1,31 +1,63 @@
 package com.ubirch.services.tenantadmin
+
 import cats.Applicative
 import cats.data.EitherT
+import cats.syntax.either._
+import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  UserNotCompleted,
+  UserNotFound
+}
+import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
+import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, TenantAdminContext }
+import cats.syntax.either._
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.poc.{ PocAdmin, PocAdminStatus }
+import com.ubirch.models.poc.{ Completed, PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant._
+import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
+import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
+import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import java.util.UUID
 import javax.inject.Inject
-import scala.language.higherKinds
+import scala.language.{ existentials, higherKinds }
 
 trait TenantAdminService {
+
   def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String]
+
   def updateWebIdentId(
     tenant: Tenant,
+    tenantAdminContext: TenantAdminContext,
     request: UpdateWebIdentIdRequest): Task[Either[UpdateWebIdentIdError, Unit]]
+
   def createWebIdentInitiateId(
     tenant: Tenant,
+    tenantAdminContext: TenantAdminContext,
     createWebIdentInitiateIdRequest: CreateWebIdentInitiateIdRequest)
     : Task[Either[CreateWebIdentInitiateIdErrors, UUID]]
+
   def getPocAdminStatus(
     tenant: Tenant,
     pocAdminId: UUID): Task[Either[GetPocAdminStatusErrors, GetPocAdminStatusResponse]]
 
-  def addDeviceCreationToken(tenant: Tenant, addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
+  def switchActiveForPocAdmin(
+    pocAdminId: UUID,
+    tenantContext: TenantAdminContext,
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
+
+  def addDeviceCreationToken(
+    tenant: Tenant,
+    tenantContext: TenantAdminContext,
+    addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
 }
 
 class DefaultTenantAdminService @Inject() (
@@ -33,8 +65,13 @@ class DefaultTenantAdminService @Inject() (
   pocRepository: PocRepository,
   tenantRepository: TenantRepository,
   pocAdminRepository: PocAdminRepository,
-  pocAdminStatusRepository: PocAdminStatusRepository)
-  extends TenantAdminService {
+  pocAdminStatusRepository: PocAdminStatusRepository,
+  keycloakUserService: KeycloakUserService,
+  quillMonixJdbcContext: QuillMonixJdbcContext)
+  extends TenantAdminService
+  with PocAuditLogging
+  with LazyLogging {
+
   private val simplifiedDeviceInfoCSVHeader = """"externalId"; "pocName"; "deviceId""""
 
   override def getSimplifiedDeviceInfoAsCSV(tenant: Tenant): Task[String] = {
@@ -45,6 +82,7 @@ class DefaultTenantAdminService @Inject() (
   }
   override def createWebIdentInitiateId(
     tenant: Tenant,
+    tenantAdminContext: TenantAdminContext,
     createWebIdentInitiateIdRequest: CreateWebIdentInitiateIdRequest)
     : Task[Either[CreateWebIdentInitiateIdErrors, UUID]] = {
     import CreateWebIdentInitiateIdErrors._
@@ -58,29 +96,46 @@ class DefaultTenantAdminService @Inject() (
     }
 
     def assignWebIdentInitiateId(
-      pocAdminId: UUID,
+      pocAdmin: PocAdmin,
       webIdentInitiateId: UUID): EitherT[Task, CreateWebIdentInitiateIdErrors, Unit] = {
-      EitherT(pocAdminRepository.assignWebIdentInitiateId(pocAdminId, webIdentInitiateId).map(_ =>
-        Right(())).onErrorRecover {
-        case exception: Exception => Left(PocAdminRepositoryError(exception.getMessage))
-      })
+      EitherT(
+        pocAdminRepository
+          .assignWebIdentInitiateId(pocAdmin.id, webIdentInitiateId)
+          .map { _ =>
+            logAuditByTenantAdmin(
+              s"initiated webIdent with $webIdentInitiateId for admin ${pocAdmin.id} of poc ${pocAdmin.pocId}",
+              tenantAdminContext)
+            Right(())
+          }
+          .onErrorRecover {
+            case exception: Exception => Left(PocAdminRepositoryError(exception.getMessage))
+          })
     }
 
+    def isWebIdentAlreadyInitiated(admin: PocAdmin): EitherT[Task, WebIdentAlreadyInitiated, Unit] =
+      EitherT(
+        if (admin.webIdentInitiateId.isEmpty) Task(Right(()))
+        else Task(Left(WebIdentAlreadyInitiated(admin.webIdentInitiateId.get)))
+      )
+
     (for {
-      pocAdmin <- getPocAdmin(createWebIdentInitiateIdRequest.pocAdminId, PocAdminNotFound)
-      _ <- isWebIdentRequired(tenant, pocAdmin)
+      pocAdmin <-
+        getPocAdmin(createWebIdentInitiateIdRequest.pocAdminId, CreateWebIdentInitiateIdErrors.PocAdminNotFound)
       _ <-
         isPocAdminAssignedToTenant[Task, CreateWebIdentInitiateIdErrors](tenant, pocAdmin)(
           PocAdminAssignedToDifferentTenant(
             tenant.id,
             pocAdmin.id))
+      _ <- isWebIdentAlreadyInitiated(pocAdmin)
+      _ <- isWebIdentRequired(tenant, pocAdmin)
       webIdentInitiateId = UUID.randomUUID()
-      _ <- assignWebIdentInitiateId(pocAdmin.id, webIdentInitiateId)
+      _ <- assignWebIdentInitiateId(pocAdmin, webIdentInitiateId)
     } yield webIdentInitiateId).value
   }
 
   override def updateWebIdentId(
     tenant: Tenant,
+    tenantAdminContext: TenantAdminContext,
     request: UpdateWebIdentIdRequest): Task[Either[UpdateWebIdentIdError, Unit]] = {
     import UpdateWebIdentIdError._
 
@@ -92,7 +147,16 @@ class DefaultTenantAdminService @Inject() (
     def updatePocAdminWebIdentIdAndStatus(pocAdmin: PocAdmin) = {
       EitherT.right[UpdateWebIdentIdError](pocAdminRepository.updateWebIdentIdAndStatus(
         request.webIdentId,
-        pocAdmin.id))
+        pocAdmin.id)
+        .map { _ =>
+          logAuditByTenantAdmin(
+            s"updated webIdent success with ${request.webIdentId} for admin ${pocAdmin.id} of poc ${pocAdmin.pocId}",
+            tenantAdminContext)
+          Right(())
+        }
+        .onErrorRecover {
+          case exception: Exception => Left(PocAdminRepositoryError(exception.getMessage))
+        })
     }
 
     def isSameWebIdentInitialId(tenant: Tenant, pocAdmin: PocAdmin) = {
@@ -106,8 +170,17 @@ class DefaultTenantAdminService @Inject() (
       }
     }
 
+    def isWebIdentAlreadyExist(pocAdmin: PocAdmin) = {
+      if (pocAdmin.webIdentId.isDefined) {
+        EitherT.leftT[Task, UpdateWebIdentIdError](WebIdentAlreadyExist(pocAdmin.id))
+      } else {
+        EitherT.rightT[Task, UpdateWebIdentIdError](())
+      }
+    }
+
     (for {
       pocAdmin <- getPocAdmin(request.pocAdminId, UnknownPocAdmin)
+      _ <- isWebIdentAlreadyExist(pocAdmin)
       _ <- isPocAdminAssignedToTenant[Task, UpdateWebIdentIdError](tenant, pocAdmin)(
         PocAdminIsNotAssignedToRequestingTenant(pocAdmin.tenantId, tenant.id))
       _ <- isSameWebIdentInitialId(tenant, pocAdmin)
@@ -146,8 +219,37 @@ class DefaultTenantAdminService @Inject() (
     } yield GetPocAdminStatusResponse.fromPocAdminStatus(pocAdminStatus)).value
   }
 
+  override def switchActiveForPocAdmin(
+    pocAdminId: UUID,
+    tenantContext: TenantAdminContext,
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
+
+    quillMonixJdbcContext.withTransaction {
+      pocAdminRepository
+        .getPocAdmin(pocAdminId)
+        .flatMap {
+          case None                                                                   => Task(UserNotFound(pocAdminId).asLeft)
+          case Some(admin) if admin.tenantId.value.asJava() != tenantContext.tenantId => Task(NotAllowedError.asLeft)
+          case Some(admin) if admin.status != Completed                               => Task(UserNotCompleted.asLeft)
+          case Some(admin) if admin.certifyUserId.isEmpty                             => Task(MissingCertifyUserId(pocAdminId).asLeft)
+
+          case Some(admin) =>
+            val userId = admin.certifyUserId.get
+            (active match {
+              case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
+              case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
+            }) >> pocAdminRepository.updatePocAdmin(admin.copy(active = ActivateSwitch.toBoolean(active)))
+              .map { _ =>
+                logAuditByTenantAdmin(s"$active poc admin ${admin.id} of poc ${admin.pocId}.", tenantContext)
+                Right(())
+              }
+        }
+    }
+  }
+
   def addDeviceCreationToken(
     tenant: Tenant,
+    tenantContext: TenantAdminContext,
     addDeviceTokenRequest: AddDeviceCreationTokenRequest): Task[Either[String, Unit]] = {
 
     aesEncryption
@@ -155,8 +257,10 @@ class DefaultTenantAdminService @Inject() (
       .flatMap { encryptedDeviceCreationToken: EncryptedDeviceCreationToken =>
         val updatedTenant = tenant.copy(deviceCreationToken = Some(encryptedDeviceCreationToken))
         tenantRepository
-          .updateTenant(updatedTenant).map(Right(_))
-          .onErrorHandle { ex: Throwable => Left("something went wrong on device token creation") }
+          .updateTenant(updatedTenant).map { _ =>
+            logAuditByTenantAdmin("updated tenant with new deviceCreationToken", tenantContext)
+            Right(())
+          }
       }
   }
 
@@ -167,6 +271,7 @@ object CreateWebIdentInitiateIdErrors {
   case class PocAdminNotFound(pocAdminId: UUID) extends CreateWebIdentInitiateIdErrors
   case class PocAdminAssignedToDifferentTenant(tenantId: TenantId, pocAdminId: UUID)
     extends CreateWebIdentInitiateIdErrors
+  case class WebIdentAlreadyInitiated(webIdentInitiateId: UUID) extends CreateWebIdentInitiateIdErrors
   case class WebIdentNotRequired(tenantId: TenantId, pocAdminId: UUID) extends CreateWebIdentInitiateIdErrors
   case class PocAdminRepositoryError(msg: String) extends CreateWebIdentInitiateIdErrors
 }
@@ -174,6 +279,7 @@ object CreateWebIdentInitiateIdErrors {
 sealed trait UpdateWebIdentIdError
 object UpdateWebIdentIdError {
   case class UnknownPocAdmin(id: UUID) extends UpdateWebIdentIdError
+  case class WebIdentAlreadyExist(pocAdminId: UUID) extends UpdateWebIdentIdError
   case class PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId: TenantId, requestingTenantId: TenantId)
     extends UpdateWebIdentIdError
   case class DifferentWebIdentInitialId(requestWebIdentInitialId: UUID, tenant: Tenant, pocAdmin: PocAdmin)

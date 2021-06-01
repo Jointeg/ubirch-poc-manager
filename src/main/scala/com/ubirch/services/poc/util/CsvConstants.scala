@@ -17,7 +17,6 @@ object CsvConstants {
   val certifyApp = "certify_app*"
   val logoUrl = "logo_url"
   val clientCert = "client_cert*"
-  val dataSchemaId = "data_schema_id*"
   val managerSurname = "manager_surname*"
   val managerName = "manager_name*"
   val managerEmail = "manager_email*"
@@ -53,7 +52,6 @@ object CsvConstants {
     certifyApp,
     logoUrl,
     clientCert,
-    dataSchemaId,
     managerSurname,
     managerName,
     managerEmail,

@@ -1,22 +1,29 @@
 package com.ubirch.e2e.controllers
 
+import cats.implicits._
 import com.ubirch.FakeTokenCreator
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.controllers.TenantAdminController.{ Paginated_OUT, PocAdmin_OUT }
+import com.ubirch.controllers.TenantAdminController.PocAdmin_OUT
+import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.ValidationErrorsResponse
+import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.user.UserId
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, pocHeaderLine }
+import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import io.prometheus.client.CollectorRegistry
+import monix.eval.Task
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s._
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
@@ -24,7 +31,7 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.{ read, write }
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
-import org.scalatra.{ BadRequest, Ok }
+import org.scalatra.{ BadRequest, Conflict, Ok }
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -44,16 +51,6 @@ class TenantAdminControllerSpec
   implicit private val formats: Formats =
     DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
 
-  private val badCsv =
-    "poc_id*;poc_type*;poc_name*;poc_street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;data_schema_id*;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12A636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}\n" +
-      "a5a62b0f-6694-4916-b188-89e69264458f;Impfzentrum zum Löwen;An der Heide;101;;12A636;Wunschstadt;;;Deutschland;030-786862834;TRUE;;certification-vaccination;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1; vaccine2\"]}"
-
-  private val goodCsv =
-    s"""$pocHeaderLine
-       |${poc1id.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;0187-738786782;TRUE;;FALSE;certification-vaccination;Musterfrau;Frau;frau.musterfrau@mail.de;0187-738786782;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
-
   private val addDeviceCreationToken: String =
     s"""
        |{
@@ -68,7 +65,7 @@ class TenantAdminControllerSpec
         val tenant = addTenantToDB()
         post(
           "/pocs/create",
-          body = goodCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body.isEmpty)
@@ -83,7 +80,10 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
         addTenantToDB()
-        post("/pocs/create", body = badCsv.getBytes(), headers = Map("authorization" -> token.superAdmin.prepare)) {
+        post(
+          "/pocs/create",
+          body = validPocOnlyCsv(poc1id).getBytes(),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
           status should equal(403)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
@@ -95,7 +95,7 @@ class TenantAdminControllerSpec
         val token = Injector.get[FakeTokenCreator]
         post(
           "/pocs/create",
-          body = badCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)) {
           status should equal(400)
           assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
@@ -109,7 +109,7 @@ class TenantAdminControllerSpec
         val tenant = addTenantToDB()
         post(
           "/pocs/create",
-          body = badCsv.getBytes(),
+          body = invalidHeaderPocOnlyCsv.getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
@@ -123,7 +123,7 @@ class TenantAdminControllerSpec
         val tenant = addTenantToDB()
         post(
           "/pocs/create",
-          body = goodCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
           assert(body.isEmpty)
@@ -131,10 +131,11 @@ class TenantAdminControllerSpec
 
         post(
           "/pocs/create",
-          body = goodCsv.getBytes(),
+          body = validPocOnlyCsv(poc1id).getBytes(),
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
-          assert(body == goodCsv + columnSeparator + "error on persisting objects; maybe duplicated key error")
+          assert(body == validPocOnlyCsv(
+            poc1id) + columnSeparator + "error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
         }
       }
     }
@@ -264,7 +265,7 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return PoCs for passed search query" in withInjector { Injector =>
+    "return PoCs for passed search by pocName" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB()
@@ -284,6 +285,29 @@ class TenantAdminControllerSpec
         val poC_OUT = read[Paginated_OUT[Poc]](body)
         poC_OUT.total shouldBe 2
         poC_OUT.records shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
+      }
+    }
+
+    "return PoCs for passed search by city" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB()
+      val r = for {
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, city = "Berlin 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, city = "Berlin 11"))
+        _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, city = "Berlin 2"))
+        pocs <- pocTable.getAllPocsByTenantId(tenant.id)
+      } yield pocs
+      val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
+      get(
+        "/pocs",
+        params = Map("search" -> "Berlin 1"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val poC_OUT = read[Paginated_OUT[Poc]](body)
+        poC_OUT.total shouldBe 2
+        poC_OUT.records shouldBe pocs.filter(_.address.city.startsWith("Berlin 1"))
       }
     }
 
@@ -527,7 +551,7 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return PoC admins for passed search query" in withInjector { Injector =>
+    "return PoC admins for passed search by email" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
       val tenant = addTenantToDB()
@@ -554,6 +578,84 @@ class TenantAdminControllerSpec
       }
     }
 
+    "return PoC admins for passed search by name" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val repository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
+      val r = for {
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin1@example.com",
+            name = "PocAdmin 1"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin11@example.com",
+            name = "PocAdmin 11"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin2@example.com",
+            name = "PocAdmin 2"))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).map(_.toPocAdminOut(poc))
+      get(
+        "/poc-admins",
+        params = Map("search" -> "PocAdmin 1"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val out = read[Paginated_OUT[PocAdmin_OUT]](body)
+        out.total shouldBe 2
+        out.records shouldBe pocAdmins.filter(_.firstName.startsWith("PocAdmin 1"))
+      }
+    }
+
+    "return PoC admins for passed search by surname" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val repository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, Injector.get[PocTable])
+      val r = for {
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin1@example.com",
+            surname = "PocAdmin 1"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin11@example.com",
+            surname = "PocAdmin 11"))
+        _ <-
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "admin2@example.com",
+            surname = "PocAdmin 2"))
+        records <- repository.getAllPocAdminsByTenantId(tenant.id)
+      } yield records
+      val pocAdmins = await(r, 5.seconds).map(_.toPocAdminOut(poc))
+      get(
+        "/poc-admins",
+        params = Map("search" -> "PocAdmin 1"),
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        val out = read[Paginated_OUT[PocAdmin_OUT]](body)
+        out.total shouldBe 2
+        out.records shouldBe pocAdmins.filter(_.lastName.startsWith("PocAdmin 1"))
+      }
+    }
+
     "return PoC admins ordered asc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
@@ -568,7 +670,7 @@ class TenantAdminControllerSpec
       val pocAdmins = await(r, 5.seconds).sortBy(_.name).map(_.toPocAdminOut(poc))
       get(
         "/poc-admins",
-        params = Map("sortColumn" -> "name", "sortOrder" -> "asc"),
+        params = Map("sortColumn" -> "firstName", "sortOrder" -> "asc"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
@@ -592,7 +694,7 @@ class TenantAdminControllerSpec
       val pocAdmins = await(r, 5.seconds).sortBy(_.name).reverse.map(_.toPocAdminOut(poc))
       get(
         "/poc-admins",
-        params = Map("sortColumn" -> "name", "sortOrder" -> "desc"),
+        params = Map("sortColumn" -> "firstName", "sortOrder" -> "desc"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
@@ -795,7 +897,7 @@ class TenantAdminControllerSpec
          |}
          |""".stripMargin
 
-    "create new WebInitiateId each time it is called" in {
+    "create WebInitiateId on first time and return conflict on second time" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val pocTable = injector.get[PocRepository]
@@ -828,16 +930,15 @@ class TenantAdminControllerSpec
           headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
           body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
         ) {
-          status shouldBe Ok().status
-          val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds)
+          status shouldBe Conflict().status
           body shouldBe
-            s"""{"webInitiateId":"${updatedPocAdmin.value.webIdentInitiateId.value.toString}"}""".stripMargin
+            s"""{"webInitiateId":"${firstWebIdentInitiatedId.toString}"}""".stripMargin
         }
 
         val secondWebIdentInitiatedId =
           await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value.webIdentInitiateId.value
 
-        firstWebIdentInitiatedId shouldNot be(secondWebIdentInitiatedId)
+        firstWebIdentInitiatedId shouldBe secondWebIdentInitiatedId
       }
     }
   }
@@ -889,7 +990,7 @@ class TenantAdminControllerSpec
           body = updateWebIdentIdJson(pocAdmin1.id, UUID.randomUUID(), UUID.randomUUID()).getBytes
         ) {
           status shouldBe BadRequest().status
-          body shouldBe "Wrong WebIdentInitialId"
+          body shouldBe "NOK(1.0,false,'BadRequest,Wrong WebIdentInitialId)"
         }
 
         post(
@@ -1001,6 +1102,204 @@ class TenantAdminControllerSpec
           status should equal(400)
           assert(body.contains("Invalid UUID string"))
         }
+      }
+    }
+  }
+
+  "Endpoint PUT /poc-admin/:id/active/:isActive" should {
+    "deactivate, and activate user" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        CertifyKeycloak))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        certifyUserId = Some(certifyUserId.value),
+        status = Completed)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id/active/0",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(repository.getPocAdmin(id)).value.active shouldBe false
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe false
+      }
+
+      put(
+        s"/poc-admin/$id/active/1",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(repository.getPocAdmin(id)).value.active shouldBe true
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+      }
+    }
+
+    "fail deactivating employee, when employee not completed" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        CertifyKeycloak))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId.value))
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id/active/0",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        body.contains(s"Poc admin with id '$id' cannot be de/-activated before status is Completed.") shouldBe true
+        await(repository.getPocAdmin(id)).value.active shouldBe true
+        await(
+          keycloakUserService.getUserById(UserId(certifyUserId.value), CertifyKeycloak)).value.isEnabled shouldBe true
+      }
+    }
+
+    "return 404 when poc-admin does not exist" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val tenant = addTenantToDB()
+      val invalidPocAdminId = UUID.randomUUID()
+
+      put(
+        s"/poc-admin/$invalidPocAdminId/active/0",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"Poc admin with id '$invalidPocAdminId' not found"))
+      }
+    }
+
+    "return 400 when isActive is invalid value" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val tenant = addTenantToDB()
+      val invalidPocAdminId = UUID.randomUUID()
+
+      put(
+        s"/poc-admin/$invalidPocAdminId/active/2",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(400)
+        assert(body.contains("Illegal value for ActivateSwitch: 2. Expected 0 or 1"))
+      }
+    }
+
+    "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None, status = Completed)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id/active/1",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
+      }
+    }
+
+    "return 401 when poc of poc-admin doesn't belong to tenant " in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      val tenantTable = i.get[TenantTable]
+      val unrelatedTenant = createTenant("unrelated tenant")
+      await(tenantTable.createTenant(unrelatedTenant), 5.seconds)
+
+      put(
+        s"/poc-admin/$id/active/0",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(unrelatedTenant.tenantName).prepare)
+      ) {
+        status should equal(401)
+        assert(body.contains(s"Poc admin with id '$id' doesn't belong to requesting tenant admin."))
+      }
+    }
+  }
+
+  "Endpoint DELETE /poc-admin/:id/2fa-token" should {
+    "delete 2FA token for poc admin" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val instance = CertifyKeycloak
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        instance,
+        List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId.value))
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      val requiredAction = for {
+        requiredAction <- keycloakUserService.getUserById(certifyUserId, instance).flatMap {
+          case Some(ur) => Task.pure(ur.getRequiredActions)
+          case None     => Task.raiseError(new RuntimeException("User not found"))
+        }
+      } yield requiredAction
+
+      delete(
+        s"/poc-admin/$id/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(requiredAction) should contain theSameElementsAs List("UPDATE_PASSWORD")
+      }
+    }
+
+    "return 404 when poc-admin does not exist" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val tenant = addTenantToDB()
+      val invalidPocAdminId = UUID.randomUUID()
+
+      delete(
+        s"/poc-admin/$invalidPocAdminId/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"Poc admin with id '$invalidPocAdminId' not found"))
+      }
+    }
+
+    "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      delete(
+        s"/poc-admin/$id/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
       }
     }
   }

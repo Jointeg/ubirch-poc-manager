@@ -3,6 +3,7 @@ package com.ubirch.services.util
 import cats.data.Validated.Valid
 import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
+import com.ubirch.models.poc.PocLogo
 import com.ubirch.models.tenant.{ API, APP, Tenant }
 import com.ubirch.services.poc.util.ValidatorConstants._
 import org.joda.time.LocalDate
@@ -43,12 +44,16 @@ object Validator {
   /**
     * parsable to URL
     */
-  def validateURL(header: String, str: String, mandatory: String): AllErrorsOr[Option[URL]] = {
+  def validateLogoURL(header: String, str: String, mandatory: String): AllErrorsOr[Option[URL]] = {
     Try(mandatory.toBoolean) match {
       case Success(boolean) if boolean =>
         Try(new URL(str)) match {
-          case Success(url) => Some(url).validNel
-          case Failure(_)   => urlError(header).invalidNel
+          case Success(url) =>
+            PocLogo.hasAcceptedFileExtension(url) match {
+              case true  => Some(url).validNel
+              case false => logoUrlNoValidFileFormatError(header).invalidNel
+            }
+          case Failure(_) => logoUrlNoValidUrlError(header).invalidNel
         }
       case _ => None.validNel
     }
@@ -61,6 +66,27 @@ object Validator {
     Try(str.toBoolean) match {
       case Success(boolean) => boolean.validNel
       case Failure(_)       => booleanError(header).invalidNel
+    }
+  }
+
+  /**
+    * parsable to Boolean
+    */
+  def validateAdminCertifyApp(header: String, str: String): AllErrorsOr[Boolean] = {
+    Try(str.toBoolean) match {
+      case Success(true)  => true.validNel
+      case Success(false) => certifyAppAdminError(header).invalidNel
+      case Failure(_)     => booleanError(header).invalidNel
+    }
+  }
+
+  /**
+    * parsable to Boolean
+    */
+  def validateClientCertAdmin(header: String, str: String): AllErrorsOr[Boolean] = {
+    validateBoolean(header, str) match {
+      case Valid(false)   => clientCertAdminError(header).invalidNel
+      case validOrInvalid => validOrInvalid
     }
   }
 
@@ -82,9 +108,6 @@ object Validator {
     * exactly 1 number in this regex https://www.regextester.com/97440
     */
   def validatePhone(header: String, str: String): AllErrorsOr[String] = {
-    val numbers = phoneRegex.findAllIn(str)
-    if (numbers.size != 1)
-      phoneValidationError(header).invalidNel
     str match {
       case phoneRegex(_*) => str.validNel
       case _              => phoneValidationError(header).invalidNel
@@ -99,16 +122,6 @@ object Validator {
       emptyStringError(header).invalidNel
     else
       str.validNel
-  }
-
-  /**
-    * string exists in list
-    */
-  def validateListContainsString(header: String, str: String, list: Seq[String]): AllErrorsOr[String] = {
-    if (list.contains(str)) {
-      str.validNel
-    } else
-      listDoesntContainStringError(header, list).invalidNel
   }
 
   /**

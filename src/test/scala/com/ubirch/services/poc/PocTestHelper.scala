@@ -75,7 +75,6 @@ object PocTestHelper extends Awaits {
       clientCertCreated = None,
       clientCertProvided = None,
       logoRequired = false,
-      logoReceived = None,
       logoStored = None,
       goClientProvided = true,
       certifyApiProvided = true,

@@ -12,9 +12,11 @@ import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
 
 import java.io.ByteArrayInputStream
+import java.nio.charset.{ Charset, StandardCharsets }
 import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
 import javax.servlet.{ ReadListener, ServletInputStream }
 import scala.concurrent.Future
+import scala.io.Source
 import scala.util.Try
 
 /**
@@ -120,4 +122,10 @@ abstract class ControllerBase
     val headers = request.headers.toList.map { case (k, v) => k + ":" + v }.mkString(",")
     logger.info("Path[{}]:{} {}", method, path, headers)
   }
+
+  /**
+    * This methods parse a request body with the charset because the body method of HttpServletRequest is using UTF-8 for only application/json.
+    */
+  def readBodyWithCharset(request: HttpServletRequest, charset: Charset): Task[String] =
+    Task(Source.fromInputStream(request.getInputStream, charset.name()).mkString)
 }

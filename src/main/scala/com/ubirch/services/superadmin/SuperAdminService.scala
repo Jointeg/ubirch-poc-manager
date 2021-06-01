@@ -2,23 +2,25 @@ package com.ubirch.services.superadmin
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
+import com.ubirch.controllers.SuperAdminContext
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.models.auth.cert.{ Passphrase, SharedAuthCertificateResponse }
 import com.ubirch.models.auth.{ Base16String, CertIdentifier }
 import com.ubirch.models.tenant._
-import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
 import com.ubirch.services.teamdrive.TeamDriveService
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
 import com.ubirch.services.teamdrive.model.SpaceName
-import com.ubirch.util.TaskHelpers
+import com.ubirch.util.{ PocAuditLogging, TaskHelpers }
 import monix.eval.Task
 
 import java.util.UUID
 import javax.inject.Inject
 
 trait SuperAdminService {
-  def createTenant(createTenantRequest: CreateTenantRequest): Task[Either[CreateTenantErrors, TenantId]]
+  def createTenant(
+    createTenantRequest: CreateTenantRequest,
+    superAdminContext: SuperAdminContext): Task[Either[CreateTenantErrors, TenantId]]
 }
 
 class DefaultSuperAdminService @Inject() (
@@ -29,9 +31,12 @@ class DefaultSuperAdminService @Inject() (
   keycloakHelper: TenantKeycloakHelper)
   extends SuperAdminService
   with LazyLogging
-  with TaskHelpers {
+  with TaskHelpers
+  with PocAuditLogging {
 
-  override def createTenant(createTenantRequest: CreateTenantRequest): Task[Either[CreateTenantErrors, TenantId]] = {
+  override def createTenant(
+    createTenantRequest: CreateTenantRequest,
+    superAdminContext: SuperAdminContext): Task[Either[CreateTenantErrors, TenantId]] = {
     for {
       deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest.tenantName)
       tenant = convertToTenant(createTenantRequest, deviceAndCertifyGroup)
@@ -45,18 +50,18 @@ class DefaultSuperAdminService @Inject() (
             _ <- createShareCertIntoTD(tenant, response)
             cert <- getCert(tenant, response)
             updated = tenant.copy(sharedAuthCert = Some(SharedAuthCert(cert)))
-            tenantId <- persistTenant(updated)
+            tenantId <- persistTenant(updated, superAdminContext)
           } yield {
             tenantId
           }
         } else {
-          persistTenant(tenant)
+          persistTenant(tenant, superAdminContext)
         }
     } yield tenantId
   }
 
   private def createShareCertIntoTD(tenant: Tenant, sharedAuthResult: SharedAuthResult): Task[SharedCertificate] = {
-    val spaceName = SpaceName.forTenant(pocConfig.teamDriveStage, tenant)
+    val spaceName = SpaceName.ofTenant(pocConfig.teamDriveStage, tenant)
     teamDriveService.shareCert(
       spaceName,
       pocConfig.teamDriveAdminEmails,
@@ -69,10 +74,15 @@ class DefaultSuperAdminService @Inject() (
     }
   }
 
-  private def persistTenant(updatedTenant: Tenant): Task[Either[DBError, TenantId]] = {
+  private def persistTenant(
+    updatedTenant: Tenant,
+    superAdminContext: SuperAdminContext): Task[Either[DBError, TenantId]] = {
     tenantRepository
       .createTenant(updatedTenant)
-      .map(Right.apply)
+      .map { tenantId =>
+        logAuditBySuperAdmin(s"created tenant ${updatedTenant.id}", superAdminContext)
+        Right.apply(tenantId)
+      }
       .onErrorHandle(ex => {
         logger.error(s"Could not create Tenant in DB because: ${ex.getMessage}")
         Left(DBError(updatedTenant.id))

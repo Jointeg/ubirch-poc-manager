@@ -8,6 +8,7 @@ import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.PocAdminCreator.throwAndLogError
 import com.ubirch.services.teamdrive.model.{ Read, SpaceName, TeamDriveClient }
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import javax.inject.Inject
@@ -46,7 +47,8 @@ class PocAdminCreatorImpl @Inject() (
   certifyHelper: AdminCertifyHelper,
   quillMonixJdbcContext: QuillMonixJdbcContext)
   extends PocAdminCreator
-  with LazyLogging {
+  with LazyLogging
+  with PocAuditLogging {
 
   import certifyHelper._
 
@@ -90,10 +92,12 @@ class PocAdminCreatorImpl @Inject() (
 
     (for {
       completePocAndStatus <- creationResult
-      _ <- quillMonixJdbcContext.withTransaction {
-        updateStatusOfAdmin(completePocAndStatus.admin, Completed) >>
-          adminStatusRepository.updateStatus(completePocAndStatus.status)
-      }
+      _ <- quillMonixJdbcContext
+        .withTransaction {
+          updateStatusOfAdmin(completePocAndStatus.admin, Completed) >>
+            adminStatusRepository.updateStatus(completePocAndStatus.status.copy(errorMessage = None))
+        }.map(_ =>
+          logAuditEventInfo(s"updated poc admin and status with id ${completePocAndStatus.admin.id} by service"))
     } yield {
       logger.info(s"finished to create poc admin with id ${aAs.admin.id}")
       Right(completePocAndStatus.status)
@@ -101,12 +105,15 @@ class PocAdminCreatorImpl @Inject() (
   }
 
   private def invitePocAdminToTeamDrive(aAs: PocAdminAndStatus, poc: Poc, tenant: Tenant): Task[PocAdminAndStatus] = {
-
     if (poc.clientCertRequired && aAs.status.invitedToTeamDrive.contains(false)) {
-      val spaceName = SpaceName.forPoc(pocConfig.teamDriveStage, tenant, poc)
+      val spaceName = SpaceName.ofPoc(pocConfig.teamDriveStage, tenant, poc)
       teamDriveClient.getSpaceIdByName(spaceName).flatMap {
-        case Some(spaceId) => teamDriveClient.inviteMember(spaceId, aAs.admin.email, Read)
-        case None          => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+        case Some(spaceId) =>
+          teamDriveClient.inviteMember(spaceId, aAs.admin.email, Read)
+            .map { _ =>
+              logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
+            }
+        case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
       }.map(_ => aAs.copy(status = aAs.status.copy(invitedToTeamDrive = Some(true))))
         .onErrorHandle {
           case ex: PocAdminCreationError => throw ex
@@ -139,10 +146,12 @@ class PocAdminCreatorImpl @Inject() (
     ex match {
       case pace: PocAdminCreationError =>
         (for {
-          _ <- quillMonixJdbcContext.withTransaction {
-            adminRepository.updatePocAdmin(pace.pocAdminAndStatus.admin) >>
-              adminStatusRepository.updateStatus(pace.pocAdminAndStatus.status)
-          }
+          _ <- quillMonixJdbcContext
+            .withTransaction {
+              adminRepository.updatePocAdmin(pace.pocAdminAndStatus.admin) >>
+                adminStatusRepository.updateStatus(pace.pocAdminAndStatus.status)
+            }.map(_ =>
+              logAuditEventInfo(s"updated poc admin and status with id ${pace.pocAdminAndStatus.admin.id} by service"))
         } yield {
           logAndGetLeft(
             s"persisted admin and status after creation error; ${pace.pocAdminAndStatus.status}: ${pace.message}")

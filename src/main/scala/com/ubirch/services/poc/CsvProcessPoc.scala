@@ -2,6 +2,7 @@ package com.ubirch.services.poc
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
+import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
 import com.ubirch.models.poc.{ Poc, PocStatus }
@@ -9,13 +10,15 @@ import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.parsers.PocCsvParser
 import com.ubirch.services.poc.util.CsvConstants.columnSeparator
 import com.ubirch.services.poc.util.{ CsvConstants, HeaderCsvException }
+import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.postgresql.util.PSQLException
 
 import javax.inject.{ Inject, Singleton }
 
 trait CsvProcessPoc {
-  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]]
+  def createListOfPoCs(csv: String, tenant: Tenant, tenantContext: TenantAdminContext): Task[Either[String, Unit]]
 }
 
 @Singleton
@@ -25,15 +28,16 @@ class CsvProcessPocImpl @Inject() (
   pocRepository: PocRepository,
   pocStatusRepository: PocStatusRepository)(implicit val scheduler: Scheduler)
   extends CsvProcessPoc
-  with LazyLogging {
+  with LazyLogging
+  with PocAuditLogging {
 
   private val pocCsvParser = new PocCsvParser(pocConfig)
 
-  def createListOfPoCs(csv: String, tenant: Tenant): Task[Either[String, Unit]] =
+  def createListOfPoCs(csv: String, tenant: Tenant, tenantContext: TenantAdminContext): Task[Either[String, Unit]] =
     pocCsvParser.parseList(csv, tenant).flatMap { parsingResult =>
       val r = parsingResult.map {
         case Right(rowResult) =>
-          storePocAndStatus(rowResult.poc, rowResult.csvRow)
+          storePocAndStatus(rowResult.poc, rowResult.csvRow, tenantContext)
         case Left(csvRow) =>
           Task(Some(csvRow))
       }
@@ -46,18 +50,25 @@ class CsvProcessPocImpl @Inject() (
         Left(s"something unexpected went wrong ${ex.getMessage}")
     }
 
-  private def storePocAndStatus(poc: Poc, csvRow: String): Task[Option[String]] = {
+  private def storePocAndStatus(poc: Poc, csvRow: String, tenantContext: TenantAdminContext): Task[Option[String]] = {
     val status = PocStatus.init(poc)
     QuillMonixJdbcContext.withTransaction {
       for {
         _ <- pocRepository.createPoc(poc)
         _ <- pocStatusRepository.createPocStatus(status)
       } yield {
+        logAuditByTenantAdmin(s"created poc and status with ${poc.id} ", tenantContext)
         None
       }
     }.onErrorHandle { e =>
       logger.error(s"fail to create poc and status. poc: $poc, error: ${e.getMessage}")
-      Some(csvRow + columnSeparator + "error on persisting objects; maybe duplicated key error")
+      e match {
+        case _: PSQLException if e.getMessage.contains("duplicate") =>
+          Some(csvRow + columnSeparator + s"error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
+        case _ =>
+          Some(
+            csvRow + columnSeparator + s"error on persisting objects; something unexpected went wrong ${e.getMessage}")
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 package com.ubirch.services.poc.parsers
 
 import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{ catsSyntaxTuple11Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
+import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocRow
@@ -12,6 +12,7 @@ import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.util.{ Failure, Success }
 
@@ -35,7 +36,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         Left(line + columnSeparator +
           s"the number of column ${cols.length} is invalid. should be ${pocHeaderColsOrder.length}.")
     }
-
   }
 
   val headerColOrder: Array[String] = pocHeaderColsOrder
@@ -52,9 +52,8 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
-      validateURL(logoUrl, csvPoc.logoUrl, csvPoc.logoUrl),
+      validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocCertifyApp),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
-      validateMapContainsStringKey(dataSchemaId, csvPoc.dataSchemaId, pocConfig.dataSchemaGroupMap),
       validateJson(jsonConfig, csvPoc.extraConfig),
       pocManager
     ).mapN {
@@ -67,7 +66,6 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         pocCertifyApp,
         logoUrl,
         clientCert,
-        dataSchemaId,
         extraConfig,
         manager) =>
         {
@@ -82,10 +80,9 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             pocCertifyApp,
             logoUrl.map(LogoURL(_)),
             clientCert,
-            dataSchemaId,
             extraConfig.map(JsonConfig(_)),
             manager,
-            status = Pending
+            Pending
           )
         }
 

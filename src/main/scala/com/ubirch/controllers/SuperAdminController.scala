@@ -19,10 +19,11 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import org.scalatra.{ InternalServerError, NotFound, Ok, ScalatraBase }
+import org.scalatra._
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Success }
 
 @Singleton
 class SuperAdminController @Inject() (
@@ -78,26 +79,24 @@ class SuperAdminController @Inject() (
   }
 
   post("/tenants/create", operation(createTenantOperation)) {
-    authenticated(_.hasRole(Token.SUPER_ADMIN)) { _ =>
-      asyncResult("CreateTenant") { _ => _ =>
-        tenantService
-          .createTenant(parsedBody.extract[CreateTenantRequest])
-          .map {
-            case Left(error) =>
-              logger.error(s"Could not create a tenant because: $error")
-              InternalServerError(NOK.serverError("Failure during tenant creation"))
-            case Right(_) => Ok()
-          }
-          .onErrorHandle {
-            case TenantCreationException(errorMsg) =>
-              InternalServerError(NOK.serverError(s"Failure during tenant creation: $errorMsg"))
+    superAdminEndpointWithUserContext("Create tenants") { superAdminContext =>
+      tenantService
+        .createTenant(parsedBody.extract[CreateTenantRequest], superAdminContext)
+        .map {
+          case Left(error) =>
+            logger.error(s"Could not create a tenant because: $error")
+            InternalServerError(NOK.serverError("Failure during tenant creation"))
+          case Right(_) => Ok()
+        }
+        .onErrorHandle {
+          case TenantCreationException(errorMsg) =>
+            InternalServerError(NOK.serverError(s"Failure during tenant creation: $errorMsg"))
 
-            case ex: Throwable =>
-              val errorMsg = s"failure on tenant creation"
-              logger.error(errorMsg, ex)
-              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
-          }
-      }
+          case ex: Throwable =>
+            val errorMsg = s"failure on tenant creation"
+            logger.error(errorMsg, ex)
+            InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+        }
     }
   }
 
@@ -116,4 +115,18 @@ class SuperAdminController @Inject() (
   before() {
     contentType = "application/json"
   }
+
+  private def superAdminEndpointWithUserContext(description: String)(logic: SuperAdminContext => Task[ActionResult]) = {
+    authenticated(_.hasRole(Token.SUPER_ADMIN)) { token: Token =>
+      asyncResult(description) { _ => _ =>
+        token.ownerIdAsUUID match {
+          case Success(userId) =>
+            logic(SuperAdminContext(userId))
+          case Failure(uuid) =>
+            Task(BadRequest(NOK.badRequest(s"Owner ID $uuid in token is not in UUID format")))
+        }
+      }
+    }
+  }
+
 }

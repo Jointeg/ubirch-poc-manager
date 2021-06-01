@@ -1,6 +1,8 @@
 package com.ubirch.util
 
 import com.typesafe.scalalogging.Logger
+import com.ubirch.controllers.{ SuperAdminContext, TenantAdminContext }
+import com.ubirch.models.poc.PocAdmin
 import org.slf4j.{ LoggerFactory, Marker, MarkerFactory }
 
 trait AuditLogging {
@@ -28,7 +30,21 @@ trait AuditLogging {
 
 }
 
-trait PoCServiceLogging extends AuditLogging {
+trait PocAuditLogging extends AuditLogging {
   //This can be overridden in case a different name is needed
   override def auditLoggerName: String = super.auditLoggerName
+
+  def logAuditByTenantAdmin(msg: String, tenantContext: TenantAdminContext): Unit = {
+    logAuditEventInfo(msg + s": tenantAdminId ${tenantContext.userId}; tenantId: ${tenantContext.tenantId}")
+  }
+
+  def logAuditBySuperAdmin(msg: String, superAdminContext: SuperAdminContext): Unit = {
+    logAuditEventInfo(msg + s": superAdminId ${superAdminContext.userId}")
+  }
+
+  def logAuditByPocAdmin(msg: String, pocAdmin: PocAdmin): Unit = {
+    logAuditEventInfo(
+      msg + s": pocAdminId ${pocAdmin.certifyUserId}, pocId ${pocAdmin.pocId}, tenantId: ${pocAdmin.tenantId} ")
+  }
+
 }

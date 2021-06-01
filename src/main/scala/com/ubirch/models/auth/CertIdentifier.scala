@@ -9,11 +9,12 @@ case class CertIdentifier private (value: String)
 object CertIdentifier {
 
   def pocOrgUnitCert(tenantName: TenantName, pocName: String, pocId: UUID): CertIdentifier = {
-    new CertIdentifier(s"${tenantName.value} $pocName ${pocId.toString.take(5)}")
+    new CertIdentifier(s"${pocId.toString.take(20)}")
   }
 
   def pocClientCert(tenantName: TenantName, pocName: String, randomId: UUID): CertIdentifier = {
-    new CertIdentifier(s"${tenantName.value} $pocName ${randomId.toString.take(5)}")
+    new CertIdentifier(s"${randomId.toString.take(20)}")
+//    new CertIdentifier(s"${tenantName.value} $pocName ${randomId.toString.take(5)}")
   }
 
   def tenantOrgCert(tenantName: TenantName): CertIdentifier = new CertIdentifier(tenantName.value)

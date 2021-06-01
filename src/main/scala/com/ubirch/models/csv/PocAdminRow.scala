@@ -18,7 +18,6 @@ case class PocAdminRow(
   pocCertifyApp: String,
   logoUrl: String,
   clientCert: String,
-  dataSchemaId: String,
   managerSurname: String,
   managerName: String,
   managerEmail: String,
@@ -60,8 +59,7 @@ object PocAdminRow {
       columns(22),
       columns(23),
       columns(24),
-      columns(25),
-      columns(26)
+      columns(25)
     )
   }
 }

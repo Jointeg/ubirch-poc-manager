@@ -11,4 +11,6 @@ case class Address(
   county: Option[String] = None,
   federalState: Option[String],
   country: String
-) extends Embedded
+) extends Embedded {
+  override def toString: String = s"$street $houseNumber, $zipcode $city, $country"
+}

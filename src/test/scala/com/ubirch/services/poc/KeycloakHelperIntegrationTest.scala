@@ -45,7 +45,6 @@ class KeycloakHelperIntegrationTest extends E2ETestBase {
           pocAndStatusFinal <- assignEmployeeRole(pocAndStatus6)
         } yield pocAndStatusFinal
         val pocAndStatus = r.runSyncUnsafe()
-        println(pocAndStatus.status)
         val certifyGroup = groups.findGroupById(GroupId(pocAndStatus.poc.certifyGroupId.get)).runSyncUnsafe(2.seconds)
         val adminGroup = groups.findGroupById(GroupId(pocAndStatus.poc.adminGroupId.get)).runSyncUnsafe(2.seconds)
         val employeeGroup = groups.findGroupById(GroupId(pocAndStatus.poc.employeeGroupId.get)).runSyncUnsafe(2.seconds)

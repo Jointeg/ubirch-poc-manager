@@ -1,23 +1,26 @@
 package com.ubirch.controllers
 
-import cats.data.{ NonEmptyChain, Validated }
+import cats.data.Validated
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
-import com.ubirch.controllers.EndpointHelpers.retrieveTenantFromToken
-import com.ubirch.controllers.concerns.{
-  ControllerBase,
-  KeycloakBearerAuthStrategy,
-  KeycloakBearerAuthenticationSupport,
-  Token
+import com.ubirch.controllers.EndpointHelpers.{ retrieveTenantFromToken, ActivateSwitch, IllegalValueForActivateSwitch }
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  UserNotCompleted,
+  UserNotFound
 }
+import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.CriteriaValidator
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
-import com.ubirch.models.{ NOK, Response, ValidationErrorsResponse }
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.poc.PocBatchHandlerImpl
+import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
+import com.ubirch.services.poc.{ CertifyUserService, PocBatchHandlerImpl, Remove2faTokenError }
+import com.ubirch.services.tenantadmin.GetPocAdminStatusErrors._
 import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
 import monix.eval.Task
@@ -29,6 +32,7 @@ import org.json4s.native.Serialization.write
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -45,7 +49,8 @@ class TenantAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
-  tenantAdminService: TenantAdminService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  tenantAdminService: TenantAdminService,
+  certifyUserService: CertifyUserService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
@@ -81,6 +86,12 @@ class TenantAdminController @Inject() (
       .description("Receives a semicolon separated .csv with a list of PoC details to create the PoCs." +
         " In case of not parsable rows, these will be returned in the answer with a specific remark.")
       .tags("PoC", "Tenant-Admin")
+
+  val deviceToken: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[Paginated_OUT[Poc]]("update device creation token for tenant")
+      .summary("updated device creation token")
+      .description("receives a CREATE-THING and GET-INFO token and store it encrypted to the tenant object")
+      .tags("Tenant", "device", "token")
 
   val getPocStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[PocStatus]("retrieve PoC Status via pocId")
@@ -134,44 +145,37 @@ class TenantAdminController @Inject() (
         bodyParam[String]("pocAdminId").description("ID of PocAdmin for which WebInitiateId will be created")
       )
 
+  val switchActiveOnPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Activate or deactivate PoC admin")
+      .summary("Activate or deactivate PoC admin")
+      .description("Activate or deactivate PoC admin")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+      .parameters(
+        queryParam[UUID]("id").description("PoC admin id"),
+        queryParam[Int]("isActive").description("Whether PoC Admin should be active, values: 1 for true, 0 for false.")
+      )
+
+  val delete2FATokenOnPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Delete 2FA token")
+      .summary("Deletes 2FA token for PoC admin")
+      .description("Deletes 2FA token for PoC admin")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+      .parameters(queryParam[UUID]("id").description("PoC admin id"))
+
   post("/pocs/create", operation(createListOfPocs)) {
-    tenantAdminEndpoint("Create poc batch") { tenant =>
-      pocBatchHandler
-        .createListOfPoCs(request.body, tenant)
-        .map {
-          case Right(_)  => Ok()
-          case Left(csv) => Ok(csv)
-        }
-    }
-  }
-
-  post("/deviceToken", operation(createListOfPocs)) {
-    tenantAdminEndpoint("Get all Devices for all PoCs of tenant") { tenant =>
-      tenantAdminService
-        .addDeviceCreationToken(tenant, Serialization.read[AddDeviceCreationTokenRequest](request.body))
-        .map {
-          case Right(_) => Ok()
-          case Left(errorMessage: String) =>
-            logger.error(s"failed to add deviceCreationToken $errorMessage")
-            InternalServerError("failed to device creation token update")
-        }.onErrorHandle { ex =>
-          logger.error(s"failed to add deviceCreationToken", ex)
-          InternalServerError("something went wrong on device creation token update")
-        }
-    }
-  }
-
-  get("/pocStatus/:id", operation(getPocStatus)) {
-    authenticated(_.hasRole(Token.TENANT_ADMIN)) { _ =>
-      asyncResult("Get Poc Status") { _ => _ =>
-        getParamAsUUID("id", id => s"error on retrieving pocStatus with $id:") { uuid =>
-          pocStatusTable
-            .getPocStatus(uuid)
-            .map {
-              case Some(pocStatus) => toJson(pocStatus)
-              case None            => NotFound(NOK.resourceNotFoundError(s"pocStatus with $uuid couldn't be found"))
-            }
-        }
+    tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
+      readBodyWithCharset(request, StandardCharsets.UTF_8).flatMap { body =>
+        pocBatchHandler
+          .createListOfPoCs(body, tenant, tenantContext)
+          .map {
+            case Right(_)  => Ok()
+            case Left(csv) => Ok(csv)
+          }
+      }.onErrorHandle { ex =>
+        InternalServerError(NOK.serverError(
+          s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
       }
     }
   }
@@ -182,17 +186,52 @@ class TenantAdminController @Inject() (
         criteria <- handleValidation(tenant, CriteriaValidator.validSortColumnsForPoc)
         pocs <- pocTable.getAllPocsByCriteria(criteria)
       } yield Paginated_OUT(pocs.total, pocs.records))
-        .map(toJson)
+        .map(Presenter.toJsonResult)
         .onErrorRecoverWith {
           case ValidationError(e) =>
-            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
-              .toJson
+            Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
               .map(BadRequest(_))
         }
         .onErrorHandle { ex =>
           InternalServerError(NOK.serverError(
             s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
         }
+    }
+  }
+
+  post("/deviceToken", operation(deviceToken)) {
+    tenantAdminEndpointWithUserContext("Add CREATE DEVICE and GET INFO token to tenant") {
+      (tenant, tenantAdminContext) =>
+        tenantAdminService
+          .addDeviceCreationToken(
+            tenant,
+            tenantAdminContext,
+            Serialization.read[AddDeviceCreationTokenRequest](request.body)
+          )
+          .map {
+            case Right(_) => Ok()
+            case Left(errorMessage: String) =>
+              logger.error(s"failed to add deviceCreationToken $errorMessage")
+              InternalServerError("failed to device creation token update")
+          }.onErrorHandle { ex =>
+            logger.error(s"failed to add deviceCreationToken", ex)
+            InternalServerError("something went wrong on device creation token update")
+          }
+    }
+  }
+
+  get("/pocStatus/:id", operation(getPocStatus)) {
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { _ =>
+      asyncResult("Get Poc Status") { _ => _ =>
+        getParamAsUUID("id", id => s"error on retrieving pocStatus with $id:") { uuid =>
+          pocStatusTable
+            .getPocStatus(uuid)
+            .map {
+              case Some(pocStatus) => Presenter.toJsonResult(pocStatus)
+              case None            => NotFound(NOK.resourceNotFoundError(s"pocStatus with $uuid couldn't be found"))
+            }
+        }
+      }
     }
   }
 
@@ -208,11 +247,12 @@ class TenantAdminController @Inject() (
 
   post("/webident/initiate-id", operation(createWebInitiateId)) {
     import CreateWebIdentInitiateIdErrors._
-    tenantAdminEndpoint("Create web initiate id") { tenant =>
+    tenantAdminEndpointWithUserContext("Create web initiate id") { (tenant, tenantAdminContext) =>
       tenantAdminService.createWebIdentInitiateId(
         tenant,
+        tenantAdminContext,
         Serialization.read[CreateWebIdentInitiateIdRequest](request.body)).map {
-        case Right(webInitiateId) => Ok(toJson(CreateWebInitiateIdResponse(webInitiateId)))
+        case Right(webInitiateId) => Ok(Presenter.toJsonResult(CreateWebInitiateIdResponse(webInitiateId)))
         case Left(PocAdminNotFound(pocAdminId)) =>
           logger.error(s"Could not find PocAdmin with id: $pocAdminId")
           NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
@@ -221,24 +261,36 @@ class TenantAdminController @Inject() (
           NotFound(NOK.resourceNotFoundError("Could not find PoC admin with provided ID"))
         case Left(WebIdentNotRequired(tenantId, pocAdminId)) =>
           logger.error(s"Tenant with ID $tenantId tried to create WebInitiateId but PoC admin with ID $pocAdminId does not require WebIdent")
-          BadRequest("PoC admin does not require WebIdent")
+          BadRequest(NOK.badRequest("PoC admin does not require WebIdent"))
         case Left(PocAdminRepositoryError(msg)) =>
           logger.error(s"Error has occurred while operating on PocAdmin table: $msg")
           InternalServerError(NOK.serverError("Could not create PoC admin WebInitiateId"))
+        case Left(WebIdentAlreadyInitiated(webIdentInitiateId)) =>
+          Try(write[CreateWebInitiateIdResponse](CreateWebInitiateIdResponse(webIdentInitiateId))) match {
+            case Success(json) => Conflict(json)
+            case Failure(ex) =>
+              val errorMsg = s"Could not parse ${CreateWebInitiateIdResponse.getClass.getSimpleName} to json"
+              logger.error(errorMsg, ex)
+              InternalServerError(NOK.serverError(errorMsg))
+          }
       }
     }
   }
 
   post("/webident/id", operation(updateWebIdentId)) {
-    tenantAdminEndpoint("Update Webident identifier") { tenant =>
+    tenantAdminEndpointWithUserContext("Update Webident identifier") { (tenant, tenantAdminContext) =>
       import UpdateWebIdentIdError._
       tenantAdminService.updateWebIdentId(
         tenant,
+        tenantAdminContext,
         Serialization.read[UpdateWebIdentIdRequest](request.body)).map {
         case Right(_) => Ok("")
         case Left(UnknownPocAdmin(id)) =>
           logger.error(s"Could not find PoC Admin with id $id")
           NotFound(NOK.resourceNotFoundError("Could not find PoC Admin with provided ID"))
+        case Left(WebIdentAlreadyExist(pocAdminId)) =>
+          logger.error(s"WebIdent Id already exist $pocAdminId")
+          BadRequest(NOK.badRequest("WebIdent Id already exists"))
         case Left(PocAdminIsNotAssignedToRequestingTenant(pocAdminTenantId, requestingTenantId)) =>
           logger.error(
             s"Requesting tenant with ID $requestingTenantId asked to change WebIdent for admin with id $pocAdminTenantId that is not under his assignment")
@@ -246,7 +298,7 @@ class TenantAdminController @Inject() (
         case Left(DifferentWebIdentInitialId(requestWebIdentInitialId, tenant, pocAdmin)) =>
           logger.error(
             s"Requesting Tenant (${tenant.id}) tried to update WebIdent ID of PoC admin (${pocAdmin.id}) but sent WebIdentInitialID ($requestWebIdentInitialId) does not match the one that is assigned to PoC Admin")
-          BadRequest("Wrong WebIdentInitialId")
+          BadRequest(NOK.badRequest("Wrong WebIdentInitialId"))
         case Left(NotExistingPocAdminStatus(id)) =>
           logger.error(s"Could not find PoC Admin status for id $id")
           NotFound(NOK.resourceNotFoundError("Could not find Poc Admin Status assigned to given PoC Admin"))
@@ -262,11 +314,10 @@ class TenantAdminController @Inject() (
       } yield Paginated_OUT(
         pocAdmins.total,
         pocAdmins.records.map { case (pa, p) => PocAdmin_OUT.fromPocAdmin(pa, p) }))
-        .map(toJson)
+        .map(Presenter.toJsonResult)
         .onErrorRecoverWith {
           case ValidationError(e) =>
-            ValidationErrorsResponse(e.toNonEmptyList.toList.toMap)
-              .toJson
+            Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
               .map(BadRequest(_))
         }
         .onErrorHandle { ex =>
@@ -279,10 +330,9 @@ class TenantAdminController @Inject() (
   get("/poc-admin/status/:id", operation(getPocAdminStatus)) {
     tenantAdminEndpoint("Get status of PoC Admin") { tenant =>
       getParamAsUUID("id", id => s"Could not convert provided ID ($id) to UUID") { pocAdminId =>
-        import GetPocAdminStatusErrors._
         tenantAdminService.getPocAdminStatus(tenant, pocAdminId).map {
           case Right(getPocAdminStatusResponse) =>
-            toJson(getPocAdminStatusResponse)
+            Presenter.toJsonResult(getPocAdminStatusResponse)
           case Left(PocAdminNotFound(pocAdminId)) =>
             logger.error(s"Could not find PoC Admin with id $pocAdminId")
             NotFound(NOK.resourceNotFoundError("Could not find PoC Admin"))
@@ -294,6 +344,64 @@ class TenantAdminController @Inject() (
             logger.error(s"Could not find PoC Admin Status for PoC Admin with id $pocAdminId")
             NotFound(NOK.resourceNotFoundError("Could not find Poc Admin Status assigned to provided PoC Admin"))
         }
+      }
+    }
+  }
+
+  put("/poc-admin/:id/active/:isActive", operation(switchActiveOnPocAdmin)) {
+    tenantAdminEndpointWithUserContext("Switch active flag for PoC Admin") { (_, tenantContext) =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { adminId =>
+        (for {
+          switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
+          r <- tenantAdminService.switchActiveForPocAdmin(adminId, tenantContext, switch)
+            .map {
+              case Left(e) => e match {
+                  case UserNotFound(id) => NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
+                  case UserNotCompleted =>
+                    Conflict(NOK.conflict(
+                      s"Poc admin with id '$adminId' cannot be de/-activated before status is Completed."))
+                  case MissingCertifyUserId(id) =>
+                    Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                  case NotAllowedError =>
+                    Unauthorized(NOK.authenticationError(
+                      s"Poc admin with id '$adminId' doesn't belong to requesting tenant admin."))
+                }
+              case Right(_) => Ok("")
+            }.onErrorHandle { ex =>
+              logger.error("something unexpected happened during de-/ activating the poc admin", ex)
+              InternalServerError(NOK.serverError("unexpected error"))
+            }
+        } yield r).onErrorRecover {
+          case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
+        }
+      }
+    }
+  }
+
+  delete("/poc-admin/:id/2fa-token", operation(delete2FATokenOnPocAdmin)) {
+    tenantAdminEndpoint("Delete 2FA token for PoC admin") { _ =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+        for {
+          maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+          r <- maybePocAdmin match {
+            case None => Task.pure(NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$pocAdminId' not found'")))
+            case Some(pocAdmin) => certifyUserService.remove2FAToken(pocAdmin)
+                .map {
+                  case Left(e) => e match {
+                      case Remove2faTokenError.KeycloakError(id, error) =>
+                        error match {
+                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                            NotFound(NOK.resourceNotFoundError(error))
+                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                            InternalServerError(NOK.serverError(error))
+                        }
+                      case Remove2faTokenError.MissingCertifyUserId(id) =>
+                        Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
+                    }
+                  case Right(_) => Ok("")
+                }
+          }
+        } yield r
       }
     }
   }
@@ -312,6 +420,26 @@ class TenantAdminController @Inject() (
     }
   }
 
+  private def tenantAdminEndpointWithUserContext(description: String)(logic: (
+    Tenant,
+    TenantAdminContext) => Task[ActionResult]) = {
+
+    authenticated(_.hasRole(Token.TENANT_ADMIN)) { token: Token =>
+      asyncResult(description) { _ => _ =>
+        retrieveTenantFromToken(token)(tenantTable)
+          .map((token.ownerIdAsUUID, _)).flatMap {
+            case (Success(userId), Right(tenant: Tenant)) =>
+              logic(tenant, TenantAdminContext(userId, tenant.id.value.asJava()))
+            case (_, Left(errorMsg: String)) =>
+              logger.error(errorMsg)
+              Task(BadRequest(NOK.authenticationError(errorMsg)))
+            case (Failure(uuid), Right(_)) =>
+              Task(BadRequest(NOK.badRequest(s"Owner ID $uuid in token is not in UUID format")))
+          }
+      }
+    }
+  }
+
   private def getParamAsUUID(paramName: String, errorMsg: String => String)(logic: UUID => Task[ActionResult]) = {
     val id = params(paramName)
     Try(UUID.fromString(id)) match {
@@ -320,16 +448,6 @@ class TenantAdminController @Inject() (
         logger.error(errorMsg(id), ex)
         Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
 
-    }
-  }
-
-  private def toJson[T](t: T): ActionResult = {
-    Try(write[T](t)) match {
-      case Success(json) => Ok(json)
-      case Failure(ex) =>
-        val errorMsg = s"Could not parse ${t.getClass.getSimpleName} to json"
-        logger.error(errorMsg, ex)
-        InternalServerError(NOK.serverError(errorMsg))
     }
   }
 
@@ -343,9 +461,6 @@ class TenantAdminController @Inject() (
 case class AddDeviceCreationTokenRequest(token: String)
 
 object TenantAdminController {
-  case class Paginated_OUT[T](total: Long, records: Seq[T])
-  case class ValidationError(n: NonEmptyChain[(String, String)]) extends RuntimeException(s"Validation errors occurred")
-
   case class PocAdmin_OUT(
     id: UUID,
     firstName: String,
@@ -354,6 +469,7 @@ object TenantAdminController {
     email: String,
     phone: String,
     pocName: String,
+    active: Boolean,
     state: Status,
     webIdentInitiateId: Option[UUID],
     webIdentSuccessId: Option[String]
@@ -369,13 +485,10 @@ object TenantAdminController {
         email = pocAdmin.email,
         phone = pocAdmin.mobilePhone,
         pocName = poc.pocName,
+        active = pocAdmin.active,
         state = pocAdmin.status,
         webIdentInitiateId = pocAdmin.webIdentInitiateId,
         webIdentSuccessId = pocAdmin.webIdentId
       )
-  }
-
-  implicit class ResponseOps[T](r: Response[T]) {
-    def toJson(implicit f: Formats): Task[String] = Task(write[Response[T]](r))
   }
 }

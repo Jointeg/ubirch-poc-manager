@@ -11,6 +11,7 @@ import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
 import org.scalactic.StringNormalizations._
 
@@ -411,6 +412,86 @@ class KeycloakIntegrationTest extends E2ETestBase {
           assert(addedActions.contains(action.toString))
         }
       }
+    }
+
+    "deactivate user" in withInjector { injector =>
+      val keycloakUserService = injector.get[KeycloakUserService]
+      val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
+      val instance = CertifyKeycloak
+
+      val r = for {
+        create <- keycloakUserService.createUser(newKeycloakUser, instance)
+        id <- create match {
+          case Left(err) =>
+            Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
+          case Right(id) => Task.pure(id)
+        }
+        deactivate <- keycloakUserService.deactivate(id.value, instance)
+        user <- deactivate match {
+          case Left(e)  => Task.raiseError(new RuntimeException(e))
+          case Right(_) => keycloakUserService.getUserById(id, instance)
+        }
+      } yield user
+
+      await(r).value.isEnabled shouldBe false
+    }
+
+    "activate user" in withInjector { injector =>
+      val keycloakUserService = injector.get[KeycloakUserService]
+      val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
+      val instance = CertifyKeycloak
+
+      val r = for {
+        create <- keycloakUserService.createUser(newKeycloakUser, instance)
+        id <- create match {
+          case Left(err) =>
+            Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
+          case Right(id) => Task.pure(id)
+        }
+        deactivate <- keycloakUserService.deactivate(id.value, instance)
+        userDeactivated <- deactivate match {
+          case Left(e)  => Task.raiseError(new RuntimeException(e))
+          case Right(_) => keycloakUserService.getUserById(id, instance)
+        }
+        activate <- keycloakUserService.activate(id.value, instance)
+        userActivated <- activate match {
+          case Left(e)  => Task.raiseError(new RuntimeException(e))
+          case Right(_) => keycloakUserService.getUserById(id, instance)
+        }
+      } yield (userDeactivated, userActivated)
+
+      val result = await(r)
+      result._1.value.isEnabled shouldBe false
+      result._2.value.isEnabled shouldBe true
+    }
+
+    "remove 2fa token" in withInjector { injector =>
+      val keycloakUserService = injector.get[KeycloakUserService]
+      val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
+      val instance = CertifyKeycloak
+      val requiredAction = List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
+
+      val r = for {
+        create <- keycloakUserService.createUser(newKeycloakUser, instance, requiredAction)
+        id <- create match {
+          case Left(err) =>
+            Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
+          case Right(id) => Task.pure(id)
+        }
+        userRequiredActionsBefore <- keycloakUserService.getUserById(id, instance).flatMap {
+          case Some(ur) => Task.pure(ur.getRequiredActions)
+          case None     => Task.raiseError(new RuntimeException("User not found"))
+        }
+        _ <- keycloakUserService.remove2faToken(id.value, instance)
+        userRequiredActionsAfter <- keycloakUserService.getUserById(id, instance).flatMap {
+          case Some(ur) => Task.pure(ur.getRequiredActions)
+          case None     => Task.raiseError(new RuntimeException("User not found"))
+        }
+      } yield (userRequiredActionsBefore, userRequiredActionsAfter)
+      val (requiredActionsBefore, requiredActionsAfter) = await(r)
+
+      requiredActionsBefore should contain theSameElementsAs List("UPDATE_PASSWORD", "webauthn-register")
+      requiredActionsAfter should contain theSameElementsAs List("UPDATE_PASSWORD")
     }
   }
 

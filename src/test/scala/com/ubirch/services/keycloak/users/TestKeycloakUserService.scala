@@ -99,4 +99,11 @@ class TestKeycloakUserService() extends KeycloakUserService {
     userId: UserId,
     instance: KeycloakInstance): Task[Either[String, Unit]] =
     Task(Right(()))
+
+  override def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] = Task.pure(Right(()))
+
+  override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] = Task.pure(Right(()))
+
+  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
+    Task.pure(Right(()))
 }

@@ -1,17 +1,10 @@
 package com.ubirch.services.keycloak.users
 
 import cats.data.OptionT
+import cats.syntax.either._
 import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.models.keycloak.user.{
-  CreateBasicKeycloakUser,
-  CreateKeycloakUser,
-  CreateKeycloakUserWithoutUserName,
-  UserAlreadyExists,
-  UserCreationError,
-  UserException,
-  UserRequiredAction
-}
+import com.ubirch.models.keycloak.user._
 import com.ubirch.models.user.{ UserId, UserName }
 import com.ubirch.services.{ DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
@@ -20,11 +13,8 @@ import org.keycloak.representations.idm.UserRepresentation
 import java.util.UUID
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
-import scala.collection.JavaConverters.{
-  iterableAsScalaIterableConverter,
-  mapAsJavaMapConverter,
-  seqAsJavaListConverter
-}
+import scala.collection.JavaConverters.{ mapAsJavaMapConverter, seqAsJavaListConverter }
+import scala.jdk.CollectionConverters._
 
 trait KeycloakUserService {
   /**
@@ -44,7 +34,7 @@ trait KeycloakUserService {
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]]
 
   /**
-    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def addGroupToUserByName(
     userName: String,
@@ -57,7 +47,7 @@ trait KeycloakUserService {
     instance: KeycloakInstance): Task[Either[String, Unit]]
 
   /**
-    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def deleteUserByUserName(username: UserName, instance: KeycloakInstance): Task[Unit]
 
@@ -66,7 +56,7 @@ trait KeycloakUserService {
     instance: KeycloakInstance): Task[Option[UserRepresentation]]
 
   /**
-    * @Important This method doesn't work for Certify Keycloak instance because username is not used for this instance
+    * @note This method doesn't work for Certify Keycloak instance because username is not used for this instance
     */
   def getUserByUserName(
     username: UserName,
@@ -76,6 +66,12 @@ trait KeycloakUserService {
     * Send an email to user with actions set to the user
     */
   def sendRequiredActionsEmail(userId: UserId, instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]]
+
+  def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]]
 }
 
 @Singleton
@@ -226,6 +222,54 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
   }
 
+  override def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    switchActive(
+      id,
+      instance,
+      (id, ex) => s"Could not activate user with id $id. Reason: ${ex.getMessage}",
+      enabled = true)
+
+  override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    switchActive(
+      id,
+      instance,
+      (id, ex) => s"Could not deactivate user with id $id. Reason: ${ex.getMessage}",
+      enabled = false)
+
+  private def switchActive(
+    id: UUID,
+    instance: KeycloakInstance,
+    errorMessage: (UUID, Throwable) => String,
+    enabled: Boolean): Task[Either[String, Unit]] =
+    getUserById(UserId(id), instance)
+      .flatMap {
+        case Some(ur) =>
+          ur.setEnabled(enabled)
+          update(id, ur, instance)
+            .map(_ => ().asRight)
+        case None => Task.pure(s"user with name $id wasn't found".asLeft)
+      }.onErrorHandle { ex =>
+        val message = errorMessage(id, ex)
+        logger.error(message, ex)
+        message.asLeft
+      }
+
+  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
+    getUserById(UserId(id), instance).flatMap {
+      case Some(ur) => update(
+          id, {
+            ur.setRequiredActions(
+              ur.getRequiredActions.asScala.filterNot(_ == UserRequiredAction.WEBAUTHN_REGISTER.toString).asJava)
+            ur
+          },
+          instance).map(_ => ().asRight)
+      case None => Task.pure(Remove2faTokenKeycloakError.UserNotFound(s"user with id $id wasn't found").asLeft)
+    }.onErrorHandle { ex =>
+      val message = s"Could not remove 2FA token: ${ex.getMessage}"
+      logger.error(message, ex)
+      Remove2faTokenKeycloakError.KeycloakError(message).asLeft
+    }
+
   private def processCreationResponse(response: Response, userName: String): Either[UserException, UserId] = {
 
     if (response.getStatusInfo.equals(Status.CREATED)) {
@@ -243,4 +287,22 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     val path = response.getLocation.getPath
     UserId(UUID.fromString(path.substring(path.lastIndexOf('/') + 1)))
   }
+
+  private def update(id: UUID, userRepresentation: UserRepresentation, instance: KeycloakInstance): Task[Unit] = {
+    Task(
+      keycloakConnector
+        .getKeycloak(instance)
+        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .users()
+        .get(id.toString)
+        .update(userRepresentation)
+    )
+  }
+}
+
+sealed trait Remove2faTokenKeycloakError
+
+object Remove2faTokenKeycloakError {
+  case class UserNotFound(error: String) extends Remove2faTokenKeycloakError
+  case class KeycloakError(error: String) extends Remove2faTokenKeycloakError
 }

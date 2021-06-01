@@ -1,16 +1,24 @@
 package com.ubirch
 
-import com.ubirch.db.tables.{ PocEmployeeRepositoryMock, PocEmployeeStatusRepositoryMock, PocRepositoryMock }
+import com.ubirch.controllers.TenantAdminContext
+import com.ubirch.db.tables.{
+  PocEmployeeRepositoryMock,
+  PocEmployeeStatusRepositoryMock,
+  PocRepositoryMock,
+  TenantRepository
+}
 import com.ubirch.models.auth.{ Base64String, EncryptedData }
 import com.ubirch.models.poc._
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.models.tenant._
+import com.ubirch.services.poc.PocTestHelper.await
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.execution.Scheduler.Implicits.global
 import org.joda.time.LocalDate
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
+import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 object ModelCreationHelper {
@@ -25,12 +33,12 @@ object ModelCreationHelper {
   val dataSchemaGroupId = "data-schema-id"
   val pocTypeValue = "ub_vac_app"
 
-  private val tenantName = "tenantName"
+  val globalTenantName = "tenantName"
   private val tenantNameObj = TenantName("tenantName")
-  private val tenantId = TenantId(TenantName(tenantName))
+  private val tenantId = TenantId(TenantName(globalTenantName))
 
   def createTenant(
-    name: String = tenantName,
+    name: String = globalTenantName,
     sharedAuthCert: Option[SharedAuthCert] = Some(SharedAuthCert(cert))): Tenant = {
 
     Tenant(
@@ -38,8 +46,8 @@ object ModelCreationHelper {
       TenantName(name),
       API,
       Some(deviceCreationToken),
-      TenantCertifyGroupId(TENANT_GROUP_PREFIX + tenantName),
-      TenantDeviceGroupId(TENANT_GROUP_PREFIX + tenantName),
+      TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
+      TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       OrgId(TenantId(TenantName(name)).value),
       sharedAuthCertRequired = true
     ).copy(sharedAuthCert = sharedAuthCert)
@@ -51,23 +59,23 @@ object ModelCreationHelper {
     externalId: String = UUID.randomUUID().toString,
     name: String = "pocName",
     status: Status = Pending,
-    clientCertRequired: Boolean = false
+    clientCertRequired: Boolean = false,
+    city: String = "Paris"
   ): Poc =
     Poc(
-      id,
-      TenantId(tenantName),
-      externalId,
-      pocTypeValue,
-      name,
-      Address("", "", None, 67832, "", None, None, "France"),
-      "pocPhone",
+      id = id,
+      tenantId = TenantId(tenantName),
+      externalId = externalId,
+      pocType = pocTypeValue,
+      pocName = name,
+      address = Address("An der Heide", "101", None, 67832, city, None, None, "France"),
+      phone = "pocPhone",
       certifyApp = true,
-      None,
-      clientCertRequired,
-      dataSchemaGroupId,
-      Some(JsonConfig(parse("""{"test":"hello"}"""))),
-      PocManager("surname", "", "", "08023-782137"),
-      status
+      logoUrl = None,
+      clientCertRequired = clientCertRequired,
+      extraConfig = Some(JsonConfig(parse("""{"test":"hello"}"""))),
+      manager = PocManager("surname", "", "", "08023-782137"),
+      status = status
     )
 
   def createPocAdmin(
@@ -76,29 +84,31 @@ object ModelCreationHelper {
     tenantId: TenantId,
     name: String = getRandomString,
     surname: String = getRandomString,
-    email: String = getRandomString,
+    email: String = getRandomString + "@test.de",
     mobilePhone: String = getRandomString,
     webIdentRequired: Boolean = true,
     webIdentInitiateId: Option[UUID] = None,
     webIdentId: Option[String] = None,
     certifyUserId: Option[UUID] = None,
     dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
-    status: Status = Pending
+    status: Status = Pending,
+    active: Boolean = true
   ): PocAdmin = {
     PocAdmin(
-      pocAdminId,
-      pocId,
-      tenantId,
-      name,
-      surname,
-      email,
-      mobilePhone,
-      webIdentRequired,
-      webIdentInitiateId,
-      webIdentId,
-      certifyUserId,
-      dateOfBirth,
-      status
+      id = pocAdminId,
+      pocId = pocId,
+      tenantId = tenantId,
+      name = name,
+      surname = surname,
+      email = email,
+      mobilePhone = mobilePhone,
+      webIdentRequired = webIdentRequired,
+      webIdentInitiateId = webIdentInitiateId,
+      webIdentId = webIdentId,
+      certifyUserId = certifyUserId,
+      dateOfBirth = dateOfBirth,
+      status = status,
+      active = active
     )
   }
 
@@ -123,7 +133,6 @@ object ModelCreationHelper {
       clientCertProvided = None,
       orgUnitCertCreated = None,
       logoRequired = false,
-      logoReceived = None,
       logoStored = None
     )
 
@@ -158,14 +167,22 @@ object ModelCreationHelper {
       createPocEmployeeStatus(employeeId))
   }
 
-  def createPocEmployee(employeeId: UUID = UUID.randomUUID(), pocId: UUID = UUID.randomUUID()): PocEmployee = {
+  def createPocEmployee(
+    employeeId: UUID = UUID.randomUUID(),
+    pocId: UUID = UUID.randomUUID(),
+    tenantId: TenantId = tenantId,
+    name: String = "Hans",
+    surname: String = "Welsich",
+    status: Status = Pending,
+    email: String = getRandomString + "@test.de"): PocEmployee = {
     PocEmployee(
       employeeId,
       pocId,
       tenantId,
-      "Hans",
-      "Welsich",
-      s"${employeeId.toString}@test.de"
+      name,
+      surname,
+      email,
+      status = status
     )
   }
 
@@ -198,4 +215,14 @@ object ModelCreationHelper {
     } yield ()).runSyncUnsafe()
   }
 
+  def getTenantAdminContext(tenant: Tenant): TenantAdminContext = {
+    TenantAdminContext(UUID.randomUUID(), tenant.id.value.asJava())
+  }
+
+  def addTenantToDB(injector: InjectorHelper, name: String = "tenant"): Tenant = {
+    val tenantTable = injector.get[TenantRepository]
+    val tenant = createTenant(name = name)
+    await(tenantTable.createTenant(tenant), 5.seconds)
+    tenant
+  }
 }
