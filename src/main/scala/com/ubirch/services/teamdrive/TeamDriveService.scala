@@ -70,11 +70,11 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient)
             case Right(spaceIdOpt) =>
               spaceIdOpt.getOrElse(throw TeamDriveError(s"$spaceName was not found."))
             case Left(exception) =>
-              logger.error(s"unexpected error occurred when retrieving space: $spaceName. ${exception.getMessage}")
+              logger.error(s"unexpected error occurred when retrieving space: $spaceName.", exception)
               throw exception
           }
         case ex =>
-          logger.error(s"unexpected error occurred when creating space: $spaceName. ${ex.getMessage}")
+          logger.error(s"unexpected error occurred when creating space: $spaceName.", ex)
           Task.raiseError(ex)
       }
   }
