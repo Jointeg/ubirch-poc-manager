@@ -31,11 +31,11 @@ object PoCCertCreator extends LazyLogging {
             pocAndStatus.updateStatus(_.copy(clientCertCreated = Some(true))),
             sharedAuthResponse))
       }
-      (pocAndStatus, sharedAuthResponse) = statusWithResponse
+      (newPocAndStatus, sharedAuthResponse) = statusWithResponse
       _ <-
         Task(
           PKCS12Operations.recreateFromBase16String(sharedAuthResponse.pkcs12, sharedAuthResponse.passphrase)).flatMap {
-          case Left(_)         => pocCreationError("Certificate creation error", pocAndStatus)
+          case Left(_)         => pocCreationError("Certificate creation error", newPocAndStatus)
           case Right(keystore) => Task(keystore)
         }
       name = SpaceName.ofPoc(stage, tenant, poc)
@@ -44,9 +44,13 @@ object PoCCertCreator extends LazyLogging {
         ubirchAdmins,
         sharedAuthResponse.passphrase,
         sharedAuthResponse.pkcs12
-      )
+      ).onErrorHandle {
+        ex =>
+          logger.error(s"Could not upload shared auth certificate in TeamDrive id: $id, pocIc: ${poc.id.toString}", ex)
+          pocCreationError(s"Could not upload shared auth certificate in TeamDrive with id: $id", newPocAndStatus)
+      }
     } yield {
-      pocAndStatus
+      newPocAndStatus
         .updatePoc(_.copy(sharedAuthCertId = Some(sharedAuthResponse.certUuid)))
         .updateStatus(_.copy(clientCertProvided = Some(true)))
     }
