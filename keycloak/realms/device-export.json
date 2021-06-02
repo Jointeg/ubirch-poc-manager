@@ -76,14 +76,6 @@
           "clientRole": false,
           "containerId": "ubirch-default-realm",
           "attributes": {}
-        },
-        {
-          "id": "b84a7b1d-5e23-4068-babf-f1cc3d9e202f",
-          "name": "admin",
-          "composite": false,
-          "clientRole": false,
-          "containerId": "ubirch-default-realm",
-          "attributes": {}
         }
       ],
       "client": {

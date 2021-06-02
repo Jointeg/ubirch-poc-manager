@@ -13,6 +13,8 @@ services:
     image: quay.io/keycloak/keycloak:11.0.3
     container_name: keycloak-certify
     environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
       JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled -Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/certify-export.json -Dkeycloak.migration.strategy=IGNORE_EXISTING'
     ports:
       - 8080:8080
@@ -25,6 +27,8 @@ services:
     image: quay.io/keycloak/keycloak:11.0.3
     container_name: keycloak-device
     environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
       JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled -Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/device-export.json -Dkeycloak.migration.strategy=IGNORE_EXISTING'
     ports:
       - 8081:8080

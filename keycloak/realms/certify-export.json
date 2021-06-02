@@ -62,14 +62,6 @@
           "attributes": {}
         },
         {
-          "id": "b84a7b1d-5e23-4068-babf-f1cc3d9e202f",
-          "name": "admin",
-          "composite": false,
-          "clientRole": false,
-          "containerId": "poc-certify",
-          "attributes": {}
-        },
-        {
           "id": "608ee4a3-03ec-484c-8c03-97b7b108d9dc",
           "name": "super-admin",
           "composite": false,
@@ -2320,14 +2312,6 @@
           "attributes": {}
         },
         {
-          "id": "b84a7b1d-5e23-4069-babf-f1cc3d9e202f",
-          "name": "admin",
-          "composite": false,
-          "clientRole": false,
-          "containerId": "default-certify",
-          "attributes": {}
-        },
-        {
           "id": "608ee4a3-03ec-4842-8c03-97b7b108d9dc",
           "name": "super-admin",
           "composite": false,
@@ -4572,14 +4556,6 @@
           "id": "09e03548-540e-4fae-a129-6243546cdce1",
           "name": "uma_authorization",
           "description": "${role_uma_authorization}",
-          "composite": false,
-          "clientRole": false,
-          "containerId": "bmg-certify",
-          "attributes": {}
-        },
-        {
-          "id": "b84a7b19-5e23-4068-babf-f1cc3d9e202f",
-          "name": "admin",
           "composite": false,
           "clientRole": false,
           "containerId": "bmg-certify",
