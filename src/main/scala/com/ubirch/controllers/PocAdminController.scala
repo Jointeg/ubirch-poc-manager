@@ -208,12 +208,15 @@ class PocAdminController @Inject() (
   }
 
   delete("/poc-employee/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
-    pocAdminEndpoint("Delete 2FA token for PoC admin") { _ =>
+    pocAdminEndpoint("Delete 2FA token for PoC admin") { pocAdmin =>
       getParamAsUUID("id", id => s"Invalid poc employee id: '$id'") { id =>
         for {
           maybePocEmployee <- pocEmployeeRepository.getPocEmployee(id)
+          notFoundMessage = s"Poc employee with id '$id' not found'"
           r <- maybePocEmployee match {
-            case None => Task.pure(NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' not found'")))
+            case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+            case Some(certifyUser) if certifyUser.pocId != pocAdmin.pocId =>
+              Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
             case Some(certifyUser) => certifyUserService.remove2FAToken(certifyUser)
                 .flatMap {
                   case Left(e) => e match {
@@ -261,7 +264,6 @@ class PocAdminController @Inject() (
       case Failure(ex) =>
         logger.error(errorMsg(id), ex)
         Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
-
     }
   }
 }

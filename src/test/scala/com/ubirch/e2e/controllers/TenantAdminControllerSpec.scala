@@ -1,7 +1,7 @@
 package com.ubirch.e2e.controllers
 
 import cats.implicits._
-import com.ubirch.FakeTokenCreator
+import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.data.KeycloakTestData
@@ -1295,6 +1295,25 @@ class TenantAdminControllerSpec
       }
     }
 
+    "return 404 when poc-admin is not owned by tenant-admin" in withInjector { implicit i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      val otherTenant = addTenantToDB("otherTenant")
+
+      delete(
+        s"/poc-admin/$id/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(otherTenant.tenantName).prepare)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"Poc admin with id '$id' not found"))
+      }
+    }
+
     "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
@@ -1329,12 +1348,16 @@ class TenantAdminControllerSpec
   }
 
   private def addTenantToDB(): Tenant = {
-    withInjector { injector =>
-      val tenantTable = injector.get[TenantTable]
-      val tenant = createTenant()
-      await(tenantTable.createTenant(tenant), 5.seconds)
-      tenant
+    withInjector { implicit injector =>
+      addTenantToDB(globalTenantName)
     }
+  }
+
+  private def addTenantToDB(name: String = globalTenantName)(implicit injector: InjectorHelper): Tenant = {
+    val tenantTable = injector.get[TenantTable]
+    val tenant = createTenant(name = name)
+    await(tenantTable.createTenant(tenant), 5.seconds)
+    tenant
   }
 
   private def addPocToDb(tenant: Tenant, pocTable: PocTable): Poc = {

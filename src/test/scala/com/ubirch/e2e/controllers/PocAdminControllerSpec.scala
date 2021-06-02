@@ -3,9 +3,8 @@ package com.ubirch.e2e.controllers
 import cats.syntax.either._
 import cats.syntax.option._
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant }
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant, globalTenantName }
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.createPocEmployee
 import com.ubirch.controllers.PocAdminController
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminTable, PocEmployeeTable, PocTable, TenantTable }
@@ -371,6 +370,23 @@ class PocAdminControllerSpec
         }
       }
 
+      "return 404 when poc-employee is not owned by poc-admin" in withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val repository = injector.get[PocEmployeeTable]
+        val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+
+        val (_, poc, _) = createTenantWithPocAndPocAdmin(injector, "secondTenant")
+        val id = await(repository.createPocEmployee(createPocEmployee(pocId = poc.id)))
+
+        delete(
+          s"/poc-employee/$id/2fa-token",
+          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+        ) {
+          status should equal(404)
+          assert(body.contains(s"Poc employee with id '$id' not found"))
+        }
+      }
+
       "return 409 when poc-employee does not have certifyUserId" in withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
@@ -387,8 +403,10 @@ class PocAdminControllerSpec
       }
     }
 
-    def createTenantWithPocAndPocAdmin(injector: InjectorHelper): (Tenant, Poc, PocAdmin) = {
-      val tenant = addTenantToDB(injector)
+    def createTenantWithPocAndPocAdmin(
+      injector: InjectorHelper,
+      tenantName: String = globalTenantName): (Tenant, Poc, PocAdmin) = {
+      val tenant = addTenantToDB(injector, tenantName)
       val poc = addPocToDb(tenant, injector)
       val pocAdmin = addPocAdminToDB(poc, tenant, injector)
       (tenant, poc, pocAdmin)

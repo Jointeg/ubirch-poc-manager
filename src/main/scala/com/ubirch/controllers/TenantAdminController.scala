@@ -381,12 +381,15 @@ class TenantAdminController @Inject() (
   }
 
   delete("/poc-admin/:id/2fa-token", operation(delete2FATokenOnPocAdmin)) {
-    tenantAdminEndpoint("Delete 2FA token for PoC admin") { _ =>
+    tenantAdminEndpoint("Delete 2FA token for PoC admin") { tenant =>
       getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
         for {
           maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+          notFoundMessage = s"Poc admin with id '$pocAdminId' not found'"
           r <- maybePocAdmin match {
-            case None => Task.pure(NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$pocAdminId' not found'")))
+            case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+            case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
+              Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
             case Some(pocAdmin) => certifyUserService.remove2FAToken(pocAdmin)
                 .flatMap {
                   case Left(e) => e match {
