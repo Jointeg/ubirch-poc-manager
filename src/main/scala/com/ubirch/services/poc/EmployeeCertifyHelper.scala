@@ -38,7 +38,11 @@ class EmployeeCertifyHelperImpl @Inject() (users: KeycloakUserService) extends E
 
     if (pocEmployeeAndStatus.status.certifyUserCreated) Task(pocEmployeeAndStatus)
     else {
-      users.createUserWithoutUserName(getKeycloakUser(pocEmployeeAndStatus), CertifyKeycloak, requiredActions).map {
+      users.createUserWithoutUserName(
+        CertifyKeycloak.defaultRealm,
+        getKeycloakUser(pocEmployeeAndStatus),
+        CertifyKeycloak,
+        requiredActions).map {
         case Right(userId) =>
           pocEmployeeAndStatus.copy(
             employee = pocEmployeeAndStatus.employee.copy(certifyUserId = Some(userId.value)),
@@ -57,7 +61,10 @@ class EmployeeCertifyHelperImpl @Inject() (users: KeycloakUserService) extends E
     else if (eas.employee.certifyUserId.isEmpty)
       throwError(eas, s"certifyUser is missing, when it should be added to poc employee ${eas.employee.id}")
     else {
-      users.sendRequiredActionsEmail(UserId(eas.employee.certifyUserId.get), CertifyKeycloak).map {
+      users.sendRequiredActionsEmail(
+        CertifyKeycloak.defaultRealm,
+        UserId(eas.employee.certifyUserId.get),
+        CertifyKeycloak).map {
         case Right(_)       => eas.copy(status = eas.status.copy(keycloakEmailSent = true))
         case Left(errorMsg) => PocEmployeeCreator.throwError(eas, errorMsg)
       }
@@ -72,7 +79,7 @@ class EmployeeCertifyHelperImpl @Inject() (users: KeycloakUserService) extends E
     val employeeGroupId =
       poc.employeeGroupId.getOrElse(throwError(eAs, s"employeeGroupId is missing in poc ${poc.id}"))
 
-    users.addGroupToUserById(UserId(userId), employeeGroupId, CertifyKeycloak).map {
+    users.addGroupToUserById(CertifyKeycloak.defaultRealm, UserId(userId), employeeGroupId, CertifyKeycloak).map {
       case Right(_)       => eAs.copy(status = eAs.status.copy(employeeGroupAssigned = true))
       case Left(errorMsg) => throwError(eAs, errorMsg)
     }

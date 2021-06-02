@@ -85,8 +85,10 @@ class PocAdminServiceImpl @Inject() (
             val userId = employee.certifyUserId.get
 
             (active match {
-              case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
-              case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
+              case EndpointHelpers.Activate =>
+                keycloakUserService.activate(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
+              case EndpointHelpers.Deactivate =>
+                keycloakUserService.deactivate(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
             }) >> employeeRepository.updatePocEmployee(employee.copy(active = ActivateSwitch.toBoolean(active)))
               .map { _ =>
                 logAuditByPocAdmin(s"$active poc employee ${employee.id} of poc ${employee.pocId}.", pocAdmin)

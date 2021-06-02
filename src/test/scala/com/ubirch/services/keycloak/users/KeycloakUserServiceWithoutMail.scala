@@ -1,6 +1,7 @@
 package com.ubirch.services.keycloak.users
 import com.google.inject.Inject
 import com.ubirch.models.user.UserId
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
@@ -10,8 +11,11 @@ import scala.jdk.CollectionConverters.seqAsJavaListConverter
 // Tests do not support sending emails
 class KeycloakUserServiceWithoutMail @Inject() (keycloakConnector: KeycloakConnector)
   extends DefaultKeycloakUserService(keycloakConnector) {
-  override def sendRequiredActionsEmail(userId: UserId, instance: KeycloakInstance): Task[Either[String, Unit]] = {
-    getUserById(userId, instance).map {
+  override def sendRequiredActionsEmail(
+    realm: KeycloakRealm,
+    userId: UserId,
+    instance: KeycloakInstance): Task[Either[String, Unit]] = {
+    getUserById(realm, userId, instance).map {
       case Some(userRepresentation: UserRepresentation) =>
         val actions = userRepresentation.getRequiredActions
         if (!actions.isEmpty) {

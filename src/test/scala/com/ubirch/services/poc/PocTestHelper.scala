@@ -51,6 +51,7 @@ object PocTestHelper extends Awaits {
 
   def createNeededDeviceUser(users: KeycloakUserService, poc: Poc): Either[UserException, UserId] = {
     users.createUser(
+      DeviceKeycloak.defaultRealm,
       CreateBasicKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
       DeviceKeycloak).runSyncUnsafe()
   }

@@ -36,7 +36,11 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
   override def createCertifyUserWithRequiredActions(pocAdminAndStatus: PocAdminAndStatus): Task[PocAdminAndStatus] = {
     if (pocAdminAndStatus.status.certifyUserCreated) Task(pocAdminAndStatus)
     else {
-      users.createUserWithoutUserName(getKeycloakUser(pocAdminAndStatus), CertifyKeycloak, requiredActions).map {
+      users.createUserWithoutUserName(
+        CertifyKeycloak.defaultRealm,
+        getKeycloakUser(pocAdminAndStatus),
+        CertifyKeycloak,
+        requiredActions).map {
         case Right(userId) =>
           pocAdminAndStatus.copy(
             admin = pocAdminAndStatus.admin.copy(certifyUserId = Some(userId.value)),
@@ -63,7 +67,10 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
     else if (aAs.admin.certifyUserId.isEmpty)
       throwError(aAs, s"certifyUserId is missing for ${aAs.admin}, when it should be added to poc admin group")
     else {
-      users.sendRequiredActionsEmail(UserId(aAs.admin.certifyUserId.get), CertifyKeycloak).map {
+      users.sendRequiredActionsEmail(
+        CertifyKeycloak.defaultRealm,
+        UserId(aAs.admin.certifyUserId.get),
+        CertifyKeycloak).map {
         case Right(_)       => aAs.copy(status = aAs.status.copy(keycloakEmailSent = true))
         case Left(errorMsg) => PocAdminCreator.throwError(aAs, errorMsg)
       }
@@ -79,7 +86,7 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
     val adminGroupId =
       poc.adminGroupId.getOrElse(throwError(pocAdminAndStatus, s"adminGroupId is missing in poc ${poc.id}"))
 
-    users.addGroupToUserById(UserId(userId), adminGroupId, CertifyKeycloak).map {
+    users.addGroupToUserById(CertifyKeycloak.defaultRealm, UserId(userId), adminGroupId, CertifyKeycloak).map {
       case Right(_) =>
         pocAdminAndStatus.copy(status = pocAdminAndStatus.status.copy(pocAdminGroupAssigned = true))
       case Left(errorMsg) =>
