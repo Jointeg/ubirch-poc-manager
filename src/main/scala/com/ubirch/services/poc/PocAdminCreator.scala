@@ -118,17 +118,17 @@ class PocAdminCreatorImpl @Inject() (
                 logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
               }
           case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
-        }.map(_ => aAs.copy(status = aAs.status.copy(invitedToTeamDrive = Some(true))))
-          .onErrorHandle {
-            case ex: PocAdminCreationError => throw ex
-            case ex: Exception =>
-              throwAndLogError(
-                aAs,
-                s"failed to invite poc admin ${aAs.admin.id} to the cert space in TeamDrive. $spaceName. $ex",
-                ex,
-                logger)
-          }
-      }
+        }
+      }.map(_ => aAs.copy(status = aAs.status.copy(invitedToTeamDrive = Some(true))))
+        .onErrorHandle {
+          case ex: PocAdminCreationError => throw ex
+          case ex: Exception =>
+            throwAndLogError(
+              aAs,
+              s"failed to invite poc admin ${aAs.admin.id} to the cert space in TeamDrive. $spaceName. $ex",
+              ex,
+              logger)
+        }
     } else Task(aAs)
   }
 
@@ -144,17 +144,17 @@ class PocAdminCreatorImpl @Inject() (
                   logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
                 }
             case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
-          }.map(_ => aAs.copy(status = aAs.status.copy(invitedToStaticTeamDrive = Some(true))))
-            .onErrorHandle {
-              case ex: PocAdminCreationError => throw ex
-              case ex: Exception =>
-                throwAndLogError(
-                  aAs,
-                  s"failed to invite poc admin ${aAs.admin.id} to the static space in TeamDrive. $spaceName. $ex",
-                  ex,
-                  logger)
-            }
-        }
+          }
+        }.map(_ => aAs.copy(status = aAs.status.copy(invitedToStaticTeamDrive = Some(true))))
+          .onErrorHandle {
+            case ex: PocAdminCreationError => throw ex
+            case ex: Exception =>
+              throwAndLogError(
+                aAs,
+                s"failed to invite poc admin ${aAs.admin.id} to the static space in TeamDrive. $spaceName. $ex",
+                ex,
+                logger)
+          }
       } else Task(aAs)
     }
   }
