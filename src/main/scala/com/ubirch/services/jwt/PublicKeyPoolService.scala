@@ -1,8 +1,7 @@
 package com.ubirch.services.jwt
 
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.KeycloakPaths
+import com.ubirch.services.keycloak.{ KeycloakCertifyConfig, KeycloakDeviceConfig }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 
@@ -19,22 +18,26 @@ trait PublicKeyPoolService {
 }
 
 @Singleton
-class DefaultPublicKeyPoolService @Inject() (config: Config, publicKeyDiscoveryService: PublicKeyDiscoveryService)
+class DefaultPublicKeyPoolService @Inject() (
+  keycloakCertifyConfig: KeycloakCertifyConfig,
+  keycloakDeviceConfig: KeycloakDeviceConfig,
+  publicKeyDiscoveryService: PublicKeyDiscoveryService)
   extends PublicKeyPoolService
   with LazyLogging {
 
-  private def acceptedKids(keycloakInstance: KeycloakInstance): List[String] =
+  protected def acceptedKids(keycloakInstance: KeycloakInstance): List[String] =
     keycloakInstance match {
-      case CertifyKeycloak => List(config.getString(KeycloakPaths.CertifyKeycloak.KID))
-      case DeviceKeycloak  => List(config.getString(KeycloakPaths.DeviceKeycloak.KID))
+      case CertifyKeycloak => List(keycloakCertifyConfig.acceptedKid)
+      case DeviceKeycloak  => List(keycloakDeviceConfig.acceptedKid)
     }
 
   final private val cache = new TrieMap[String, Key]()
 
   override def getKey(kid: String): Option[Key] = cache.get(kid)
 
-  override def getDefaultKey(keycloakInstance: KeycloakInstance): Option[Key] =
-    acceptedKids(keycloakInstance).headOption.flatMap(x => getKey(x))
+  override def getDefaultKey(keycloakInstance: KeycloakInstance): Option[Key] = {
+    acceptedKids(keycloakInstance).find(kid => getKey(kid).isDefined).flatMap(x => getKey(x))
+  }
 
   def getKeyFromDiscoveryService(keycloakInstance: KeycloakInstance, kid: String): Task[Option[Key]] =
     publicKeyDiscoveryService.getKey(keycloakInstance, kid)

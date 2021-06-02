@@ -67,9 +67,11 @@ class PocAdminCreatorImpl @Inject() (
   private def createPocAdmin(admin: PocAdmin): Task[Either[String, PocAdminStatus]] = {
     retrieveStatusAndTenant(admin).flatMap {
       case (Some(status: PocAdminStatus), Some(poc: Poc), Some(tenant: Tenant)) =>
-        // Skip if the web ident has not been successful
-        if (status.webIdentSuccess.contains(false)) {
-          logger.info(s"cannot process admin ${admin.id} as webident is not finished yet")
+        if (poc.status != Completed) {
+          logger.debug(s"cannot start processing admin ${admin.id} as poc is not completed yet")
+          Task(Right(status))
+        } else if (status.webIdentSuccess.contains(false)) {
+          logger.debug(s"cannot start processing admin ${admin.id} as webident is not finished yet")
           Task(Right(status))
         } else {
           updateStatusOfAdmin(admin, Processing)

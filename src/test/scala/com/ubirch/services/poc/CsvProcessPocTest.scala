@@ -4,7 +4,6 @@ import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.UnitTestBase
 import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{ PocRepository, PocStatusRepository }
-import com.ubirch.services.poc.util.CsvConstants.pocHeaderLine
 import com.ubirch.testutils.CentralCsvProvider.{
   invalidHeaderPocOnlyCsv,
   validHeaderButBadRowsPocOnlyCsv,

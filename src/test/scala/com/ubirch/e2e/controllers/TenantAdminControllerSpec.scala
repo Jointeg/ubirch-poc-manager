@@ -4,15 +4,13 @@ import cats.implicits._
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.data.KeycloakTestData
 import com.ubirch.controllers.TenantAdminController.PocAdmin_OUT
+import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
-import com.ubirch.models.ValidationErrorsResponse
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
-import com.ubirch.models.user.UserId
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
 import com.ubirch.services.auth.AESEncryption
@@ -21,7 +19,6 @@ import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.columnSeparator
-import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, pocHeaderLine }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
@@ -40,7 +37,6 @@ import java.nio.charset.StandardCharsets
 import java.time.{ Clock, Instant }
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
-import scala.jdk.CollectionConverters._
 
 class TenantAdminControllerSpec
   extends E2ETestBase
