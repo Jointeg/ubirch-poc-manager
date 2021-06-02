@@ -121,7 +121,11 @@ class PocAdminCreatorImpl @Inject() (
         .onErrorHandle {
           case ex: PocAdminCreationError => throw ex
           case ex: Exception =>
-            throwAndLogError(aAs, s"failed to invite poc admin ${aAs.admin.id} to TeamDrive. $ex", ex, logger)
+            throwAndLogError(
+              aAs,
+              s"failed to invite poc admin ${aAs.admin.id} to the cert space in TeamDrive. $spaceName. $ex",
+              ex,
+              logger)
         }
     } else Task(aAs)
   }
@@ -141,7 +145,11 @@ class PocAdminCreatorImpl @Inject() (
           .onErrorHandle {
             case ex: PocAdminCreationError => throw ex
             case ex: Exception =>
-              throwAndLogError(aAs, s"failed to invite poc admin ${aAs.admin.id} to TeamDrive. $ex", ex, logger)
+              throwAndLogError(
+                aAs,
+                s"failed to invite poc admin ${aAs.admin.id} to the static space in TeamDrive. $spaceName. $ex",
+                ex,
+                logger)
           }
       } else Task(aAs)
     }
