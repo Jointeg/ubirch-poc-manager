@@ -54,12 +54,12 @@ class PocEmployeeServiceImpl @Inject() (
         styleTheme,
         poc.address.toString,
         None,
-        DataSchemaSettings(
+        Seq(DataSchemaSetting(
           dataSchemaId,
           packagingFormat,
           None,
           None
-        )
+        ))
       )
     }
     EitherT.fromOption[Task](dtoOpt, InvalidDataPocType(poc.pocType, poc.id))
@@ -89,7 +89,7 @@ object GetCertifyConfigError {
 }
 
 case class PocContact(email: String, phone: String, mobile: String, fax: String)
-case class DataSchemaSettings(
+case class DataSchemaSetting(
   dataSchemaId: String,
   packagingFormat: Option[String],
   requiredRole: Option[String],
@@ -101,7 +101,7 @@ case class GetCertifyConfigDTO(
   styleTheme: Option[String],
   pocAddress: String,
   pocContact: Option[PocContact],
-  dataSchemaSettings: DataSchemaSettings)
+  dataSchemaSettings: Seq[DataSchemaSetting])
 
 sealed trait GetPocLogoError
 object GetPocLogoError {
