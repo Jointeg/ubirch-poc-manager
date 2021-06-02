@@ -140,6 +140,7 @@ object ModelCreationHelper {
     CreateTenantRequest(
       TenantName("tenantName"),
       API,
+      UBIRCH,
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 

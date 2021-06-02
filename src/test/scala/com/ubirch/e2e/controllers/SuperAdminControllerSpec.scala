@@ -3,7 +3,7 @@ package com.ubirch.e2e.controllers
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.tenant.{ API, SharedAuthCert, TenantName }
+import com.ubirch.models.tenant.{ API, SharedAuthCert, TenantName, TenantType }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.{ FakeTokenCreator, ModelCreationHelper }
@@ -17,12 +17,12 @@ import scala.util.Random
 
 class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  private def createTenantJson(tenantName: String) = {
+  private def createTenantJson(tenantName: String, tenantType: String = TenantType.UBIRCH_STRING) = {
     s"""
        |{
        |    "tenantName": "$tenantName",
        |    "usageType": "API",
-       |    "deviceCreationToken": "1234567890",
+       |    "tenantType": "$tenantType",
        |    "sharedAuthCertRequired": true
        |}
        |""".stripMargin
@@ -33,7 +33,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |{
        |    "tenantName": "$tenantName",
        |    "usageType": "API",
-       |    "deviceCreationToken": "1234567890",
+       |    "tenantType": "${TenantType.BMG_STRING}",
        |    "sharedAuthCertRequired": false
        |}
        |""".stripMargin
@@ -43,7 +43,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     s"""
        |{
        |    "tenantName": "$tenantName",
-       |    "deviceCreationToken": "1234567890",
        |}
        |""".stripMargin
   }
