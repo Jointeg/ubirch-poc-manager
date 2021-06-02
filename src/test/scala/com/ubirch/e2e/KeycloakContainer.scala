@@ -11,12 +11,6 @@ class KeycloakContainer(underlying: GenericContainer, mountExtension: Boolean, r
   underlying.container.withCopyFileToContainer(
     MountableFile.forHostPath(s"./keycloak/realms/$realmExportFile"),
     s"/tmp/$realmExportFile")
-  if (mountExtension) {
-    underlying.container.withCopyFileToContainer(
-      MountableFile.forHostPath("./keycloak/extensions/get_users_by_attributes_extension.jar"),
-      "/opt/jboss/keycloak/standalone/deployments/get_users_by_attributes_extension.jar"
-    )
-  }
 }
 
 object KeycloakContainer {

@@ -38,7 +38,7 @@ class DefaultSuperAdminService @Inject() (
     createTenantRequest: CreateTenantRequest,
     superAdminContext: SuperAdminContext): Task[Either[CreateTenantErrors, TenantId]] = {
     for {
-      deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest.tenantName)
+      deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest)
       tenant = convertToTenant(createTenantRequest, deviceAndCertifyGroup)
 
       _ <- createOrgCert(tenant)
@@ -147,6 +147,7 @@ class DefaultSuperAdminService @Inject() (
       None,
       TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
       TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),
+      deviceAndCertifyGroup.employeeGroup.map(g => TenantTypeGroupId(g.value)),
       orgId = OrgId(tenantId.value),
       sharedAuthCertRequired = createTenantRequest.sharedAuthCertRequired
     )

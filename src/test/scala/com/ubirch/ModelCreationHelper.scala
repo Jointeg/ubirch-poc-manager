@@ -48,6 +48,7 @@ object ModelCreationHelper {
       Some(deviceCreationToken),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),
+      None,
       OrgId(TenantId(TenantName(name)).value),
       sharedAuthCertRequired = true
     ).copy(sharedAuthCert = sharedAuthCert)

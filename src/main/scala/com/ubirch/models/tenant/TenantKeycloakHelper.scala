@@ -14,37 +14,42 @@ import monix.eval.Task
 
 trait TenantKeycloakHelper {
 
-  def doKeycloakRelatedTasks(tenantName: TenantName): Task[DeviceAndCertifyGroups]
+  def doKeycloakRelatedTasks(tenantRequest: CreateTenantRequest): Task[DeviceAndCertifyGroups]
 }
 
 class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: KeycloakGroupService)
   extends TenantKeycloakHelper {
 
-  override def doKeycloakRelatedTasks(tenantName: TenantName): Task[DeviceAndCertifyGroups] = {
-    val keycloakName = TENANT_GROUP_PREFIX + tenantName.value
+  override def doKeycloakRelatedTasks(tenantRequest: CreateTenantRequest): Task[DeviceAndCertifyGroups] = {
+    val keycloakName = TENANT_GROUP_PREFIX + tenantRequest.tenantName.value
     for {
-      _ <- createRoles(keycloakName)
-      deviceAndTenantGroupId <- createGroups(keycloakName)
+      _ <- createRoles(keycloakName, tenantRequest)
+      deviceAndTenantGroupId <- createGroups(keycloakName, tenantRequest)
       _ <- assignRolesToGroups(deviceAndTenantGroupId, keycloakName)
     } yield deviceAndTenantGroupId
   }
 
-  private def createRoles(tenantRoleName: String): Task[Unit] = {
+  private def createRoles(tenantRoleName: String, tenantRequest: CreateTenantRequest): Task[Unit] = {
     val tenantRole = CreateKeycloakRole(RoleName(tenantRoleName))
 
-    def createRole(instance: KeycloakInstance): Task[Unit] =
-      roles.createNewRole(instance.defaultRealm, tenantRole, instance).map {
+    def createRole(realm: KeycloakRealm, instance: KeycloakInstance): Task[Unit] =
+      roles.createNewRole(realm, tenantRole, instance).map {
         case Left(_: RoleCreationException) =>
           throw TenantCreationException(s"failed to create role in ${instance.name} realm with name $tenantRoleName ")
         case _ => ()
       }
 
-    createRole(CertifyKeycloak)
-      .flatMap(_ => createRole(DeviceKeycloak))
-
+    createRole(CertifyKeycloak.defaultRealm, CertifyKeycloak)
+      .flatMap(_ => createRole(DeviceKeycloak.defaultRealm, DeviceKeycloak))
+      .flatMap { _ =>
+        if (tenantRequest.usageType == API) Task(())
+        else createRole(TenantType.getRealm(tenantRequest.tenantType), CertifyKeycloak)
+      }
   }
 
-  private def createGroups(tenantGroupName: String): Task[DeviceAndCertifyGroups] = {
+  private def createGroups(
+    tenantGroupName: String,
+    tenantRequest: CreateTenantRequest): Task[DeviceAndCertifyGroups] = {
     val tenantGroup = CreateKeycloakGroup(GroupName(tenantGroupName))
 
     def createGroup(realm: KeycloakRealm, instance: KeycloakInstance): Task[group.GroupId] =
@@ -53,11 +58,13 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
         case Left(error: GroupCreationError) =>
           throw TenantCreationException(s"failed to create group for tenant $tenantGroupName ${error.errorMsg}")
       }
-
-    createGroup(CertifyKeycloak.defaultRealm, CertifyKeycloak)
-      .flatMap(certifyGroup =>
-        createGroup(DeviceKeycloak.defaultRealm, DeviceKeycloak)
-          .map(deviceGroup => DeviceAndCertifyGroups(deviceGroup, certifyGroup)))
+    for {
+      certifyGroup <- createGroup(CertifyKeycloak.defaultRealm, CertifyKeycloak)
+      deviceGroup <- createGroup(DeviceKeycloak.defaultRealm, DeviceKeycloak)
+      employeeGroup <-
+        if (tenantRequest.usageType == API) Task(None)
+        else createGroup(TenantType.getRealm(tenantRequest.tenantType), CertifyKeycloak).map(Some(_))
+    } yield DeviceAndCertifyGroups(deviceGroup, certifyGroup, employeeGroup)
   }
 
   private def assignRolesToGroups(deviceAndCertifyGroup: DeviceAndCertifyGroups, keycloakName: String): Task[Unit] = {
@@ -83,4 +90,7 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
 
 }
 
-case class DeviceAndCertifyGroups(deviceGroup: group.GroupId, certifyGroup: group.GroupId)
+case class DeviceAndCertifyGroups(
+  deviceGroup: group.GroupId,
+  certifyGroup: group.GroupId,
+  employeeGroup: Option[group.GroupId])

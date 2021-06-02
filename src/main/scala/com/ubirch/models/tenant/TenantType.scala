@@ -1,5 +1,6 @@
 package com.ubirch.models.tenant
 
+import com.ubirch.services.keycloak.{ CertifyBmgRealm, CertifyUbirchRealm, KeycloakRealm }
 import io.getquill.MappedEncoding
 
 sealed trait TenantType extends Product with Serializable
@@ -20,6 +21,12 @@ object TenantType {
     tenantType match {
       case BMG    => BMG_STRING
       case UBIRCH => UBIRCH_STRING
+    }
+
+  def getRealm(tenantType: TenantType): KeycloakRealm =
+    tenantType match {
+      case UBIRCH => CertifyUbirchRealm
+      case BMG    => CertifyBmgRealm
     }
 
   implicit val encodeTenantTypeValue: MappedEncoding[TenantType, String] =

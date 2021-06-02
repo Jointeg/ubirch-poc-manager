@@ -13,6 +13,7 @@ case class Tenant(
   deviceCreationToken: Option[EncryptedDeviceCreationToken],
   certifyGroupId: TenantCertifyGroupId,
   deviceGroupId: TenantDeviceGroupId,
+  tenantTypeGroupId: Option[TenantTypeGroupId],
   orgId: OrgId,
   sharedAuthCertRequired: Boolean,
   orgUnitId: OrgUnitId,
@@ -39,6 +40,7 @@ object Tenant {
     deviceCreationToken: Option[EncryptedDeviceCreationToken],
     certifyGroupId: TenantCertifyGroupId,
     deviceGroupId: TenantDeviceGroupId,
+    tenantSpecificGroupId: Option[TenantTypeGroupId],
     orgId: OrgId,
     sharedAuthCertRequired: Boolean): Tenant =
     Tenant(
@@ -48,6 +50,7 @@ object Tenant {
       deviceCreationToken,
       certifyGroupId,
       deviceGroupId,
+      tenantSpecificGroupId,
       orgId,
       sharedAuthCertRequired,
       getNamespacedOrgUnitId(id),
