@@ -39,6 +39,7 @@ class FakeTeamDriveClient extends TeamDriveClient {
   override def inviteMember(
     spaceId: SpaceId,
     email: String,
+    welcomeMessage: String,
     permissionLevel: PermissionLevel
   ): Task[Boolean] =
     Task {

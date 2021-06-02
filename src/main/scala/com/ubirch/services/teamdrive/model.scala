@@ -12,7 +12,11 @@ object model {
   trait TeamDriveClient {
     def createSpace(name: SpaceName, path: String): Task[SpaceId]
     def putFile(spaceId: SpaceId, fileName: String, file: ByteBuffer): Task[FileId]
-    def inviteMember(spaceId: SpaceId, email: String, permissionLevel: PermissionLevel): Task[Boolean]
+    def inviteMember(
+      spaceId: SpaceId,
+      email: String,
+      welcomeMessage: String,
+      permissionLevel: PermissionLevel): Task[Boolean]
     def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]]
     def getLoginInformation(): Task[LoginInformation]
     def login(): Task[Unit]

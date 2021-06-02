@@ -1,5 +1,7 @@
 package com.ubirch.teamdrive
 
+import com.typesafe.config.{ Config, ConfigFactory }
+import com.ubirch.PocConfigImpl
 import com.ubirch.models.auth.Base16String
 import com.ubirch.services.poc.TestCertHandler
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
@@ -11,12 +13,15 @@ import org.json4s.Formats
 class TeamDriveServiceTest extends HttpTest {
   implicit private val formats: Formats = org.json4s.DefaultFormats
 
+  private val pocConfig = new PocConfigImpl(ConfigFactory.load())
+
   import com.ubirch.test.TaskSupport._
 
   "TeamDriveServiceTest.shareCert" must {
     "share cert and passphrase with given email addresses" in httpTest { httpStub =>
       // given
-      val service = new TeamDriveServiceImpl(new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url)))
+      val service =
+        new TeamDriveServiceImpl(new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url)), pocConfig)
 
       httpStub.getLoginInformationWillReturn(isLoginRequired = false)
       httpStub.loginWillBeOk()
@@ -24,12 +29,12 @@ class TeamDriveServiceTest extends HttpTest {
       httpStub.fileWillBeSent(
         spaceId = 8,
         fileBody = TestCertHandler.passphrase.value.getBytes,
-        fileName = "passphrase_spaceName.pwd",
+        fileName = "password.txt",
         fileId = 16)
       httpStub.fileWillBeSent(
         spaceId = 8,
         fileBody = Base16String.toByteArray(TestCertHandler.validPkcs12),
-        fileName = "cert_spaceName.pfx",
+        fileName = "ubirch-client-certificate.pfx",
         fileId = 17)
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email, permissionLevel = "read")
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email2, permissionLevel = "read")
@@ -48,7 +53,8 @@ class TeamDriveServiceTest extends HttpTest {
 
     "login if it is required" in httpTest { httpStub =>
       // given
-      val service = new TeamDriveServiceImpl(new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url)))
+      val service =
+        new TeamDriveServiceImpl(new SttpTeamDriveClient(sttpTeamDriveConfig(httpStub.url)), pocConfig)
 
       httpStub.getLoginInformationWillReturn(isLoginRequired = true)
       httpStub.loginWillBeOk()
@@ -56,12 +62,12 @@ class TeamDriveServiceTest extends HttpTest {
       httpStub.fileWillBeSent(
         spaceId = 8,
         fileBody = TestCertHandler.passphrase.value.getBytes,
-        fileName = "passphrase_spaceName.pwd",
+        fileName = "password.txt",
         fileId = 16)
       httpStub.fileWillBeSent(
         spaceId = 8,
         fileBody = Base16String.toByteArray(TestCertHandler.validPkcs12),
-        fileName = "cert_spaceName.pfx",
+        fileName = "ubirch-client-certificate.pfx",
         fileId = 17)
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email, permissionLevel = "read")
       httpStub.invitationWillBeAccepted(spaceId = 8, email = TestData.email2, permissionLevel = "read")

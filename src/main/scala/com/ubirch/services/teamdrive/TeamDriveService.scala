@@ -1,6 +1,7 @@
 package com.ubirch.services.teamdrive
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.PocConfig
 import com.ubirch.models.auth.Base16String
 import com.ubirch.models.auth.cert.Passphrase
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
@@ -21,7 +22,7 @@ trait TeamDriveService {
 }
 
 @Singleton
-class TeamDriveServiceImpl @Inject() (client: TeamDriveClient)
+class TeamDriveServiceImpl @Inject() (client: TeamDriveClient, pocConfig: PocConfig)
   extends TeamDriveService
   with LazyLogging
   with PocAuditLogging {
@@ -39,12 +40,12 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient)
         case _                                                    => Task.unit
       }
       spaceId <- createSpace(spaceName)
-      fileName = s"cert_$spaceName.pfx"
-      _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, Read)))
+      fileName = s"ubirch-client-certificate.pfx"
+      _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, pocConfig.certWelcomeMessage, Read)))
       certByteArray <- Task(Base16String.toByteArray(certificate))
       certFileId <- client.putFile(spaceId, fileName, ByteBuffer.wrap(certByteArray))
       passphraseFileId <-
-        client.putFile(spaceId, s"passphrase_$spaceName.pwd", ByteBuffer.wrap(passphrase.value.getBytes))
+        client.putFile(spaceId, s"password.txt", ByteBuffer.wrap(passphrase.value.getBytes))
     } yield {
       logAuditEventInfo(s"uploaded cert with $fileName to TeamDrive space $spaceName")
       SharedCertificate(

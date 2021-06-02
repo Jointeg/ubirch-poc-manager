@@ -81,7 +81,7 @@ class SttpTeamDriveClientTest extends HttpTest {
       httpStub.invitationWillBeAccepted(spaceId = 8, permissionLevel = "read", email = "admin@ubirch.com")
 
       // when
-      val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).unwrap
+      val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", "welcome", Read).unwrap
 
       // then
       response mustBe true
@@ -99,7 +99,7 @@ class SttpTeamDriveClientTest extends HttpTest {
         email = "admin@ubirch.com")
 
       // when
-      val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).catchError
+      val response = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", "welcome", Read).catchError
 
       // then
       response mustBe model.TeamDriveHttpError(30, "some error")
@@ -170,7 +170,8 @@ class SttpTeamDriveClientTest extends HttpTest {
         case _: SttpClientException.ReadException => "read timeout"
       }
       val createSpace = client.createSpace(SpaceName(spaceName), spacePath).onErrorRecover(matchTimeout)
-      val inviteMember = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).onErrorRecover(matchTimeout)
+      val inviteMember =
+        client.inviteMember(model.SpaceId(8), "admin@ubirch.com", "welcome", Read).onErrorRecover(matchTimeout)
       val putFile =
         client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)
       val getLoginInformation = client.getLoginInformation().onErrorRecover(matchTimeout)
@@ -192,7 +193,8 @@ class SttpTeamDriveClientTest extends HttpTest {
         case _: SttpClientException.ConnectException => "connection timeout"
       }
       val createSpace = client.createSpace(SpaceName(spaceName), spacePath).onErrorRecover(matchTimeout)
-      val inviteMember = client.inviteMember(model.SpaceId(8), "admin@ubirch.com", Read).onErrorRecover(matchTimeout)
+      val inviteMember =
+        client.inviteMember(model.SpaceId(8), "admin@ubirch.com", "welcome", Read).onErrorRecover(matchTimeout)
       val putFile =
         client.putFile(model.SpaceId(8), "cert.txt", ByteBuffer.wrap("content".getBytes)).onErrorRecover(matchTimeout)
       val getLoginInformation = client.getLoginInformation().onErrorRecover(matchTimeout)

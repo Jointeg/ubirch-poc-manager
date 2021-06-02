@@ -88,6 +88,9 @@ object ConfPaths {
     val READ_TIMEOUT = "system.teamdrive.readTimeout"
     val STAGE = "system.teamdrive.stage"
     val UBIRCH_ADMINS = "system.teamdrive.ubirchAdmins"
+    val CERT_WELCOME_MESSAGE = "system.teamdrive.certWelcomeMessage"
+    val STATIC_ASSETS_WELCOME_MESSAGE = "system.teamdrive.staticAssetsWelcomeMessage"
+    val POC_TYPE_STATIC_SPACE_NAME_MAP = "system.teamdrive.pocTypeStaticSpaceNameMap"
   }
 
   object GenericConfPaths extends GenericConfPaths
