@@ -105,7 +105,7 @@ object CriteriaValidator extends CriteriaValidator {
     )
 
   val validSortColumnsForPocAdmin: Seq[String] =
-    Seq("id", "firstName", "email", "lastName", "pocName", "active", "status")
+    Seq("id", "firstName", "email", "lastName", "pocName", "active", "state")
 
   def validateParams(
     tenantId: TenantId,

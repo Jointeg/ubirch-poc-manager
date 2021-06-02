@@ -154,7 +154,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       case Some("firstName") => dynamic.sortBy(r => quote(r._1.name))(sort.ord)
       case Some("email")     => dynamic.sortBy(r => quote(r._1.email))(sort.ord)
       case Some("active")    => dynamic.sortBy(r => quote(r._1.active))(sort.ord)
-      case Some("status")    => dynamic.sortBy(r => quote(r._1.status))(sort.ord)
+      case Some("state")     => dynamic.sortBy(r => quote(r._1.status))(sort.ord)
       case Some("pocName")   => dynamic.sortBy(r => quote(r._2.pocName))(sort.ord)
       case _                 => dynamic
     }

@@ -1,5 +1,6 @@
 package com.ubirch
 
+import com.typesafe.config.ConfigFactory
 import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{
   PocEmployeeRepositoryMock,
@@ -36,6 +37,8 @@ object ModelCreationHelper {
   val globalTenantName = "tenantName"
   private val tenantNameObj = TenantName("tenantName")
   private val tenantId = TenantId(TenantName(globalTenantName))
+
+  private val pocConfig = new PocConfigImpl(ConfigFactory.load())
 
   def createTenant(
     name: String = globalTenantName,
@@ -114,7 +117,7 @@ object ModelCreationHelper {
 
   private def getRandomString = Random.alphanumeric.take(10).mkString
 
-  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = PocAdminStatus.init(pocAdmin, poc)
+  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = PocAdminStatus.init(pocAdmin, poc, pocConfig)
 
   def createPocStatus(
     pocId: UUID = UUID.randomUUID(),

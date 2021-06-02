@@ -1,6 +1,7 @@
 package com.ubirch.e2e.flows
 
-import com.ubirch.InjectorHelper
+import cats.implicits.toTraverseOps
+import com.ubirch.{ InjectorHelper, PocConfig }
 import com.ubirch.controllers.{ PocAdminController, SuperAdminController, TenantAdminController }
 import com.ubirch.db.tables._
 import com.ubirch.e2e.{ E2ETestBase, KeycloakOperations, RealDiscoverService, TenantAdmin }
@@ -20,7 +21,9 @@ import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, KeycloakCertifyC
 import com.ubirch.services.poc.PocTestHelper.createNeededDeviceUser
 import com.ubirch.services.poc.util.CsvConstants.{ pocAdminHeaderLine, pocEmployeeHeaderLine }
 import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
+import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.test.FakeTeamDriveClient
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
 import monix.reactive.Observable
@@ -73,8 +76,14 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
       val certifyKeycloakConnector = injector.get[CertifyKeycloakConnector]
       val certifyConfig = injector.get[KeycloakCertifyConfig]
       val users = injector.get[KeycloakUserService]
+      val pocConfig = injector.get[PocConfig]
+      val teamDriveClient = injector.get[FakeTeamDriveClient]
       createRole("poc-admin")(certifyKeycloakConnector)
       createRole("poc-employee")(certifyKeycloakConnector)
+      // Create static spaces
+      pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
+        teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
+      }.runSyncUnsafe()
 
       info("Super Admin needs to be created manually")
       await(createKeycloakSuperAdminUser(injector.superAdmin)(certifyKeycloakConnector), 5.seconds)
@@ -186,6 +195,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     pocAdminStatus.keycloakEmailSent shouldBe true
     pocAdminStatus.pocAdminGroupAssigned shouldBe true
     pocAdminStatus.invitedToTeamDrive shouldBe Some(true)
+    pocAdminStatus.invitedToStaticTeamDrive shouldBe Some(true)
     pocAdminStatus.errorMessage shouldBe None
   }
 

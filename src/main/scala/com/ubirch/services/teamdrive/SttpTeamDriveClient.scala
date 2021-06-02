@@ -85,14 +85,19 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
         .send()
     }
 
-  override def inviteMember(spaceId: SpaceId, email: String, permissionLevel: PermissionLevel): Task[Boolean] =
-    callInviteMember(spaceId, email, permissionLevel).flatMap { r =>
+  override def inviteMember(
+    spaceId: SpaceId,
+    email: String,
+    welcomeMessage: String,
+    permissionLevel: PermissionLevel): Task[Boolean] =
+    callInviteMember(spaceId, email, welcomeMessage, permissionLevel).flatMap { r =>
       handleResponse(r) { v => Task.pure(v.result) }
     }
 
   private def callInviteMember(
     spaceId: SpaceId,
     email: String,
+    welcomeMessage: String,
     permissionLevel: PermissionLevel
   ): Task[Response[Either[ResponseError[Exception], InviteMember_OUT]]] =
     Task.deferFuture {
@@ -102,7 +107,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
         .body(
           InviteMember_IN(
             spaceId = spaceId.v,
-            text = "This is your cert. Enjoy!!",
+            text = welcomeMessage,
             permissionLevel = PermissionLevel.toFormattedString(permissionLevel),
             sendEmail = true,
             name = email

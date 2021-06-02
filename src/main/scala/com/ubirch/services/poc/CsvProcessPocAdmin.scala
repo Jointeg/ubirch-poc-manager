@@ -68,7 +68,7 @@ class CsvProcessPocAdminImpl @Inject() (
     csvRow: String,
     tenantContext: TenantAdminContext): Task[Option[String]] = {
     val pocStatus = PocStatus.init(poc)
-    val pocAdminStatus = PocAdminStatus.init(pocAdmin, poc)
+    val pocAdminStatus = PocAdminStatus.init(pocAdmin, poc, pocConfig)
     QuillMonixJdbcContext.withTransaction {
       for {
         _ <- pocRepository.createPoc(poc)
