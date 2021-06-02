@@ -23,14 +23,17 @@ object KeycloakContainer {
           exposedPorts = List(8080),
           env = Map(
             "KEYCLOAK_USER" -> "admin",
-            "KEYCLOAK_PASSWORD" -> "admin",
-            "KEYCLOAK_IMPORT" -> s"/tmp/$realmExportFile"
+            "KEYCLOAK_PASSWORD" -> "admin"
           ),
           command = List(
             "-c standalone.xml",
             "-b 0.0.0.0",
             "-Dkeycloak.profile.feature.upload_scripts=enabled",
-            "-Dkeycloak.profile.feature.scripts=enabled"
+            "-Dkeycloak.profile.feature.scripts=enabled",
+            "-Dkeycloak.migration.action=import",
+            "-Dkeycloak.migration.provider=singleFile",
+            s"-Dkeycloak.migration.file=/tmp/$realmExportFile",
+            "-Dkeycloak.migration.strategy=IGNORE_EXISTING"
           ),
           waitStrategy = Wait.forHttp("/auth").forPort(8080).withStartupTimeout(Duration.ofSeconds(90))
         ),
