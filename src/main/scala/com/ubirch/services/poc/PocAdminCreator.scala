@@ -110,13 +110,15 @@ class PocAdminCreatorImpl @Inject() (
   private def invitePocAdminToTeamDrive(aAs: PocAdminAndStatus, poc: Poc, tenant: Tenant): Task[PocAdminAndStatus] = {
     if (poc.clientCertRequired && aAs.status.invitedToTeamDrive.contains(false)) {
       val spaceName = SpaceName.ofPoc(pocConfig.teamDriveStage, tenant, poc)
-      teamDriveClient.getSpaceIdByName(spaceName).flatMap {
-        case Some(spaceId) =>
-          teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.certWelcomeMessage, Read)
-            .map { _ =>
-              logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
-            }
-        case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+      teamDriveClient.withLogin {
+        teamDriveClient.getSpaceIdByName(spaceName).flatMap {
+          case Some(spaceId) =>
+            teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.certWelcomeMessage, Read)
+              .map { _ =>
+                logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
+              }
+          case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+        }
       }.map(_ => aAs.copy(status = aAs.status.copy(invitedToTeamDrive = Some(true))))
         .onErrorHandle {
           case ex: PocAdminCreationError => throw ex
@@ -134,13 +136,15 @@ class PocAdminCreatorImpl @Inject() (
     pocConfig.pocTypeStaticSpaceNameMap.get(poc.pocType).fold(Task(aAs)) { name =>
       if (poc.clientCertRequired && aAs.status.invitedToStaticTeamDrive.contains(false)) {
         val spaceName = SpaceName.of(pocConfig.teamDriveStage, name)
-        teamDriveClient.getSpaceIdByName(spaceName).flatMap {
-          case Some(spaceId) =>
-            teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.staticAssetsWelcomeMessage, Read)
-              .map { _ =>
-                logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
-              }
-          case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+        teamDriveClient.withLogin {
+          teamDriveClient.getSpaceIdByName(spaceName).flatMap {
+            case Some(spaceId) =>
+              teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.staticAssetsWelcomeMessage, Read)
+                .map { _ =>
+                  logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
+                }
+            case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+          }
         }.map(_ => aAs.copy(status = aAs.status.copy(invitedToStaticTeamDrive = Some(true))))
           .onErrorHandle {
             case ex: PocAdminCreationError => throw ex

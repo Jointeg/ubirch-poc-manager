@@ -20,6 +20,7 @@ object model {
     def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]]
     def getLoginInformation(): Task[LoginInformation]
     def login(): Task[Unit]
+    def withLogin[T](mainTask: => Task[T]): Task[T]
   }
 
   case class SpaceId(v: Int) extends AnyVal {
