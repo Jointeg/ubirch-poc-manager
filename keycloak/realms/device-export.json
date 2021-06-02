@@ -1,6 +1,6 @@
 {
-  "id": "device-realm",
-  "realm": "device-realm",
+  "id": "ubirch-default-realm",
+  "realm": "ubirch-default-realm",
   "notBefore": 0,
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
@@ -47,7 +47,7 @@
         "name": "super-admin",
         "composite": false,
         "clientRole": false,
-        "containerId": "device-realm",
+        "containerId": "ubirch-default-realm",
         "attributes": {}
       },
       {
@@ -55,7 +55,7 @@
         "name": "tenant-admin",
         "composite": false,
         "clientRole": false,
-        "containerId": "device-realm",
+        "containerId": "ubirch-default-realm",
         "attributes": {}
       },
       {
@@ -64,7 +64,7 @@
         "description": "${role_offline-access}",
         "composite": false,
         "clientRole": false,
-        "containerId": "device-realm",
+        "containerId": "ubirch-default-realm",
         "attributes": {}
       },
       {
@@ -73,7 +73,7 @@
         "description": "${role_uma_authorization}",
         "composite": false,
         "clientRole": false,
-        "containerId": "device-realm",
+        "containerId": "ubirch-default-realm",
         "attributes": {}
       },
       {
@@ -81,7 +81,7 @@
         "name": "admin",
         "composite": false,
         "clientRole": false,
-        "containerId": "device-realm",
+        "containerId": "ubirch-default-realm",
         "attributes": {}
       }
     ],
@@ -497,7 +497,7 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/device-realm/account/",
+      "baseUrl": "/realms/ubirch-default-realm/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
@@ -508,7 +508,7 @@
         "manage-account"
       ],
       "redirectUris": [
-        "/realms/device-realm/account/*"
+        "/realms/ubirch-default-realm/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -544,14 +544,14 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/device-realm/account/",
+      "baseUrl": "/realms/ubirch-default-realm/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "**********",
       "redirectUris": [
-        "/realms/device-realm/account/*"
+        "/realms/ubirch-default-realm/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -716,14 +716,14 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/device-realm/console/",
+      "baseUrl": "/admin/ubirch-default-realm/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "**********",
       "redirectUris": [
-        "/admin/device-realm/console/*"
+        "/admin/ubirch-default-realm/console/*"
       ],
       "webOrigins": [
         "+"

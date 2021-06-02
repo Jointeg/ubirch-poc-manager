@@ -17,5 +17,5 @@ case object CertifyUbirchRealm extends KeycloakRealm {
 }
 
 case object DeviceDefaultRealm extends KeycloakRealm {
-  val name = "ubirch-default"
+  val name = "ubirch-default-realm"
 }

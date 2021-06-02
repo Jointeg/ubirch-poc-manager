@@ -38,9 +38,11 @@ class PocCreationLoopTest extends UnitTestBase {
         createNeededDeviceUser(users, poc)
 
         keyCloakRoleService.createNewRole(
+          DeviceKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
           DeviceKeycloak).runSyncUnsafe(3.seconds)
         keyCloakRoleService.createNewRole(
+          CertifyKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
           CertifyKeycloak).runSyncUnsafe(3.seconds)
 

@@ -28,10 +28,10 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newGroup = createNewKeycloakGroup()
         val res = for {
-          _ <- keycloakGroupService.createGroup(newGroup)
-          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName)
-          _ <- keycloakGroupService.deleteGroup(newGroup.groupName)
-          groupAfterDeletion <- keycloakGroupService.findGroupByName(newGroup.groupName)
+          _ <- keycloakGroupService.createGroup(newGroup, CertifyKeycloak)
+          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName, CertifyKeycloak)
+          _ <- keycloakGroupService.deleteGroup(newGroup.groupName, CertifyKeycloak)
+          groupAfterDeletion <- keycloakGroupService.findGroupByName(newGroup.groupName, CertifyKeycloak)
         } yield (foundGroup, groupAfterDeletion)
 
         val (maybeFoundGroup, groupAfterDeletion) = await(res, 2.seconds)
@@ -49,24 +49,24 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val pocName = "P_pocName"
         val tenantPath = s"/$tenantName"
         val childPocPath = s"$tenantPath/$pocName"
-
+        val realm = CertifyKeycloak.defaultRealm
         val res1 = for {
 
           //create tenant role and group
-          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(tenantName)))
-          tenantRole <- roles.findRoleRepresentation(RoleName(tenantName))
-          tenantGroup <- groups.createGroup(CreateKeycloakGroup(GroupName(tenantName)))
-          - <- groups.assignRoleToGroup(tenantGroup.right.value, tenantRole.get)
+          _ <- roles.createNewRole(realm, CreateKeycloakRole(RoleName(tenantName)), CertifyKeycloak)
+          tenantRole <- roles.findRoleRepresentation(realm, RoleName(tenantName), CertifyKeycloak)
+          tenantGroup <- groups.createGroup(CreateKeycloakGroup(GroupName(tenantName)), CertifyKeycloak)
+          - <- groups.assignRoleToGroup(tenantGroup.right.value, tenantRole.get, CertifyKeycloak)
 
           //create poc role and create as subGroup of tenantgroup
-          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(pocName)))
-          pocRole <- roles.findRoleRepresentation(RoleName(pocName))
-          pocGroup <- groups.addSubGroup(tenantGroup.right.value, GroupName(pocName))
-          - <- groups.assignRoleToGroup(pocGroup.right.value, pocRole.get)
+          _ <- roles.createNewRole(realm, CreateKeycloakRole(RoleName(pocName)), CertifyKeycloak)
+          pocRole <- roles.findRoleRepresentation(realm, RoleName(pocName), CertifyKeycloak)
+          pocGroup <- groups.addSubGroup(tenantGroup.right.value, GroupName(pocName), CertifyKeycloak)
+          - <- groups.assignRoleToGroup(pocGroup.right.value, pocRole.get, CertifyKeycloak)
 
           //retrieve final Groups
-          tenantGroupFinal <- groups.findGroupById(tenantGroup.right.value)
-          pocGroupFinal <- groups.findGroupById(pocGroup.right.value)
+          tenantGroupFinal <- groups.findGroupById(tenantGroup.right.value, CertifyKeycloak)
+          pocGroupFinal <- groups.findGroupById(pocGroup.right.value, CertifyKeycloak)
 
         } yield {
           (tenantGroupFinal, pocGroupFinal)
@@ -98,13 +98,14 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val group = createNewKeycloakGroup().copy(groupName = GroupName(roleName))
         val roleRepr = new RoleRepresentation()
         roleRepr.setName(roleName)
+        val realm = CertifyKeycloak.defaultRealm
 
         val res = for {
-          _ <- roles.createNewRole(role)
-          role <- roles.findRoleRepresentation(RoleName(roleName))
-          createdGroup <- groups.createGroup(group)
-          _ <- groups.assignRoleToGroup(createdGroup.right.get, role.get)
-          foundGroup <- groups.findGroupById(createdGroup.right.get)
+          _ <- roles.createNewRole(realm, role, CertifyKeycloak)
+          role <- roles.findRoleRepresentation(realm, RoleName(roleName), CertifyKeycloak)
+          createdGroup <- groups.createGroup(group, CertifyKeycloak)
+          _ <- groups.assignRoleToGroup(createdGroup.right.get, role.get, CertifyKeycloak)
+          foundGroup <- groups.findGroupById(createdGroup.right.get, CertifyKeycloak)
         } yield foundGroup
 
         val foundGroup: GroupRepresentation = await(res, 2.seconds).right.get
@@ -120,9 +121,9 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val parentGroup = createNewKeycloakGroup()
         val childGroup = createNewKeycloakGroup()
         val res = for {
-          parentGroup <- keycloakGroupService.createGroup(parentGroup)
-          first <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName)
-          second <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName)
+          parentGroup <- keycloakGroupService.createGroup(parentGroup, CertifyKeycloak)
+          first <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName, CertifyKeycloak)
+          second <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName, CertifyKeycloak)
         } yield (first, second)
 
         val (firstGroup, secondGroup) = await(res, 2.seconds)
@@ -154,7 +155,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val keycloakGroupService = injector.get[KeycloakGroupService]
 
         val groupName = GroupName("Unknown group")
-        val result = keycloakGroupService.findGroupByName(groupName)
+        val result = keycloakGroupService.findGroupByName(groupName, CertifyKeycloak)
 
         val maybeGroup = await(result, 2.seconds)
         maybeGroup.left.value shouldBe GroupNotFound(groupName)
@@ -167,9 +168,9 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newGroup = createNewKeycloakGroup()
         val res = for {
-          _ <- keycloakGroupService.createGroup(newGroup)
-          _ <- keycloakGroupService.deleteGroup(GroupName("Unknown group"))
-          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName)
+          _ <- keycloakGroupService.createGroup(newGroup, CertifyKeycloak)
+          _ <- keycloakGroupService.deleteGroup(GroupName("Unknown group"), CertifyKeycloak)
+          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName, CertifyKeycloak)
         } yield foundGroup
 
         val maybeFoundGroup = await(res, 2.seconds)
@@ -183,12 +184,12 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
         val newRole = KeycloakTestData.createNewKeycloakRole()
-
+        val realm = CertifyKeycloak.defaultRealm
         val response = for {
-          _ <- keycloakRolesService.createNewRole(newRole)
-          foundRole <- keycloakRolesService.findRole(newRole.roleName)
-          _ <- keycloakRolesService.deleteRole(newRole.roleName)
-          roleAfterDeletion <- keycloakRolesService.findRole(newRole.roleName)
+          _ <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
+          foundRole <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
+          _ <- keycloakRolesService.deleteRole(realm, newRole.roleName, CertifyKeycloak)
+          roleAfterDeletion <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
         } yield (foundRole, roleAfterDeletion)
 
         val (maybeCreatedRole, roleAfterDeletion) = await(response, 2.seconds)
@@ -201,10 +202,10 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
         val newRole = KeycloakTestData.createNewKeycloakRole()
-
+        val realm = CertifyKeycloak.defaultRealm
         val response = for {
-          firstCreationResult <- keycloakRolesService.createNewRole(newRole)
-          secondCreationResult <- keycloakRolesService.createNewRole(newRole)
+          firstCreationResult <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
+          secondCreationResult <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
         } yield (firstCreationResult, secondCreationResult)
 
         val (firstCreationResult, secondCreationResult) = await(response, 2.seconds)
@@ -217,7 +218,8 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
 
-        val response = keycloakRolesService.findRole(RoleName("Unknown role"))
+        val response =
+          keycloakRolesService.findRole(CertifyKeycloak.defaultRealm, RoleName("Unknown role"), CertifyKeycloak)
 
         val maybeFoundRole = await(response, 2.seconds)
         maybeFoundRole should not be defined
@@ -228,11 +230,11 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
         val newRole = KeycloakTestData.createNewKeycloakRole()
-
+        val realm = CertifyKeycloak.defaultRealm
         val response = for {
-          _ <- keycloakRolesService.createNewRole(newRole)
-          _ <- keycloakRolesService.deleteRole(RoleName("Unknown role"))
-          retrievedRole <- keycloakRolesService.findRole(newRole.roleName)
+          _ <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
+          _ <- keycloakRolesService.deleteRole(realm, RoleName("Unknown role"), CertifyKeycloak)
+          retrievedRole <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
         } yield retrievedRole
         val maybeFoundRole = await(response, 2.seconds)
 
@@ -365,7 +367,6 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val users = injector.get[KeycloakUserService]
         val groups = injector.get[KeycloakGroupService]
-        val userId = UUID.randomUUID().toString
         val group = new GroupRepresentation()
         group.setName("testGroup")
         val result = for {
