@@ -1253,7 +1253,11 @@ class TenantAdminControllerSpec
         instance,
         List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
         .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
-      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId.value))
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        certifyUserId = Some(certifyUserId.value),
+        status = Completed)
       val id = await(repository.createPocAdmin(pocAdmin))
       val getPocAdmin = repository.getPocAdmin(id)
 
@@ -1315,7 +1319,7 @@ class TenantAdminControllerSpec
       val repository = i.get[PocAdminRepository]
       val tenant = addTenantToDB()
       val poc = addPocToDb(tenant, i.get[PocTable])
-      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None)
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None, status = Completed)
       val id = await(repository.createPocAdmin(pocAdmin))
 
       delete(
@@ -1324,6 +1328,23 @@ class TenantAdminControllerSpec
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
+      }
+    }
+
+    "return 409 when poc-admin is not in Completed status" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocAdminRepository]
+      val tenant = addTenantToDB()
+      val poc = addPocToDb(tenant, i.get[PocTable])
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None, status = Pending)
+      val id = await(repository.createPocAdmin(pocAdmin))
+
+      delete(
+        s"/poc-admin/$id/2fa-token",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Pending', required: 'Completed'"))
       }
     }
   }

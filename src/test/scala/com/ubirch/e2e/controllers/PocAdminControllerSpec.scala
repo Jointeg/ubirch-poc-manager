@@ -332,7 +332,8 @@ class PocAdminControllerSpec
           List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
           .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
         val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        val employee = createPocEmployee(pocId = poc.id).copy(certifyUserId = certifyUserId.value.some)
+        val employee =
+          createPocEmployee(pocId = poc.id).copy(certifyUserId = certifyUserId.value.some, status = Completed)
         val id = await(repository.createPocEmployee(employee))
         val getPocEmployee = repository.getPocEmployee(id)
 
@@ -390,7 +391,7 @@ class PocAdminControllerSpec
       "return 409 when poc-employee does not have certifyUserId" in withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        val employee = createPocEmployee(pocId = poc.id)
+        val employee = createPocEmployee(pocId = poc.id, status = Completed)
         await(injector.get[PocEmployeeTable].createPocEmployee(employee))
 
         delete(
@@ -399,6 +400,22 @@ class PocAdminControllerSpec
         ) {
           status should equal(409)
           assert(body.contains(s"Poc employee '${employee.id}' does not have certifyUserId"))
+        }
+      }
+
+      "return 409 when poc-employee is not in completed status" in withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val repository = injector.get[PocEmployeeTable]
+        val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee = createPocEmployee(pocId = poc.id).copy(status = Pending)
+        val id = await(repository.createPocEmployee(employee))
+
+        delete(
+          s"/poc-employee/$id/2fa-token",
+          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+        ) {
+          status should equal(409)
+          assert(body.contains(s"Poc employee '$id' is in wrong status: 'Pending', required: 'Completed'"))
         }
       }
     }

@@ -21,9 +21,9 @@ case class PocAdmin(
   dateOfBirth: BirthDate,
   status: Status = Pending,
   active: Boolean = true,
+  webAuthnDisconnected: Option[DateTime] = None,
   lastUpdated: Updated = Updated(DateTime.now()),
-  created: Created = Created(DateTime.now()),
-  webAuthnDisconnected: Option[DateTime] = None
+  created: Created = Created(DateTime.now())
 ) extends HasCertifyUserId
 
 object PocAdmin {

@@ -15,7 +15,7 @@ import com.ubirch.controllers.SwitchActiveError.{
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.AdminCriteriaValidator
 import com.ubirch.db.tables.model.AdminCriteria
-import com.ubirch.models.poc.{ PocAdmin, Status }
+import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.{ Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.controllers.concerns.{
@@ -217,6 +217,9 @@ class PocAdminController @Inject() (
             case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
             case Some(certifyUser) if certifyUser.pocId != pocAdmin.pocId =>
               Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+            case Some(certifyUser) if certifyUser.status != Completed =>
+              Task.pure(Conflict(NOK.conflict(
+                s"Poc employee '$id' is in wrong status: '${certifyUser.status}', required: '${Completed}'")))
             case Some(certifyUser) => certifyUserService.remove2FAToken(certifyUser)
                 .flatMap {
                   case Left(e) => e match {

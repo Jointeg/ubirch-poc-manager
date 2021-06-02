@@ -390,6 +390,9 @@ class TenantAdminController @Inject() (
             case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
             case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
               Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+            case Some(pocAdmin) if pocAdmin.status != Completed =>
+              Task.pure(Conflict(NOK.conflict(
+                s"Poc admin '$pocAdminId' is in wrong status: '${pocAdmin.status}', required: '${Completed}'")))
             case Some(pocAdmin) => certifyUserService.remove2FAToken(pocAdmin)
                 .flatMap {
                   case Left(e) => e match {
