@@ -1,7 +1,7 @@
 package com.ubirch
 
 import monix.eval.Task
-import monix.execution.Scheduler
+import monix.execution.{ Cancelable, Scheduler }
 import monix.reactive.Observable
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, WordSpec }
@@ -42,6 +42,38 @@ trait Awaits {
   def await[T](task: Task[T], atMost: Duration = 5.seconds)(implicit scheduler: Scheduler): T = {
     val future = task.runToFuture
     Await.result(future, atMost)
+  }
+
+  private def sleepUntil[C](condition: Task[Boolean], atMost: Duration)(implicit scheduler: Scheduler): Task[Unit] = {
+    for {
+      goOn <- condition
+      _ <-
+        if (goOn) {
+          Task.unit
+        } else if (!goOn && atMost.toMillis > 0) {
+          Task.sleep(100.millis).flatMap(_ => sleepUntil(condition, atMost - 100.millis))
+        } else {
+          Task.raiseError(new RuntimeException(
+            s"Could not complete specified task due to falsy condition ($goOn) or timeout (${atMost.toMillis} millis left)"))
+        }
+    } yield ()
+  }
+
+  def awaitUntil[T](task: Task[T], condition: Task[Boolean], atMost: Duration)(implicit scheduler: Scheduler): T = {
+    val futResult = (for {
+      result <- task
+      _ <- sleepUntil(condition, atMost)
+    } yield result).runToFuture
+    Await.result(futResult, atMost)
+  }
+
+  def awaitUntil[T](observable: Observable[T], condition: Task[Boolean], atMost: Duration)(implicit
+  scheduler: Scheduler): Unit = {
+    val result = for {
+      cancelable <- Task(observable.subscribe())
+      _ <- sleepUntil(condition, atMost)
+    } yield cancelable.cancel()
+    Await.result(result.runToFuture, atMost)
   }
 
 }
