@@ -37,6 +37,8 @@ object model {
       SpaceName(s"${stage}_${tenant.tenantName.value}")
     def ofPoc(stage: String, tenant: Tenant, poc: Poc): SpaceName =
       SpaceName(s"${stage}_${poc.pocType.split("_")(1)}_${tenant.tenantName.value}_${poc.pocName}_${poc.externalId}")
+    def of(stage: String, name: String): SpaceName =
+      SpaceName(s"${stage}_$name")
   }
 
   case class FileId(v: Int) extends AnyVal

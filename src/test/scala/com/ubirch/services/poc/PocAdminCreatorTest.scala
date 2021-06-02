@@ -39,7 +39,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
         // Create static spaces
         pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
-          teamDriveClient.createSpace(SpaceName(spaceName), spaceName)
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
         }.runSyncUnsafe()
 
         val result = creator.createPocAdmins().runSyncUnsafe()
@@ -86,7 +86,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
         // Create static spaces
         pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
-          teamDriveClient.createSpace(SpaceName(spaceName), spaceName)
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
         }.runSyncUnsafe()
 
         // start process
@@ -150,7 +150,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
         // Create static spaces
         pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
-          teamDriveClient.createSpace(SpaceName(spaceName), spaceName)
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
         }.runSyncUnsafe()
 
         // start process

@@ -82,7 +82,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
       createRole("poc-employee")(certifyKeycloakConnector)
       // Create static spaces
       pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
-        teamDriveClient.createSpace(SpaceName(spaceName), spaceName)
+        teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
       }.runSyncUnsafe()
 
       info("Super Admin needs to be created manually")

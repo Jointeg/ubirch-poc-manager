@@ -127,9 +127,10 @@ class PocAdminCreatorImpl @Inject() (
   }
 
   private def invitePocAdminToStaticTeamDrive(aAs: PocAdminAndStatus, poc: Poc): Task[PocAdminAndStatus] = {
-    pocConfig.pocTypeStaticSpaceNameMap.get(poc.pocType).fold(Task(aAs)) { spaceName =>
+    pocConfig.pocTypeStaticSpaceNameMap.get(poc.pocType).fold(Task(aAs)) { name =>
       if (poc.clientCertRequired && aAs.status.invitedToStaticTeamDrive.contains(false)) {
-        teamDriveClient.getSpaceIdByName(SpaceName(spaceName)).flatMap {
+        val spaceName = SpaceName.of(pocConfig.teamDriveStage, name)
+        teamDriveClient.getSpaceIdByName(spaceName).flatMap {
           case Some(spaceId) =>
             teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.staticAssetsWelcomeMessage, Read)
               .map { _ =>

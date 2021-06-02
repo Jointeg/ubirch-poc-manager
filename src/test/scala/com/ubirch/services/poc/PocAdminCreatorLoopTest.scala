@@ -51,7 +51,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
         // Create static spaces
         pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
-          teamDriveClient.createSpace(SpaceName(spaceName), spaceName)
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
         }.runSyncUnsafe()
 
         Thread.sleep(3000)
