@@ -262,7 +262,10 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
       5.seconds).value
     val keycloakGroupsService = injector.get[KeycloakGroupService]
     await(
-      keycloakGroupsService.findGroupByName(GroupName(s"TEN_${tenant.tenantName.value}"), CertifyKeycloak),
+      keycloakGroupsService.findGroupByName(
+        CertifyKeycloak.defaultRealm,
+        GroupName(s"TEN_${tenant.tenantName.value}"),
+        CertifyKeycloak),
       5.seconds).right.value
     ()
   }

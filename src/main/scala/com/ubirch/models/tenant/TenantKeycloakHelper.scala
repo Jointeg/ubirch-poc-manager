@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.ubirch.models.keycloak.group
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupCreationError, GroupName }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleCreationException, RoleName }
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.superadmin.TenantCreationException
@@ -46,25 +47,25 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
   private def createGroups(tenantGroupName: String): Task[DeviceAndCertifyGroups] = {
     val tenantGroup = CreateKeycloakGroup(GroupName(tenantGroupName))
 
-    def createGroup(instance: KeycloakInstance): Task[group.GroupId] =
-      groups.createGroup(tenantGroup, instance).map {
+    def createGroup(realm: KeycloakRealm, instance: KeycloakInstance): Task[group.GroupId] =
+      groups.createGroup(realm, tenantGroup, instance).map {
         case Right(groupId) => groupId
         case Left(error: GroupCreationError) =>
           throw TenantCreationException(s"failed to create group for tenant $tenantGroupName ${error.errorMsg}")
       }
 
-    createGroup(CertifyKeycloak)
+    createGroup(CertifyKeycloak.defaultRealm, CertifyKeycloak)
       .flatMap(certifyGroup =>
-        createGroup(DeviceKeycloak)
+        createGroup(DeviceKeycloak.defaultRealm, DeviceKeycloak)
           .map(deviceGroup => DeviceAndCertifyGroups(deviceGroup, certifyGroup)))
   }
 
   private def assignRolesToGroups(deviceAndCertifyGroup: DeviceAndCertifyGroups, keycloakName: String): Task[Unit] = {
 
-    def assignRoleToGroup(groupId: group.GroupId, instance: KeycloakInstance): Task[Unit] = {
+    def assignRoleToGroup(realm: KeycloakRealm, groupId: group.GroupId, instance: KeycloakInstance): Task[Unit] = {
       roles.findRoleRepresentation(instance.defaultRealm, RoleName(keycloakName), instance).flatMap {
         case Some(role) =>
-          groups.assignRoleToGroup(groupId, role, instance).map {
+          groups.assignRoleToGroup(realm, groupId, role, instance).map {
             case Right(_) =>
             case Left(errorMsg) =>
               TenantCreationException(
@@ -75,8 +76,8 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
       }
     }
 
-    assignRoleToGroup(deviceAndCertifyGroup.certifyGroup, CertifyKeycloak)
-      .flatMap(_ => assignRoleToGroup(deviceAndCertifyGroup.deviceGroup, DeviceKeycloak))
+    assignRoleToGroup(CertifyKeycloak.defaultRealm, deviceAndCertifyGroup.certifyGroup, CertifyKeycloak)
+      .flatMap(_ => assignRoleToGroup(DeviceKeycloak.defaultRealm, deviceAndCertifyGroup.deviceGroup, DeviceKeycloak))
 
   }
 
