@@ -169,6 +169,18 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
       handleResponse(r)(_ => Task.unit)
     }
 
+  override def withLogin[T](mainTask: => Task[T]): Task[T] = for {
+    loginInformation <- getLoginInformation()
+    _ <- Task(logger.debug(s"TeamDrive agent requires login: ${loginInformation.isLoginRequired}"))
+    _ <- loginInformation match {
+      case LoginInformation(isLoginRequired) if isLoginRequired => login()
+      case _                                                    => Task.unit
+    }
+    result <- mainTask
+  } yield {
+    result
+  }
+
   private def callLogin(): Task[Response[Either[ResponseError[Exception], LoginInformation]]] =
     Task.deferFuture {
       basicRequestWithTimeout

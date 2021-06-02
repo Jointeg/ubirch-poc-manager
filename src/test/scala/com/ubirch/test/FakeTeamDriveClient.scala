@@ -65,5 +65,7 @@ class FakeTeamDriveClient extends TeamDriveClient {
 
   override def getLoginInformation(): Task[LoginInformation] = Task.pure(LoginInformation(isLoginRequired = false))
 
+  override def withLogin[T](mainTask: => Task[T]): Task[T] = mainTask
+
   override def login(): Task[Unit] = Task.unit
 }

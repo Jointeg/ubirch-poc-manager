@@ -2,11 +2,12 @@ package com.ubirch
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.{ ServicesConfPaths, TeamDrivePaths }
+import com.ubirch.ConfPaths.{ServicesConfPaths, TeamDrivePaths}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 
-import javax.inject.{ Inject, Singleton }
+import java.nio.charset.StandardCharsets
+import javax.inject.{Inject, Singleton}
 
 trait PocConfig {
 
@@ -78,7 +79,8 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
   val teamDriveStage: String = config.getString(TeamDrivePaths.STAGE)
   val pocAdminGroupId: String = config.getString(ServicesConfPaths.POC_ADMIN_GROUP_ID)
   val pocLogoEndpoint: String = config.getString(ServicesConfPaths.POC_LOGO_ENDPOINT)
-  val certWelcomeMessage: String = config.getString(TeamDrivePaths.CERT_WELCOME_MESSAGE)
+  val certWelcomeMessage: String = new String(config.getString(TeamDrivePaths.CERT_WELCOME_MESSAGE).getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8)
+  println(certWelcomeMessage)
   val staticAssetsWelcomeMessage: String = config.getString(TeamDrivePaths.STATIC_ASSETS_WELCOME_MESSAGE)
 
   val pocTypeStaticSpaceNameMap: Map[String, String] =
