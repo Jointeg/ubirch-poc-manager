@@ -3,7 +3,7 @@ import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.group._
 import com.ubirch.services.keycloak.KeycloakRealm
-import com.ubirch.services.{ CertifyKeycloak, KeycloakConnector, KeycloakInstance }
+import com.ubirch.services.{ KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
@@ -23,7 +23,6 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     realm: KeycloakRealm,
     createKeycloakGroup: CreateKeycloakGroup,
     instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]] = {
-
     val groupName = createKeycloakGroup.groupName.value
     Task {
       val group = createKeycloakGroup.toKeycloakRepresentation
@@ -153,7 +152,8 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         .realmLevel()
         .add(List(role).asJava)))
       .onErrorHandle { ex: Throwable =>
-        val errorMsg = s"adding role ${role.getName} to group with id $groupId failed, due to ${ex.getMessage}"
+        val errorMsg =
+          s"adding role ${role.getName} in realm ${realm.name} to group with id $groupId failed, due to ${ex.getMessage}"
         logger.error(errorMsg, ex)
         Left(errorMsg)
       }

@@ -25,7 +25,7 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
     for {
       _ <- createRoles(keycloakName, tenantRequest)
       deviceAndTenantGroupId <- createGroups(keycloakName, tenantRequest)
-      _ <- assignRolesToGroups(deviceAndTenantGroupId, keycloakName)
+      _ <- assignRolesToGroups(deviceAndTenantGroupId, keycloakName, tenantRequest)
     } yield deviceAndTenantGroupId
   }
 
@@ -39,12 +39,15 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
         case _ => ()
       }
 
-    createRole(CertifyKeycloak.defaultRealm, CertifyKeycloak)
-      .flatMap(_ => createRole(DeviceKeycloak.defaultRealm, DeviceKeycloak))
-      .flatMap { _ =>
+    for {
+      _ <- createRole(CertifyKeycloak.defaultRealm, CertifyKeycloak)
+      _ <- createRole(DeviceKeycloak.defaultRealm, DeviceKeycloak)
+      _ <-
         if (tenantRequest.usageType == API) Task(())
-        else createRole(TenantType.getRealm(tenantRequest.tenantType), CertifyKeycloak)
-      }
+        else {
+          createRole(TenantType.getRealm(tenantRequest.tenantType), CertifyKeycloak)
+        }
+    } yield ()
   }
 
   private def createGroups(
@@ -58,19 +61,25 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
         case Left(error: GroupCreationError) =>
           throw TenantCreationException(s"failed to create group for tenant $tenantGroupName ${error.errorMsg}")
       }
+
     for {
       certifyGroup <- createGroup(CertifyKeycloak.defaultRealm, CertifyKeycloak)
       deviceGroup <- createGroup(DeviceKeycloak.defaultRealm, DeviceKeycloak)
       employeeGroup <-
         if (tenantRequest.usageType == API) Task(None)
-        else createGroup(TenantType.getRealm(tenantRequest.tenantType), CertifyKeycloak).map(Some(_))
+        else {
+          createGroup(TenantType.getRealm(tenantRequest.tenantType), CertifyKeycloak).map(Some(_))
+        }
     } yield DeviceAndCertifyGroups(deviceGroup, certifyGroup, employeeGroup)
   }
 
-  private def assignRolesToGroups(deviceAndCertifyGroup: DeviceAndCertifyGroups, keycloakName: String): Task[Unit] = {
+  private def assignRolesToGroups(
+    deviceAndCertifyGroup: DeviceAndCertifyGroups,
+    keycloakName: String,
+    tenantRequest: CreateTenantRequest): Task[Unit] = {
 
     def assignRoleToGroup(realm: KeycloakRealm, groupId: group.GroupId, instance: KeycloakInstance): Task[Unit] = {
-      roles.findRoleRepresentation(instance.defaultRealm, RoleName(keycloakName), instance).flatMap {
+      roles.findRoleRepresentation(realm, RoleName(keycloakName), instance).flatMap {
         case Some(role) =>
           groups.assignRoleToGroup(realm, groupId, role, instance).map {
             case Right(_) =>
@@ -83,8 +92,18 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
       }
     }
 
-    assignRoleToGroup(CertifyKeycloak.defaultRealm, deviceAndCertifyGroup.certifyGroup, CertifyKeycloak)
-      .flatMap(_ => assignRoleToGroup(DeviceKeycloak.defaultRealm, deviceAndCertifyGroup.deviceGroup, DeviceKeycloak))
+    for {
+      _ <- assignRoleToGroup(CertifyKeycloak.defaultRealm, deviceAndCertifyGroup.certifyGroup, CertifyKeycloak)
+      _ <- assignRoleToGroup(DeviceKeycloak.defaultRealm, deviceAndCertifyGroup.deviceGroup, DeviceKeycloak)
+      _ <-
+        if (tenantRequest.usageType == API) Task(None)
+        else {
+          val tenantTypeGroupId = deviceAndCertifyGroup.tenantTypeGroup.getOrElse(throw TenantCreationException(
+            "couldn't find tenantTypeGroupId though it should have been created"))
+          assignRoleToGroup(TenantType.getRealm(tenantRequest.tenantType), tenantTypeGroupId, CertifyKeycloak).map(Some(
+            _))
+        }
+    } yield Task(())
 
   }
 
@@ -93,4 +112,4 @@ class TenantKeycloakHelperImpl @Inject() (roles: KeycloakRolesService, groups: K
 case class DeviceAndCertifyGroups(
   deviceGroup: group.GroupId,
   certifyGroup: group.GroupId,
-  employeeGroup: Option[group.GroupId])
+  tenantTypeGroup: Option[group.GroupId])

@@ -8,6 +8,7 @@ import com.ubirch.models.tenant._
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.groups.DefaultKeycloakGroupService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.util.ServiceConstants
 import com.ubirch.{ FakeTokenCreator, ModelCreationHelper }
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
@@ -73,8 +74,20 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         tenant.usageType shouldBe API
         tenant.tenantType shouldBe UBIRCH
         tenant.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
-        groups.findGroupById(DeviceKeycloak.defaultRealm, GroupId(tenant.deviceGroupId.value), DeviceKeycloak)
-        groups.findGroupById(CertifyKeycloak.defaultRealm, GroupId(tenant.deviceGroupId.value), CertifyKeycloak)
+
+        val deviceGroup = groups.findGroupById(
+          DeviceKeycloak.defaultRealm,
+          GroupId(tenant.deviceGroupId.value),
+          DeviceKeycloak).runSyncUnsafe()
+        assert(deviceGroup.isRight)
+        assert(deviceGroup.right.get.getRealmRoles.contains(ServiceConstants.TENANT_GROUP_PREFIX + tenantName))
+
+        val certifyGroup = groups.findGroupById(
+          CertifyKeycloak.defaultRealm,
+          GroupId(tenant.certifyGroupId.value),
+          CertifyKeycloak).runSyncUnsafe()
+        assert(certifyGroup.isRight)
+        assert(certifyGroup.right.get.getRealmRoles.contains(ServiceConstants.TENANT_GROUP_PREFIX + tenantName))
       }
     }
 
@@ -84,7 +97,8 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         val groups = injector.get[DefaultKeycloakGroupService]
         val tenantName = getRandomString
         val ubirchName = "ubirchTenant"
-        val bmgCreateTenantBody = createTenantJson(tenantName, UsageType.APPString, TenantType.BMG_STRING)
+        val bmgName = "bmgTenant"
+        val bmgCreateTenantBody = createTenantJson(bmgName, UsageType.APPString, TenantType.BMG_STRING)
         val ubirchCreateTenantBody = createTenantJson(ubirchName, UsageType.BothString, TenantType.UBIRCH_STRING)
         post(
           "/tenants/create",
@@ -102,19 +116,30 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         }
         val tenantRepository = injector.get[TenantRepository]
 
-        val tenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds).get
-        tenant.tenantName shouldBe TenantName(tenantName)
-        tenant.usageType shouldBe APP
-        tenant.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
-        tenant.tenantType shouldBe BMG
-        groups.findGroupById(DeviceKeycloak.defaultRealm, GroupId(tenant.deviceGroupId.value), DeviceKeycloak)
+        val bmgTenant = await(tenantRepository.getTenantByName(TenantName(bmgName)), 2.seconds).get
+        bmgTenant.tenantName shouldBe TenantName(bmgName)
+        bmgTenant.usageType shouldBe APP
+        bmgTenant.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
+        bmgTenant.tenantType shouldBe BMG
+        val bmgGroup =
+          groups.findGroupById(
+            bmgTenant.getRealm,
+            GroupId(bmgTenant.tenantTypeGroupId.get.value),
+            CertifyKeycloak).runSyncUnsafe()
+        assert(bmgGroup.isRight)
+        assert(bmgGroup.right.get.getRealmRoles.contains(ServiceConstants.TENANT_GROUP_PREFIX + bmgName))
 
         val ubirchTenant = await(tenantRepository.getTenantByName(TenantName(ubirchName)), 2.seconds).get
         ubirchTenant.tenantName shouldBe TenantName(ubirchName)
         ubirchTenant.usageType shouldBe Both
         ubirchTenant.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
         ubirchTenant.tenantType shouldBe UBIRCH
-        groups.findGroupById(DeviceKeycloak.defaultRealm, GroupId(ubirchTenant.deviceGroupId.value), DeviceKeycloak)
+        val ubirchGroup = groups.findGroupById(
+          ubirchTenant.getRealm,
+          GroupId(ubirchTenant.tenantTypeGroupId.get.value),
+          CertifyKeycloak).runSyncUnsafe()
+        assert(ubirchGroup.isRight)
+        assert(ubirchGroup.right.get.getRealmRoles.contains(ServiceConstants.TENANT_GROUP_PREFIX + ubirchName))
       }
 
     }

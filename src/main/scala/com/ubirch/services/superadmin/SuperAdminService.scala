@@ -148,7 +148,7 @@ class DefaultSuperAdminService @Inject() (
       None,
       TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
       TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),
-      deviceAndCertifyGroup.employeeGroup.map(g => TenantTypeGroupId(g.value)),
+      deviceAndCertifyGroup.tenantTypeGroup.map(g => TenantTypeGroupId(g.value)),
       orgId = OrgId(tenantId.value),
       sharedAuthCertRequired = createTenantRequest.sharedAuthCertRequired
     )
