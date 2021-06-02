@@ -27,7 +27,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
       val group = createKeycloakGroup.toKeycloakRepresentation
       val response = keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(instance.defaultRealm.name)
         .groups()
         .add(group)
 
@@ -49,7 +49,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     Task(
       Right(keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(instance.defaultRealm.name)
         .groups()
         .group(groupId.value)
         .toRepresentation)
@@ -68,7 +68,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         Task(
           Right(keycloakConnector
             .getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .realm(instance.defaultRealm.name)
             .groups()
             .group(groupId.value)
             .toRepresentation))
@@ -94,7 +94,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
       val group = CreateKeycloakGroup(childGroupName).toKeycloakRepresentation
       val response = keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(instance.defaultRealm.name)
         .groups()
         .group(parentGroupId.value)
         .subGroup(group)
@@ -139,7 +139,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     Task(
       Right(keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(instance.defaultRealm.name)
         .groups()
         .group(groupId.value)
         .roles()
@@ -159,7 +159,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     Task(
       Right(keycloakConnector
         .getKeycloak(instance)
-        .realm(keycloakConnector.getKeycloakRealm(instance))
+        .realm(instance.defaultRealm.name)
         .groups()
         .group(groupId.value)
         .members()
@@ -177,7 +177,7 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
         Task {
           keycloakConnector
             .getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .realm(instance.defaultRealm.name)
             .groups()
             .group(groupId.value)
             .remove()
@@ -202,11 +202,11 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     }
   }
 
-  private def getGroupIdByName(groupName: GroupName, keycloakInstance: KeycloakInstance): Task[Option[GroupId]] =
+  private def getGroupIdByName(groupName: GroupName, instance: KeycloakInstance): Task[Option[GroupId]] =
     Task {
       keycloakConnector
-        .getKeycloak(keycloakInstance)
-        .realm(keycloakConnector.getKeycloakRealm(keycloakInstance))
+        .getKeycloak(instance)
+        .realm(instance.defaultRealm.name)
         .groups()
         .groups()
         .asScala
