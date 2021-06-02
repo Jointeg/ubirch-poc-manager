@@ -6,7 +6,6 @@ import com.ubirch.db.tables.TenantRepository
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.keycloak.group.GroupId
 import com.ubirch.models.tenant.{ DeviceAndCertifyGroups, OrgId, TenantId, TenantKeycloakHelper }
-import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
 import com.ubirch.services.teamdrive.TeamDriveService
 import com.ubirch.{ PocConfig, UnitTestBase }
@@ -144,6 +143,5 @@ class SuperAdminServiceSpec extends UnitTestBase {
         assertThrows[TenantCreationException](superAdminSvc.createSharedAuthCert(tenant).runSyncUnsafe())
       }
     }
-
   }
 }

@@ -10,6 +10,7 @@ case class Tenant(
   id: TenantId,
   tenantName: TenantName,
   usageType: UsageType,
+  tenantType: TenantType,
   deviceCreationToken: Option[EncryptedDeviceCreationToken],
   certifyGroupId: TenantCertifyGroupId,
   deviceGroupId: TenantDeviceGroupId,
@@ -18,7 +19,6 @@ case class Tenant(
   sharedAuthCertRequired: Boolean,
   orgUnitId: OrgUnitId,
   groupId: GroupId,
-  tenantType: TenantType,
   sharedAuthCert: Option[SharedAuthCert] = None,
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
@@ -37,6 +37,7 @@ object Tenant {
     id: TenantId,
     tenantName: TenantName,
     usageType: UsageType,
+    tenantType: TenantType,
     deviceCreationToken: Option[EncryptedDeviceCreationToken],
     certifyGroupId: TenantCertifyGroupId,
     deviceGroupId: TenantDeviceGroupId,
@@ -47,6 +48,7 @@ object Tenant {
       id,
       tenantName,
       usageType,
+      tenantType,
       deviceCreationToken,
       certifyGroupId,
       deviceGroupId,
@@ -54,8 +56,7 @@ object Tenant {
       orgId,
       sharedAuthCertRequired,
       getNamespacedOrgUnitId(id),
-      getNamespacedGroupId(id),
-      BMG // @todo fix
+      getNamespacedGroupId(id)
     )
 
   private def getNamespacedOrgUnitId(tenantId: TenantId) = {

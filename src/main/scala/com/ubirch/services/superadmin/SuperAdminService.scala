@@ -144,6 +144,7 @@ class DefaultSuperAdminService @Inject() (
       tenantId,
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
+      createTenantRequest.tenantType,
       None,
       TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
       TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),

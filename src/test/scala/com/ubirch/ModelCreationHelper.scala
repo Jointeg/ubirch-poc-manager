@@ -45,6 +45,7 @@ object ModelCreationHelper {
       TenantId(TenantName(name)),
       TenantName(name),
       API,
+      UBIRCH,
       Some(deviceCreationToken),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),

@@ -3,8 +3,10 @@ package com.ubirch.e2e.controllers
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.tenant.{ API, SharedAuthCert, TenantName, TenantType }
+import com.ubirch.models.keycloak.group.GroupId
+import com.ubirch.models.tenant._
 import com.ubirch.services.jwt.PublicKeyPoolService
+import com.ubirch.services.keycloak.groups.DefaultKeycloakGroupService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.{ FakeTokenCreator, ModelCreationHelper }
 import io.prometheus.client.CollectorRegistry
@@ -17,11 +19,14 @@ import scala.util.Random
 
 class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  private def createTenantJson(tenantName: String, tenantType: String = TenantType.UBIRCH_STRING) = {
+  private def createTenantJson(
+    tenantName: String,
+    usageType: String = UsageType.APIString,
+    tenantType: String = TenantType.UBIRCH_STRING) = {
     s"""
        |{
        |    "tenantName": "$tenantName",
-       |    "usageType": "API",
+       |    "usageType": "$usageType",
        |    "tenantType": "$tenantType",
        |    "sharedAuthCertRequired": true
        |}
@@ -51,7 +56,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
     "be able to successfully create a Tenant with sharedAuthCert required" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
-
+        val groups = injector.get[DefaultKeycloakGroupService]
         val tenantName = getRandomString
         val createTenantBody = createTenantJson(tenantName)
         post(
@@ -63,11 +68,55 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         }
 
         val tenantRepository = injector.get[TenantRepository]
-        val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
-        maybeTenant.value.tenantName shouldBe TenantName(tenantName)
-        maybeTenant.value.usageType shouldBe API
-        maybeTenant.value.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
+        val tenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds).get
+        tenant.tenantName shouldBe TenantName(tenantName)
+        tenant.usageType shouldBe API
+        tenant.tenantType shouldBe UBIRCH
+        tenant.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
+        groups.findGroupById(DeviceKeycloak.defaultRealm, GroupId(tenant.deviceGroupId.value), DeviceKeycloak)
+        groups.findGroupById(CertifyKeycloak.defaultRealm, GroupId(tenant.deviceGroupId.value), CertifyKeycloak)
       }
+    }
+
+    "be able to successfully create a Tenant with APP & BMG / BOTH & UBIRCH Type" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val groups = injector.get[DefaultKeycloakGroupService]
+        val tenantName = getRandomString
+        val ubirchName = "ubirchTenant"
+        val bmgCreateTenantBody = createTenantJson(tenantName, UsageType.APPString, TenantType.BMG_STRING)
+        val ubirchCreateTenantBody = createTenantJson(ubirchName, UsageType.BothString, TenantType.UBIRCH_STRING)
+        post(
+          "/tenants/create",
+          body = bmgCreateTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(200)
+          assert(body == "")
+        }
+        post(
+          "/tenants/create",
+          body = ubirchCreateTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          status should equal(200)
+          assert(body == "")
+        }
+        val tenantRepository = injector.get[TenantRepository]
+
+        val tenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds).get
+        tenant.tenantName shouldBe TenantName(tenantName)
+        tenant.usageType shouldBe APP
+        tenant.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
+        tenant.tenantType shouldBe BMG
+        groups.findGroupById(DeviceKeycloak.defaultRealm, GroupId(tenant.deviceGroupId.value), DeviceKeycloak)
+
+        val ubirchTenant = await(tenantRepository.getTenantByName(TenantName(ubirchName)), 2.seconds).get
+        ubirchTenant.tenantName shouldBe TenantName(ubirchName)
+        ubirchTenant.usageType shouldBe Both
+        ubirchTenant.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
+        ubirchTenant.tenantType shouldBe UBIRCH
+        groups.findGroupById(DeviceKeycloak.defaultRealm, GroupId(ubirchTenant.deviceGroupId.value), DeviceKeycloak)
+      }
+
     }
 
     "be able to successfully create a Tenant without a sharedAuthCert required" in {
