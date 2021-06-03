@@ -210,7 +210,6 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     }
   }
 
-
   private def getGroupIdByName(
     realm: KeycloakRealm,
     groupName: GroupName,

@@ -64,7 +64,7 @@ object PocTestHelper extends Awaits {
       certifyGroupRoleAssigned = true,
       adminGroupCreated = None,
       adminRoleAssigned = None,
-      pocTenantTypeGroupCreated = None,
+      pocTypeGroupCreated = None,
       employeeGroupCreated = None,
       employeeRoleAssigned = None,
       deviceRoleCreated = true,

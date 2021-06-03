@@ -178,8 +178,8 @@ class PocCreatorImpl @Inject() (
       pocAndStatus4 <- createAdminGroup(pocAndStatus3)
       pocAndStatus5 <- assignAdminRole(pocAndStatus4)
       pocAndStatus6 <- createPocTenantTypeGroup(pocAndStatus5, tenant)
-      pocAndStatus7 <- createEmployeeGroup(pocAndStatus6, tenant)
-      pocAndStatusFinal <- assignEmployeeRole(pocAndStatus7, tenant)
+      pocAndStatus7 <- createEmployeeGroup(pocAndStatus6)
+      pocAndStatusFinal <- assignEmployeeRole(pocAndStatus7)
     } yield pocAndStatusFinal
   }
 

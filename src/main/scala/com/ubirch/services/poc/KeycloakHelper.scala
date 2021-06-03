@@ -33,9 +33,9 @@ trait KeycloakHelper {
 
   def createPocTenantTypeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
-  def createEmployeeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+  def createEmployeeGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
-  def assignEmployeeRole(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+  def assignEmployeeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
   def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
@@ -154,31 +154,33 @@ class KeycloakHelperImpl @Inject() (
   }
 
   override def createPocTenantTypeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
-    if (pocAndStatus.status.pocTenantTypeGroupCreated.isEmpty || pocAndStatus.status.pocTenantTypeGroupCreated.contains(
+    if (pocAndStatus.status.pocTypeGroupCreated.isEmpty || pocAndStatus.status.pocTypeGroupCreated.contains(
         true))
       Task(pocAndStatus)
     else {
+      val tenantTypeGroupId =
+        tenant.tenantTypeGroupId.getOrElse(throwError(pocAndStatus, "tenant is missing tenantTypeGroupId"))
       addSubGroup(
-        tenant.certifyGroupId.value,
+        tenantTypeGroupId.value,
         pocAndStatus.poc.roleName,
         pocAndStatus,
         tenant.getRealm,
         CertifyKeycloak)
         .map { groupId =>
-          val updatedPoc = pocAndStatus.poc.copy(pocTenantTypeGroupId = Some(groupId.value))
-          val updatedStatus = pocAndStatus.status.copy(pocTenantTypeGroupCreated = Some(true))
+          val updatedPoc = pocAndStatus.poc.copy(pocTypeGroupId = Some(groupId.value))
+          val updatedStatus = pocAndStatus.status.copy(pocTypeGroupCreated = Some(true))
           pocAndStatus.copy(poc = updatedPoc, status = updatedStatus)
         }
     }
   }
 
-  override def createEmployeeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+  override def createEmployeeGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.status.employeeGroupCreated.isEmpty || pocAndStatus.status.employeeGroupCreated.contains(true))
       Task(pocAndStatus)
     else {
       val pocTenantTypeGroupId =
-        pocAndStatus.poc.pocTenantTypeGroupId.getOrElse(throwError(pocAndStatus, "poc is missing pocTenantTypeGroupId"))
-      addSubGroup(pocTenantTypeGroupId, POC_EMPLOYEE, pocAndStatus, tenant.getRealm, CertifyKeycloak)
+        pocAndStatus.poc.pocTypeGroupId.getOrElse(throwError(pocAndStatus, "poc is missing pocTenantTypeGroupId"))
+      addSubGroup(pocTenantTypeGroupId, POC_EMPLOYEE, pocAndStatus, pocAndStatus.poc.getRealm, CertifyKeycloak)
         .map { groupId =>
           val updatedPoc = pocAndStatus.poc.copy(employeeGroupId = Some(groupId.value))
           val updatedStatus = pocAndStatus.status.copy(employeeGroupCreated = Some(true))
@@ -187,7 +189,7 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
-  override def assignEmployeeRole(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+  override def assignEmployeeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     val poc = pocAndStatus.poc
     if (pocAndStatus.status.employeeRoleAssigned.isEmpty || pocAndStatus.status.employeeRoleAssigned.contains(true))
       Task(pocAndStatus)
@@ -195,7 +197,7 @@ class KeycloakHelperImpl @Inject() (
       val employeeGroupId =
         poc.employeeGroupId.getOrElse(throwError(pocAndStatus, s"employeeGroupId for poc ${poc.id} is missing"))
 
-      findRoleAndAddToGroup(poc, POC_EMPLOYEE, employeeGroupId, pocAndStatus.status, tenant.getRealm, CertifyKeycloak)
+      findRoleAndAddToGroup(poc, POC_EMPLOYEE, employeeGroupId, pocAndStatus.status, poc.getRealm, CertifyKeycloak)
         .map {
           case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(employeeRoleAssigned = Some(true)))
           case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
