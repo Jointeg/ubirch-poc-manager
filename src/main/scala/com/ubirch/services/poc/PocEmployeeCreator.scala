@@ -57,7 +57,7 @@ class PocEmployeeCreatorImpl @Inject() (
   private def createPocEmployee(employee: PocEmployee): Task[Either[String, PocEmployeeStatus]] = {
     retrieveStatusAndPoc(employee).flatMap {
       case (Some(poc: Poc), Some(status: PocEmployeeStatus)) =>
-        process(EmployeeTriple(poc, employee, status))
+        process(EmployeeTriple(poc, employee, status.copy(errorMessage = None)))
       case (_, _) =>
         Task(logAndGetLeft(s"cannot create employee ${employee.id}, poc or status couldn't be found"))
     }.onErrorHandle { e =>
