@@ -468,13 +468,18 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     "\\write18",
     "ub\0irch GmbH",
     "u\\x08ubirch GmbH",
-    "❤️"
+    "❤️❤️❤️❤️"
   )
 
   "Validator PocName" must {
     "not have empty header" in {
       val validated = validatePocName("poc_name*", " ")
-      validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column poc_name* cannot be empty")))
+      validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column poc_name* cannot be shorter than 4")))
+    }
+
+    "not have short header less than 4 characters" in {
+      val validated = validatePocName("poc_name*", "poc")
+      validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column poc_name* cannot be shorter than 4")))
     }
   }
 

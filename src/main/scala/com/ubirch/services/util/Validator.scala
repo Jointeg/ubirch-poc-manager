@@ -162,7 +162,7 @@ object Validator {
   }
 
   def validatePocName(header: String, pocName: String): AllErrorsOr[String] = {
-    if (pocName.trim == "") emptyStringError(header).invalidNel
+    if (pocName.trim.length < 4) tooShortStringError(header, 4).invalidNel
     else {
       val matches = pocNameRegex.findAllIn(pocName).toSeq
       if (matches.nonEmpty) pocName.validNel
