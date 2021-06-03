@@ -10,34 +10,36 @@ import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.keycloak.{ CertifyBmgRealm, CertifyDefaultRealm, CertifyUbirchRealm }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
 import org.scalactic.StringNormalizations._
 
-import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters._
 
 class KeycloakIntegrationTest extends E2ETestBase {
 
+  val certifyRealms = Seq(CertifyUbirchRealm, CertifyBmgRealm, CertifyDefaultRealm)
+
   "KeycloakGroupService" should {
     "Create new group, find it and then delete" in {
       withInjector { injector =>
         val keycloakGroupService = injector.get[KeycloakGroupService]
-
         val newGroup = createNewKeycloakGroup()
-        val realm = CertifyKeycloak.defaultRealm
-        val res = for {
-          _ <- keycloakGroupService.createGroup(realm, newGroup, CertifyKeycloak)
-          foundGroup <- keycloakGroupService.findGroupByName(realm, newGroup.groupName, CertifyKeycloak)
-          _ <- keycloakGroupService.deleteGroup(realm, newGroup.groupName, CertifyKeycloak)
-          groupAfterDeletion <- keycloakGroupService.findGroupByName(realm, newGroup.groupName, CertifyKeycloak)
-        } yield (foundGroup, groupAfterDeletion)
+        certifyRealms.map { realm =>
+          val res = for {
+            _ <- keycloakGroupService.createGroup(realm, newGroup, CertifyKeycloak)
+            foundGroup <- keycloakGroupService.findGroupByName(realm, newGroup.groupName, CertifyKeycloak)
+            _ <- keycloakGroupService.deleteGroup(realm, newGroup.groupName, CertifyKeycloak)
+            groupAfterDeletion <- keycloakGroupService.findGroupByName(realm, newGroup.groupName, CertifyKeycloak)
+          } yield (foundGroup, groupAfterDeletion)
 
-        val (maybeFoundGroup, groupAfterDeletion) = await(res, 2.seconds)
-        maybeFoundGroup.right.value.getName shouldBe newGroup.groupName.value
-        groupAfterDeletion.left.value shouldBe GroupNotFound(newGroup.groupName)
+          val (maybeFoundGroup, groupAfterDeletion) = await(res, 2.seconds)
+          maybeFoundGroup.right.value.getName shouldBe newGroup.groupName.value
+          groupAfterDeletion.left.value shouldBe GroupNotFound(newGroup.groupName)
+        }
       }
     }
 
@@ -185,19 +187,39 @@ class KeycloakIntegrationTest extends E2ETestBase {
   }
 
   "KeycloakRolesService" should {
-    "Be able to create, find and in the end delete role" in {
+    "Be able to create, find and in the end delete role in CertifyKeycloak" in {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
         val newRole = KeycloakTestData.createNewKeycloakRole()
-        val realm = CertifyKeycloak.defaultRealm
-        val response = for {
-          _ <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
-          foundRole <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
-          _ <- keycloakRolesService.deleteRole(realm, newRole.roleName, CertifyKeycloak)
-          roleAfterDeletion <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
-        } yield (foundRole, roleAfterDeletion)
+        certifyRealms.map { realm =>
+          val response = for {
+            _ <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
+            foundRole <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
+            _ <- keycloakRolesService.deleteRole(realm, newRole.roleName, CertifyKeycloak)
+            roleAfterDeletion <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
+          } yield (foundRole, roleAfterDeletion)
+          val (maybeCreatedRole, roleAfterDeletion) = await(response, 2.seconds)
+          assert(maybeCreatedRole.isDefined)
+          maybeCreatedRole.value.roleName shouldBe newRole.roleName
+          roleAfterDeletion should not be defined
+        }
+      }
+    }
 
+    "Be able to create, find and in the end delete role in DeviceKeycloak" in {
+      withInjector { injector =>
+        val keycloakRolesService = injector.get[KeycloakRolesService]
+        val newRole = KeycloakTestData.createNewKeycloakRole()
+        val realm = DeviceKeycloak.defaultRealm
+        val instance = DeviceKeycloak
+        val response = for {
+          _ <- keycloakRolesService.createNewRole(realm, newRole, instance)
+          foundRole <- keycloakRolesService.findRole(realm, newRole.roleName, instance)
+          _ <- keycloakRolesService.deleteRole(realm, newRole.roleName, instance)
+          roleAfterDeletion <- keycloakRolesService.findRole(realm, newRole.roleName, instance)
+        } yield (foundRole, roleAfterDeletion)
         val (maybeCreatedRole, roleAfterDeletion) = await(response, 2.seconds)
+        assert(maybeCreatedRole.isDefined)
         maybeCreatedRole.value.roleName shouldBe newRole.roleName
         roleAfterDeletion should not be defined
       }
@@ -252,25 +274,26 @@ class KeycloakIntegrationTest extends E2ETestBase {
     "Be able to create an user, retrieve info about him and delete him" in {
       withInjector { injector =>
         val keycloakUserService = injector.get[KeycloakUserService]
-        val realm = DeviceKeycloak.defaultRealm
+
         val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
+        certifyRealms.map { realm =>
+          val result = for {
+            _ <- keycloakUserService.createUser(realm, newKeycloakUser, CertifyKeycloak)
+            user <- keycloakUserService.getUserByUserName(realm, newKeycloakUser.userName, CertifyKeycloak)
+            _ <- keycloakUserService.deleteUserByUserName(realm, newKeycloakUser.userName, CertifyKeycloak)
+            userAfterDeletion <- keycloakUserService.getUserByUserName(realm, newKeycloakUser.userName, CertifyKeycloak)
+          } yield (user, userAfterDeletion)
 
-        val result = for {
-          _ <- keycloakUserService.createUser(realm, newKeycloakUser, DeviceKeycloak)
-          user <- keycloakUserService.getUserByUserName(realm, newKeycloakUser.userName, DeviceKeycloak)
-          _ <- keycloakUserService.deleteUserByUserName(realm, newKeycloakUser.userName, DeviceKeycloak)
-          userAfterDeletion <- keycloakUserService.getUserByUserName(realm, newKeycloakUser.userName, DeviceKeycloak)
-        } yield (user, userAfterDeletion)
+          val (user, userAfterDeletion) = await(result, 5.seconds)
 
-        val (user, userAfterDeletion) = await(result, 5.seconds)
+          user.value.getEmail should equal(newKeycloakUser.email.value)(after.being(lowerCased))
+          user.value.getUsername should equal(newKeycloakUser.email.value)(after.being(lowerCased))
+          user.value.getLastName should equal(newKeycloakUser.lastName.value)(after.being(lowerCased))
+          user.value.getFirstName should equal(newKeycloakUser.firstName.value)(after.being(lowerCased))
+          user.value.isEnabled shouldBe true
 
-        user.value.getEmail should equal(newKeycloakUser.email.value)(after.being(lowerCased))
-        user.value.getUsername should equal(newKeycloakUser.email.value)(after.being(lowerCased))
-        user.value.getLastName should equal(newKeycloakUser.lastName.value)(after.being(lowerCased))
-        user.value.getFirstName should equal(newKeycloakUser.firstName.value)(after.being(lowerCased))
-        user.value.isEnabled shouldBe true
-
-        userAfterDeletion should not be defined
+          userAfterDeletion should not be defined
+        }
       }
     }
 

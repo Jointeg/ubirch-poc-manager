@@ -9,7 +9,7 @@ import com.ubirch.models.keycloak.group.GroupName
 import com.ubirch.models.keycloak.roles.RoleName
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.tenant.{ Tenant, TenantName }
+import com.ubirch.models.tenant.{ Tenant, TenantName, TenantType }
 import com.ubirch.models.user.UserName
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
@@ -45,7 +45,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
        |{
        |    "tenantName": "$tenantName",
        |    "usageType": "APP",
-       |    "deviceCreationToken": "1234567890",
+       |    "tenantType": "${TenantType.UBIRCH_STRING}"
        |    "sharedAuthCertRequired": true
        |}
        |""".stripMargin

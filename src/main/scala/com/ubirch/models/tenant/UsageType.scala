@@ -7,9 +7,9 @@ case object APP extends UsageType
 case object Both extends UsageType
 
 object UsageType {
-  private val APIString = "API"
-  private val APPString = "APP"
-  private val BothString = "BOTH"
+  val APIString = "API"
+  val APPString = "APP"
+  val BothString = "BOTH"
 
   def unsafeFromString(value: String): UsageType =
     value match {

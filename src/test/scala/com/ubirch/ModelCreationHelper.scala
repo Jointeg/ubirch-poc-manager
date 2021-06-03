@@ -45,9 +45,11 @@ object ModelCreationHelper {
       TenantId(TenantName(name)),
       TenantName(name),
       API,
+      UBIRCH,
       Some(deviceCreationToken),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),
+      None,
       OrgId(TenantId(TenantName(name)).value),
       sharedAuthCertRequired = true
     ).copy(sharedAuthCert = sharedAuthCert)
@@ -140,6 +142,7 @@ object ModelCreationHelper {
     CreateTenantRequest(
       TenantName("tenantName"),
       API,
+      UBIRCH,
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 

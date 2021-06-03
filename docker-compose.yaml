@@ -15,13 +15,11 @@ services:
     environment:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: admin
-      KEYCLOAK_IMPORT: '/tmp/certify-export.json'
-      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
+      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled -Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/certify-export.json -Dkeycloak.migration.strategy=IGNORE_EXISTING'
     ports:
       - 8080:8080
     volumes:
       - './keycloak/realms:/tmp'
-      - './keycloak/extensions:/opt/jboss/keycloak/standalone/deployments'
     networks:
       - keycloak_users_network
 
@@ -31,8 +29,7 @@ services:
     environment:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: admin
-      KEYCLOAK_IMPORT: '/tmp/device-export.json'
-      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled'
+      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled -Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/device-export.json -Dkeycloak.migration.strategy=IGNORE_EXISTING'
     ports:
       - 8081:8080
     volumes:

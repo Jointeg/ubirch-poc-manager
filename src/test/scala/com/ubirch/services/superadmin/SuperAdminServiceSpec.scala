@@ -5,8 +5,7 @@ import com.ubirch.controllers.SuperAdminContext
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.keycloak.group.GroupId
-import com.ubirch.models.tenant.{ DeviceAndCertifyGroups, OrgId, TenantId, TenantKeycloakHelper, TenantName }
-import com.ubirch.services.auth.AESEncryption
+import com.ubirch.models.tenant.{ DeviceAndCertifyGroups, OrgId, TenantId, TenantKeycloakHelper }
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
 import com.ubirch.services.teamdrive.TeamDriveService
 import com.ubirch.{ PocConfig, UnitTestBase }
@@ -54,11 +53,9 @@ class SuperAdminServiceSpec extends UnitTestBase {
 
     "should throw exception on group creation failure" in {
       withInjector { injector =>
-        val aesEncryption = injector.get[AESEncryption]
         val repo = injector.get[TenantRepository]
-
         val keycloakHelperMock = mock[TenantKeycloakHelper]
-        when(keycloakHelperMock.doKeycloakRelatedTasks(TenantName(tenantRequest.tenantName.value)))
+        when(keycloakHelperMock.doKeycloakRelatedTasks(tenantRequest))
           .thenReturn(Task.raiseError(TenantCreationException("")))
 
         val superAdminSvc =
@@ -85,8 +82,8 @@ class SuperAdminServiceSpec extends UnitTestBase {
           .thenReturn(Task(Left(CertificateCreationError("error"))))
 
         val keycloakHelperMock = mock[TenantKeycloakHelper]
-        when(keycloakHelperMock.doKeycloakRelatedTasks(TenantName(tenantRequest.tenantName.value)))
-          .thenReturn(Task(DeviceAndCertifyGroups(GroupId("id"), GroupId("id"))))
+        when(keycloakHelperMock.doKeycloakRelatedTasks(tenantRequest))
+          .thenReturn(Task(DeviceAndCertifyGroups(GroupId("id"), GroupId("id"), None)))
 
         val superAdminSvc =
           new DefaultSuperAdminService(
@@ -146,6 +143,5 @@ class SuperAdminServiceSpec extends UnitTestBase {
         assertThrows[TenantCreationException](superAdminSvc.createSharedAuthCert(tenant).runSyncUnsafe())
       }
     }
-
   }
 }

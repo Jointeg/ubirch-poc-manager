@@ -21,7 +21,7 @@ class KeycloakUserServiceWithoutMail @Inject() (keycloakConnector: KeycloakConne
         if (!actions.isEmpty) {
           userRepresentation.setRequiredActions(List.empty.asJava)
           Right(keycloakConnector.getKeycloak(instance)
-            .realm(keycloakConnector.getKeycloakRealm(instance))
+            .realm(realm.name)
             .users()
             .get(userRepresentation.getId)
             .update(userRepresentation))
