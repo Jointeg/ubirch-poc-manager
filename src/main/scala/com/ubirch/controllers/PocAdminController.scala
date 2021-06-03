@@ -8,8 +8,8 @@ import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
   NotAllowedError,
-  UserNotCompleted,
-  UserNotFound
+  ResourceNotFound,
+  UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.AdminCriteriaValidator
@@ -180,8 +180,8 @@ class PocAdminController @Inject() (
           r <- pocAdminService.switchActiveForPocEmployee(employeeId, pocAdmin, switch)
             .map {
               case Left(e) => e match {
-                  case UserNotFound(id) =>
-                    NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' not found'"))
+                  case ResourceNotFound(id) =>
+                    NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' or related tenant was not found'"))
                   case UserNotCompleted => Conflict(NOK.conflict(
                       s"Poc employee with id '$employeeId' cannot be de/-activated before status is Completed."))
                   case MissingCertifyUserId(id) =>
