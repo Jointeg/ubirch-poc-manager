@@ -47,10 +47,10 @@ class EmployeeCertifyHelperImpl @Inject() (users: KeycloakUserService) extends E
             employee = triple.employee.copy(certifyUserId = Some(userId.value)),
             status = triple.status.copy(certifyUserCreated = true))
         case Left(UserAlreadyExists(userName)) =>
-          logger.warn(s"user already exists. user: $userName, employee: ${triple.employee.id}")
+          logger.error(s"user already exists. user: $userName, employee: ${triple.employee.id}")
           PocEmployeeCreator.throwError(
             triple,
-            "this user already exists in the Keycloak. please contact Ubirch admin.")
+            "This user already exists in Keycloak. Please contact Ubirch admin.")
         case Left(UserCreationError(errorMsg)) => PocEmployeeCreator.throwError(triple, errorMsg)
       }
     }

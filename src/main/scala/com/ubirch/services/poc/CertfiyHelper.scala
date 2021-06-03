@@ -46,10 +46,10 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
             admin = pocAdminAndStatus.admin.copy(certifyUserId = Some(userId.value)),
             status = pocAdminAndStatus.status.copy(certifyUserCreated = true))
         case Left(UserAlreadyExists(userName)) =>
-          logger.warn(s"user already exists. user: $userName, admin: ${pocAdminAndStatus.admin.id}")
+          logger.error(s"user already exists. user: $userName, admin: ${pocAdminAndStatus.admin.id}")
           PocAdminCreator.throwError(
             pocAdminAndStatus,
-            "this user already exists in the Keycloak. please contact Ubirch admin.")
+            "This user already exists in Keycloak. Please contact Ubirch admin.")
         case Left(UserCreationError(errorMsg)) => PocAdminCreator.throwError(pocAdminAndStatus, errorMsg)
       }
     }
