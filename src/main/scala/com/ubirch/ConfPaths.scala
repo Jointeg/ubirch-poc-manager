@@ -26,7 +26,6 @@ object ConfPaths {
       final val USERNAME = "keycloak-certify.server.username"
       final val PASSWORD = "keycloak-certify.server.password"
       final val CLIENT_ID = "keycloak-certify.server.clientId"
-      final val REALM = "keycloak-certify.realm"
       final val CONFIG_URL = "keycloak-certify.tokenVerification.configURL"
       final val KID = "keycloak-certify.tokenVerification.kid"
     }
@@ -37,7 +36,6 @@ object ConfPaths {
       final val USERNAME = "keycloak-device.server.username"
       final val PASSWORD = "keycloak-device.server.password"
       final val CLIENT_ID = "keycloak-device.server.clientId"
-      final val REALM = "keycloak-device.realm"
       final val CONFIG_URL = "keycloak-device.tokenVerification.configURL"
       final val KID = "keycloak-device.tokenVerification.kid"
     }

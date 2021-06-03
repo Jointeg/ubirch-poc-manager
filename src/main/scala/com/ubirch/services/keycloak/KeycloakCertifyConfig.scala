@@ -15,8 +15,6 @@ trait KeycloakCertifyConfig {
 
   def clientId: String
 
-  def realm: String
-
   def configUrl: String
 
   def acceptedKid: String
@@ -30,7 +28,6 @@ class RealKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
   val username: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ID)
-  val realm: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.REALM)
   val configUrl: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CONFIG_URL)
   val acceptedKid: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.KID)
 }

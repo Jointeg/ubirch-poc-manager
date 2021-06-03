@@ -68,7 +68,6 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
   val username: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ID)
-  val realm: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.REALM)
   val configUrl: String =
     s"http://$keycloakServer:$keycloakPort/auth/realms/poc-certify/.well-known/openid-configuration"
   lazy val acceptedKid: String = kid.body
@@ -100,7 +99,6 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
   val username: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_ID)
-  val realm: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.REALM)
   val configUrl: String =
     s"http://$keycloakServer:$keycloakPort/auth/realms/ubirch-default-realm/.well-known/openid-configuration"
   lazy val acceptedKid: String = kid.body

@@ -5,11 +5,11 @@ import com.ubirch._
 import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.{
   CertifyBmgRealm,
+  CertifyDefaultRealm,
   CertifyKeycloakConnector,
   CertifyUbirchRealm,
-  DeviceKeycloakConnector,
-  KeycloakCertifyConfig,
-  KeycloakDeviceConfig
+  DeviceDefaultRealm,
+  DeviceKeycloakConnector
 }
 import org.flywaydb.core.Flyway
 import org.scalatest.{ EitherValues, OptionValues }
@@ -62,14 +62,12 @@ trait E2ETestBase
 
   private def performKeycloakCleanup(injector: E2EInjectorHelperImpl): Unit = {
     val keycloakUsers = injector.get[CertifyKeycloakConnector]
-    val keycloakCertifyConfig = injector.get[KeycloakCertifyConfig]
     val keycloakDevice = injector.get[DeviceKeycloakConnector]
-    val keycloakDeviceConfig = injector.get[KeycloakDeviceConfig]
 
-    val keycloakCertifyRealm = keycloakUsers.keycloak.realm(keycloakCertifyConfig.realm)
+    val keycloakCertifyRealm = keycloakUsers.keycloak.realm(CertifyDefaultRealm.name)
     val keycloakCertifyUbirchRealm = keycloakUsers.keycloak.realm(CertifyUbirchRealm.name)
     val keycloakCertifyBmgRealm = keycloakUsers.keycloak.realm(CertifyBmgRealm.name)
-    val keycloakDeviceRealm = keycloakDevice.keycloak.realm(keycloakDeviceConfig.realm)
+    val keycloakDeviceRealm = keycloakDevice.keycloak.realm(DeviceDefaultRealm.name)
     val keycloakRealms =
       Seq(keycloakCertifyRealm, keycloakCertifyUbirchRealm, keycloakDeviceRealm, keycloakCertifyBmgRealm)
 
