@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import cats.data.Validated.{ Invalid, Valid }
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
-import com.ubirch.models.tenant.{ API, APP, Both }
+import com.ubirch.models.tenant.{ API, APP, BMG, Both }
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.poc.util.ValidatorConstants
 import com.ubirch.services.poc.util.ValidatorConstants._
@@ -338,24 +338,43 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   "Validator map contains key string" should {
 
-    val map = Map("test" -> "xxx", "test1" -> "yyy", "123" -> "zzz")
-    "validate valid" in {
-      val validated = validateMapContainsStringKey(pocType, "test1", map)
+    val ubirchTenant = createTenant()
+    val bmgTenant = ubirchTenant.copy(tenantType = BMG)
+    val map = Map("ub_vac_app" -> "endpoint1", "ub_vac_api" -> "endpoint2", "bmg_vac_app" -> "endpoint3")
+
+    "validate valid when ubirch pocType and tenantType" in {
+      "ub_vac_app".split("_").foreach(println(_))
+      val validated = validatePocType(pocType, "ub_vac_app", map, ubirchTenant)
       assert(validated.isValid)
     }
 
-    "validate error if string is empty" in {
-      val validated = validateMapContainsStringKey(pocType, "", map)
+    "validate valid when bmg pocType and tenantType" in {
+      val validated = validatePocType(pocType, "bmg_vac_app", map, bmgTenant)
+      assert(validated.isValid)
+    }
+
+    "validate error if UBIRCH pocType but BMG tenantType" in {
+      val validated = validatePocType(pocType, "ub_vac_app", map, bmgTenant)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
         .leftMap { error =>
-          assert(error == mapDoesntContainStringKeyError(pocType, map))
+          assert(error == pocTypeMustCorrelateWithTenantType(pocType, bmgTenant.tenantType))
+        }
+    }
+
+    "validate error if BMG pocType but UBIRCH tenantType" in {
+      val validated = validatePocType(pocType, "bmg_vac_app", map, ubirchTenant)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == pocTypeMustCorrelateWithTenantType(pocType, ubirchTenant.tenantType))
         }
     }
 
     "validate error if map doesn't contain string" in {
-      val validated = validateMapContainsStringKey(pocType, "set1", map)
+      val validated = validatePocType(pocType, "set1", map, ubirchTenant)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -363,6 +382,17 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
           assert(error == mapDoesntContainStringKeyError(pocType, map))
         }
     }
+
+    "validate error if string empty" in {
+      val validated = validatePocType(pocType, "", map, ubirchTenant)
+      assert(validated.isInvalid)
+      validated
+        .leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == mapDoesntContainStringKeyError(pocType, map))
+        }
+    }
+
   }
 
   "Validator StringOption" should {
