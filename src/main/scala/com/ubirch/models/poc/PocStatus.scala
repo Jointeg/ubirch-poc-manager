@@ -11,6 +11,7 @@ case class PocStatus(
   certifyGroupRoleAssigned: Boolean = false,
   adminGroupCreated: Option[Boolean],
   adminRoleAssigned: Option[Boolean],
+  pocTypeGroupCreated: Option[Boolean],
   employeeGroupCreated: Option[Boolean],
   employeeRoleAssigned: Option[Boolean],
   deviceRoleCreated: Boolean = false,
@@ -39,6 +40,7 @@ case class PocStatus(
       s"certifyGroupRoleAssigned: $certifyGroupRoleAssigned\n" +
       s"adminGroupCreated: $adminGroupCreated\n" +
       s"adminRoleAssigned: $adminRoleAssigned\n" +
+      s"pocTypeGroupCreated: $pocTypeGroupCreated\n" +
       s"employeeGroupCreated: $employeeGroupCreated\n" +
       s"employeeRoleAssigned: $employeeRoleAssigned\n" +
       s"deviceRoleCreated: $deviceRoleCreated\n" +
@@ -72,6 +74,7 @@ object PocStatus {
       clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
       adminGroupCreated = if (poc.certifyApp) Some(false) else None,
       adminRoleAssigned = if (poc.certifyApp) Some(false) else None,
+      pocTypeGroupCreated = if (poc.certifyApp) Some(false) else None,
       employeeGroupCreated = if (poc.certifyApp) Some(false) else None,
       employeeRoleAssigned = if (poc.certifyApp) Some(false) else None,
       logoRequired = poc.certifyApp,

@@ -125,14 +125,14 @@ object ModelCreationHelper {
     pocId: UUID = UUID.randomUUID(),
     adminGroupCreated: Option[Boolean] = None,
     adminRoleAssigned: Option[Boolean] = None,
-    employeeGroupCreated: Option[Boolean] = None,
-    employeeRoleAssigned: Option[Boolean] = None): PocStatus =
+    pocTypeGroupCreated: Option[Boolean] = None): PocStatus =
     PocStatus(
       pocId,
       adminGroupCreated = adminGroupCreated,
       adminRoleAssigned = adminRoleAssigned,
-      employeeGroupCreated = employeeGroupCreated,
-      employeeRoleAssigned = employeeRoleAssigned,
+      pocTypeGroupCreated = pocTypeGroupCreated,
+      employeeGroupCreated = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
+      employeeRoleAssigned = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,

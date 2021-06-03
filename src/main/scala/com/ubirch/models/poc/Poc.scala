@@ -24,6 +24,7 @@ case class Poc(
   manager: PocManager,
   roleName: String,
   deviceGroupId: Option[String] = None,
+  pocTypeGroupId: Option[String] = None,
   certifyGroupId: Option[String] = None,
   adminGroupId: Option[String] = None,
   employeeGroupId: Option[String] = None,

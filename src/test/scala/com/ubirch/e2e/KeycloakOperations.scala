@@ -5,7 +5,7 @@ import com.ubirch.data.KeycloakToken
 import com.ubirch.models.user.{ UserId, UserName }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, DeviceKeycloakConnector }
+import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, DeviceKeycloakConnector, KeycloakRealm }
 import com.ubirch.{ Awaits, ExecutionContextsTests }
 import monix.eval.Task
 import org.json4s.Formats
@@ -165,10 +165,10 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
         .add(List(adminRole.toRepresentation).asJava)
     }
 
-  def createRole(roleName: String)(keycloakConnector: CertifyKeycloakConnector): Unit = {
+  def createRole(roleName: String, realm: KeycloakRealm)(keycloakConnector: CertifyKeycloakConnector): Unit = {
     val roleRepresentation = new RoleRepresentation()
     roleRepresentation.setName(roleName)
-    keycloakConnector.keycloak.realm(CERTIFY_REALM).roles().create(roleRepresentation)
+    keycloakConnector.keycloak.realm(realm.name).roles().create(roleRepresentation)
   }
 
   def createGroupWithId(groupName: String)(keycloakConnector: DeviceKeycloakConnector): core.Response = {

@@ -18,7 +18,8 @@ import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, KeycloakCertifyConfig }
+import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, CertifyUbirchRealm, KeycloakCertifyConfig }
+import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
 import com.ubirch.services.poc.PocTestHelper.createNeededDeviceUser
 import com.ubirch.services.poc.util.CsvConstants.{ pocAdminHeaderLine, pocEmployeeHeaderLine }
 import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
@@ -79,12 +80,12 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
       val users = injector.get[KeycloakUserService]
       val pocConfig = injector.get[PocConfig]
       val teamDriveClient = injector.get[FakeTeamDriveClient]
-      createRole("poc-admin")(certifyKeycloakConnector)
-      createRole("poc-employee")(certifyKeycloakConnector)
       // Create static spaces
       pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
         teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
       }.runSyncUnsafe()
+      createRole("poc-admin", CertifyKeycloak.defaultRealm)(certifyKeycloakConnector)
+      createRole("poc-employee", CertifyUbirchRealm)(certifyKeycloakConnector)
 
       info("Super Admin needs to be created manually")
       await(createKeycloakSuperAdminUser(injector.superAdmin)(certifyKeycloakConnector), 5.seconds)
