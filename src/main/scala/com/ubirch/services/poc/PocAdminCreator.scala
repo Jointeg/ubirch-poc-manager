@@ -75,7 +75,7 @@ class PocAdminCreatorImpl @Inject() (
           Task(Right(status))
         } else {
           updateStatusOfAdmin(admin, Processing)
-            .flatMap(pocAdmin => process(PocAdminAndStatus(pocAdmin, status), poc, tenant))
+            .flatMap(pocAdmin => process(PocAdminAndStatus(pocAdmin, status.copy(errorMessage = None)), poc, tenant))
         }
       case (_, _, _) =>
         Task(logAndGetLeft(s"cannot create admin ${admin.id} as tenant, poc or status couldn't be found"))

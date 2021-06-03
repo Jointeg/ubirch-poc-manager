@@ -5,7 +5,7 @@ import com.ubirch.data.KeycloakToken
 import com.ubirch.models.user.{ UserId, UserName }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, DeviceKeycloakConnector }
+import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, DeviceKeycloakConnector, KeycloakRealm }
 import com.ubirch.{ Awaits, ExecutionContextsTests }
 import monix.eval.Task
 import org.json4s.Formats
@@ -22,6 +22,7 @@ import sttp.client._
 import sttp.client.json4s._
 import sttp.client.quick.backend
 
+import javax.ws.rs.core
 import scala.collection.JavaConverters.{
   iterableAsScalaIterableConverter,
   mapAsJavaMapConverter,
@@ -32,8 +33,8 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
 
-  val DEVICE_REALM = "device-realm"
-  val CERTIFY_REALM = "certify-realm"
+  val DEVICE_REALM = "ubirch-default-realm"
+  val CERTIFY_REALM = "poc-certify"
 
   def cleanAllUsers(
     keycloakUsersConnector: CertifyKeycloakConnector,
@@ -58,14 +59,14 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
     credentialRepresentation.setTemporary(false)
 
     for {
-      maybeUser <- userService.getUserById(userId, CertifyKeycloak)
+      maybeUser <- userService.getUserById(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
       user = maybeUser.getOrElse(fail(s"Expected to get user with username $userId"))
       _ = user.setCredentials(List(credentialRepresentation).asJava)
       _ <- Task(keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(user.getId).update(user))
     } yield ()
   }
 
-  def getAuthToken(username: String, password: String, url: String)(implicit formats: Formats) = {
+  def getAuthToken(username: String, password: String, url: String)(implicit formats: Formats): String = {
     val response = basicRequest
       .body(
         Map(
@@ -77,7 +78,7 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
           "password" -> password
         )
       )
-      .post(uri"$url/realms/certify-realm/protocol/openid-connect/token")
+      .post(uri"$url/realms/poc-certify/protocol/openid-connect/token")
       .response(asJson[KeycloakToken])
       .send()
 
@@ -164,19 +165,19 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
         .add(List(adminRole.toRepresentation).asJava)
     }
 
-  def createRole(roleName: String)(keycloakConnector: CertifyKeycloakConnector): Unit = {
+  def createRole(roleName: String, realm: KeycloakRealm)(keycloakConnector: CertifyKeycloakConnector): Unit = {
     val roleRepresentation = new RoleRepresentation()
     roleRepresentation.setName(roleName)
-    keycloakConnector.keycloak.realm(CERTIFY_REALM).roles().create(roleRepresentation)
+    keycloakConnector.keycloak.realm(realm.name).roles().create(roleRepresentation)
   }
 
-  def createGroupWithId(groupName: String)(keycloakConnector: DeviceKeycloakConnector) = {
+  def createGroupWithId(groupName: String)(keycloakConnector: DeviceKeycloakConnector): core.Response = {
     val groupRepresentation = new GroupRepresentation()
     groupRepresentation.setName(groupName)
     keycloakConnector.keycloak.realm(DEVICE_REALM).groups().add(groupRepresentation)
   }
 
-  def updatePassword(userId: String, password: String)(keycloakConnector: CertifyKeycloakConnector) = {
+  def updatePassword(userId: String, password: String)(keycloakConnector: CertifyKeycloakConnector): Unit = {
     val credentialRepresentation = new CredentialRepresentation()
     credentialRepresentation.setType(CredentialRepresentation.PASSWORD)
     credentialRepresentation.setValue(password)
@@ -190,7 +191,7 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
     userService: KeycloakUserService,
     keycloakConnector: CertifyKeycloakConnector): Task[Unit] = {
     for {
-      maybeUser <- userService.getUserById(userId, CertifyKeycloak)
+      maybeUser <- userService.getUserById(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
       user = maybeUser.getOrElse(fail(s"Expected to find user with username $userId in Keycloak"))
       _ = user.setAttributes(Map("confirmation_mail_sent" -> List(value.toString).asJava).asJava)
       _ <- Task(keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(user.getId).update(user))
@@ -200,7 +201,7 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
   def setEmailVerified(
     userId: UserId)(userService: KeycloakUserService, keycloakConnector: CertifyKeycloakConnector): Task[Unit] = {
     for {
-      maybeUser <- userService.getUserById(userId, CertifyKeycloak)
+      maybeUser <- userService.getUserById(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
       user = maybeUser.getOrElse(fail(s"Expected to find user with username $userId in Keycloak"))
       _ = user.setEmailVerified(true)
       _ <- Task(keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(user.getId).update(user))

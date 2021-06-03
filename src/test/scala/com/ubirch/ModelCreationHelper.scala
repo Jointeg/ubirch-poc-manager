@@ -48,9 +48,11 @@ object ModelCreationHelper {
       TenantId(TenantName(name)),
       TenantName(name),
       API,
+      UBIRCH,
       Some(deviceCreationToken),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),
+      None,
       OrgId(TenantId(TenantName(name)).value),
       sharedAuthCertRequired = true
     ).copy(sharedAuthCert = sharedAuthCert)
@@ -123,14 +125,14 @@ object ModelCreationHelper {
     pocId: UUID = UUID.randomUUID(),
     adminGroupCreated: Option[Boolean] = None,
     adminRoleAssigned: Option[Boolean] = None,
-    employeeGroupCreated: Option[Boolean] = None,
-    employeeRoleAssigned: Option[Boolean] = None): PocStatus =
+    pocTypeGroupCreated: Option[Boolean] = None): PocStatus =
     PocStatus(
       pocId,
       adminGroupCreated = adminGroupCreated,
       adminRoleAssigned = adminRoleAssigned,
-      employeeGroupCreated = employeeGroupCreated,
-      employeeRoleAssigned = employeeRoleAssigned,
+      pocTypeGroupCreated = pocTypeGroupCreated,
+      employeeGroupCreated = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
+      employeeRoleAssigned = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,
@@ -143,6 +145,7 @@ object ModelCreationHelper {
     CreateTenantRequest(
       TenantName("tenantName"),
       API,
+      UBIRCH,
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 

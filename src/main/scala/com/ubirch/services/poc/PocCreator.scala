@@ -80,7 +80,7 @@ class PocCreatorImpl @Inject() (
     retrieveStatusAndTenant(poc).flatMap {
       case (Some(status: PocStatus), Some(tenant: Tenant)) =>
         updateStatusOfPoc(poc, Processing)
-          .flatMap(poc => process(PocAndStatus(poc, status), tenant))
+          .flatMap(poc => process(PocAndStatus(poc, status.copy(errorMessage = None)), tenant))
       case (_, _) =>
         val errorMsg = s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
         logger.error(errorMsg)
@@ -177,8 +177,9 @@ class PocCreatorImpl @Inject() (
       pocAndStatus3 <- assignCertifyRoleToGroup(pocAndStatus2, tenant)
       pocAndStatus4 <- createAdminGroup(pocAndStatus3)
       pocAndStatus5 <- assignAdminRole(pocAndStatus4)
-      pocAndStatus6 <- createEmployeeGroup(pocAndStatus5)
-      pocAndStatusFinal <- assignEmployeeRole(pocAndStatus6)
+      pocAndStatus6 <- createPocTenantTypeGroup(pocAndStatus5, tenant)
+      pocAndStatus7 <- createEmployeeGroup(pocAndStatus6)
+      pocAndStatusFinal <- assignEmployeeRole(pocAndStatus7)
     } yield pocAndStatusFinal
   }
 

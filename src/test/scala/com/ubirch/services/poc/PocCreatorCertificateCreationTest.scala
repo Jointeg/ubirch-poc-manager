@@ -192,9 +192,11 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
       updatedTenant)
 
     keyCloakRoleService.createNewRole(
+      DeviceKeycloak.defaultRealm,
       CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
       DeviceKeycloak).runSyncUnsafe(3.seconds)
     keyCloakRoleService.createNewRole(
+      CertifyKeycloak.defaultRealm,
       CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
       CertifyKeycloak).runSyncUnsafe(3.seconds)
 

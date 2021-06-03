@@ -20,7 +20,6 @@ trait PocConfig {
 
   val teamDriveAdminEmails: Seq[String]
   val teamDriveStage: String
-  val pocAdminGroupId: String
   val pocLogoEndpoint: String
   val certWelcomeMessage: String
   val staticAssetsWelcomeMessage: String
@@ -77,7 +76,6 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     config.getString(TeamDrivePaths.UBIRCH_ADMINS).split(",").map(_.trim)
 
   val teamDriveStage: String = config.getString(TeamDrivePaths.STAGE)
-  val pocAdminGroupId: String = config.getString(ServicesConfPaths.POC_ADMIN_GROUP_ID)
   val pocLogoEndpoint: String = config.getString(ServicesConfPaths.POC_LOGO_ENDPOINT)
   val certWelcomeMessage: String = config.getString(TeamDrivePaths.CERT_WELCOME_MESSAGE)
   val staticAssetsWelcomeMessage: String = config.getString(TeamDrivePaths.STATIC_ASSETS_WELCOME_MESSAGE)

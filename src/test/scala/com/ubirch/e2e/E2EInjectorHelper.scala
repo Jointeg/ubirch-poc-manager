@@ -41,15 +41,14 @@ class TestPocConfig @Inject() (
 
   val groupRepresentation = new GroupRepresentation()
   groupRepresentation.setName("vaccination-v3")
-  keycloakConnector.keycloak.realm("device-realm").groups().add(groupRepresentation)
-  val id = keycloakConnector.keycloak.realm("device-realm").groups().groups().asScala.head
+  keycloakConnector.keycloak.realm("ubirch-default-realm").groups().add(groupRepresentation)
+  val id: GroupRepresentation = keycloakConnector.keycloak.realm("ubirch-default-realm").groups().groups().asScala.head
   override val dataSchemaGroupMap = Map("vaccination-v3" -> id.getId)
   override val trustedPocGroupMap: Map[String, String] = Map("vaccination-v3" -> id.getId)
 }
 
 @Singleton
-class TestKeycloakCertifyConfig @Inject() (val conf: Config, keycloakRuntimeConfig: KeycloakUsersRuntimeConfig)
-  extends KeycloakCertifyConfig {
+class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCertifyConfig {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val formats: Formats = DefaultFormats.lossless ++ TestFormats.all
@@ -59,7 +58,7 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config, keycloakRuntimeConf
 
   private lazy val kid = {
     basicRequest
-      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/certify-realm/protocol/openid-connect/certs")
+      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/poc-certify/protocol/openid-connect/certs")
       .response(asJson[KeycloakKidResponse])
       .send()
   }
@@ -69,14 +68,8 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config, keycloakRuntimeConf
   val username: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ID)
-  val realm: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.REALM)
-  val clientConfig: String =
-    s"""{ "realm": "certify-realm", "auth-server-url": "http://$keycloakServer:$keycloakPort/auth", "ssl-required": "external", "resource": "ubirch-2.0-user-access-local", "credentials": { "secret": "ca942e9b-8336-43a3-bd22-adcaf7e5222f" }, "confidential-port": 0 }"""
-  val clientAdminUsername: String = keycloakRuntimeConfig.tenantAdmin.userName.value
-  val clientAdminPassword: String = keycloakRuntimeConfig.tenantAdmin.password
-  val userPollingInterval: Int = conf.getInt(ConfPaths.KeycloakPaths.CertifyKeycloak.USER_POLLING_INTERVAL)
   val configUrl: String =
-    s"http://$keycloakServer:$keycloakPort/auth/realms/certify-realm/.well-known/openid-configuration"
+    s"http://$keycloakServer:$keycloakPort/auth/realms/poc-certify/.well-known/openid-configuration"
   lazy val acceptedKid: String = kid.body
     .right
     .get
@@ -96,7 +89,7 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
 
   private lazy val kid = {
     basicRequest
-      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/device-realm/protocol/openid-connect/certs")
+      .get(uri"http://$keycloakServer:$keycloakPort/auth/realms/ubirch-default-realm/protocol/openid-connect/certs")
       .response(asJson[KeycloakKidResponse])
       .send()
   }
@@ -106,9 +99,8 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
   val username: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_ID)
-  val realm: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.REALM)
   val configUrl: String =
-    s"http://$keycloakServer:$keycloakPort/auth/realms/device-realm/.well-known/openid-configuration"
+    s"http://$keycloakServer:$keycloakPort/auth/realms/ubirch-default-realm/.well-known/openid-configuration"
   lazy val acceptedKid: String = kid.body
     .right
     .get
@@ -165,7 +157,7 @@ class E2EInjectorHelperImpl(
 
     override def KeycloakUsersConfig: ScopedBindingBuilder = {
       bind(classOf[KeycloakCertifyConfig]).toConstructor(
-        classOf[TestKeycloakCertifyConfig].getConstructor(classOf[Config], classOf[KeycloakUsersRuntimeConfig])
+        classOf[TestKeycloakCertifyConfig].getConstructor(classOf[Config])
       )
     }
 

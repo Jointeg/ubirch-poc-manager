@@ -14,11 +14,11 @@ object CentralCsvProvider {
 
   def toShortHeaderCsv(pocId: UUID): String =
     s"""${pocHeaderColsOrder.drop(2).mkString(columnSeparator)}
-       |${pocId.toString};ub_vac_app;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;TRUE;http://www.ubirch.com/logo.png;False;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+       |${pocId.toString};$pocTypeValue;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;TRUE;http://www.ubirch.com/logo.png;False;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   def validPocOnlyCsv(pocId: UUID): String =
     s"""$pocHeaderLine
-       |${pocId.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;TRUE;http://www.ubirch.com/logo.png;False;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;TRUE;http://www.ubirch.com/logo.png;False;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   def validHeaderButBadRowsPocOnlyCsv(pocId: UUID): String =
     s"""$pocHeaderLine

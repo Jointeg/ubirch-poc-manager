@@ -39,7 +39,6 @@ class PocCsvParserTest extends TestBase {
     "parse a correct csv file correctly" in {
       val resultT = pocCsvParser.parseList(validPocOnlyCsv(pocId), tenant)
       val result = resultT.runSyncUnsafe()
-      println(result)
       assert(result.size == 1)
       assert(result.head.isRight)
     }

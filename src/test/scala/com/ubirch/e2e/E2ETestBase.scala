@@ -4,10 +4,12 @@ import com.typesafe.scalalogging.StrictLogging
 import com.ubirch._
 import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.{
+  CertifyBmgRealm,
+  CertifyDefaultRealm,
   CertifyKeycloakConnector,
-  DeviceKeycloakConnector,
-  KeycloakCertifyConfig,
-  KeycloakDeviceConfig
+  CertifyUbirchRealm,
+  DeviceDefaultRealm,
+  DeviceKeycloakConnector
 }
 import org.flywaydb.core.Flyway
 import org.scalatest.{ EitherValues, OptionValues }
@@ -60,27 +62,24 @@ trait E2ETestBase
 
   private def performKeycloakCleanup(injector: E2EInjectorHelperImpl): Unit = {
     val keycloakUsers = injector.get[CertifyKeycloakConnector]
-    val keycloakCertifyConfig = injector.get[KeycloakCertifyConfig]
     val keycloakDevice = injector.get[DeviceKeycloakConnector]
-    val keycloakDeviceConfig = injector.get[KeycloakDeviceConfig]
 
-    val keycloakCertifyRealm = keycloakUsers.keycloak.realm(keycloakCertifyConfig.realm)
-    val keycloakDeviceRealm = keycloakDevice.keycloak.realm(keycloakDeviceConfig.realm)
+    val keycloakCertifyRealm = keycloakUsers.keycloak.realm(CertifyDefaultRealm.name)
+    val keycloakCertifyUbirchRealm = keycloakUsers.keycloak.realm(CertifyUbirchRealm.name)
+    val keycloakCertifyBmgRealm = keycloakUsers.keycloak.realm(CertifyBmgRealm.name)
+    val keycloakDeviceRealm = keycloakDevice.keycloak.realm(DeviceDefaultRealm.name)
+    val keycloakRealms =
+      Seq(keycloakCertifyRealm, keycloakCertifyUbirchRealm, keycloakDeviceRealm, keycloakCertifyBmgRealm)
 
-    keycloakCertifyRealm.users().list().asScala.foreach(user => keycloakCertifyRealm.users().delete(user.getId))
-    keycloakCertifyRealm.groups().groups().asScala.foreach(group => {
-      keycloakCertifyRealm.groups().group(group.getId).remove()
-    })
-    keycloakCertifyRealm.roles().list().asScala.filterNot(role =>
-      role.getName == "super-admin" || role.getName == "tenant-admin" || role.getName == "admin").foreach(role =>
-      keycloakCertifyRealm.roles().deleteRole(role.getName))
-    keycloakDeviceRealm.users().list().asScala.foreach(user => keycloakDeviceRealm.users().delete(user.getId))
-    keycloakDeviceRealm.groups().groups().asScala.foreach(group => {
-      keycloakDeviceRealm.groups().group(group.getId).remove()
-    })
-    keycloakDeviceRealm.roles().list().asScala.filterNot(role =>
-      role.getName == "super-admin" || role.getName == "tenant-admin" || role.getName == "admin").foreach(role =>
-      keycloakDeviceRealm.roles().deleteRole(role.getName))
+    keycloakRealms.foreach { realm =>
+      realm.users().list().asScala.foreach(user => realm.users().delete(user.getId))
+      realm.groups().groups().asScala.foreach(group => {
+        realm.groups().group(group.getId).remove()
+      })
+      realm.roles().list().asScala.filterNot(role =>
+        role.getName == "super-admin" || role.getName == "tenant-admin" || role.getName == "admin").foreach(role =>
+        realm.roles().deleteRole(role.getName))
+    }
   }
 }
 

@@ -7,6 +7,7 @@ import com.ubirch.models.keycloak.user.{
   UserRequiredAction
 }
 import com.ubirch.models.user.{ UserId, UserName }
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
@@ -21,6 +22,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
   private val keycloakDeviceDatastore = mutable.Map[UserId, CreateBasicKeycloakUser]()
 
   override def createUser(
+    realm: KeycloakRealm,
     createBasicKeycloakUser: CreateBasicKeycloakUser,
     instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
@@ -34,6 +36,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
   }
 
   override def createUserWithoutUserName(
+    realm: KeycloakRealm,
     createKeycloakUserWithoutUserName: CreateKeycloakUserWithoutUserName,
     instance: KeycloakInstance,
     userRequiredActions: List[UserRequiredAction.Value] = Nil): Task[Either[UserException, UserId]] = {
@@ -47,6 +50,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
   }
 
   override def deleteUserByUserName(
+    realm: KeycloakRealm,
     username: UserName,
     keycloakInstance: KeycloakInstance = DeviceKeycloak): Task[Unit] =
     keycloakInstance match {
@@ -62,6 +66,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
     }
 
   override def getUserById(
+    realm: KeycloakRealm,
     userId: UserId,
     instance: KeycloakInstance): Task[Option[UserRepresentation]] = Task {
     val datastore = instance match {
@@ -72,6 +77,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
   }
 
   override def getUserByUserName(
+    realm: KeycloakRealm,
     username: UserName,
     keycloakInstance: KeycloakInstance = DeviceKeycloak): Task[Option[UserRepresentation]] =
     keycloakInstance match {
@@ -84,26 +90,34 @@ class TestKeycloakUserService() extends KeycloakUserService {
     }
 
   override def addGroupToUserByName(
+    realm: KeycloakRealm,
     userName: String,
     groupId: String,
     keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
     Task { Right(()) }
 
   override def addGroupToUserById(
+    realm: KeycloakRealm,
     userId: UserId,
     groupId: String,
     keycloakInstance: KeycloakInstance): Task[Either[String, Unit]] =
     Task { Right(()) }
 
   override def sendRequiredActionsEmail(
+    realm: KeycloakRealm,
     userId: UserId,
     instance: KeycloakInstance): Task[Either[String, Unit]] =
     Task(Right(()))
 
-  override def activate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] = Task.pure(Right(()))
+  override def activate(realm: KeycloakRealm, id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    Task.pure(Right(()))
 
-  override def deactivate(id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] = Task.pure(Right(()))
+  override def deactivate(realm: KeycloakRealm, id: UUID, instance: KeycloakInstance): Task[Either[String, Unit]] =
+    Task.pure(Right(()))
 
-  override def remove2faToken(id: UUID, instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
+  override def remove2faToken(
+    realm: KeycloakRealm,
+    id: UUID,
+    instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
     Task.pure(Right(()))
 }

@@ -85,7 +85,7 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val employeeTable = injector.get[PocEmployeeTable]
-        val (tenant, poc, _) = createTenantWithPocAndPocAdmin(injector)
+        val (tenant, poc, _) = addTenantWithPocAndPocAdminToTable(injector)
         val employee =
           createPocEmployee(pocId = poc.id, tenantId = tenant.id).copy(certifyUserId = Some(UUID.randomUUID()))
         await(employeeTable.createPocEmployee(employee), 5.seconds)

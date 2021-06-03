@@ -61,7 +61,6 @@ class CsvProcessPocAdminTest extends UnitTestBase {
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
           pocAdmins <- pocAdminRepository.getAllPocAdminsByTenantId(tenant.id)
         } yield {
-          println(result)
           result.left.get shouldBe "poc_type_invalid* didn't equal expected header poc_type*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config"
           assert(pocs.isEmpty)
           assert(pocAdmins.isEmpty)

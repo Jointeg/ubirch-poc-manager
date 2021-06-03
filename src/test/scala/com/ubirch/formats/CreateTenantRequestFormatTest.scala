@@ -1,6 +1,7 @@
-package com.ubirch.services.formats
+package com.ubirch.formats
 
 import com.ubirch.UnitTestBase
+import com.ubirch.models.tenant
 import com.ubirch.models.tenant._
 import org.json4s._
 import org.json4s.native.JsonMethods._
@@ -17,6 +18,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |{
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
+             |    "tenantType": "${TenantType.UBIRCH_STRING}",
              |    "sharedAuthCertRequired": false
              |}
              |""".stripMargin)
@@ -24,6 +26,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
           API,
+          tenant.UBIRCH,
           sharedAuthCertRequired = false
         )
       }
@@ -37,6 +40,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |{
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
+             |    "tenantType": "${TenantType.BMG_STRING}",
              |    "sharedAuthCertRequired": true,
              |}
              |""".stripMargin)
@@ -44,6 +48,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
           API,
+          BMG,
           sharedAuthCertRequired = true
         )
       }
@@ -72,6 +77,23 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
         createTenantRequestJSON.extractOpt[CreateTenantRequest] shouldBe None
       }
     }
+
+    "Fail to parse JSON if unknown value is provided for tenant type" in {
+      withInjector { injector =>
+        implicit val formats: Formats = injector.get[Formats]
+        val createTenantRequestJSON = parse(
+          s"""
+             |{
+             |    "tenantName": "someRandomName",
+             |    "usageType": "API",
+             |    "tenantType": "bmgX",
+             |    "sharedAuthCertRequired": true,
+             |}
+             |""".stripMargin)
+
+        createTenantRequestJSON.extractOpt[CreateTenantRequest] shouldBe None
+      }
+    }
   }
 
   "UsageType" should {
@@ -88,6 +110,23 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
       withInjector { injector =>
         implicit val formats: Formats = injector.get[Formats]
         JString("NotAnUsage").extractOpt[UsageType] shouldBe None
+      }
+    }
+  }
+
+  "TenantType" should {
+    "Parse known values" in {
+      withInjector { injector =>
+        implicit val formats: Formats = injector.get[Formats]
+        JString("ubirch").extract[TenantType] shouldBe UBIRCH
+        JString("bmg").extract[TenantType] shouldBe BMG
+      }
+    }
+
+    "Fail if provided value is not known" in {
+      withInjector { injector =>
+        implicit val formats: Formats = injector.get[Formats]
+        JString("unknown_value").extractOpt[TenantType] shouldBe None
       }
     }
   }

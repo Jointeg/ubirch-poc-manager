@@ -36,14 +36,20 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
   override def createCertifyUserWithRequiredActions(pocAdminAndStatus: PocAdminAndStatus): Task[PocAdminAndStatus] = {
     if (pocAdminAndStatus.status.certifyUserCreated) Task(pocAdminAndStatus)
     else {
-      users.createUserWithoutUserName(getKeycloakUser(pocAdminAndStatus), CertifyKeycloak, requiredActions).map {
+      users.createUserWithoutUserName(
+        CertifyKeycloak.defaultRealm,
+        getKeycloakUser(pocAdminAndStatus),
+        CertifyKeycloak,
+        requiredActions).map {
         case Right(userId) =>
           pocAdminAndStatus.copy(
             admin = pocAdminAndStatus.admin.copy(certifyUserId = Some(userId.value)),
             status = pocAdminAndStatus.status.copy(certifyUserCreated = true))
         case Left(UserAlreadyExists(userName)) =>
-          logger.warn(s"user is already exist. $userName")
-          pocAdminAndStatus.copy(status = pocAdminAndStatus.status.copy(certifyUserCreated = true))
+          logger.error(s"user already exists. user: $userName, admin: ${pocAdminAndStatus.admin.id}")
+          PocAdminCreator.throwError(
+            pocAdminAndStatus,
+            "This user already exists in Keycloak. Please contact Ubirch admin.")
         case Left(UserCreationError(errorMsg)) => PocAdminCreator.throwError(pocAdminAndStatus, errorMsg)
       }
     }
@@ -61,9 +67,12 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
   override def sendEmailToCertifyUser(aAs: PocAdminAndStatus): Task[PocAdminAndStatus] = {
     if (aAs.status.keycloakEmailSent) Task(aAs)
     else if (aAs.admin.certifyUserId.isEmpty)
-      throwError(aAs, s"certifyUserId is missing for ${aAs.admin}, when it should be added to poc admin group")
+      throwError(aAs, s"certifyUserId is missing for ${aAs.admin.id}, when it should be added to poc admin group")
     else {
-      users.sendRequiredActionsEmail(UserId(aAs.admin.certifyUserId.get), CertifyKeycloak).map {
+      users.sendRequiredActionsEmail(
+        CertifyKeycloak.defaultRealm,
+        UserId(aAs.admin.certifyUserId.get),
+        CertifyKeycloak).map {
         case Right(_)       => aAs.copy(status = aAs.status.copy(keycloakEmailSent = true))
         case Left(errorMsg) => PocAdminCreator.throwError(aAs, errorMsg)
       }
@@ -79,7 +88,7 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
     val adminGroupId =
       poc.adminGroupId.getOrElse(throwError(pocAdminAndStatus, s"adminGroupId is missing in poc ${poc.id}"))
 
-    users.addGroupToUserById(UserId(userId), adminGroupId, CertifyKeycloak).map {
+    users.addGroupToUserById(CertifyKeycloak.defaultRealm, UserId(userId), adminGroupId, CertifyKeycloak).map {
       case Right(_) =>
         pocAdminAndStatus.copy(status = pocAdminAndStatus.status.copy(pocAdminGroupAssigned = true))
       case Left(errorMsg) =>

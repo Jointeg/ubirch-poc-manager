@@ -26,11 +26,6 @@ object ConfPaths {
       final val USERNAME = "keycloak-certify.server.username"
       final val PASSWORD = "keycloak-certify.server.password"
       final val CLIENT_ID = "keycloak-certify.server.clientId"
-      final val REALM = "keycloak-certify.realm"
-      final val CLIENT_CONFIG = "keycloak-certify.client.config"
-      final val CLIENT_ADMIN_USER = "keycloak-certify.client.adminUsername"
-      final val CLIENT_ADMIN_PASSWORD = "keycloak-certify.client.adminPassword"
-      final val USER_POLLING_INTERVAL = "keycloak-certify.polling.interval"
       final val CONFIG_URL = "keycloak-certify.tokenVerification.configURL"
       final val KID = "keycloak-certify.tokenVerification.kid"
     }
@@ -41,7 +36,6 @@ object ConfPaths {
       final val USERNAME = "keycloak-device.server.username"
       final val PASSWORD = "keycloak-device.server.password"
       final val CLIENT_ID = "keycloak-device.server.clientId"
-      final val REALM = "keycloak-device.realm"
       final val CONFIG_URL = "keycloak-device.tokenVerification.configURL"
       final val KID = "keycloak-device.tokenVerification.kid"
     }
@@ -55,7 +49,6 @@ object ConfPaths {
     final val POC_TYPES_ROLE_NEEDED = "system.services.pocTypeRoleNeeded"
     final val POC_TYPES_LOCATION_NEEDED = "system.services.pocTypeLocationNeeded"
 
-    final val POC_ADMIN_GROUP_ID = "system.services.pocAdminGroupId"
     //urls and tokens
     final val THING_API_URL_CREATE_DEVICE = "system.services.thingApiURLCreateDevice"
     final val THING_API_URL_GET_INFO = "system.services.thingApiURLGetInfo"

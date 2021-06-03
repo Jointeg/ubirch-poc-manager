@@ -3,12 +3,7 @@ package com.ubirch.services.pocadmin
 import cats.data.EitherT
 import cats.implicits.catsSyntaxEitherId
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
-import com.ubirch.controllers.SwitchActiveError.{
-  MissingCertifyUserId,
-  NotAllowedError,
-  UserNotCompleted,
-  UserNotFound
-}
+import com.ubirch.controllers.SwitchActiveError._
 import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.model.{ AdminCriteria, PaginatedResult }
@@ -70,31 +65,35 @@ class PocAdminServiceImpl @Inject() (
   override def switchActiveForPocEmployee(
     employeeId: UUID,
     pocAdmin: PocAdmin,
-    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] = {
+    active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]] =
+    tenantRepository.getTenant(pocAdmin.tenantId).flatMap {
+      case Some(tenant) =>
+        quillMonixJdbcContext.withTransaction {
+          employeeRepository
+            .getPocEmployee(employeeId)
+            .flatMap {
+              case None                                               => Task(ResourceNotFound(employeeId).asLeft)
+              case Some(employee) if employee.pocId != pocAdmin.pocId => Task(NotAllowedError.asLeft)
+              case Some(employee) if employee.status != Completed     => Task(UserNotCompleted.asLeft)
+              case Some(employee) if employee.certifyUserId.isEmpty   => Task(MissingCertifyUserId(employeeId).asLeft)
 
-    quillMonixJdbcContext.withTransaction {
-      employeeRepository
-        .getPocEmployee(employeeId)
-        .flatMap {
-          case None                                               => Task(UserNotFound(employeeId).asLeft)
-          case Some(employee) if employee.pocId != pocAdmin.pocId => Task(NotAllowedError.asLeft)
-          case Some(employee) if employee.status != Completed     => Task(UserNotCompleted.asLeft)
-          case Some(employee) if employee.certifyUserId.isEmpty   => Task(MissingCertifyUserId(employeeId).asLeft)
+              case Some(employee) =>
+                val userId = employee.certifyUserId.get
 
-          case Some(employee) =>
-            val userId = employee.certifyUserId.get
-
-            (active match {
-              case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
-              case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
-            }) >> employeeRepository.updatePocEmployee(employee.copy(active = ActivateSwitch.toBoolean(active)))
-              .map { _ =>
-                logAuditByPocAdmin(s"$active poc employee ${employee.id} of poc ${employee.pocId}.", pocAdmin)
-                Right(())
-              }
+                (active match {
+                  case EndpointHelpers.Activate =>
+                    keycloakUserService.activate(tenant.getRealm, userId, CertifyKeycloak)
+                  case EndpointHelpers.Deactivate =>
+                    keycloakUserService.deactivate(tenant.getRealm, userId, CertifyKeycloak)
+                }) >> employeeRepository.updatePocEmployee(employee.copy(active = ActivateSwitch.toBoolean(active)))
+                  .map { _ =>
+                    logAuditByPocAdmin(s"$active poc employee ${employee.id} of poc ${employee.pocId}.", pocAdmin)
+                    Right(())
+                  }
+            }
         }
+      case None => Task(ResourceNotFound(pocAdmin.tenantId.asUUID()).asLeft)
     }
-  }
 }
 
 sealed trait GetPocsAdminErrors

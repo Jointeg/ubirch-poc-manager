@@ -47,7 +47,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
     tenant: Tenant): AllErrorsOr[Poc] =
     (
       validateString(externalId, csvPoc.externalId),
-      validateMapContainsStringKey(pocType, csvPoc.pocType, pocConfig.pocTypeEndpointMap),
+      validatePocType(pocType, csvPoc.pocType, pocConfig.pocTypeEndpointMap, tenant),
       validatePocName(pocName, csvPoc.pocName),
       pocAddress,
       validatePhone(phone, csvPoc.pocPhone),
