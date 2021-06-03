@@ -38,7 +38,7 @@ case class Poc(
   def getDeviceId: String = deviceId.value.value.toString
 
   def getRealm: KeycloakRealm = {
-    if (pocName.contains("bmg")) CertifyBmgRealm
+    if (pocType.contains("bmg")) CertifyBmgRealm
     else CertifyUbirchRealm
   }
 
