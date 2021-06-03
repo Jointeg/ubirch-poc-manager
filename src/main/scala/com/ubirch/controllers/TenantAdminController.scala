@@ -25,7 +25,7 @@ import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
-import org.joda.time.LocalDate
+import org.joda.time.{ DateTime, LocalDate }
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
@@ -33,6 +33,7 @@ import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
 import java.nio.charset.StandardCharsets
+import java.time.Clock
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -50,7 +51,8 @@ class TenantAdminController @Inject() (
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
   tenantAdminService: TenantAdminService,
-  certifyUserService: CertifyUserService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  certifyUserService: CertifyUserService,
+  clock: Clock)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
@@ -380,29 +382,41 @@ class TenantAdminController @Inject() (
   }
 
   delete("/poc-admin/:id/2fa-token", operation(delete2FATokenOnPocAdmin)) {
-    tenantAdminEndpoint("Delete 2FA token for PoC admin") { _ =>
-      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
-        for {
-          maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-          r <- maybePocAdmin match {
-            case None => Task.pure(NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$pocAdminId' not found'")))
-            case Some(pocAdmin) => certifyUserService.remove2FAToken(pocAdmin)
-                .map {
-                  case Left(e) => e match {
-                      case Remove2faTokenError.KeycloakError(id, error) =>
-                        error match {
-                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
-                            NotFound(NOK.resourceNotFoundError(error))
-                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
-                            InternalServerError(NOK.serverError(error))
-                        }
-                      case Remove2faTokenError.MissingCertifyUserId(id) =>
-                        Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId"))
-                    }
-                  case Right(_) => Ok("")
-                }
-          }
-        } yield r
+    if (true) NotFound(NOK.noRouteFound("Sorry, this method is not yet fully implemented."))
+    else {
+      tenantAdminEndpoint("Delete 2FA token for PoC admin") { tenant =>
+        getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+          for {
+            maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+            notFoundMessage = s"Poc admin with id '$pocAdminId' not found'"
+            r <- maybePocAdmin match {
+              case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+              case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
+                Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+              case Some(pocAdmin) if pocAdmin.status != Completed =>
+                Task.pure(Conflict(NOK.conflict(
+                  s"Poc admin '$pocAdminId' is in wrong status: '${pocAdmin.status}', required: '${Completed}'")))
+              case Some(pocAdmin) => certifyUserService.remove2FAToken(CertifyKeycloak.defaultRealm, pocAdmin)
+                  .flatMap {
+                    case Left(e) => e match {
+                        case Remove2faTokenError.KeycloakError(_, error) =>
+                          error match {
+                            case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                              Task.pure(NotFound(NOK.resourceNotFoundError(error)))
+                            case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                              Task.pure(InternalServerError(NOK.serverError(error)))
+                          }
+                        case Remove2faTokenError.MissingCertifyUserId(id) =>
+                          Task.pure(Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId")))
+                      }
+                    case Right(_) =>
+                      pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
+                        Some(DateTime.parse(clock.instant().toString)))) >>
+                        Task.pure(Ok(""))
+                  }
+            }
+          } yield r
+        }
       }
     }
   }

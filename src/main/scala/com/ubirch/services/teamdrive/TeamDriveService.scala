@@ -1,6 +1,7 @@
 package com.ubirch.services.teamdrive
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.PocConfig
 import com.ubirch.models.auth.Base16String
 import com.ubirch.models.auth.cert.Passphrase
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
@@ -21,7 +22,7 @@ trait TeamDriveService {
 }
 
 @Singleton
-class TeamDriveServiceImpl @Inject() (client: TeamDriveClient)
+class TeamDriveServiceImpl @Inject() (client: TeamDriveClient, pocConfig: PocConfig)
   extends TeamDriveService
   with LazyLogging
   with PocAuditLogging {
@@ -30,29 +31,26 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient)
     emails: Seq[String],
     passphrase: Passphrase,
     certificate: Base16String
-  ): Task[SharedCertificate] =
-    for {
-      loginInformation <- client.getLoginInformation()
-      _ <- Task(logger.debug(s"TeamDrive agent requires login: ${loginInformation.isLoginRequired}"))
-      _ <- loginInformation match {
-        case LoginInformation(isLoginRequired) if isLoginRequired => client.login()
-        case _                                                    => Task.unit
+  ): Task[SharedCertificate] = {
+    client.withLogin {
+      for {
+        spaceId <- createSpace(spaceName)
+        fileName = s"ubirch-client-certificate.pfx"
+        _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, pocConfig.certWelcomeMessage, Read)))
+        certByteArray <- Task(Base16String.toByteArray(certificate))
+        certFileId <- client.putFile(spaceId, fileName, ByteBuffer.wrap(certByteArray))
+        passphraseFileId <-
+          client.putFile(spaceId, s"password.txt", ByteBuffer.wrap(passphrase.value.getBytes))
+      } yield {
+        logAuditEventInfo(s"uploaded cert with $fileName to TeamDrive space $spaceName")
+        SharedCertificate(
+          spaceName = spaceName,
+          spaceId = spaceId,
+          passphraseFileId = passphraseFileId,
+          certificateFileId = certFileId)
       }
-      spaceId <- createSpace(spaceName)
-      fileName = s"cert_$spaceName.pfx"
-      _ <- Task.sequence(emails.map(e => client.inviteMember(spaceId, e, Read)))
-      certByteArray <- Task(Base16String.toByteArray(certificate))
-      certFileId <- client.putFile(spaceId, fileName, ByteBuffer.wrap(certByteArray))
-      passphraseFileId <-
-        client.putFile(spaceId, s"passphrase_$spaceName.pwd", ByteBuffer.wrap(passphrase.value.getBytes))
-    } yield {
-      logAuditEventInfo(s"uploaded cert with $fileName to TeamDrive space $spaceName")
-      SharedCertificate(
-        spaceName = spaceName,
-        spaceId = spaceId,
-        passphraseFileId = passphraseFileId,
-        certificateFileId = certFileId)
     }
+  }
 
   /**
     * This method creates a space with the space name.

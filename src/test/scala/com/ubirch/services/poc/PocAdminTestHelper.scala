@@ -39,6 +39,7 @@ object PocAdminTestHelper {
       keycloakEmailSent = true,
       pocAdminGroupAssigned = true,
       invitedToTeamDrive = Some(true),
+      invitedToStaticTeamDrive = Some(true),
       errorMessage = None
     )
   }

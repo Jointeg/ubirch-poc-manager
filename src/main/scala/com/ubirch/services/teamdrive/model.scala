@@ -12,10 +12,15 @@ object model {
   trait TeamDriveClient {
     def createSpace(name: SpaceName, path: String): Task[SpaceId]
     def putFile(spaceId: SpaceId, fileName: String, file: ByteBuffer): Task[FileId]
-    def inviteMember(spaceId: SpaceId, email: String, permissionLevel: PermissionLevel): Task[Boolean]
+    def inviteMember(
+      spaceId: SpaceId,
+      email: String,
+      welcomeMessage: String,
+      permissionLevel: PermissionLevel): Task[Boolean]
     def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]]
     def getLoginInformation(): Task[LoginInformation]
     def login(): Task[Unit]
+    def withLogin[T](mainTask: => Task[T]): Task[T]
   }
 
   case class SpaceId(v: Int) extends AnyVal {
@@ -33,6 +38,8 @@ object model {
       SpaceName(s"${stage}_${tenant.tenantName.value}")
     def ofPoc(stage: String, tenant: Tenant, poc: Poc): SpaceName =
       SpaceName(s"${stage}_${poc.pocType.split("_")(1)}_${tenant.tenantName.value}_${poc.pocName}_${poc.externalId}")
+    def of(stage: String, name: String): SpaceName =
+      SpaceName(s"${stage}_$name")
   }
 
   case class FileId(v: Int) extends AnyVal

@@ -6,6 +6,7 @@ import com.ubirch.ConfPaths.{ ServicesConfPaths, TeamDrivePaths }
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 
+import java.nio.charset.StandardCharsets
 import javax.inject.{ Inject, Singleton }
 
 trait PocConfig {
@@ -21,6 +22,9 @@ trait PocConfig {
   val teamDriveStage: String
   val pocAdminGroupId: String
   val pocLogoEndpoint: String
+  val certWelcomeMessage: String
+  val staticAssetsWelcomeMessage: String
+  val pocTypeStaticSpaceNameMap: Map[String, String]
 }
 
 @Singleton
@@ -75,4 +79,15 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
   val teamDriveStage: String = config.getString(TeamDrivePaths.STAGE)
   val pocAdminGroupId: String = config.getString(ServicesConfPaths.POC_ADMIN_GROUP_ID)
   val pocLogoEndpoint: String = config.getString(ServicesConfPaths.POC_LOGO_ENDPOINT)
+  val certWelcomeMessage: String = config.getString(TeamDrivePaths.CERT_WELCOME_MESSAGE)
+  val staticAssetsWelcomeMessage: String = config.getString(TeamDrivePaths.STATIC_ASSETS_WELCOME_MESSAGE)
+
+  val pocTypeStaticSpaceNameMap: Map[String, String] =
+    try {
+      parse(config.getString(TeamDrivePaths.POC_TYPE_STATIC_SPACE_NAME_MAP)).extract[Map[String, String]]
+    } catch {
+      case e: Exception =>
+        logger.error(s"can't parse the ${TeamDrivePaths.POC_TYPE_STATIC_SPACE_NAME_MAP} value as Map[String, String]")
+        throw e
+    }
 }

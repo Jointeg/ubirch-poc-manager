@@ -1,6 +1,7 @@
 package com.ubirch.services.poc
 
-import com.ubirch.UnitTestBase
+import cats.implicits.toTraverseOps
+import com.ubirch.{ PocConfig, UnitTestBase }
 import com.ubirch.db.tables.{
   PocAdminRepositoryMock,
   PocAdminStatusRepositoryMock,
@@ -23,6 +24,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
   "Poc Admin Creation Loop" should {
     "create pending poc admin first after adding it to database and web-ident successful" in {
       withInjector { injector =>
+        val pocConfig = injector.get[PocConfig]
         val loop = injector.get[PocAdminCreationLoop]
         val webIdentRequired = true
         val tenantTable = injector.get[TenantRepositoryMock]
@@ -47,6 +49,10 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
+        // Create static spaces
+        pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
+        }.runSyncUnsafe()
 
         Thread.sleep(3000)
         // not processed yet because poc is not completed yet
@@ -73,5 +79,6 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
     assert(status.keycloakEmailSent)
     assert(status.pocAdminGroupAssigned)
     assert(status.invitedToTeamDrive.get)
+    assert(status.invitedToStaticTeamDrive.get)
   }
 }
