@@ -3,9 +3,8 @@ package com.ubirch.e2e.controllers
 import cats.syntax.either._
 import cats.syntax.option._
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant }
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocAdmin, createPocEmployee, createTenant, globalTenantName }
 import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.createPocEmployee
 import com.ubirch.controllers.PocAdminController
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminTable, PocEmployeeTable, PocTable, TenantTable }
@@ -28,14 +27,14 @@ import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
-import org.joda.time.DateTime
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.native.Serialization.read
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.prop.TableDrivenPropertyChecks
 
-import java.time.Instant
+import java.time.{ Clock, Instant }
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
@@ -323,16 +322,20 @@ class PocAdminControllerSpec
     "Endpoint DELETE /poc-employee/:id/2fa-token" should {
       "delete 2FA token for poc employee" in withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
+        val clock = injector.get[Clock]
         val keycloakUserService = injector.get[KeycloakUserService]
         val instance = CertifyKeycloak
+        val repository = injector.get[PocEmployeeTable]
         val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
           KeycloakTestData.createNewCertifyKeycloakUser(),
           instance,
           List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)))
           .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
         val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        val employee = createPocEmployee(pocId = poc.id).copy(certifyUserId = certifyUserId.value.some)
-        await(injector.get[PocEmployeeTable].createPocEmployee(employee))
+        val employee =
+          createPocEmployee(pocId = poc.id).copy(certifyUserId = certifyUserId.value.some, status = Completed)
+        val id = await(repository.createPocEmployee(employee))
+        val getPocEmployee = repository.getPocEmployee(id)
 
         val requiredAction = for {
           requiredAction <- keycloakUserService.getUserById(certifyUserId, instance).flatMap {
@@ -348,6 +351,9 @@ class PocAdminControllerSpec
           status should equal(200)
           body shouldBe empty
           await(requiredAction) should contain theSameElementsAs List("UPDATE_PASSWORD")
+          await(getPocEmployee).value.webAuthnDisconnected shouldBe Some(new DateTime(
+            clock.instant().toString,
+            DateTimeZone.forID(clock.getZone.getId)))
         }
       }
 
@@ -365,10 +371,27 @@ class PocAdminControllerSpec
         }
       }
 
+      "return 404 when poc-employee is not owned by poc-admin" in withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val repository = injector.get[PocEmployeeTable]
+        val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+
+        val (_, poc, _) = createTenantWithPocAndPocAdmin(injector, "secondTenant")
+        val id = await(repository.createPocEmployee(createPocEmployee(pocId = poc.id)))
+
+        delete(
+          s"/poc-employee/$id/2fa-token",
+          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+        ) {
+          status should equal(404)
+          assert(body.contains(s"Poc employee with id '$id' not found"))
+        }
+      }
+
       "return 409 when poc-employee does not have certifyUserId" in withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        val employee = createPocEmployee(pocId = poc.id)
+        val employee = createPocEmployee(pocId = poc.id, status = Completed)
         await(injector.get[PocEmployeeTable].createPocEmployee(employee))
 
         delete(
@@ -379,10 +402,28 @@ class PocAdminControllerSpec
           assert(body.contains(s"Poc employee '${employee.id}' does not have certifyUserId"))
         }
       }
+
+      "return 409 when poc-employee is not in completed status" in withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val repository = injector.get[PocEmployeeTable]
+        val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee = createPocEmployee(pocId = poc.id).copy(status = Pending)
+        val id = await(repository.createPocEmployee(employee))
+
+        delete(
+          s"/poc-employee/$id/2fa-token",
+          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+        ) {
+          status should equal(409)
+          assert(body.contains(s"Poc employee '$id' is in wrong status: 'Pending', required: 'Completed'"))
+        }
+      }
     }
 
-    def createTenantWithPocAndPocAdmin(injector: InjectorHelper): (Tenant, Poc, PocAdmin) = {
-      val tenant = addTenantToDB(injector)
+    def createTenantWithPocAndPocAdmin(
+      injector: InjectorHelper,
+      tenantName: String = globalTenantName): (Tenant, Poc, PocAdmin) = {
+      val tenant = addTenantToDB(injector, tenantName)
       val poc = addPocToDb(tenant, injector)
       val pocAdmin = addPocAdminToDB(poc, tenant, injector)
       (tenant, poc, pocAdmin)

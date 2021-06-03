@@ -1,13 +1,14 @@
 package com.ubirch
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.google.inject.{ AbstractModule, Module }
+import com.google.inject.{ AbstractModule, Module, Provider }
 import com.typesafe.config.Config
 import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
 import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
 import com.ubirch.models.tenant.{ TenantKeycloakHelper, TenantKeycloakHelperImpl }
 import com.ubirch.services.auth._
+import com.ubirch.services.clock.ClockProvider
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
@@ -49,11 +50,14 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.Swagger
 
+import java.time.Clock
 import scala.concurrent.ExecutionContext
 
 class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
+
+  def Clock: ScopedBindingBuilder = bind(classOf[Clock]).toProvider(classOf[ClockProvider])
 
   def PocConfig: ScopedBindingBuilder = bind(classOf[PocConfig]).to(classOf[PocConfigImpl])
 
@@ -222,6 +226,7 @@ class Binder extends AbstractModule {
 
   override def configure(): Unit = {
     Config
+    Clock
     PocConfig
     KeycloakUsersConfig
     KeycloakDeviceConfig

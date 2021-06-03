@@ -31,7 +31,8 @@ trait PocEmployeeRepository {
 }
 
 class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocEmployeeRepository {
-  import QuillMonixJdbcContext.ctx._
+  import QuillMonixJdbcContext._
+  import ctx._
 
   private def createPocEmployeeQuery(employee: PocEmployee): Quoted[Insert[PocEmployee]] =
     quote {

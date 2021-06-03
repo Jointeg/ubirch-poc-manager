@@ -4,12 +4,15 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.ubirch._
 import com.ubirch.db.context.QuillMonixJdbcContext
+import com.ubirch.services.clock.ClockProvider
 import com.ubirch.formats.TestFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.{ KeycloakUserService, KeycloakUserServiceWithoutMail }
 import com.ubirch.services.keycloak.{ DeviceKeycloakConnector, KeycloakCertifyConfig, KeycloakDeviceConfig }
 import com.ubirch.services.poc._
 import com.ubirch.services.teamdrive.model.TeamDriveClient
+import com.ubirch.test.{ FakeTeamDriveClient, FixedClockProvider }
+import io.getquill.{ PostgresJdbcContext, SnakeCase }
 import com.ubirch.test.FakeTeamDriveClient
 import io.getquill.context.monix.MonixJdbcContext.Runner
 import io.getquill.{ PostgresMonixJdbcContext, SnakeCase }
@@ -21,6 +24,7 @@ import sttp.client._
 import sttp.client.json4s._
 import sttp.client.quick.backend
 
+import java.time.Clock
 import javax.inject.{ Inject, Singleton }
 import scala.jdk.CollectionConverters.collectionAsScalaIterableConverter
 
@@ -114,10 +118,12 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
 }
 
 @Singleton
-class TestPostgresQuillMonixJdbcContext @Inject() () extends QuillMonixJdbcContext {
+class TestPostgresQuillMonixJdbcContext @Inject() (clock: Clock) extends QuillMonixJdbcContext {
   override val ctx: PostgresMonixJdbcContext[SnakeCase] = StaticTestPostgresJdbcContext.ctx
 
   override def withTransaction[T](f: => Task[T]): Task[T] = f
+
+  override val systemClock: Clock = clock
 }
 
 object StaticTestPostgresJdbcContext {
@@ -185,4 +191,5 @@ class E2EInjectorHelperImpl(
     override def TeamDriveClient: ScopedBindingBuilder =
       bind(classOf[TeamDriveClient]).to(classOf[FakeTeamDriveClient])
 
+    override def Clock: ScopedBindingBuilder = bind(classOf[Clock]).toProvider(classOf[FixedClockProvider])
   }))
