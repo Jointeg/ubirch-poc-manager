@@ -7,7 +7,7 @@ import com.ubirch.models.keycloak.user.{
   UserCreationError,
   UserRequiredAction
 }
-import com.ubirch.models.poc.Poc
+import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.user.{ Email, FirstName, LastName, UserId }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -20,11 +20,11 @@ import javax.inject.Inject
   * This trait is for keycloak certify realm related employee creation operations
   */
 trait EmployeeCertifyHelper {
-  def createCertifyUserWithRequiredActions(pocEmployeeAndStatus: EmployeeAndStatus): Task[EmployeeAndStatus]
+  def createCertifyUserWithRequiredActions(employeeTriple: EmployeeTriple): Task[EmployeeTriple]
 
-  def sendEmailToCertifyUser(pocEmployeeAndStatus: EmployeeAndStatus): Task[EmployeeAndStatus]
+  def sendEmailToCertifyUser(triple: EmployeeTriple): Task[EmployeeTriple]
 
-  def addGroupsToCertifyUser(pocEmployeeAndStatus: EmployeeAndStatus, poc: Poc): Task[EmployeeAndStatus]
+  def addGroupsToCertifyUser(triple: EmployeeTriple): Task[EmployeeTriple]
 }
 
 class EmployeeCertifyHelperImpl @Inject() (users: KeycloakUserService) extends EmployeeCertifyHelper with LazyLogging {
@@ -33,63 +33,64 @@ class EmployeeCertifyHelperImpl @Inject() (users: KeycloakUserService) extends E
     List(UserRequiredAction.VERIFY_EMAIL, UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
 
   @throws[PocEmployeeCreationError]
-  override def createCertifyUserWithRequiredActions(pocEmployeeAndStatus: EmployeeAndStatus)
-    : Task[EmployeeAndStatus] = {
+  override def createCertifyUserWithRequiredActions(triple: EmployeeTriple): Task[EmployeeTriple] = {
 
-    if (pocEmployeeAndStatus.status.certifyUserCreated) Task(pocEmployeeAndStatus)
+    if (triple.status.certifyUserCreated) Task(triple)
     else {
       users.createUserWithoutUserName(
-        CertifyKeycloak.defaultRealm,
-        getKeycloakUser(pocEmployeeAndStatus),
+        triple.poc.getRealm,
+        getKeycloakUser(triple.employee),
         CertifyKeycloak,
         requiredActions).map {
         case Right(userId) =>
-          pocEmployeeAndStatus.copy(
-            employee = pocEmployeeAndStatus.employee.copy(certifyUserId = Some(userId.value)),
-            status = pocEmployeeAndStatus.status.copy(certifyUserCreated = true))
+          triple.copy(
+            employee = triple.employee.copy(certifyUserId = Some(userId.value)),
+            status = triple.status.copy(certifyUserCreated = true))
         case Left(UserAlreadyExists(userName)) =>
           logger.warn(s"user is already exist. $userName")
-          pocEmployeeAndStatus.copy(status = pocEmployeeAndStatus.status.copy(certifyUserCreated = true))
-        case Left(UserCreationError(errorMsg)) => PocEmployeeCreator.throwError(pocEmployeeAndStatus, errorMsg)
+          triple.copy(status = triple.status.copy(certifyUserCreated = true))
+        case Left(UserCreationError(errorMsg)) => PocEmployeeCreator.throwError(triple, errorMsg)
       }
     }
   }
 
   @throws[PocEmployeeCreationError]
-  override def sendEmailToCertifyUser(eas: EmployeeAndStatus): Task[EmployeeAndStatus] = {
-    if (eas.status.keycloakEmailSent) Task(eas)
-    else if (eas.employee.certifyUserId.isEmpty)
-      throwError(eas, s"certifyUser is missing, when it should be added to poc employee ${eas.employee.id}")
+  override def sendEmailToCertifyUser(triple: EmployeeTriple): Task[EmployeeTriple] = {
+    if (triple.status.keycloakEmailSent) Task(triple)
+    else if (triple.employee.certifyUserId.isEmpty)
+      throwError(
+        triple,
+        s"certifyUserId is missing, when trying to send email invitation to poc employee ${triple.employee.id}")
     else {
       users.sendRequiredActionsEmail(
-        CertifyKeycloak.defaultRealm,
-        UserId(eas.employee.certifyUserId.get),
+        triple.poc.getRealm,
+        UserId(triple.employee.certifyUserId.get),
         CertifyKeycloak).map {
-        case Right(_)       => eas.copy(status = eas.status.copy(keycloakEmailSent = true))
-        case Left(errorMsg) => PocEmployeeCreator.throwError(eas, errorMsg)
+        case Right(_)       => triple.copy(status = triple.status.copy(keycloakEmailSent = true))
+        case Left(errorMsg) => PocEmployeeCreator.throwError(triple, errorMsg)
       }
     }
   }
 
-  override def addGroupsToCertifyUser(eAs: EmployeeAndStatus, poc: Poc): Task[EmployeeAndStatus] = {
+  override def addGroupsToCertifyUser(triple: EmployeeTriple): Task[EmployeeTriple] = {
 
-    val userId = eAs.employee.certifyUserId
-      .getOrElse(throwError(eAs, s"certifyUserId for ${eAs.employee.id} is missing, when groups should be added"))
+    val userId = triple.employee.certifyUserId
+      .getOrElse(throwError(triple, s"certifyUserId for ${triple.employee.id} is missing, when groups should be added"))
 
     val employeeGroupId =
-      poc.employeeGroupId.getOrElse(throwError(eAs, s"employeeGroupId is missing in poc ${poc.id}"))
+      triple.poc.employeeGroupId.getOrElse(throwError(triple, s"employeeGroupId is missing in poc ${triple.poc.id}"))
 
-    users.addGroupToUserById(CertifyKeycloak.defaultRealm, UserId(userId), employeeGroupId, CertifyKeycloak).map {
-      case Right(_)       => eAs.copy(status = eAs.status.copy(employeeGroupAssigned = true))
-      case Left(errorMsg) => throwError(eAs, errorMsg)
+    users.addGroupToUserById(triple.poc.getRealm, UserId(userId), employeeGroupId, CertifyKeycloak).map {
+      case Right(_)       => triple.copy(status = triple.status.copy(employeeGroupAssigned = true))
+      case Left(errorMsg) => throwError(triple, errorMsg)
     }
   }
 
-  private def getKeycloakUser(eAs: EmployeeAndStatus): CreateKeycloakUserWithoutUserName = {
+  private def getKeycloakUser(employee: PocEmployee): CreateKeycloakUserWithoutUserName = {
     CreateKeycloakUserWithoutUserName(
-      FirstName(eAs.employee.name),
-      LastName(eAs.employee.surname),
-      Email(eAs.employee.email)
+      FirstName(employee.name),
+      LastName(employee.surname),
+      Email(employee.email)
     )
   }
 

@@ -1,32 +1,33 @@
 package com.ubirch.e2e.flows
 
 import com.ubirch.InjectorHelper
-import com.ubirch.controllers.{ PocAdminController, SuperAdminController, TenantAdminController }
+import com.ubirch.ModelCreationHelper.pocTypeValue
+import com.ubirch.controllers.{PocAdminController, SuperAdminController, TenantAdminController}
 import com.ubirch.db.tables._
-import com.ubirch.e2e.{ DiscoveryServiceType, E2ETestBase, KeycloakOperations, RealDiscoverService, TenantAdmin }
+import com.ubirch.e2e.{DiscoveryServiceType, E2ETestBase, KeycloakOperations, RealDiscoverService, TenantAdmin}
 import com.ubirch.formats.TestFormats
 import com.ubirch.models.keycloak.group.GroupName
 import com.ubirch.models.keycloak.roles.RoleName
-import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin }
+import com.ubirch.models.poc.{Completed, Pending, Poc, PocAdmin}
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.tenant.{ Tenant, TenantName, TenantType }
+import com.ubirch.models.tenant.{Tenant, TenantName, TenantType}
 import com.ubirch.models.user.UserName
-import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.{CustomFormats, JodaDateTimeFormats}
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, KeycloakCertifyConfig }
+import com.ubirch.services.keycloak.{CertifyKeycloakConnector, KeycloakCertifyConfig}
 import com.ubirch.services.poc.PocTestHelper.createNeededDeviceUser
-import com.ubirch.services.poc.util.CsvConstants.{ pocAdminHeaderLine, pocEmployeeHeaderLine }
-import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.services.poc.util.CsvConstants.{pocAdminHeaderLine, pocEmployeeHeaderLine}
+import com.ubirch.services.poc.{PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop}
+import com.ubirch.services.{CertifyKeycloak, DeviceKeycloak}
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
 import monix.reactive.Observable
-import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
-import org.json4s.{ DefaultFormats, Formats }
-import org.scalatest.{ Assertion, BeforeAndAfterEach }
+import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.{DefaultFormats, Formats}
+import org.scalatest.{Assertion, BeforeAndAfterEach}
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
@@ -40,7 +41,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   val poc1Id: UUID = UUID.randomUUID()
 
-  private def createTenantJson(tenantName: String) = {
+  private def createTenantJson(tenantName: String): String = {
     s"""
        |{
        |    "tenantName": "$tenantName",
@@ -53,7 +54,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   private val createPocWithPocAdminCSV =
     s"""$pocAdminHeaderLine
-       |${poc1Id.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;FALSE""".stripMargin
+       |${poc1Id.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;FALSE""".stripMargin
 
   private val addDeviceCreationToken: String =
     s"""

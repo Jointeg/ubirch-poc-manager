@@ -131,11 +131,10 @@ object Validator {
     map: Map[String, String],
     tenant: Tenant): AllErrorsOr[String] = {
     if (map.contains(pocType)) {
-      val prefix = pocType.split("_").head
       tenant.tenantType match {
-        case UBIRCH if prefix == "ub" => pocType.validNel
-        case BMG if prefix == "bmg"   => pocType.validNel
-        case _                        => pocTypeMustCorrelateWithTenantType(header, tenant.tenantType).invalidNel
+        case UBIRCH if pocType.contains("ub") => pocType.validNel
+        case BMG if pocType.contains("bmg")   => pocType.validNel
+        case _                                => pocTypeMustCorrelateWithTenantType(header, tenant.tenantType).invalidNel
       }
     } else
       mapDoesntContainStringKeyError(header, map).invalidNel
