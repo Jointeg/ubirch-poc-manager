@@ -87,7 +87,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     (
       validateString(externalId, csvPocAdmin.externalId),
       validatePocType(pocType, csvPocAdmin.pocType, pocConfig.pocTypeEndpointMap, tenant),
-      validateString(pocName, csvPocAdmin.pocName),
+      validatePocName(pocName, csvPocAdmin.pocName),
       pocAddress,
       validatePhone(phone, csvPocAdmin.pocPhone),
       validateAdminCertifyApp(certifyApp, csvPocAdmin.pocCertifyApp),
