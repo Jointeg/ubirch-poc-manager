@@ -1,6 +1,6 @@
 package com.ubirch.services.poc.util
 
-import com.ubirch.models.tenant.UsageType
+import com.ubirch.models.tenant.{ TenantType, UsageType }
 
 import scala.util.matching.Regex
 
@@ -54,6 +54,9 @@ object ValidatorConstants {
 
   def mapDoesntContainStringKeyError(header: String, map: Map[String, String]) =
     s"column $header must contain a valid value from this map $map"
+
+  def pocTypeMustCorrelateWithTenantType(header: String, tenantType: TenantType) =
+    s"column $header must contain a valid value matching the tenant type ${TenantType.toStringFormat(tenantType)}"
 
   def zipCodeLengthError(header: String) =
     s"column $header must have the length of 5 digits"

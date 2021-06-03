@@ -90,8 +90,7 @@ class PocEmployeeCreatorTest extends UnitTestBase {
               allTrue.copy(
                 pocEmployeeId = employee.id,
                 lastUpdated = result.lastUpdated,
-                created = result.created,
-                errorMessage = Some(s"employeeGroupId is missing in poc ${poc.id}")
+                created = result.created
               )
             result shouldBe expectedFinal
         }

@@ -7,8 +7,8 @@ import com.ubirch.controllers.EndpointHelpers.{ retrieveTenantFromToken, Activat
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
   NotAllowedError,
-  UserNotCompleted,
-  UserNotFound
+  ResourceNotFound,
+  UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.CriteriaValidator
@@ -356,7 +356,8 @@ class TenantAdminController @Inject() (
           r <- tenantAdminService.switchActiveForPocAdmin(adminId, tenantContext, switch)
             .map {
               case Left(e) => e match {
-                  case UserNotFound(id) => NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
+                  case ResourceNotFound(id) =>
+                    NotFound(NOK.resourceNotFoundError(s"Poc admin with id '$id' not found'"))
                   case UserNotCompleted =>
                     Conflict(NOK.conflict(
                       s"Poc admin with id '$adminId' cannot be de/-activated before status is Completed."))

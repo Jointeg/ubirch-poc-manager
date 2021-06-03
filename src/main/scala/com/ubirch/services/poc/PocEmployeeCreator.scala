@@ -16,15 +16,15 @@ trait PocEmployeeCreator {
 
 object PocEmployeeCreator {
   @throws[PocEmployeeCreationError]
-  def throwAndLogError(employeeAndStatus: EmployeeAndStatus, msg: String, ex: Throwable, logger: Logger): Nothing = {
+  def throwAndLogError(triple: EmployeeTriple, msg: String, ex: Throwable, logger: Logger): Nothing = {
     logger.error(msg, ex)
-    throwError(employeeAndStatus, msg + ex.getMessage)
+    throwError(triple, msg + ex.getMessage)
   }
 
   @throws[PocEmployeeCreationError]
-  def throwError(employeeAndStatus: EmployeeAndStatus, msg: String) =
+  def throwError(triple: EmployeeTriple, msg: String) =
     throw PocEmployeeCreationError(
-      employeeAndStatus.copy(status = employeeAndStatus.status.copy(errorMessage = Some(msg))),
+      EmployeeAndStatus(employee = triple.employee, status = triple.status.copy(errorMessage = Some(msg))),
       msg)
 }
 
@@ -57,7 +57,7 @@ class PocEmployeeCreatorImpl @Inject() (
   private def createPocEmployee(employee: PocEmployee): Task[Either[String, PocEmployeeStatus]] = {
     retrieveStatusAndPoc(employee).flatMap {
       case (Some(poc: Poc), Some(status: PocEmployeeStatus)) =>
-        process(EmployeeTriple(poc, employee, status))
+        process(EmployeeTriple(poc, employee, status.copy(errorMessage = None)))
       case (_, _) =>
         Task(logAndGetLeft(s"cannot create employee ${employee.id}, poc or status couldn't be found"))
     }.onErrorHandle { e =>
@@ -69,20 +69,20 @@ class PocEmployeeCreatorImpl @Inject() (
 
     val creationResult = for {
       employee <- updateStatusOfEmployee(triple.employee, Processing)
-      eAs1 <- createCertifyUserWithRequiredActions(EmployeeAndStatus(employee, triple.status))
-      eAs2 <- addGroupsToCertifyUser(eAs1, triple.poc)
-      eAs3 <- sendEmailToCertifyUser(eAs2)
-    } yield eAs3
+      triple1 <- createCertifyUserWithRequiredActions(triple.copy(employee = employee))
+      triple2 <- addGroupsToCertifyUser(triple1)
+      triple3 <- sendEmailToCertifyUser(triple2)
+    } yield triple3
 
     (for {
-      eAs <- creationResult
+      triple <- creationResult
       _ <- quillMonixJdbcContext.withTransaction {
-        updateStatusOfEmployee(eAs.employee, Completed) >>
-          employeeStatusTable.updateStatus(eAs.status)
-      }.map(_ => logAuditEventInfo(s"updated poc employee and status with id ${eAs.employee.id} by service"))
+        updateStatusOfEmployee(triple.employee, Completed) >>
+          employeeStatusTable.updateStatus(triple.status)
+      }.map(_ => logAuditEventInfo(s"updated poc employee and status with id ${triple.employee.id} by service"))
     } yield {
-      logger.info(s"finished to create poc employee with id ${eAs.employee.id}")
-      Right(eAs.status)
+      logger.info(s"finished to create poc employee with id ${triple.employee.id}")
+      Right(triple.status)
     }).onErrorHandleWith(handlePocEmployeeCreationError)
   }
 
@@ -131,7 +131,6 @@ class PocEmployeeCreatorImpl @Inject() (
     logger.error(errorMsg, ex)
     Left(errorMsg + ex.getMessage)
   }
-
 }
 
 sealed trait PocEmployeeCreationResult

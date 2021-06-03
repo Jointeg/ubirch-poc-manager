@@ -281,7 +281,9 @@ class PocCreatorTest extends UnitTestBase {
         val maybeSuccess2 = result2.asInstanceOf[PocCreationMaybeSuccess]
         maybeSuccess2.list.head.isRight shouldBe true
 
-        maybeSuccess2 shouldBe PocCreationMaybeSuccess(List(Right(expected.copy(logoStored = Some(true)))))
+        maybeSuccess2 shouldBe PocCreationMaybeSuccess(List(Right(expected.copy(
+          logoStored = Some(true),
+          errorMessage = None))))
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
         assert(newPoc.isDefined)

@@ -1,6 +1,7 @@
 package com.ubirch.e2e.flows
 
 import com.ubirch.InjectorHelper
+import com.ubirch.ModelCreationHelper.pocTypeValue
 import com.ubirch.controllers.{ PocAdminController, SuperAdminController, TenantAdminController }
 import com.ubirch.db.tables._
 import com.ubirch.e2e.{ DiscoveryServiceType, E2ETestBase, KeycloakOperations, RealDiscoverService, TenantAdmin }
@@ -40,7 +41,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   val poc1Id: UUID = UUID.randomUUID()
 
-  private def createTenantJson(tenantName: String) = {
+  private def createTenantJson(tenantName: String): String = {
     s"""
        |{
        |    "tenantName": "$tenantName",
@@ -53,7 +54,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   private val createPocWithPocAdminCSV =
     s"""$pocAdminHeaderLine
-       |${poc1Id.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;FALSE""".stripMargin
+       |${poc1Id.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"vaccines":["vaccine1: vaccine2"]};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;FALSE""".stripMargin
 
   private val addDeviceCreationToken: String =
     s"""

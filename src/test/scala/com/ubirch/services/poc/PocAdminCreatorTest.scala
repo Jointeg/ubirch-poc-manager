@@ -173,8 +173,7 @@ class PocAdminCreatorTest extends UnitTestBase {
               allTrue.copy(
                 pocAdminId = pocAdmin.id,
                 lastUpdated = result.lastUpdated,
-                created = result.created,
-                errorMessage = Some(s"adminGroupId is missing in poc ${poc.id}")
+                created = result.created
               )
             result shouldBe expectedFinal
         }

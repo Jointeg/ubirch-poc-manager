@@ -13,12 +13,18 @@ import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
 trait ControllerSpecHelper {
-  def createTenantWithPocAndPocAdmin(injector: InjectorHelper, tenantName: String = globalTenantName)(implicit
+  def addTenantWithPocAndPocAdminToTable(injector: InjectorHelper, tenantName: String = globalTenantName)(implicit
   scheduler: Scheduler): (Tenant, Poc, PocAdmin) = {
     val tenant = addTenantToDB(injector, tenantName)
+    val (poc: Poc, pocAdmin: PocAdmin) = addPocAndPocAdminToTable(injector, tenant)
+    (tenant, poc, pocAdmin)
+  }
+
+  def addPocAndPocAdminToTable(injector: InjectorHelper, tenant: Tenant)(implicit
+  scheduler: Scheduler): (Poc, PocAdmin) = {
     val poc = addPocToDb(tenant, injector)
     val pocAdmin = addPocAdminToDB(poc, tenant, injector)
-    (tenant, poc, pocAdmin)
+    (poc, pocAdmin)
   }
 
   def addPocAdminToDB(poc: Poc, tenant: Tenant, injector: InjectorHelper)(implicit scheduler: Scheduler): PocAdmin = {
