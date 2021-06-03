@@ -101,7 +101,7 @@ class DefaultSuperAdminService @Inject() (
   }
 
   private[superadmin] def createOrgUnitCert(tenant: Tenant): Task[Unit] = {
-    val identifier = CertIdentifier.tenantOrgUnitCert
+    val identifier = CertIdentifier.tenantOrgUnitCert(tenant.tenantName)
     certHandler
       .createOrganisationalUnitCertificate(tenant.getOrgId, tenant.orgUnitId.value, identifier)
       .map {
@@ -113,7 +113,7 @@ class DefaultSuperAdminService @Inject() (
 
   private[superadmin] def createSharedAuthCert(tenant: Tenant): Task[SharedAuthResult] = {
 
-    val identifier = CertIdentifier.tenantClientCert
+    val identifier = CertIdentifier.tenantClientCert(tenant.tenantName)
     certHandler
       .createSharedAuthCertificate(tenant.orgUnitId.value, tenant.groupId.value, identifier)
       .map {

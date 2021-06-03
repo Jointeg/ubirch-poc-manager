@@ -18,11 +18,11 @@ object CertIdentifier {
 
   def tenantOrgCert(tenantName: TenantName): CertIdentifier = new CertIdentifier(tenantName.value)
 
-  def tenantOrgUnitCert =
-    new CertIdentifier(s"default point of certificate")
+  def tenantOrgUnitCert(tenantName: TenantName) =
+    new CertIdentifier(s"${tenantName.value} default point of certificate")
 
-  def tenantClientCert =
-    new CertIdentifier(s"default")
+  def tenantClientCert(tenantName: TenantName) =
+    new CertIdentifier(s"${tenantName.value} default")
 
   def thingCert(pocName: String, deviceId: DeviceId): CertIdentifier = {
     new CertIdentifier(s"${pocName.take(30)} ${deviceId.toString.take(5)}")
