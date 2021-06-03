@@ -39,6 +39,7 @@ class FakeTeamDriveClient extends TeamDriveClient {
   override def inviteMember(
     spaceId: SpaceId,
     email: String,
+    welcomeMessage: String,
     permissionLevel: PermissionLevel
   ): Task[Boolean] =
     Task {
@@ -63,6 +64,8 @@ class FakeTeamDriveClient extends TeamDriveClient {
   def spaceIsCreated(spaceId: SpaceId, spaceName: String): Boolean = spaces(spaceId) == spaceName
 
   override def getLoginInformation(): Task[LoginInformation] = Task.pure(LoginInformation(isLoginRequired = false))
+
+  override def withLogin[T](mainTask: => Task[T]): Task[T] = mainTask
 
   override def login(): Task[Unit] = Task.unit
 }

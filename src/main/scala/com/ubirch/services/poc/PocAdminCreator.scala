@@ -89,7 +89,8 @@ class PocAdminCreatorImpl @Inject() (
         aAs1 <- createCertifyUserWithRequiredActions(aAs)
         aAs2 <- addGroupsToCertifyUser(aAs1, poc)
         aAs3 <- sendEmailToCertifyUser(aAs2)
-        completeStatus <- invitePocAdminToTeamDrive(aAs3, poc, tenant)
+        aAs4 <- invitePocAdminToTeamDrive(aAs3, poc, tenant)
+        completeStatus <- invitePocAdminToStaticTeamDrive(aAs4, poc)
       } yield completeStatus
 
     (for {
@@ -109,20 +110,53 @@ class PocAdminCreatorImpl @Inject() (
   private def invitePocAdminToTeamDrive(aAs: PocAdminAndStatus, poc: Poc, tenant: Tenant): Task[PocAdminAndStatus] = {
     if (poc.clientCertRequired && aAs.status.invitedToTeamDrive.contains(false)) {
       val spaceName = SpaceName.ofPoc(pocConfig.teamDriveStage, tenant, poc)
-      teamDriveClient.getSpaceIdByName(spaceName).flatMap {
-        case Some(spaceId) =>
-          teamDriveClient.inviteMember(spaceId, aAs.admin.email, Read)
-            .map { _ =>
-              logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
-            }
-        case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+      teamDriveClient.withLogin {
+        teamDriveClient.getSpaceIdByName(spaceName).flatMap {
+          case Some(spaceId) =>
+            teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.certWelcomeMessage, Read)
+              .map { _ =>
+                logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
+              }
+          case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+        }
       }.map(_ => aAs.copy(status = aAs.status.copy(invitedToTeamDrive = Some(true))))
         .onErrorHandle {
           case ex: PocAdminCreationError => throw ex
           case ex: Exception =>
-            throwAndLogError(aAs, s"failed to invite poc admin ${aAs.admin.id} to TeamDrive. $ex", ex, logger)
+            throwAndLogError(
+              aAs,
+              s"failed to invite poc admin ${aAs.admin.id} to the cert space in TeamDrive. $spaceName. $ex",
+              ex,
+              logger)
         }
     } else Task(aAs)
+  }
+
+  private def invitePocAdminToStaticTeamDrive(aAs: PocAdminAndStatus, poc: Poc): Task[PocAdminAndStatus] = {
+    pocConfig.pocTypeStaticSpaceNameMap.get(poc.pocType).fold(Task(aAs)) { name =>
+      if (poc.clientCertRequired && aAs.status.invitedToStaticTeamDrive.contains(false)) {
+        val spaceName = SpaceName.of(pocConfig.teamDriveStage, name)
+        teamDriveClient.withLogin {
+          teamDriveClient.getSpaceIdByName(spaceName).flatMap {
+            case Some(spaceId) =>
+              teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.staticAssetsWelcomeMessage, Read)
+                .map { _ =>
+                  logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
+                }
+            case None => throwAndLogError(aAs, s"space was not found. $spaceName", logger)
+          }
+        }.map(_ => aAs.copy(status = aAs.status.copy(invitedToStaticTeamDrive = Some(true))))
+          .onErrorHandle {
+            case ex: PocAdminCreationError => throw ex
+            case ex: Exception =>
+              throwAndLogError(
+                aAs,
+                s"failed to invite poc admin ${aAs.admin.id} to the static space in TeamDrive. $spaceName. $ex",
+                ex,
+                logger)
+          }
+      } else Task(aAs)
+    }
   }
 
   private def updateStatusOfAdmin(pocAdmin: PocAdmin, newStatus: Status): Task[PocAdmin] = {
