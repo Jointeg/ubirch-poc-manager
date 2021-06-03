@@ -6,6 +6,7 @@ import com.ubirch.models.keycloak.group.{ GroupCreationError, GroupId, GroupName
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleAlreadyExists, RoleCreationException, RoleName }
 import com.ubirch.models.poc.{ Poc, PocStatus }
 import com.ubirch.models.tenant.Tenant
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.poc.PocCreator.throwError
@@ -30,9 +31,11 @@ trait KeycloakHelper {
 
   def assignAdminRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
-  def createEmployeeGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus]
+  def createPocTenantTypeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
-  def assignEmployeeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
+  def createEmployeeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+
+  def assignEmployeeRole(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
   def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
 
@@ -72,7 +75,12 @@ class KeycloakHelperImpl @Inject() (
   override def createCertifyGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     if (pocAndStatus.status.certifyGroupCreated) Task(pocAndStatus)
     else {
-      addSubGroup(tenant.certifyGroupId.value, pocAndStatus.poc.roleName, pocAndStatus, CertifyKeycloak)
+      addSubGroup(
+        tenant.certifyGroupId.value,
+        pocAndStatus.poc.roleName,
+        pocAndStatus,
+        CertifyKeycloak.defaultRealm,
+        CertifyKeycloak)
         .map { groupId =>
           val updatedPoc = pocAndStatus.poc.copy(certifyGroupId = Some(groupId.value))
           val updatedStatus = pocAndStatus.status.copy(certifyGroupCreated = true)
@@ -91,7 +99,13 @@ class KeycloakHelperImpl @Inject() (
         pocAndStatus,
         s"groupId for poc with id ${poc.id} is missing, though poc status says it was already created"))
 
-      findRoleAndAddToGroup(poc, poc.roleName, certifyGroupId, pocAndStatus.status, CertifyKeycloak)
+      findRoleAndAddToGroup(
+        poc,
+        poc.roleName,
+        certifyGroupId,
+        pocAndStatus.status,
+        CertifyKeycloak.defaultRealm,
+        CertifyKeycloak)
         .map {
           case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(certifyGroupRoleAssigned = true))
           case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
@@ -104,7 +118,12 @@ class KeycloakHelperImpl @Inject() (
     if (pocAndStatus.status.adminGroupCreated.isEmpty || pocAndStatus.status.adminGroupCreated.contains(true))
       Task(pocAndStatus)
     else {
-      addSubGroup(getCertifyGroupId(pocAndStatus), POC_ADMIN, pocAndStatus, CertifyKeycloak)
+      addSubGroup(
+        getCertifyGroupId(pocAndStatus),
+        POC_ADMIN,
+        pocAndStatus,
+        CertifyKeycloak.defaultRealm,
+        CertifyKeycloak)
         .map { groupId =>
           val updatedPoc = pocAndStatus.poc.copy(adminGroupId = Some(groupId.value))
           val updatedStatus = pocAndStatus.status.copy(adminGroupCreated = Some(true))
@@ -120,7 +139,13 @@ class KeycloakHelperImpl @Inject() (
     else {
       val adminGroupId =
         poc.adminGroupId.getOrElse(throwError(pocAndStatus, s"adminGroupId for poc ${poc.id} is missing"))
-      findRoleAndAddToGroup(poc, POC_ADMIN, adminGroupId, pocAndStatus.status, CertifyKeycloak)
+      findRoleAndAddToGroup(
+        poc,
+        POC_ADMIN,
+        adminGroupId,
+        pocAndStatus.status,
+        CertifyKeycloak.defaultRealm,
+        CertifyKeycloak)
         .map {
           case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(adminRoleAssigned = Some(true)))
           case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
@@ -128,11 +153,32 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
-  override def createEmployeeGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+  override def createPocTenantTypeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
+    if (pocAndStatus.status.pocTenantTypeGroupCreated.isEmpty || pocAndStatus.status.pocTenantTypeGroupCreated.contains(
+        true))
+      Task(pocAndStatus)
+    else {
+      addSubGroup(
+        tenant.certifyGroupId.value,
+        pocAndStatus.poc.roleName,
+        pocAndStatus,
+        tenant.getRealm,
+        CertifyKeycloak)
+        .map { groupId =>
+          val updatedPoc = pocAndStatus.poc.copy(pocTenantTypeGroupId = Some(groupId.value))
+          val updatedStatus = pocAndStatus.status.copy(pocTenantTypeGroupCreated = Some(true))
+          pocAndStatus.copy(poc = updatedPoc, status = updatedStatus)
+        }
+    }
+  }
+
+  override def createEmployeeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     if (pocAndStatus.status.employeeGroupCreated.isEmpty || pocAndStatus.status.employeeGroupCreated.contains(true))
       Task(pocAndStatus)
     else {
-      addSubGroup(getCertifyGroupId(pocAndStatus), POC_EMPLOYEE, pocAndStatus, CertifyKeycloak)
+      val pocTenantTypeGroupId =
+        pocAndStatus.poc.pocTenantTypeGroupId.getOrElse(throwError(pocAndStatus, "poc is missing pocTenantTypeGroupId"))
+      addSubGroup(pocTenantTypeGroupId, POC_EMPLOYEE, pocAndStatus, tenant.getRealm, CertifyKeycloak)
         .map { groupId =>
           val updatedPoc = pocAndStatus.poc.copy(employeeGroupId = Some(groupId.value))
           val updatedStatus = pocAndStatus.status.copy(employeeGroupCreated = Some(true))
@@ -141,7 +187,7 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
-  override def assignEmployeeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+  override def assignEmployeeRole(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     val poc = pocAndStatus.poc
     if (pocAndStatus.status.employeeRoleAssigned.isEmpty || pocAndStatus.status.employeeRoleAssigned.contains(true))
       Task(pocAndStatus)
@@ -149,7 +195,7 @@ class KeycloakHelperImpl @Inject() (
       val employeeGroupId =
         poc.employeeGroupId.getOrElse(throwError(pocAndStatus, s"employeeGroupId for poc ${poc.id} is missing"))
 
-      findRoleAndAddToGroup(poc, POC_EMPLOYEE, employeeGroupId, pocAndStatus.status, CertifyKeycloak)
+      findRoleAndAddToGroup(poc, POC_EMPLOYEE, employeeGroupId, pocAndStatus.status, tenant.getRealm, CertifyKeycloak)
         .map {
           case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(employeeRoleAssigned = Some(true)))
           case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
@@ -183,7 +229,12 @@ class KeycloakHelperImpl @Inject() (
   override def createDeviceGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     if (pocAndStatus.status.deviceGroupCreated) Task(pocAndStatus)
     else {
-      addSubGroup(tenant.deviceGroupId.value, pocAndStatus.poc.roleName, pocAndStatus, DeviceKeycloak)
+      addSubGroup(
+        tenant.deviceGroupId.value,
+        pocAndStatus.poc.roleName,
+        pocAndStatus,
+        DeviceKeycloak.defaultRealm,
+        DeviceKeycloak)
         .map { groupId =>
           val updatedPoc = pocAndStatus.poc.copy(deviceGroupId = Some(groupId.value))
           val updatedStatus = pocAndStatus.status.copy(deviceGroupCreated = true)
@@ -203,7 +254,13 @@ class KeycloakHelperImpl @Inject() (
         pocAndStatus,
         s"groupId for poc with id ${poc.id} is missing though poc status says it was already created")
     else {
-      findRoleAndAddToGroup(poc, poc.roleName, poc.deviceGroupId.get, status, DeviceKeycloak)
+      findRoleAndAddToGroup(
+        poc,
+        poc.roleName,
+        poc.deviceGroupId.get,
+        status,
+        DeviceKeycloak.defaultRealm,
+        DeviceKeycloak)
         .map {
           case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(deviceGroupRoleAssigned = true))
           case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
@@ -216,9 +273,10 @@ class KeycloakHelperImpl @Inject() (
     parentGroupId: String,
     subGroupName: String,
     pocAndStatus: PocAndStatus,
+    realm: KeycloakRealm,
     keycloak: KeycloakInstance): Task[GroupId] =
     groups
-      .addSubGroup(keycloak.defaultRealm, GroupId(parentGroupId), GroupName(subGroupName), keycloak)
+      .addSubGroup(realm, GroupId(parentGroupId), GroupName(subGroupName), keycloak)
       .map {
         case Right(groupId)               => groupId
         case Left(ex: GroupCreationError) => throwError(pocAndStatus, ex.errorMsg)
@@ -230,11 +288,12 @@ class KeycloakHelperImpl @Inject() (
     roleName: String,
     groupId: String,
     status: PocStatus,
+    realm: KeycloakRealm,
     instance: KeycloakInstance): Task[Either[String, Unit]] = {
     roles
-      .findRoleRepresentation(instance.defaultRealm, RoleName(roleName), instance)
+      .findRoleRepresentation(realm, RoleName(roleName), instance)
       .flatMap {
-        case Some(role) => groups.assignRoleToGroup(instance.defaultRealm, GroupId(groupId), role, instance)
+        case Some(role) => groups.assignRoleToGroup(realm, GroupId(groupId), role, instance)
         case None =>
           throwError(
             PocAndStatus(poc, status),

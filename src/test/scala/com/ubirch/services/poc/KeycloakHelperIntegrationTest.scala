@@ -17,7 +17,7 @@ class KeycloakHelperIntegrationTest extends E2ETestBase {
 
   private val tenant = createTenant()
   private val poc: Poc = createPoc(tenantName = tenant.tenantName)
-  private val pocStatus: PocStatus = createPocStatus(poc.id, Some(false), Some(false), Some(false), Some(false))
+  private val pocStatus: PocStatus = createPocStatus(poc.id, Some(false), Some(false), Some(false))
 
   "KeycloakHelper" should {
     "do certify realm related tasks" in {
@@ -44,8 +44,9 @@ class KeycloakHelperIntegrationTest extends E2ETestBase {
           pocAndStatus3 <- assignCertifyRoleToGroup(pocAndStatus2, updatedTenant)
           pocAndStatus4 <- createAdminGroup(pocAndStatus3)
           pocAndStatus5 <- assignAdminRole(pocAndStatus4)
-          pocAndStatus6 <- createEmployeeGroup(pocAndStatus5)
-          pocAndStatusFinal <- assignEmployeeRole(pocAndStatus6)
+          pocAndStatus6 <- createPocTenantTypeGroup(pocAndStatus5, tenant)
+          pocAndStatus7 <- createEmployeeGroup(pocAndStatus6, tenant)
+          pocAndStatusFinal <- assignEmployeeRole(pocAndStatus7, tenant)
         } yield pocAndStatusFinal
         val pocAndStatus = r.runSyncUnsafe()
         val certifyGroup =
