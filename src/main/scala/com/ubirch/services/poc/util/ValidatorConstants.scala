@@ -49,6 +49,9 @@ object ValidatorConstants {
   def emptyStringError(header: String) =
     s"column $header cannot be empty"
 
+  def tooShortStringError(header: String, minLength: Int) =
+    s"column $header cannot be shorter than $minLength"
+
   def listDoesntContainStringError(header: String, list: Seq[String]) =
     s"column $header must contain a valid value from this list $list"
 

@@ -28,6 +28,9 @@ object ConfPaths {
       final val CLIENT_ID = "keycloak-certify.server.clientId"
       final val CONFIG_URL = "keycloak-certify.tokenVerification.configURL"
       final val KID = "keycloak-certify.tokenVerification.kid"
+      final val DEFAULT_REALM = "keycloak-certify.defaultRealm"
+      final val BMG_REALM = "keycloak-certify.bmgRealm"
+      final val UBIRCH_REALM = "keycloak-certify.ubirchRealm"
     }
 
     object DeviceKeycloak {
@@ -38,6 +41,7 @@ object ConfPaths {
       final val CLIENT_ID = "keycloak-device.server.clientId"
       final val CONFIG_URL = "keycloak-device.tokenVerification.configURL"
       final val KID = "keycloak-device.tokenVerification.kid"
+      final val DEFAULT_REALM = "keycloak-device.defaultRealm"
     }
   }
 
