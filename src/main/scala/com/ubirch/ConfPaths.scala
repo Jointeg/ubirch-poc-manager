@@ -49,7 +49,6 @@ object ConfPaths {
     final val POC_TYPES_ROLE_NEEDED = "system.services.pocTypeRoleNeeded"
     final val POC_TYPES_LOCATION_NEEDED = "system.services.pocTypeLocationNeeded"
 
-    final val POC_ADMIN_GROUP_ID = "system.services.pocAdminGroupId"
     //urls and tokens
     final val THING_API_URL_CREATE_DEVICE = "system.services.thingApiURLCreateDevice"
     final val THING_API_URL_GET_INFO = "system.services.thingApiURLGetInfo"
