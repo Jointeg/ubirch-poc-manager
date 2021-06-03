@@ -65,7 +65,7 @@ class AdminCertifyHelperImpl @Inject() (users: KeycloakUserService) extends Admi
   override def sendEmailToCertifyUser(aAs: PocAdminAndStatus): Task[PocAdminAndStatus] = {
     if (aAs.status.keycloakEmailSent) Task(aAs)
     else if (aAs.admin.certifyUserId.isEmpty)
-      throwError(aAs, s"certifyUserId is missing for ${aAs.admin}, when it should be added to poc admin group")
+      throwError(aAs, s"certifyUserId is missing for ${aAs.admin.id}, when it should be added to poc admin group")
     else {
       users.sendRequiredActionsEmail(
         CertifyKeycloak.defaultRealm,
