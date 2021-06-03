@@ -1,5 +1,6 @@
 package com.ubirch.controllers.concerns
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.NOK
 import org.json4s.JNothing
 import org.json4s.JsonAST.JValue
@@ -11,7 +12,7 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import scala.language.implicitConversions
 import scala.util.Try
 
-trait BearerAuthSupport[TokenType <: AnyRef] {
+trait BearerAuthSupport[TokenType <: AnyRef] extends LazyLogging {
   self: ScalatraBase with ScentrySupport[TokenType] =>
 
   def realm: String
@@ -35,7 +36,9 @@ trait BearerAuthSupport[TokenType <: AnyRef] {
     val predicates: Seq[TokenType => Boolean] = p
     bearerAuth() match {
       case Some(value) if predicates.forall(x => x(value)) => action(value)
-      case _                                               => halt(403, NOK.authenticationError("Forbidden"))
+      case _ =>
+        logger.warn("the incoming token is invalid.")
+        halt(403, NOK.authenticationError("Forbidden"))
     }
   }
 

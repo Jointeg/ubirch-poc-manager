@@ -17,3 +17,7 @@ class ConfigProvider extends Provider[Config] {
   override def get(): Config = conf
 
 }
+
+object DefaultConfig {
+  val conf = ConfigFactory.load()
+}
