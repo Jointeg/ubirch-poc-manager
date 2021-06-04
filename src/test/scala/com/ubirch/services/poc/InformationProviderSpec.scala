@@ -9,10 +9,12 @@ import com.ubirch.services.poc.PocTestHelper.createPocTriple
 import com.ubirch.{ Awaits, Binder, DefaultUnitTestBinder, InjectorHelper }
 import monix.execution.Scheduler
 import org.json4s.Formats
+import org.json4s.JsonAST.JValue
 import org.json4s.native.Serialization.read
 import org.scalatest.TryValues
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
+import org.json4s.native.JsonMethods._
 import java.util.UUID
 import scala.util.Try
 
@@ -183,7 +185,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       parsedObject.cert.isDefined shouldBe true
       parsedObject.name shouldBe poc.pocName
       parsedObject.location shouldBe None
-      parsedObject.config shouldBe Some("""{"test":"hello"}""")
+      parsedObject.config shouldBe Some(parse("""{"test":"hello"}"""))
     }
 
     "succeed to create body with tenant's shared auth cert with jsonConfig " in {

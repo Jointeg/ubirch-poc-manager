@@ -12,6 +12,7 @@ import com.ubirch.services.poc.PocCreator._
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.json4s.Formats
+import org.json4s.JsonAST.JValue
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import sttp.client.{ basicRequest, UriContext }
@@ -35,7 +36,7 @@ case class RegisterDeviceCertifyAPI(
   role: Option[String],
   location: Option[String],
   cert: Option[String],
-  config: Option[String])
+  config: Option[JValue])
 
 class InformationProviderImpl @Inject() (conf: Config, pocConfig: PocConfig, certHandler: CertHandler)(implicit
 formats: Formats)
@@ -182,7 +183,7 @@ formats: Formats)
           if (pocConfig.roleNeeded.contains(poc.pocType)) Some(poc.roleName) else None,
           if (pocConfig.locationNeeded.contains(poc.pocType)) Some(poc.externalId) else None,
           cert,
-          poc.extraConfig.map(jsonConfig => write(jsonConfig.jvalue))
+          poc.extraConfig.map(jsonConfig => jsonConfig.jvalue)
         )
       write[RegisterDeviceCertifyAPI](registerDevice)
     })
