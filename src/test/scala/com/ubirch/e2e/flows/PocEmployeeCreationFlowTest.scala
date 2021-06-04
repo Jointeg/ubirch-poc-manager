@@ -214,6 +214,10 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     pocStatusAfterLoop.deviceRoleCreated shouldBe true
     pocStatusAfterLoop.deviceGroupCreated shouldBe true
     pocStatusAfterLoop.deviceGroupRoleAssigned shouldBe true
+
+    pocStatusAfterLoop.pocTypeRoleCreated shouldBe Some(true)
+    pocStatusAfterLoop.pocTypeGroupCreated shouldBe Some(true)
+    pocStatusAfterLoop.pocTypeGroupRoleAssigned shouldBe Some(true)
     pocStatusAfterLoop.certifyRoleCreated shouldBe true
     pocStatusAfterLoop.certifyGroupCreated shouldBe true
     pocStatusAfterLoop.certifyGroupRoleAssigned shouldBe true

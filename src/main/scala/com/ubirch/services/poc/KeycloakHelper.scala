@@ -31,14 +31,17 @@ trait KeycloakHelper {
 
   def assignAdminRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
+  def createPocTypeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
+
   def createPocTenantTypeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
+
+  def assignPocTypeRoleToGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
   def createEmployeeGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
   def assignEmployeeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus]
 
   def assignCertifyRoleToGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus]
-
 }
 
 case class PocAndStatus(poc: Poc, status: PocStatus) {
@@ -132,6 +135,7 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
+  @throws[PocCreationError]
   override def assignAdminRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     val poc = pocAndStatus.poc
     if (pocAndStatus.status.adminRoleAssigned.isEmpty || pocAndStatus.status.adminRoleAssigned.contains(true))
@@ -153,6 +157,26 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
+  @throws[PocCreationError]
+  override def createPocTypeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    if (pocAndStatus.status.pocTypeRoleCreated.isEmpty || pocAndStatus.status.pocTypeRoleCreated.contains(true))
+      Task(pocAndStatus)
+    else {
+      roles.createNewRole(
+        pocAndStatus.poc.getRealm,
+        CreateKeycloakRole(RoleName(pocAndStatus.poc.roleName)),
+        CertifyKeycloak)
+        .map {
+          case Right(_) => pocAndStatus.copy(status = pocAndStatus.status.copy(pocTypeRoleCreated = Some(true)))
+          case Left(_: RoleAlreadyExists) =>
+            pocAndStatus.copy(status = pocAndStatus.status.copy(pocTypeRoleCreated = Some(true)))
+          case Left(l: RoleCreationException) =>
+            throwError(pocAndStatus, s"pocTypeRole couldn't be created :${l.roleName}")
+        }
+    }
+  }
+
+  @throws[PocCreationError]
   override def createPocTenantTypeGroup(pocAndStatus: PocAndStatus, tenant: Tenant): Task[PocAndStatus] = {
     if (pocAndStatus.status.pocTypeGroupCreated.isEmpty || pocAndStatus.status.pocTypeGroupCreated.contains(
         true))
@@ -174,6 +198,32 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
+  @throws[PocCreationError]
+  override def assignPocTypeRoleToGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
+    val poc = pocAndStatus.poc
+
+    if (pocAndStatus.status.pocTypeGroupRoleAssigned.isEmpty || pocAndStatus.status.pocTypeGroupRoleAssigned.contains(
+        true)) Task(pocAndStatus)
+    else {
+      val pocTypeGroupId = poc.pocTypeGroupId.getOrElse(throwError(
+        pocAndStatus,
+        s"pocTypeGroupId for poc with id ${poc.id} is missing, though poc status says it was already created"))
+
+      findRoleAndAddToGroup(
+        poc,
+        poc.roleName,
+        pocTypeGroupId,
+        pocAndStatus.status,
+        poc.getRealm,
+        CertifyKeycloak)
+        .map {
+          case Right(_)       => pocAndStatus.copy(status = pocAndStatus.status.copy(pocTypeGroupRoleAssigned = Some(true)))
+          case Left(errorMsg) => throwError(pocAndStatus, errorMsg)
+        }
+    }
+  }
+
+  @throws[PocCreationError]
   override def createEmployeeGroup(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     if (pocAndStatus.status.employeeGroupCreated.isEmpty || pocAndStatus.status.employeeGroupCreated.contains(true))
       Task(pocAndStatus)
@@ -189,6 +239,7 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
+  @throws[PocCreationError]
   override def assignEmployeeRole(pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
     val poc = pocAndStatus.poc
     if (pocAndStatus.status.employeeRoleAssigned.isEmpty || pocAndStatus.status.employeeRoleAssigned.contains(true))
@@ -205,6 +256,7 @@ class KeycloakHelperImpl @Inject() (
     }
   }
 
+  @throws[PocCreationError]
   private def getCertifyGroupId(pocAndStatus: PocAndStatus): String = {
     pocAndStatus.poc.certifyGroupId.getOrElse(throwError(pocAndStatus, "poc is missing certifyGroupId"))
   }
