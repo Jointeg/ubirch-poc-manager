@@ -4,7 +4,7 @@ import cats.implicits._
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.controllers.TenantAdminController.PocAdmin_OUT
+import com.ubirch.controllers.model.TenantAdminController.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
@@ -438,7 +438,7 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return 404 when poc is not owned by tenant-admin" in withInjector { implicit Injector =>
+    "return 401 when poc is not owned by tenant-admin" in withInjector { implicit Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB()
@@ -448,8 +448,8 @@ class TenantAdminControllerSpec
       val _ = await(pocTable.createPoc(poc))
 
       get(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
-        status should equal(404)
-        assert(body.contains(s"PoC with id '$poc1id' does not exist"))
+        status should equal(401)
+        assert(body.contains(s"PoC with id '$poc1id' does not belong to tenant with id '${tenant.id.value.value}'"))
       }
     }
 
@@ -511,7 +511,10 @@ class TenantAdminControllerSpec
       val poc = createPoc(poc1id, tenant.tenantName).copy(status = Pending)
       val _ = await(pocTable.createPoc(poc))
 
-      put(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      put(
+        s"/poc/$poc1id",
+        body = pocToFormattedJson(poc).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
         status should equal(409)
         assert(body.contains(s"Poc '$poc1id' is in wrong status: 'Pending', required: 'Completed'"))
       }
@@ -528,15 +531,20 @@ class TenantAdminControllerSpec
 
     "return 404 when poc does not exists" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB()
+      val poc = createPoc(poc1id, tenant.tenantName)
 
-      put(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      put(
+        s"/poc/$poc1id",
+        body = pocToFormattedJson(poc).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
         status should equal(404)
         assert(body.contains(s"PoC with id '$poc1id' does not exist"))
       }
     }
 
-    "return 404 when poc is not owned by tenant-admin" in withInjector { implicit Injector =>
+    "return 401 when poc is not owned by tenant-admin" in withInjector { implicit Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB()
@@ -545,9 +553,12 @@ class TenantAdminControllerSpec
       val poc = createPoc(poc1id, otherTenant.tenantName)
       val _ = await(pocTable.createPoc(poc))
 
-      put(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
-        status should equal(404)
-        assert(body.contains(s"PoC with id '$poc1id' does not exist"))
+      put(
+        s"/poc/$poc1id",
+        body = pocToFormattedJson(poc).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        status should equal(401)
+        assert(body.contains(s"PoC with id '$poc1id' does not belong to tenant with id '${tenant.id.value.value}'"))
       }
     }
 

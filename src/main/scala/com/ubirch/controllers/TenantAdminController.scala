@@ -31,6 +31,7 @@ import org.json4s.native.Serialization
 import org.json4s.native.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
+import com.ubirch.controllers.error.ErrorMapper._
 
 import java.nio.charset.StandardCharsets
 import java.time.Clock
@@ -56,7 +57,7 @@ class TenantAdminController @Inject() (
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
-  import TenantAdminController._
+  import com.ubirch.controllers.model.TenantAdminController._
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -197,15 +198,7 @@ class TenantAdminController @Inject() (
   get("/poc/:id", operation(getPoc)) {
     tenantAdminEndpoint("Get PoC for a tenant") { tenant =>
       getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
-        for {
-          maybePoc <- pocTable.getPoc(id)
-          notFound = Task.pure(NotFound(NOK.resourceNotFoundError(s"PoC with id '$id' does not exist")))
-          r <- maybePoc match {
-            case None                               => notFound
-            case Some(p) if p.tenantId != tenant.id => notFound
-            case Some(p)                            => Task.pure(Presenter.toJsonResult(p))
-          }
-        } yield r
+        tenantAdminService.getPocForTenant(tenant, id).toActionResult
       }
     }
   }
@@ -215,15 +208,7 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
         for {
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          maybePoc <- pocTable.getPoc(id)
-          notFound = Task.pure(NotFound(NOK.resourceNotFoundError(s"PoC with id '$id' does not exist")))
-          r <- maybePoc match {
-            case None                               => notFound
-            case Some(p) if p.tenantId != tenant.id => notFound
-            case Some(p) if p.status != Completed =>
-              Task.pure(Conflict(NOK.conflict(s"Poc '$id' is in wrong status: '${p.status}', required: '$Completed'")))
-            case Some(p) => pocTable.updatePoc(read[Poc_IN](body).copyToPoc(p)) >> Task.pure(Ok(""))
-          }
+          r <- tenantAdminService.updatePoc(tenant, id, read[Poc_IN](body)).toActionResult
         } yield r
       }
     }
@@ -521,87 +506,3 @@ class TenantAdminController @Inject() (
 }
 
 case class AddDeviceCreationTokenRequest(token: String)
-
-object TenantAdminController {
-  case class PocAdmin_OUT(
-    id: UUID,
-    firstName: String,
-    lastName: String,
-    dateOfBirth: LocalDate,
-    email: String,
-    phone: String,
-    pocName: String,
-    active: Boolean,
-    state: Status,
-    webIdentInitiateId: Option[UUID],
-    webIdentSuccessId: Option[String]
-  )
-
-  object PocAdmin_OUT {
-    def fromPocAdmin(pocAdmin: PocAdmin, poc: Poc): PocAdmin_OUT =
-      PocAdmin_OUT(
-        id = pocAdmin.id,
-        firstName = pocAdmin.name,
-        lastName = pocAdmin.surname,
-        dateOfBirth = pocAdmin.dateOfBirth.date,
-        email = pocAdmin.email,
-        phone = pocAdmin.mobilePhone,
-        pocName = poc.pocName,
-        active = pocAdmin.active,
-        state = pocAdmin.status,
-        webIdentInitiateId = pocAdmin.webIdentInitiateId,
-        webIdentSuccessId = pocAdmin.webIdentId
-      )
-  }
-
-  case class Poc_IN(
-    address: Address_IN,
-    phone: String,
-    manager: PocManager_IN
-  ) {
-    def copyToPoc(poc: Poc): Poc =
-      poc.copy(
-        phone = phone,
-        address = address.toAddress,
-        manager = manager.toManager
-      )
-  }
-
-  case class Address_IN(
-    street: String,
-    houseNumber: String,
-    additionalAddress: Option[String] = None,
-    zipcode: Int,
-    city: String,
-    county: Option[String] = None,
-    federalState: Option[String],
-    country: String
-  ) {
-    def toAddress: Address =
-      Address(
-        street = street,
-        houseNumber = houseNumber,
-        additionalAddress = additionalAddress,
-        zipcode = zipcode,
-        city = city,
-        county = county,
-        federalState = federalState,
-        country = country
-      )
-  }
-
-  case class PocManager_IN(
-    lastName: String,
-    firstName: String,
-    email: String,
-    mobilePhone: String
-  ) {
-    def toManager: PocManager =
-      PocManager(
-        managerSurname = lastName,
-        managerName = firstName,
-        managerEmail = email,
-        managerMobilePhone = mobilePhone
-      )
-  }
-}
