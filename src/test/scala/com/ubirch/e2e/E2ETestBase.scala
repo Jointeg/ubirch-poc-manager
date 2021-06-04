@@ -5,14 +5,7 @@ import com.ubirch._
 import com.ubirch.e2e.StartupHelperMethods.isPortInUse
 import com.ubirch.models.user.UserName
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.keycloak.{
-  CertifyBmgRealm,
-  CertifyDefaultRealm,
-  CertifyKeycloakConnector,
-  CertifyUbirchRealm,
-  DeviceDefaultRealm,
-  DeviceKeycloakConnector
-}
+import com.ubirch.services.keycloak._
 import com.ubirch.services.poc.PocTestHelper.await
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import monix.execution.Scheduler

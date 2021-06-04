@@ -47,17 +47,16 @@ class PocCreationLoopTest extends UnitTestBase {
           CertifyKeycloak).runSyncUnsafe(3.seconds)
 
         //start process
-        val pocCreation = loop.startPocCreationLoop(resp => Observable(resp)).subscribe()
-        Thread.sleep(4000)
+        val pocCreation = loop.startPocCreationLoop(resp => Observable(resp))
+        awaitForTwoTicks(pocCreation, 5.seconds)
         await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds) shouldBe None
         val updatedPoc = poc.copy(logoUrl = Some(LogoURL(
           new URL("https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png"))))
         val updatedStatus = pocStatus.copy(logoRequired = true, logoStored = Some(true))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, updatedStatus, updatedTenant)
-        Thread.sleep(3000)
+        awaitForTwoTicks(pocCreation, 5.seconds)
         val status = await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds).get
         assertStatusAllTrue(status)
-        pocCreation.cancel()
       }
     }
   }

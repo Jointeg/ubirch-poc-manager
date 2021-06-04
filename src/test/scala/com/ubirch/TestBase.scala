@@ -1,15 +1,15 @@
 package com.ubirch
 
+import cats.effect.concurrent.Ref
 import monix.eval.Task
-import monix.execution.{ Cancelable, Scheduler }
+import monix.execution.Scheduler
 import monix.reactive.Observable
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, WordSpec }
 
 import java.util.concurrent.Executors
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ Duration, _ }
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
-import scala.concurrent.duration._
 
 /**
   * Represents base for a convenient test
@@ -76,4 +76,15 @@ trait Awaits {
     Await.result(result.runToFuture, atMost)
   }
 
+  def awaitForTwoTicks[T](observable: Observable[T], atMost: Duration)(implicit scheduler: Scheduler) = {
+    val res = for {
+      ref <- Ref.of[Task, List[Unit]](List.empty)
+      cancelable <-
+        Task(observable.doOnNext(elem => {
+          ref.modify(current => (current :+ (), elem))
+        }).subscribe())
+      _ <- sleepUntil(ref.get.map(elems => elems.length >= 2), atMost)
+    } yield cancelable.cancel()
+    Await.ready(res.runToFuture, atMost)
+  }
 }

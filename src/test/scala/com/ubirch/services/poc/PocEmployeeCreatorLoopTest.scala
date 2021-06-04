@@ -23,15 +23,15 @@ class PocEmployeeCreatorLoopTest extends UnitTestBase {
         employeeTable.createPocEmployee(employee)
 
         //start process
-        val creationLoop = loop.startPocEmployeeCreationLoop(resp => Observable(resp)).subscribe()
-        Thread.sleep(3000)
+        val creationLoop = loop.startPocEmployeeCreationLoop(resp => Observable(resp))
+        awaitForTwoTicks(creationLoop, 5.seconds)
 
         // not process because the not poc is stored/found in database yet
         statusTable.getStatus(status.pocEmployeeId).runSyncUnsafe() shouldBe None
 
         // store objects in database
         addEmployeeTripleToRepository(pocTable, employeeTable, statusTable, poc, employee, status)
-        Thread.sleep(3000)
+        awaitForTwoTicks(creationLoop, 5.seconds)
         val updatedStatus1 = statusTable.getStatus(status.pocEmployeeId).runSyncUnsafe().get
         updatedStatus1.certifyUserCreated shouldBe true
 
@@ -39,11 +39,10 @@ class PocEmployeeCreatorLoopTest extends UnitTestBase {
         val updatedPoc = poc.copy(employeeGroupId = Some(UUID.randomUUID().toString))
         pocTable.updatePoc(updatedPoc).runSyncUnsafe(1.seconds)
 
-        Thread.sleep(3000)
+        awaitForTwoTicks(creationLoop, 5.seconds)
         // not process because employee group doesn't exist yet
         val updatedStatus2 = statusTable.getStatus(status.pocEmployeeId).runSyncUnsafe().get
         assertStatusAllTrue(updatedStatus2)
-        creationLoop.cancel()
       }
     }
   }
