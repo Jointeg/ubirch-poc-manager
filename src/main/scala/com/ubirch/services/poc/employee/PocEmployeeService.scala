@@ -106,7 +106,7 @@ case class DataSchemaSetting(
   requiredRole: Option[String],
   customSettings: Option[CustomDataSchemaSetting])
 case class GetCertifyConfigDTO(
-  externalId: String,
+  pocId: String,
   pocName: String,
   logoUrl: String,
   styleTheme: Option[String],

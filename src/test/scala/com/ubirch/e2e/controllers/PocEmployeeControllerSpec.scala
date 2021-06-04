@@ -98,7 +98,7 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
             contentType shouldBe JsonContentType + ";charset=utf-8"
           }
           val certifyConfig = read[GetCertifyConfigDTO](body)
-          certifyConfig.externalId shouldBe poc.externalId
+          certifyConfig.pocId shouldBe poc.externalId
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-blue")
@@ -123,7 +123,7 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         get(configEndpoint(poc)) {
           status should equal(200)
           val certifyConfig = read[GetCertifyConfigDTO](body)
-          certifyConfig.externalId shouldBe poc.externalId
+          certifyConfig.pocId shouldBe poc.externalId
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-bmg-blue")
@@ -148,7 +148,7 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
         get(configEndpoint(poc)) {
           status should equal(200)
           val certifyConfig = read[GetCertifyConfigDTO](body)
-          certifyConfig.externalId shouldBe poc.externalId
+          certifyConfig.pocId shouldBe poc.externalId
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe None
