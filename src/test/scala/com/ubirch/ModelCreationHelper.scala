@@ -33,6 +33,7 @@ object ModelCreationHelper {
   private val deviceCreationToken = EncryptedDeviceCreationToken(encryptedData)
   val dataSchemaGroupId = "data-schema-id"
   val pocTypeValue = "ub_vac_app"
+  val pocBmgTypeValue = "bmg_vac_app"
 
   val globalTenantName = "tenantName"
   private val tenantNameObj = TenantName("tenantName")

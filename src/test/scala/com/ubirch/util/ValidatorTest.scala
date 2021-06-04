@@ -395,6 +395,29 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   }
 
+  "Validator validationExternalId" should {
+    val ubirchTenant = createTenant()
+    val bmgTenant = ubirchTenant.copy(tenantType = BMG)
+
+    "validate valid when string length is 17 for bmg tenant" in {
+      val validated = validateExternalId(externalId, "a" * 17, bmgTenant)
+      assert(validated.isValid)
+    }
+
+    "validate valid when string length is 30 for ubirch tenant" in {
+      val validated = validateExternalId(externalId, "a" * 30, ubirchTenant)
+      assert(validated.isValid)
+    }
+
+    "validate error when string length is 30 for bmg tenant" in {
+      val validated = validateExternalId(externalId, "a" * 30, bmgTenant)
+      validated.leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == rangeOverStringError(externalId, 1, 17))
+        }
+    }
+  }
+
   "Validator StringOption" should {
 
     "validate String Option valid if not empty" in {

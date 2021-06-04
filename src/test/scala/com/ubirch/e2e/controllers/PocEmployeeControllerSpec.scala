@@ -1,9 +1,6 @@
 package com.ubirch.e2e.controllers
 
-import com.ubirch.FakeTokenCreator
-import com.ubirch.ModelCreationHelper.{ createPocAdmin, createPocEmployee }
-import com.ubirch.db.tables.{ PocAdminTable, PocEmployeeTable }
-import com.ubirch.models.poc.Pending
+import com.ubirch.models.poc.{ Completed, LogoURL, Pending, Poc, PocLogo }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
@@ -15,15 +12,16 @@ import org.json4s.native.Serialization.read
 import com.ubirch.ModelCreationHelper.createPoc
 import com.ubirch.controllers.PocEmployeeController
 import com.ubirch.db.tables.{ PocLogoRepository, PocTable, TenantTable }
-import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.{ LogoURL, Poc, PocLogo }
+import com.ubirch.e2e.{ E2ETestBase, KeycloakOperations }
+import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
+import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, KeycloakCertifyConfig }
+import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import org.scalatest.BeforeAndAfterEach
 
 import java.io.{ ByteArrayInputStream, File }
 import java.net.URL
 import java.nio.file.Files
 import javax.imageio.ImageIO
-import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
 class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with ControllerSpecHelper {
@@ -81,21 +79,26 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
   "Endpoint GET /certify-config" should {
     val EndPoint = "/certify-config"
+    def configEndpoint(poc: Poc) = EndPoint + s"/${poc.roleName}"
     "get certify config UBIRCH vaccination centers" in {
       withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val employeeTable = injector.get[PocEmployeeTable]
-        val (tenant, poc, _) = addTenantWithPocAndPocAdminToTable(injector)
-        val employee =
-          createPocEmployee(pocId = poc.id, tenantId = tenant.id).copy(certifyUserId = Some(UUID.randomUUID()))
-        await(employeeTable.createPocEmployee(employee), 5.seconds)
-        get(EndPoint, headers = Map("authorization" -> token.pocEmployee(employee.certifyUserId.value).prepare)) {
+        val tenant = addTenantToDB(injector)
+        val keycloakRoleService = injector.get[KeycloakRolesService]
+        val pocTable = injector.get[PocTable]
+        val poc =
+          createPoc(tenantName = tenant.tenantName, status = Pending).copy(pocType = "ub_vac_app", status = Completed)
+        val r =
+          for {
+            _ <- pocTable.createPoc(poc)
+          } yield ()
+        await(r, 5.seconds)
+        get(configEndpoint(poc)) {
           status should equal(200)
           header.get(ContentTypeKey).foreach { contentType =>
             contentType shouldBe JsonContentType + ";charset=utf-8"
           }
           val certifyConfig = read[GetCertifyConfigDTO](body)
-          certifyConfig.pocId shouldBe poc.id.toString
+          certifyConfig.externalId shouldBe poc.externalId
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-blue")
@@ -108,26 +111,19 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
     "get certify config BMG vaccination center POC" in {
       withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
         val tenant = addTenantToDB(injector)
-        val employeeTable = injector.get[PocEmployeeTable]
         val pocTable = injector.get[PocTable]
-        val pocAdminTable = injector.get[PocAdminTable]
-        val poc = createPoc(tenantName = tenant.tenantName, status = Pending).copy(pocType = "bmg_vac_app")
-        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
-        val employee =
-          createPocEmployee(pocId = poc.id, tenantId = tenant.id).copy(certifyUserId = Some(UUID.randomUUID()))
+        val poc =
+          createPoc(tenantName = tenant.tenantName, status = Pending).copy(pocType = "bmg_vac_app", status = Completed)
         val r =
           for {
             _ <- pocTable.createPoc(poc)
-            _ <- pocAdminTable.createPocAdmin(pocAdmin)
-            _ <- employeeTable.createPocEmployee(employee)
           } yield ()
         await(r, 5.seconds)
-        get(EndPoint, headers = Map("authorization" -> token.pocEmployee(employee.certifyUserId.value).prepare)) {
+        get(configEndpoint(poc)) {
           status should equal(200)
           val certifyConfig = read[GetCertifyConfigDTO](body)
-          certifyConfig.pocId shouldBe poc.id.toString
+          certifyConfig.externalId shouldBe poc.externalId
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-bmg-blue")
@@ -140,26 +136,19 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
     "get certify config BVDW POC" in {
       withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
         val tenant = addTenantToDB(injector)
-        val employeeTable = injector.get[PocEmployeeTable]
         val pocTable = injector.get[PocTable]
-        val pocAdminTable = injector.get[PocAdminTable]
-        val poc = createPoc(tenantName = tenant.tenantName, status = Pending).copy(pocType = "ub_cust_app")
-        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
-        val employee =
-          createPocEmployee(pocId = poc.id, tenantId = tenant.id).copy(certifyUserId = Some(UUID.randomUUID()))
+        val poc =
+          createPoc(tenantName = tenant.tenantName, status = Pending).copy(pocType = "ub_cust_app", status = Completed)
         val r =
           for {
             _ <- pocTable.createPoc(poc)
-            _ <- pocAdminTable.createPocAdmin(pocAdmin)
-            _ <- employeeTable.createPocEmployee(employee)
           } yield ()
         await(r, 5.seconds)
-        get(EndPoint, headers = Map("authorization" -> token.pocEmployee(employee.certifyUserId.value).prepare)) {
+        get(configEndpoint(poc)) {
           status should equal(200)
           val certifyConfig = read[GetCertifyConfigDTO](body)
-          certifyConfig.pocId shouldBe poc.id.toString
+          certifyConfig.externalId shouldBe poc.externalId
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe None
@@ -172,35 +161,30 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
 
     "return BadRequest when pocType is wrong" in {
       withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
         val tenant = addTenantToDB(injector)
-        val employeeTable = injector.get[PocEmployeeTable]
         val pocTable = injector.get[PocTable]
-        val pocAdminTable = injector.get[PocAdminTable]
-        val poc = createPoc(tenantName = tenant.tenantName, status = Pending).copy(pocType = "ub_cust_app1")
-        val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
-        val employee =
-          createPocEmployee(pocId = poc.id, tenantId = tenant.id).copy(certifyUserId = Some(UUID.randomUUID()))
+        val poc =
+          createPoc(tenantName = tenant.tenantName, status = Pending).copy(pocType = "ub_cust_app1", status = Completed)
         val r =
           for {
             _ <- pocTable.createPoc(poc)
-            _ <- pocAdminTable.createPocAdmin(pocAdmin)
-            _ <- employeeTable.createPocEmployee(employee)
           } yield ()
         await(r, 5.seconds)
-        get(EndPoint, headers = Map("authorization" -> token.pocEmployee(employee.certifyUserId.value).prepare)) {
+        get(configEndpoint(poc)) {
           status should equal(400)
         }
       }
     }
 
-    "return Bad Request when employee doesn't exist" in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        get(EndPoint, headers = Map("authorization" -> token.pocEmployee(UUID.randomUUID()).prepare)) {
-          status should equal(404)
+    "return Bad Request when pocRole has a wrong format" in {
+      get(EndPoint + "/test") {
+        status should equal(400)
+      }
+    }
 
-        }
+    "return Bad Request when pocRole doesn't include uuid" in {
+      get(EndPoint + "/test_test_1232454") {
+        status should equal(400)
       }
     }
   }
