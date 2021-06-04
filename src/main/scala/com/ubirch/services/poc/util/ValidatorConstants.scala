@@ -49,6 +49,9 @@ object ValidatorConstants {
   def emptyStringError(header: String) =
     s"column $header cannot be empty"
 
+  def rangeOverStringError(header: String, minLength: Int, maxLength: Int) =
+    s"column $header must be from $minLength to $maxLength"
+
   def tooShortStringError(header: String, minLength: Int) =
     s"column $header cannot be shorter than $minLength"
 

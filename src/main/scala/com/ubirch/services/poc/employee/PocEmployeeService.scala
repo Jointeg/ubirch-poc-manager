@@ -3,9 +3,8 @@ package com.ubirch.services.poc.employee
 import cats.data.EitherT
 import com.ubirch.PocConfig
 import com.ubirch.db.tables.{ PocLogoRepository, PocRepository }
-import com.ubirch.models.poc.{ CustomDataSchemaSetting, Poc, PocLogo }
-import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.services.poc.employee.GetCertifyConfigError.{ InvalidDataPocType, UnknownPoc }
+import com.ubirch.models.poc.{ Completed, CustomDataSchemaSetting, Poc, PocLogo }
+import com.ubirch.services.poc.employee.GetCertifyConfigError.{ InvalidDataPocType, PocIsNotCompleted, UnknownPoc }
 import com.ubirch.services.poc.employee.GetPocLogoError.{ LogoNotFoundError, PocNotFoundError }
 import monix.eval.Task
 
@@ -13,7 +12,8 @@ import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 
 trait PocEmployeeService {
-  def getCertifyConfig(pocEmployee: PocEmployee): Task[Either[GetCertifyConfigError, GetCertifyConfigDTO]]
+  def getCertifyConfig(pocCertifyConfigRequest: PocCertifyConfigRequest)
+    : Task[Either[GetCertifyConfigError, GetCertifyConfigDTO]]
   def getPocLogo(pocId: UUID): Task[Either[GetPocLogoError, PocLogoResponse]]
 }
 
@@ -24,15 +24,25 @@ class PocEmployeeServiceImpl @Inject() (
   pocConfig: PocConfig)
   extends PocEmployeeService {
 
-  def getCertifyConfig(pocEmployee: PocEmployee): Task[Either[GetCertifyConfigError, GetCertifyConfigDTO]] = {
+  def getCertifyConfig(pocCertifyConfigRequest: PocCertifyConfigRequest)
+    : Task[Either[GetCertifyConfigError, GetCertifyConfigDTO]] = {
     (for {
       poc <- EitherT.fromOptionF[Task, GetCertifyConfigError, Poc](
-        pocRepository.getPoc(pocEmployee.pocId),
-        UnknownPoc(pocEmployee.pocId))
+        pocRepository.getPoc(pocCertifyConfigRequest.pocId),
+        UnknownPoc(pocCertifyConfigRequest.pocId))
+      _ <- isPocCompleted(poc)
       dto <- toGetCertifyConfigDTO(poc)
     } yield {
       dto
     }).value
+  }
+
+  private def isPocCompleted(poc: Poc): EitherT[Task, GetCertifyConfigError, Unit] = {
+    if (poc.status == Completed) {
+      EitherT.rightT[Task, GetCertifyConfigError](())
+    } else {
+      EitherT.leftT[Task, Unit](PocIsNotCompleted(poc.id.toString))
+    }
   }
 
   private def toGetCertifyConfigDTO(poc: Poc): EitherT[Task, GetCertifyConfigError, GetCertifyConfigDTO] = {
@@ -48,7 +58,7 @@ class PocEmployeeServiceImpl @Inject() (
 
       val logoUrl = s"${pocConfig.pocLogoEndpoint}/${poc.id.toString}"
       GetCertifyConfigDTO(
-        poc.id.toString,
+        poc.externalId,
         poc.pocName,
         logoUrl,
         styleTheme,
@@ -84,6 +94,7 @@ case class PocLogoResponse(fileExtension: String, logo: Array[Byte])
 
 sealed trait GetCertifyConfigError
 object GetCertifyConfigError {
+  case class PocIsNotCompleted(pocId: String) extends GetCertifyConfigError
   case class InvalidDataPocType(pocType: String, pocId: UUID) extends GetCertifyConfigError
   case class UnknownPoc(pocId: UUID) extends GetCertifyConfigError
 }
@@ -95,7 +106,7 @@ case class DataSchemaSetting(
   requiredRole: Option[String],
   customSettings: Option[CustomDataSchemaSetting])
 case class GetCertifyConfigDTO(
-  pocId: String,
+  externalId: String,
   pocName: String,
   logoUrl: String,
   styleTheme: Option[String],
@@ -108,3 +119,7 @@ object GetPocLogoError {
   case class PocNotFoundError(pocId: UUID) extends GetPocLogoError
   case class LogoNotFoundError(pocId: UUID) extends GetPocLogoError
 }
+
+case class PocCertifyConfigRequest(
+  pocId: UUID
+)

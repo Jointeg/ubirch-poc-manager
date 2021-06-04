@@ -122,6 +122,13 @@ object Validator {
       str.validNel
   }
 
+  def validateStringWithRange(header: String, str: String, min: Int, max: Int): AllErrorsOr[String] = {
+    if (str.length < min || str.length > max)
+      rangeOverStringError(header, min, max).invalidNel
+    else
+      str.validNel
+  }
+
   /**
     * string key exists in map
     */
@@ -138,6 +145,16 @@ object Validator {
       }
     } else
       mapDoesntContainStringKeyError(header, map).invalidNel
+  }
+
+  /**
+    * for bmg, the length of externalId is maximum 17
+    */
+  def validateExternalId(header: String, externalId: String, tenant: Tenant): AllErrorsOr[String] = {
+    tenant.tenantType match {
+      case UBIRCH => validateString(header, externalId)
+      case BMG    => validateStringWithRange(header, externalId, 1, 17)
+    }
   }
 
   /**
