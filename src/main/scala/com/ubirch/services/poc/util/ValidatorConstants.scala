@@ -46,6 +46,9 @@ object ValidatorConstants {
   def jsonError(header: String) =
     s"column $header must contain a valid json string"
 
+  def jsonErrorWhenTenantTypeBMG(header: String) =
+    s"""column $header must contain a valid json {"sealId":"59f25a72-6820-4abe-9e95-5d5c9f1b60a7"} when tenantType is BMG """
+
   def emptyStringError(header: String) =
     s"column $header cannot be empty"
 
