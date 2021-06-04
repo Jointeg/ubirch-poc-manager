@@ -15,7 +15,7 @@ import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.poc.{ Completed, Poc, PocAdmin, PocAdminStatus, Status }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
@@ -23,7 +23,6 @@ import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
-import org.json4s.native.Serialization.read
 
 import java.util.UUID
 import javax.inject.Inject
@@ -62,6 +61,7 @@ trait TenantAdminService {
 
   def updatePoc(tenant: Tenant, id: UUID, poc: Poc_IN): Task[Either[UpdatePocError, Unit]]
 
+  def getPocAdminForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocAdminForTenantError, PocAdmin]]
 }
 
 class DefaultTenantAdminService @Inject() (
@@ -294,6 +294,17 @@ class DefaultTenantAdminService @Inject() (
         }
       } yield r
     }
+
+  override def getPocAdminForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocAdminForTenantError, PocAdmin]] =
+    for {
+      maybePoc <- pocAdminRepository.getPocAdmin(id)
+      r <- maybePoc match {
+        case None => Task.pure(GetPocAdminForTenantError.NotFound(id).asLeft)
+        case Some(p) if p.tenantId != tenant.id =>
+          Task.pure(GetPocAdminForTenantError.AssignedToDifferentTenant(id, tenant.id).asLeft)
+        case Some(p) => Task.pure(p.asRight)
+      }
+    } yield r
 }
 
 sealed trait CreateWebIdentInitiateIdErrors
@@ -335,4 +346,10 @@ object UpdatePocError {
   case class NotFound(pocId: UUID) extends UpdatePocError
   case class AssignedToDifferentTenant(pocId: UUID, tenantId: TenantId) extends UpdatePocError
   case class NotCompleted(pocId: UUID, status: Status) extends UpdatePocError
+}
+
+sealed trait GetPocAdminForTenantError
+object GetPocAdminForTenantError {
+  case class NotFound(pocId: UUID) extends GetPocAdminForTenantError
+  case class AssignedToDifferentTenant(pocId: UUID, tenantId: TenantId) extends GetPocAdminForTenantError
 }

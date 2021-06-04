@@ -4,7 +4,6 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.ubirch._
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.services.clock.ClockProvider
 import com.ubirch.formats.TestFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.{ KeycloakUserService, KeycloakUserServiceWithoutMail }
@@ -12,8 +11,6 @@ import com.ubirch.services.keycloak.{ DeviceKeycloakConnector, KeycloakCertifyCo
 import com.ubirch.services.poc._
 import com.ubirch.services.teamdrive.model.TeamDriveClient
 import com.ubirch.test.{ FakeTeamDriveClient, FixedClockProvider }
-import io.getquill.{ PostgresJdbcContext, SnakeCase }
-import com.ubirch.test.FakeTeamDriveClient
 import io.getquill.context.monix.MonixJdbcContext.Runner
 import io.getquill.{ PostgresMonixJdbcContext, SnakeCase }
 import monix.eval.Task

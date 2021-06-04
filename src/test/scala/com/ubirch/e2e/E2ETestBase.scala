@@ -3,14 +3,7 @@ package com.ubirch.e2e
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch._
 import com.ubirch.models.user.UserName
-import com.ubirch.services.keycloak.{
-  CertifyBmgRealm,
-  CertifyDefaultRealm,
-  CertifyKeycloakConnector,
-  CertifyUbirchRealm,
-  DeviceDefaultRealm,
-  DeviceKeycloakConnector
-}
+import com.ubirch.services.keycloak._
 import org.flywaydb.core.Flyway
 import org.scalatest.{ EitherValues, OptionValues }
 import org.scalatra.test.scalatest.ScalatraWordSpec

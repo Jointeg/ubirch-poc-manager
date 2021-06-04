@@ -20,6 +20,23 @@ object TenantAdminControllerJsonModel {
     webIdentSuccessId: Option[String]
   )
 
+  case class PocAdmin_IN(
+    firstName: String,
+    lastName: String,
+    dateOfBirth: LocalDate,
+    email: String,
+    phone: String
+  ) {
+    def copyToPocAdmin(pa: PocAdmin): PocAdmin =
+      pa.copy(
+        name = firstName,
+        surname = lastName,
+        email = email,
+        dateOfBirth = BirthDate(dateOfBirth),
+        mobilePhone = phone
+      )
+  }
+
   case class Poc_IN(
     address: Address_IN,
     phone: String,

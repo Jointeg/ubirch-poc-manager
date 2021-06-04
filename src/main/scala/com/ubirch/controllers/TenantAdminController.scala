@@ -11,6 +11,7 @@ import com.ubirch.controllers.SwitchActiveError.{
   UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
+import com.ubirch.controllers.error.ErrorMapper._
 import com.ubirch.controllers.validator.CriteriaValidator
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc._
@@ -25,13 +26,12 @@ import com.ubirch.services.tenantadmin._
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
-import org.joda.time.{ DateTime, LocalDate }
+import org.joda.time.DateTime
 import org.json4s.Formats
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
-import com.ubirch.controllers.error.ErrorMapper._
 
 import java.nio.charset.StandardCharsets
 import java.time.Clock
@@ -125,6 +125,18 @@ class TenantAdminController @Inject() (
       .summary("Get PoC admins")
       .description("Retrieve PoC admins that belong to the querying tenant.")
       .tags("Tenant-Admin", "PoCs", "PoC Admins")
+      .authorizations()
+  val getPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve poc admin of the requesting tenant")
+      .summary("Get PoC admin")
+      .description("Retrieve PoC admin that belong to the querying tenant.")
+      .tags("Tenant-Admin", "PoCs", "PoC Admin")
+      .authorizations()
+  val putPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("update poc admin of the requesting tenant")
+      .summary("update PoC admin")
+      .description("Update PoC admin that belong to the querying tenant.")
+      .tags("Tenant-Admin", "PoCs", "PoC Admin")
       .authorizations()
   val getPocAdminStatus: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[PocAdminStatus]("retrieve PoC Admin Status via pocAdminId")
@@ -469,6 +481,40 @@ class TenantAdminController @Inject() (
             }
           } yield r
         }
+      }
+    }
+  }
+
+  get("/poc-admin/:id", operation(getPocAdmin)) {
+    tenantAdminEndpoint("Get PoC Admin for a tenant") { tenant =>
+      getParamAsUUID("id", id => s"Invalid poc-admin id '$id'") { id =>
+        tenantAdminService.getPocAdminForTenant(tenant, id).toActionResult
+      }
+    }
+  }
+
+  put("/poc-admin/:id", operation(putPocAdmin)) {
+    tenantAdminEndpoint("Update PoC Admin for a tenant") { tenant =>
+      getParamAsUUID("id", id => s"Invalid poc-admin id '$id'") { id =>
+        for {
+          body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
+          maybePoc <- pocAdminRepository.getPocAdmin(id)
+          notFound = Task.pure(NotFound(NOK.resourceNotFoundError(s"PoC Admin with id '$id' does not exist")))
+          r <- maybePoc match {
+            case None                                 => notFound
+            case Some(pa) if pa.tenantId != tenant.id => notFound
+            case Some(pa) if pa.status != Completed =>
+              Task.pure(
+                Conflict(NOK.conflict(s"Poc Admin '$id' is in wrong status: '${pa.status}', required: '$Completed'")))
+            case Some(pa) if !pa.webIdentRequired =>
+              Task.pure(Conflict(NOK.conflict(s"PoC Admin has webIdentRequired set to false")))
+            case Some(pa) => pa.webIdentInitiateId match {
+                case Some(_) => Task.pure(Conflict(NOK.conflict(s"PoC Admin already has webIdentInitiateId")))
+                case None =>
+                  pocAdminRepository.updatePocAdmin(read[PocAdmin_IN](body).copyToPocAdmin(pa)) >> Task.pure(Ok(""))
+              }
+          }
+        } yield r
       }
     }
   }
