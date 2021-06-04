@@ -28,12 +28,14 @@ trait InformationProvider {
 case class RegisterDeviceGoClient(uuid: String, password: String)
 case class RegisterDeviceCertifyAPI(
   name: String,
+  pocType: String,
   endpoint: String,
   uuid: String,
   password: String,
   role: Option[String],
   location: Option[String],
-  cert: Option[String])
+  cert: Option[String],
+  config: Option[String])
 
 class InformationProviderImpl @Inject() (conf: Config, pocConfig: PocConfig, certHandler: CertHandler)(implicit
 formats: Formats)
@@ -173,12 +175,14 @@ formats: Formats)
       val registerDevice =
         RegisterDeviceCertifyAPI(
           poc.pocName,
+          poc.pocType,
           endpoint,
           poc.getDeviceId,
           sAndPW.devicePassword,
           if (pocConfig.roleNeeded.contains(poc.pocType)) Some(poc.roleName) else None,
           if (pocConfig.locationNeeded.contains(poc.pocType)) Some(poc.externalId) else None,
-          cert
+          cert,
+          poc.extraConfig.map(jsonConfig => write(jsonConfig.jvalue))
         )
       write[RegisterDeviceCertifyAPI](registerDevice)
     })
