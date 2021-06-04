@@ -2,8 +2,10 @@ package com.ubirch.e2e
 
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch._
 import com.ubirch.db.context.QuillMonixJdbcContext
+import com.ubirch.e2e.StartupHelperMethods.isPortInUse
 import com.ubirch.formats.TestFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.{ KeycloakUserService, KeycloakUserServiceWithoutMail }
@@ -45,13 +47,26 @@ class TestPocConfig @Inject() (
 
 @Singleton
 class TestKeycloakCertifyConfig @Inject() (val conf: Config, keycloakRuntimeConfig: KeycloakUsersRuntimeConfig)
-  extends KeycloakCertifyConfig {
+  extends KeycloakCertifyConfig
+  with LazyLogging {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val formats: Formats = DefaultFormats.lossless ++ TestFormats.all
 
-  private val keycloakServer = KeycloakCertifyContainer.container.container.getContainerIpAddress
-  private val keycloakPort = KeycloakCertifyContainer.container.container.getFirstMappedPort
+  private val isLocalDockerRunning = isPortInUse(8080)
+
+  private val keycloakServer =
+    if (isLocalDockerRunning) {
+      "localhost"
+    } else {
+      KeycloakCertifyContainer.container.container.getContainerIpAddress
+    }
+  private val keycloakPort =
+    if (isLocalDockerRunning) {
+      8080
+    } else {
+      KeycloakCertifyContainer.container.container.getFirstMappedPort
+    }
 
   private lazy val kid = {
     basicRequest
@@ -82,13 +97,25 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config, keycloakRuntimeConf
 }
 
 @Singleton
-class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDeviceConfig {
+class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDeviceConfig with LazyLogging {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val formats: Formats = DefaultFormats.lossless ++ TestFormats.all
 
-  private val keycloakServer = KeycloakDeviceContainer.container.container.getContainerIpAddress
-  private val keycloakPort = KeycloakDeviceContainer.container.container.getFirstMappedPort
+  private val isLocalDockerRunning = isPortInUse(8080)
+
+  private val keycloakServer =
+    if (isLocalDockerRunning) {
+      "localhost"
+    } else {
+      KeycloakDeviceContainer.container.container.getContainerIpAddress
+    }
+  private val keycloakPort =
+    if (isLocalDockerRunning) {
+      8081
+    } else {
+      KeycloakDeviceContainer.container.container.getFirstMappedPort
+    }
 
   private lazy val kid = {
     basicRequest
@@ -120,7 +147,12 @@ class TestPostgresQuillMonixJdbcContext @Inject() () extends QuillMonixJdbcConte
   override def withTransaction[T](f: => Task[T]): Task[T] = f
 }
 
-object StaticTestPostgresJdbcContext {
+object StaticTestPostgresJdbcContext extends LazyLogging {
+  private val isLocalDockerRunning = isPortInUse(5432)
+  val portNumber = if (isLocalDockerRunning) 5432 else PostgresDbContainer.container.container.getFirstMappedPort
+  val serverName =
+    if (isLocalDockerRunning) "localhost" else PostgresDbContainer.container.container.getContainerIpAddress
+
   val ctx: PostgresMonixJdbcContext[SnakeCase] = new PostgresMonixJdbcContext(
     SnakeCase,
     ConfigFactory.parseString(s"""
@@ -128,8 +160,8 @@ object StaticTestPostgresJdbcContext {
                                  |    dataSource.user = postgres
                                  |    dataSource.password = postgres
                                  |    dataSource.databaseName = postgres
-                                 |    dataSource.portNumber = ${PostgresDbContainer.container.container.getFirstMappedPort}
-                                 |    dataSource.serverName = ${PostgresDbContainer.container.container.getContainerIpAddress}
+                                 |    dataSource.portNumber = $portNumber
+                                 |    dataSource.serverName = $serverName
                                  |    connectionTimeout = 30000
                                  |""".stripMargin),
     Runner.default)
