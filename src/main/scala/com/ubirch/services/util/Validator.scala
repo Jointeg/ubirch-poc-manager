@@ -8,24 +8,41 @@ import com.ubirch.models.tenant._
 import com.ubirch.services.poc.util.ValidatorConstants._
 import org.joda.time.LocalDate
 import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
-import org.json4s.JValue
+import org.json4s.ext.JavaTypesSerializers
 import org.json4s.native.JsonMethods._
+import org.json4s.native.Serialization
+import org.json4s.{ DefaultFormats, Formats, JValue }
 
 import java.net.URL
+import java.util.UUID
 import javax.mail.internet.InternetAddress
 import scala.util.{ Failure, Success, Try }
 
+case class SealJson(sealId: UUID)
+
 object Validator {
 
+  implicit val formats: Formats = DefaultFormats.lossless ++ JavaTypesSerializers.all
   type AllErrorsOr[A] = ValidatedNel[String, A]
 
-  def validateJson(header: String, str: String): AllErrorsOr[Option[JValue]] = {
-    if (str.isEmpty) None.validNel
+  def validateJson(header: String, str: String, tenant: Tenant): AllErrorsOr[Option[JValue]] = {
+    if (str.isEmpty && tenant.tenantType != BMG) None.validNel
+    else if (str.isEmpty) jsonErrorWhenTenantTypeBMG(header).invalidNel
     else
-      Try(parse(str)) match {
-        case Success(json) => Some(json).validNel
-        case Failure(_)    => jsonError(header).invalidNel
+      (tenant.tenantType, Try(parse(str))) match {
+        case (BMG, Success(jValue)) => validateJsonWithSealId(header, str, jValue)
+        case (BMG, Failure(_))      => jsonErrorWhenTenantTypeBMG(header).invalidNel
+        case (_, Failure(_))        => jsonError(header).invalidNel
+        case (_, Success(jValue))   => Some(jValue).validNel
       }
+
+  }
+
+  private def validateJsonWithSealId(header: String, str: String, jValue: JValue): AllErrorsOr[Option[JValue]] = {
+    Try(Serialization.read[SealJson](str)) match {
+      case Success(_)     => Some(jValue).validNel
+      case Failure(_) => jsonErrorWhenTenantTypeBMG(header).invalidNel
+    }
   }
 
   /**

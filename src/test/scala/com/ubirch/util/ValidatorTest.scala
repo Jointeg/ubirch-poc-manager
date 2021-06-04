@@ -15,23 +15,54 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   "Validator JValue" should {
 
-    "validate JValue valid" in {
+    val ubirchTenant = createTenant()
+    val bmgTenant = createTenant().copy(tenantType = BMG)
+
+    "validate any JValue valid if tenantType Ubirch" in {
       val json = """{"test": "1", "testArray": ["entry1", "entry2"]}"""
-      val jvalue = validateJson(jsonConfig, json)
+      val jvalue = validateJson(jsonConfig, json, ubirchTenant)
       assert(jvalue.isValid)
     }
 
-    "validate None if emtpy string" in {
+    "validate empty String valid if tenantType Ubirch" in {
       val json = ""
-      val validated = validateJson(jsonConfig, json)
+      val validated = validateJson(jsonConfig, json, ubirchTenant)
       assert(validated.isValid)
       validated
         .map(v => assert(v.isEmpty))
     }
 
+    "validate SealId JValue valid if tenantType BMG" in {
+
+      val json = """{"sealId": "59f25a72-6820-4abe-9e95-5d5c9f1b60a7"}"""
+      val jvalue = validateJson(jsonConfig, json, bmgTenant)
+      assert(jvalue.isValid)
+    }
+
+    "validate Not-SealId JValue invalid if tenantType BMG" in {
+
+      val json = """{"test": "1", "testArray": ["entry1", "entry2"]}"""
+      val validated = validateJson(jsonConfig, json, bmgTenant)
+      assert(validated.isInvalid)
+      validated.leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.jsonErrorWhenTenantTypeBMG(jsonConfig))
+        }
+    }
+
+    "validate empty String invalid if tenantType BMG" in {
+      val json = ""
+      val validated = validateJson(jsonConfig, json, bmgTenant)
+      assert(validated.isInvalid)
+      validated.leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.jsonErrorWhenTenantTypeBMG(jsonConfig))
+        }
+    }
+
     "validate broken json invalid" in {
       val json = """{"test": "1", "testArray: ["entry1", "entry2"]}"""
-      val validated = validateJson(jsonConfig, json)
+      val validated = validateJson(jsonConfig, json, ubirchTenant)
 
       assert(validated.isInvalid)
       validated

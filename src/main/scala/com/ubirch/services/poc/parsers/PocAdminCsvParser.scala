@@ -93,7 +93,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
       validateAdminCertifyApp(certifyApp, csvPocAdmin.pocCertifyApp),
       validateLogoURL(logoUrl, csvPocAdmin.logoUrl, csvPocAdmin.pocCertifyApp),
       validateClientCertAdmin(clientCert, csvPocAdmin.clientCert),
-      validateJson(jsonConfig, csvPocAdmin.extraConfig),
+      validateJson(jsonConfig, csvPocAdmin.extraConfig, tenant),
       pocManager
     ).mapN {
       (

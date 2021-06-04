@@ -54,7 +54,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocCertifyApp),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
-      validateJson(jsonConfig, csvPoc.extraConfig),
+      validateJson(jsonConfig, csvPoc.extraConfig, tenant),
       pocManager
     ).mapN {
       (
