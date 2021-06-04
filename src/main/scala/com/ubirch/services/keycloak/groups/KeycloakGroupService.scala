@@ -1,39 +1,46 @@
 package com.ubirch.services.keycloak.groups
 
 import com.ubirch.models.keycloak.group._
-import com.ubirch.services.{ CertifyKeycloak, KeycloakInstance }
+import com.ubirch.services.KeycloakInstance
+import com.ubirch.services.keycloak.KeycloakRealm
 import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
 trait KeycloakGroupService {
 
   def createGroup(
+    realm: KeycloakRealm,
     createKeycloakGroup: CreateKeycloakGroup,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]]
+    instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]]
 
   def findGroupById(
+    realm: KeycloakRealm,
     groupId: GroupId,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, GroupRepresentation]]
+    instance: KeycloakInstance): Task[Either[String, GroupRepresentation]]
 
   def findGroupByName(
+    realm: KeycloakRealm,
     groupName: GroupName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupNotFound, GroupRepresentation]]
+    instance: KeycloakInstance): Task[Either[GroupNotFound, GroupRepresentation]]
 
   def addSubGroup(
+    realm: KeycloakRealm,
     parentGroupId: GroupId,
     childGroupName: GroupName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]]
+    instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]]
 
   def assignRoleToGroup(
+    realm: KeycloakRealm,
     groupId: GroupId,
     role: RoleRepresentation,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Unit]]
+    instance: KeycloakInstance): Task[Either[String, Unit]]
 
   def addMemberToGroup(
+    realm: KeycloakRealm,
     groupId: GroupId,
     user: UserRepresentation,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Boolean]]
+    instance: KeycloakInstance): Task[Either[String, Boolean]]
 
-  def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit]
+  def deleteGroup(realm: KeycloakRealm, groupName: GroupName, instance: KeycloakInstance): Task[Unit]
 
 }

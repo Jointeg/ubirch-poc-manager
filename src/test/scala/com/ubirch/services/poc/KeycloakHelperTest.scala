@@ -4,11 +4,12 @@ import com.ubirch.UnitTestBase
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName, RolesException }
 import com.ubirch.models.poc.{ Poc, PocStatus }
-import com.ubirch.models.tenant.{ TenantCertifyGroupId, TenantDeviceGroupId }
+import com.ubirch.models.tenant.{ TenantCertifyGroupId, TenantDeviceGroupId, TenantTypeGroupId }
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
-import com.ubirch.util.ServiceConstants.{ POC_ADMIN, POC_EMPLOYEE }
+import com.ubirch.util.ServiceConstants.{ POC_ADMIN, POC_EMPLOYEE, TENANT_GROUP_PREFIX }
 
 import scala.concurrent.duration.DurationInt
 
@@ -29,10 +30,11 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.deviceRoleCreated shouldBe false
         pocAndStatus.status.certifyRoleCreated shouldBe true
 
-        roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
-          role.isDefined shouldBe true
-          role.get.getName shouldBe poc.roleName
-          role.get.getId shouldBe poc.deviceGroupId.get
+        roles.findRoleRepresentation(CertifyKeycloak.defaultRealm, RoleName(poc.roleName), CertifyKeycloak).map {
+          role =>
+            role.isDefined shouldBe true
+            role.get.getName shouldBe poc.roleName
+            role.get.getId shouldBe poc.deviceGroupId.get
         }
       }
     }
@@ -46,10 +48,11 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.deviceRoleCreated shouldBe true
         pocAndStatus.status.certifyRoleCreated shouldBe false
 
-        roles.findRoleRepresentation(RoleName(poc.roleName)).map { role =>
-          role.isDefined shouldBe true
-          role.get.getName shouldBe poc.roleName
-          role.get.getId shouldBe poc.deviceGroupId.get
+        roles.findRoleRepresentation(CertifyKeycloak.defaultRealm, RoleName(poc.roleName), CertifyKeycloak).map {
+          role =>
+            role.isDefined shouldBe true
+            role.get.getName shouldBe poc.roleName
+            role.get.getId shouldBe poc.deviceGroupId.get
         }
       }
     }
@@ -81,7 +84,8 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
 
         val tenantWithRightGroupId =
-          tenant.copy(deviceGroupId = TenantDeviceGroupId(createTenantGroup(groups, DeviceKeycloak)))
+          tenant.copy(deviceGroupId =
+            TenantDeviceGroupId(createTenantGroup(DeviceKeycloak.defaultRealm, groups, DeviceKeycloak)))
 
         val pocAndStatus =
           helper.createDeviceGroup(PocAndStatus(poc, pocStatus), tenantWithRightGroupId).runSyncUnsafe()
@@ -89,7 +93,10 @@ class KeycloakHelperTest extends UnitTestBase {
         pocAndStatus.status.deviceGroupCreated shouldBe true
         pocAndStatus.status.certifyGroupCreated shouldBe false
 
-        groups.findGroupById(GroupId(pocAndStatus.poc.deviceGroupId.value), DeviceKeycloak).map {
+        groups.findGroupById(
+          DeviceKeycloak.defaultRealm,
+          GroupId(pocAndStatus.poc.deviceGroupId.value),
+          DeviceKeycloak).map {
           case Right(group) =>
             group.getName shouldBe poc.roleName
             group.getId shouldBe poc.deviceGroupId.get
@@ -104,7 +111,8 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
 
         val tenantWithRightGroupId =
-          tenant.copy(certifyGroupId = TenantCertifyGroupId(createTenantGroup(groups, CertifyKeycloak)))
+          tenant.copy(certifyGroupId =
+            TenantCertifyGroupId(createTenantGroup(CertifyKeycloak.defaultRealm, groups, CertifyKeycloak)))
 
         val pocAndStatus =
           helper.createCertifyGroup(PocAndStatus(poc, pocStatus), tenantWithRightGroupId).runSyncUnsafe()
@@ -114,7 +122,7 @@ class KeycloakHelperTest extends UnitTestBase {
 
         //assert
         groups
-          .findGroupById(GroupId(pocAndStatus.poc.certifyGroupId.value))
+          .findGroupById(CertifyKeycloak.defaultRealm, GroupId(pocAndStatus.poc.certifyGroupId.value), CertifyKeycloak)
           .map {
             case Right(group) =>
               group.getName shouldBe poc.roleName
@@ -127,13 +135,18 @@ class KeycloakHelperTest extends UnitTestBase {
     "create poc admin group and assign role in certify realm" in {
       withInjector { injector =>
         val roles = injector.get[KeycloakRolesService]
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_ADMIN))).runSyncUnsafe(3.seconds).isRight shouldBe true
+        roles.createNewRole(
+          CertifyKeycloak.defaultRealm,
+          CreateKeycloakRole(RoleName(POC_ADMIN)),
+          CertifyKeycloak).runSyncUnsafe(
+          3.seconds).isRight shouldBe true
 
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]
         val status1 = pocStatus.copy(adminGroupCreated = Some(false), adminRoleAssigned = Some(false))
         val tenantWithRightGroupId =
-          tenant.copy(certifyGroupId = TenantCertifyGroupId(createTenantGroup(groups, CertifyKeycloak)))
+          tenant.copy(certifyGroupId =
+            TenantCertifyGroupId(createTenantGroup(CertifyKeycloak.defaultRealm, groups, CertifyKeycloak)))
         val r = for {
           pocAndStatus1 <- helper.createCertifyGroup(PocAndStatus(poc, status1), tenantWithRightGroupId)
           pocAndStatus2 <- helper.createAdminGroup(pocAndStatus1)
@@ -148,7 +161,10 @@ class KeycloakHelperTest extends UnitTestBase {
 
         //assert
         val groupEither = groups
-          .findGroupById(GroupId(pocAndStatus.poc.adminGroupId.value)).runSyncUnsafe()
+          .findGroupById(
+            CertifyKeycloak.defaultRealm,
+            GroupId(pocAndStatus.poc.adminGroupId.value),
+            CertifyKeycloak).runSyncUnsafe()
         groupEither match {
           case Right(group) =>
             group.getName shouldBe POC_ADMIN
@@ -161,29 +177,52 @@ class KeycloakHelperTest extends UnitTestBase {
 
     "create poc employee group and assign role in certify realm" in {
       withInjector { injector =>
-        val roles = injector.get[KeycloakRolesService]
-        roles.createNewRole(CreateKeycloakRole(RoleName(POC_EMPLOYEE))).runSyncUnsafe(3.seconds)
-
         val helper: KeycloakHelper = injector.get[KeycloakHelper]
         val groups = injector.get[TestKeycloakGroupsService]
-        val status1 = pocStatus.copy(employeeGroupCreated = Some(false), employeeRoleAssigned = Some(false))
+        val status1 = pocStatus.copy(
+          employeeGroupCreated = Some(false),
+          employeeRoleAssigned = Some(false),
+          pocTypeGroupCreated = Some(false))
+        val certifyGroupId =
+          TenantCertifyGroupId(createTenantGroup(CertifyKeycloak.defaultRealm, groups, CertifyKeycloak))
+        // use different group name as TestKeycloakGroupsService doesn't adjust three realms
+        val pocTenantTypeGroupId = TenantTypeGroupId(createTenantGroup(
+          tenant.getRealm,
+          groups,
+          CertifyKeycloak,
+          "tenant_type_" + tenant.tenantName.value))
         val tenantWithRightGroupId =
-          tenant.copy(certifyGroupId = TenantCertifyGroupId(createTenantGroup(groups, CertifyKeycloak)))
+          tenant.copy(
+            certifyGroupId =
+              certifyGroupId,
+            tenantTypeGroupId = Some(pocTenantTypeGroupId))
+
+        val roles = injector.get[KeycloakRolesService]
+        roles.createNewRole(
+          tenant.getRealm,
+          CreateKeycloakRole(RoleName(POC_EMPLOYEE)),
+          CertifyKeycloak).runSyncUnsafe(3.seconds)
+
         val r = for {
           pocAndStatus1 <- helper.createCertifyGroup(PocAndStatus(poc, status1), tenantWithRightGroupId)
-          pocAndStatus2 <- helper.createEmployeeGroup(pocAndStatus1)
-          pocAndStatus3 <- helper.assignEmployeeRole(pocAndStatus2)
-        } yield pocAndStatus3
+          pocAndStatus2 <- helper.createPocTenantTypeGroup(pocAndStatus1, tenantWithRightGroupId)
+          pocAndStatus3 <- helper.createEmployeeGroup(pocAndStatus2)
+          pocAndStatus4 <- helper.assignEmployeeRole(pocAndStatus3)
+        } yield pocAndStatus4
 
         val pocAndStatus = r.runSyncUnsafe()
         //assert
         pocAndStatus.status.employeeGroupCreated shouldBe Some(true)
         pocAndStatus.status.certifyGroupCreated shouldBe true
+        pocAndStatus.status.pocTypeGroupCreated shouldBe Some(true)
         pocAndStatus.status.employeeRoleAssigned shouldBe Some(true)
 
         //assert
         val groupEither = groups
-          .findGroupById(GroupId(pocAndStatus.poc.employeeGroupId.value)).runSyncUnsafe()
+          .findGroupById(
+            tenant.getRealm,
+            GroupId(pocAndStatus.poc.employeeGroupId.value),
+            CertifyKeycloak).runSyncUnsafe()
         groupEither match {
           case Right(group) =>
             group.getName shouldBe POC_EMPLOYEE
@@ -200,7 +239,8 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
 
         val tenantWithRightGroupId =
-          tenant.copy(certifyGroupId = TenantCertifyGroupId(createTenantGroup(groups, CertifyKeycloak)))
+          tenant.copy(certifyGroupId =
+            TenantCertifyGroupId(createTenantGroup(CertifyKeycloak.defaultRealm, groups, CertifyKeycloak)))
         helper.createCertifyRole(PocAndStatus(poc, pocStatus)).runSyncUnsafe()
         val pocAndStatus =
           helper.createCertifyGroup(PocAndStatus(poc, pocStatus), tenantWithRightGroupId).runSyncUnsafe()
@@ -216,7 +256,8 @@ class KeycloakHelperTest extends UnitTestBase {
         val groups = injector.get[TestKeycloakGroupsService]
 
         val tenantWithRightGroupId =
-          tenant.copy(deviceGroupId = TenantDeviceGroupId(createTenantGroup(groups, DeviceKeycloak)))
+          tenant.copy(deviceGroupId =
+            TenantDeviceGroupId(createTenantGroup(DeviceKeycloak.defaultRealm, groups, DeviceKeycloak)))
         helper.createDeviceRole(PocAndStatus(poc, pocStatus)).runSyncUnsafe()
         val pocAndStatus =
           helper.createDeviceGroup(PocAndStatus(poc, pocStatus), tenantWithRightGroupId).runSyncUnsafe()
@@ -227,9 +268,13 @@ class KeycloakHelperTest extends UnitTestBase {
     }
   }
 
-  private def createTenantGroup(groups: TestKeycloakGroupsService, instance: KeycloakInstance): String = {
-    val createGroup = CreateKeycloakGroup(GroupName(tenant.tenantName.value))
-    val res = groups.createGroup(createGroup, instance)
+  private def createTenantGroup(
+    realm: KeycloakRealm,
+    groups: TestKeycloakGroupsService,
+    instance: KeycloakInstance,
+    groupName: String = tenant.tenantName.value): String = {
+    val createGroup = CreateKeycloakGroup(GroupName(groupName))
+    val res = groups.createGroup(realm, createGroup, instance)
     val tenantGroup = await(res, 1.seconds)
     tenantGroup.right.get.value
 

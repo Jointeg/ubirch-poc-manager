@@ -15,17 +15,7 @@ trait KeycloakCertifyConfig {
 
   def clientId: String
 
-  def realm: String
-
-  def clientConfig: String
-
   def configUrl: String
-
-  def clientAdminUsername: String
-
-  def clientAdminPassword: String
-
-  def userPollingInterval: Int
 
   def acceptedKid: String
 }
@@ -38,11 +28,6 @@ class RealKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
   val username: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ID)
-  val realm: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.REALM)
-  val clientConfig: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_CONFIG)
-  val clientAdminUsername: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ADMIN_USER)
-  val clientAdminPassword: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CLIENT_ADMIN_PASSWORD)
-  val userPollingInterval: Int = conf.getInt(ConfPaths.KeycloakPaths.CertifyKeycloak.USER_POLLING_INTERVAL)
   val configUrl: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.CONFIG_URL)
   val acceptedKid: String = conf.getString(ConfPaths.KeycloakPaths.CertifyKeycloak.KID)
 }

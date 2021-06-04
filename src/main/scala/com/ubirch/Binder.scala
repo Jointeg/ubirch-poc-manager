@@ -1,27 +1,22 @@
 package com.ubirch
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.google.inject.{ AbstractModule, Module }
+import com.google.inject.{ AbstractModule, Module, Provider }
 import com.typesafe.config.Config
 import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
 import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
 import com.ubirch.models.tenant.{ TenantKeycloakHelper, TenantKeycloakHelperImpl }
 import com.ubirch.services.auth._
+import com.ubirch.services.clock.ClockProvider
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
-import com.ubirch.services.keycloak.auth.{ AuthClient, KeycloakAuthzClient }
 import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, KeycloakGroupService }
 import com.ubirch.services.keycloak.roles.{ DefaultKeycloakRolesService, KeycloakRolesService }
-import com.ubirch.services.keycloak.users.{
-  DefaultKeycloakUserService,
-  KeycloakUserPollingService,
-  KeycloakUserService,
-  UserPollingService
-}
+import com.ubirch.services.keycloak.users.{ DefaultKeycloakUserService, KeycloakUserService }
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
 import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
@@ -49,11 +44,14 @@ import monix.execution.Scheduler
 import org.json4s.Formats
 import org.scalatra.swagger.Swagger
 
+import java.time.Clock
 import scala.concurrent.ExecutionContext
 
 class Binder extends AbstractModule {
 
   def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(classOf[ConfigProvider])
+
+  def Clock: ScopedBindingBuilder = bind(classOf[Clock]).toProvider(classOf[ClockProvider])
 
   def PocConfig: ScopedBindingBuilder = bind(classOf[PocConfig]).to(classOf[PocConfigImpl])
 
@@ -113,12 +111,6 @@ class Binder extends AbstractModule {
 
   def KeycloakGroupService: ScopedBindingBuilder =
     bind(classOf[KeycloakGroupService]).to(classOf[DefaultKeycloakGroupService])
-
-  def AuthClient: ScopedBindingBuilder =
-    bind(classOf[AuthClient]).to(classOf[KeycloakAuthzClient])
-
-  def UserPollingService: ScopedBindingBuilder =
-    bind(classOf[UserPollingService]).to(classOf[KeycloakUserPollingService])
 
   def QuillMonixJdbcContext: ScopedBindingBuilder =
     bind(classOf[QuillMonixJdbcContext]).to(classOf[PostgresQuillMonixJdbcContext])
@@ -222,6 +214,7 @@ class Binder extends AbstractModule {
 
   override def configure(): Unit = {
     Config
+    Clock
     PocConfig
     KeycloakUsersConfig
     KeycloakDeviceConfig
@@ -244,8 +237,6 @@ class Binder extends AbstractModule {
     KeycloakGroupService
     SuperAdminService
     TenantKeycloakHelper
-    AuthClient
-    UserPollingService
     QuillMonixJdbcContext
     UserRepository
     PocBatchHandler

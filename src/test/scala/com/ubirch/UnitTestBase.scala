@@ -1,18 +1,12 @@
 package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
-import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
+import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables._
 import com.ubirch.e2e.{ DiscoveryServiceType, MockDiscoveryService, TestPostgresQuillMonixJdbcContext }
 import com.ubirch.services.jwt.PublicKeyPoolService
-import com.ubirch.services.keycloak.auth.{ AuthClient, TestAuthClient }
 import com.ubirch.services.keycloak.groups.{ KeycloakGroupService, TestKeycloakGroupsService }
 import com.ubirch.services.keycloak.roles.{ KeycloakRolesService, TestKeycloakRolesService }
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserService,
-  TestKeycloakUserService,
-  TestUserPollingService,
-  UserPollingService
-}
+import com.ubirch.services.keycloak.users.{ KeycloakUserService, TestKeycloakUserService }
 import com.ubirch.services.poc.{
   CertHandler,
   DeviceCreator,
@@ -74,12 +68,6 @@ class DefaultUnitTestBinder extends Binder {
 
   override def PocLogoRepository: ScopedBindingBuilder =
     bind(classOf[PocLogoRepository]).to(classOf[PocLogoRepositoryMock])
-
-  override def UserPollingService: ScopedBindingBuilder =
-    bind(classOf[UserPollingService]).to(classOf[TestUserPollingService])
-
-  override def AuthClient: ScopedBindingBuilder =
-    bind(classOf[AuthClient]).to(classOf[TestAuthClient])
 
   override def KeycloakGroupService: ScopedBindingBuilder =
     bind(classOf[KeycloakGroupService]).to(classOf[TestKeycloakGroupsService])

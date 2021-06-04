@@ -4,7 +4,7 @@ import cats.data.Validated.Valid
 import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
 import com.ubirch.models.poc.PocLogo
-import com.ubirch.models.tenant.{ API, APP, Tenant }
+import com.ubirch.models.tenant._
 import com.ubirch.services.poc.util.ValidatorConstants._
 import org.joda.time.LocalDate
 import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
@@ -49,10 +49,8 @@ object Validator {
       case Success(boolean) if boolean =>
         Try(new URL(str)) match {
           case Success(url) =>
-            PocLogo.hasAcceptedFileExtension(url) match {
-              case true  => Some(url).validNel
-              case false => logoUrlNoValidFileFormatError(header).invalidNel
-            }
+            if (PocLogo.hasAcceptedFileExtension(url)) Some(url).validNel
+            else logoUrlNoValidFileFormatError(header).invalidNel
           case Failure(_) => logoUrlNoValidUrlError(header).invalidNel
         }
       case _ => None.validNel
@@ -127,9 +125,17 @@ object Validator {
   /**
     * string key exists in map
     */
-  def validateMapContainsStringKey(header: String, str: String, map: Map[String, String]): AllErrorsOr[String] = {
-    if (map.contains(str)) {
-      str.validNel
+  def validatePocType(
+    header: String,
+    pocType: String,
+    map: Map[String, String],
+    tenant: Tenant): AllErrorsOr[String] = {
+    if (map.contains(pocType)) {
+      tenant.tenantType match {
+        case UBIRCH if pocType.contains("ub") => pocType.validNel
+        case BMG if pocType.contains("bmg")   => pocType.validNel
+        case _                                => pocTypeMustCorrelateWithTenantType(header, tenant.tenantType).invalidNel
+      }
     } else
       mapDoesntContainStringKeyError(header, map).invalidNel
   }
@@ -156,7 +162,7 @@ object Validator {
   }
 
   def validatePocName(header: String, pocName: String): AllErrorsOr[String] = {
-    if (pocName.trim == "") emptyStringError(header).invalidNel
+    if (pocName.trim.length < 4) tooShortStringError(header, 4).invalidNel
     else {
       val matches = pocNameRegex.findAllIn(pocName).toSeq
       if (matches.nonEmpty) pocName.validNel

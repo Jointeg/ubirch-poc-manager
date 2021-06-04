@@ -1,6 +1,7 @@
 package com.ubirch.services.poc
 
-import com.ubirch.UnitTestBase
+import cats.implicits.toTraverseOps
+import com.ubirch.{ PocConfig, UnitTestBase }
 import com.ubirch.db.tables._
 import com.ubirch.models.poc.Completed
 import com.ubirch.services.poc.PocAdminTestHelper.{
@@ -18,6 +19,7 @@ class PocAdminCreatorTest extends UnitTestBase {
   "PocAdminCreator" should {
     "create pending poc admin successfully - web ident is false" in {
       withInjector { injector =>
+        val pocConfig = injector.get[PocConfig]
         val webIdentRequired = false
         val creator = injector.get[PocAdminCreator]
         val tenantTable = injector.get[TenantRepositoryMock]
@@ -35,6 +37,10 @@ class PocAdminCreatorTest extends UnitTestBase {
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
+        // Create static spaces
+        pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
+        }.runSyncUnsafe()
 
         val result = creator.createPocAdmins().runSyncUnsafe()
 
@@ -60,6 +66,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
     "create pending poc admin successfully - web ident is true and successful" in {
       withInjector { injector =>
+        val pocConfig = injector.get[PocConfig]
         val webIdentRequired = true
         val creator = injector.get[PocAdminCreator]
         val tenantTable = injector.get[TenantRepositoryMock]
@@ -77,6 +84,10 @@ class PocAdminCreatorTest extends UnitTestBase {
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
+        // Create static spaces
+        pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
+        }.runSyncUnsafe()
 
         // start process
         val result = creator.createPocAdmins().runSyncUnsafe()
@@ -119,6 +130,7 @@ class PocAdminCreatorTest extends UnitTestBase {
 
     "create pending poc admin - after certifyGroupId is created" in {
       withInjector { injector =>
+        val pocConfig = injector.get[PocConfig]
         val webIdentRequired = true
         val creator = injector.get[PocAdminCreator]
         val tenantTable = injector.get[TenantRepositoryMock]
@@ -136,6 +148,10 @@ class PocAdminCreatorTest extends UnitTestBase {
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, tenant)
         addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, webIdentSuccessPocAdminStatus)
         teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
+        // Create static spaces
+        pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
+        }.runSyncUnsafe()
 
         // start process
         val result = creator.createPocAdmins().runSyncUnsafe()
@@ -173,8 +189,7 @@ class PocAdminCreatorTest extends UnitTestBase {
               allTrue.copy(
                 pocAdminId = pocAdmin.id,
                 lastUpdated = result.lastUpdated,
-                created = result.created,
-                errorMessage = Some(s"adminGroupId is missing in poc ${poc.id}")
+                created = result.created
               )
             result shouldBe expectedFinal
         }

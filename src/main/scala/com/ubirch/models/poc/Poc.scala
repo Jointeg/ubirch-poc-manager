@@ -1,6 +1,7 @@
 package com.ubirch.models.poc
 
 import com.ubirch.models.tenant.{ ClientCert, OrgUnitId, TenantId }
+import com.ubirch.services.keycloak.{ CertifyBmgRealm, CertifyUbirchRealm, KeycloakRealm }
 import com.ubirch.util.ServiceConstants.POC_GROUP_PREFIX
 import org.joda.time.DateTime
 
@@ -23,6 +24,7 @@ case class Poc(
   manager: PocManager,
   roleName: String,
   deviceGroupId: Option[String] = None,
+  pocTypeGroupId: Option[String] = None,
   certifyGroupId: Option[String] = None,
   adminGroupId: Option[String] = None,
   employeeGroupId: Option[String] = None,
@@ -34,6 +36,12 @@ case class Poc(
   created: Created = Created(DateTime.now())
 ) {
   def getDeviceId: String = deviceId.value.value.toString
+
+  def getRealm: KeycloakRealm = {
+    if (pocType.contains("bmg")) CertifyBmgRealm
+    else CertifyUbirchRealm
+  }
+
 }
 
 object Poc {

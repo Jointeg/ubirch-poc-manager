@@ -56,7 +56,7 @@ and the `flyway`migration will be performed to run tests in newest possible DB v
 
 Each test that extends `UnitTestBase` will be run against in-memory implementations of DB/Keycloaks. They will run fast,
 focus and should focus on testing the correctness of the modelled flow, rather than the integrations. Due to the nature
-of such tests, some functionalities might not fully work (for example UserPolling).
+of such tests, some functionalities might not fully work (for example DefaultUserKeycloakService).
 
 ## Deployment
 

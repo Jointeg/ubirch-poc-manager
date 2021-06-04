@@ -1,6 +1,7 @@
 package com.ubirch.models.tenant
 
 import com.ubirch.models.poc.{ Created, Updated }
+import com.ubirch.services.keycloak.{ CertifyBmgRealm, CertifyUbirchRealm, KeycloakRealm }
 import org.joda.time.DateTime
 
 import java.util.UUID
@@ -9,9 +10,11 @@ case class Tenant(
   id: TenantId,
   tenantName: TenantName,
   usageType: UsageType,
+  tenantType: TenantType,
   deviceCreationToken: Option[EncryptedDeviceCreationToken],
   certifyGroupId: TenantCertifyGroupId,
   deviceGroupId: TenantDeviceGroupId,
+  tenantTypeGroupId: Option[TenantTypeGroupId],
   orgId: OrgId,
   sharedAuthCertRequired: Boolean,
   orgUnitId: OrgUnitId,
@@ -21,6 +24,11 @@ case class Tenant(
   created: Created = Created(DateTime.now())
 ) {
   def getOrgId: UUID = orgId.value.value.asJava()
+
+  def getRealm: KeycloakRealm = tenantType match {
+    case UBIRCH => CertifyUbirchRealm
+    case BMG    => CertifyBmgRealm
+  }
 }
 
 object Tenant {
@@ -29,18 +37,22 @@ object Tenant {
     id: TenantId,
     tenantName: TenantName,
     usageType: UsageType,
+    tenantType: TenantType,
     deviceCreationToken: Option[EncryptedDeviceCreationToken],
     certifyGroupId: TenantCertifyGroupId,
     deviceGroupId: TenantDeviceGroupId,
+    tenantSpecificGroupId: Option[TenantTypeGroupId],
     orgId: OrgId,
     sharedAuthCertRequired: Boolean): Tenant =
     Tenant(
       id,
       tenantName,
       usageType,
+      tenantType,
       deviceCreationToken,
       certifyGroupId,
       deviceGroupId,
+      tenantSpecificGroupId,
       orgId,
       sharedAuthCertRequired,
       getNamespacedOrgUnitId(id),

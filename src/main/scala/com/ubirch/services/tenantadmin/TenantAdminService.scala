@@ -8,8 +8,8 @@ import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
   NotAllowedError,
-  UserNotCompleted,
-  UserNotFound
+  ResourceNotFound,
+  UserNotCompleted
 }
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, TenantAdminContext }
@@ -228,7 +228,7 @@ class DefaultTenantAdminService @Inject() (
       pocAdminRepository
         .getPocAdmin(pocAdminId)
         .flatMap {
-          case None                                                                   => Task(UserNotFound(pocAdminId).asLeft)
+          case None                                                                   => Task(ResourceNotFound(pocAdminId).asLeft)
           case Some(admin) if admin.tenantId.value.asJava() != tenantContext.tenantId => Task(NotAllowedError.asLeft)
           case Some(admin) if admin.status != Completed                               => Task(UserNotCompleted.asLeft)
           case Some(admin) if admin.certifyUserId.isEmpty                             => Task(MissingCertifyUserId(pocAdminId).asLeft)
@@ -236,8 +236,10 @@ class DefaultTenantAdminService @Inject() (
           case Some(admin) =>
             val userId = admin.certifyUserId.get
             (active match {
-              case EndpointHelpers.Activate   => keycloakUserService.activate(userId, CertifyKeycloak)
-              case EndpointHelpers.Deactivate => keycloakUserService.deactivate(userId, CertifyKeycloak)
+              case EndpointHelpers.Activate =>
+                keycloakUserService.activate(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
+              case EndpointHelpers.Deactivate =>
+                keycloakUserService.deactivate(CertifyKeycloak.defaultRealm, userId, CertifyKeycloak)
             }) >> pocAdminRepository.updatePocAdmin(admin.copy(active = ActivateSwitch.toBoolean(active)))
               .map { _ =>
                 logAuditByTenantAdmin(s"$active poc admin ${admin.id} of poc ${admin.pocId}.", tenantContext)

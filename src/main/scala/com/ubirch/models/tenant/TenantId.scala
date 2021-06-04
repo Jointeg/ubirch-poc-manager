@@ -5,7 +5,9 @@ import memeid4s.UUID
 
 import java.util.{ UUID => jUUID }
 
-final case class TenantId private (value: NamespacedUUID) extends AnyVal
+final case class TenantId private (value: NamespacedUUID) extends AnyVal {
+  def asUUID(): jUUID = value.value.asJava()
+}
 
 object TenantId {
 

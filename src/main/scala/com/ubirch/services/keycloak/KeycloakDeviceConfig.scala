@@ -15,8 +15,6 @@ trait KeycloakDeviceConfig {
 
   def clientId: String
 
-  def realm: String
-
   def configUrl: String
 
   def acceptedKid: String
@@ -30,7 +28,6 @@ class RealKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
   val username: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.USERNAME)
   val password: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.PASSWORD)
   val clientId: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CLIENT_ID)
-  val realm: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.REALM)
   val configUrl: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.CONFIG_URL)
   val acceptedKid: String = conf.getString(ConfPaths.KeycloakPaths.DeviceKeycloak.KID)
 }

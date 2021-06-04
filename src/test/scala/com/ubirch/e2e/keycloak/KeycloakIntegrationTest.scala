@@ -10,33 +10,36 @@ import com.ubirch.models.user.UserName
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.keycloak.{ CertifyBmgRealm, CertifyDefaultRealm, CertifyUbirchRealm }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
 import org.scalactic.StringNormalizations._
 
-import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters._
 
 class KeycloakIntegrationTest extends E2ETestBase {
 
+  val certifyRealms = Seq(CertifyUbirchRealm, CertifyBmgRealm, CertifyDefaultRealm)
+
   "KeycloakGroupService" should {
     "Create new group, find it and then delete" in {
       withInjector { injector =>
         val keycloakGroupService = injector.get[KeycloakGroupService]
-
         val newGroup = createNewKeycloakGroup()
-        val res = for {
-          _ <- keycloakGroupService.createGroup(newGroup)
-          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName)
-          _ <- keycloakGroupService.deleteGroup(newGroup.groupName)
-          groupAfterDeletion <- keycloakGroupService.findGroupByName(newGroup.groupName)
-        } yield (foundGroup, groupAfterDeletion)
+        certifyRealms.map { realm =>
+          val res = for {
+            _ <- keycloakGroupService.createGroup(realm, newGroup, CertifyKeycloak)
+            foundGroup <- keycloakGroupService.findGroupByName(realm, newGroup.groupName, CertifyKeycloak)
+            _ <- keycloakGroupService.deleteGroup(realm, newGroup.groupName, CertifyKeycloak)
+            groupAfterDeletion <- keycloakGroupService.findGroupByName(realm, newGroup.groupName, CertifyKeycloak)
+          } yield (foundGroup, groupAfterDeletion)
 
-        val (maybeFoundGroup, groupAfterDeletion) = await(res, 2.seconds)
-        maybeFoundGroup.right.value.getName shouldBe newGroup.groupName.value
-        groupAfterDeletion.left.value shouldBe GroupNotFound(newGroup.groupName)
+          val (maybeFoundGroup, groupAfterDeletion) = await(res, 2.seconds)
+          maybeFoundGroup.right.value.getName shouldBe newGroup.groupName.value
+          groupAfterDeletion.left.value shouldBe GroupNotFound(newGroup.groupName)
+        }
       }
     }
 
@@ -49,24 +52,24 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val pocName = "P_pocName"
         val tenantPath = s"/$tenantName"
         val childPocPath = s"$tenantPath/$pocName"
-
+        val realm = CertifyKeycloak.defaultRealm
         val res1 = for {
 
           //create tenant role and group
-          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(tenantName)))
-          tenantRole <- roles.findRoleRepresentation(RoleName(tenantName))
-          tenantGroup <- groups.createGroup(CreateKeycloakGroup(GroupName(tenantName)))
-          - <- groups.assignRoleToGroup(tenantGroup.right.value, tenantRole.get)
+          _ <- roles.createNewRole(realm, CreateKeycloakRole(RoleName(tenantName)), CertifyKeycloak)
+          tenantRole <- roles.findRoleRepresentation(realm, RoleName(tenantName), CertifyKeycloak)
+          tenantGroup <- groups.createGroup(realm, CreateKeycloakGroup(GroupName(tenantName)), CertifyKeycloak)
+          - <- groups.assignRoleToGroup(realm, tenantGroup.right.value, tenantRole.get, CertifyKeycloak)
 
           //create poc role and create as subGroup of tenantgroup
-          _ <- roles.createNewRole(CreateKeycloakRole(RoleName(pocName)))
-          pocRole <- roles.findRoleRepresentation(RoleName(pocName))
-          pocGroup <- groups.addSubGroup(tenantGroup.right.value, GroupName(pocName))
-          - <- groups.assignRoleToGroup(pocGroup.right.value, pocRole.get)
+          _ <- roles.createNewRole(realm, CreateKeycloakRole(RoleName(pocName)), CertifyKeycloak)
+          pocRole <- roles.findRoleRepresentation(realm, RoleName(pocName), CertifyKeycloak)
+          pocGroup <- groups.addSubGroup(realm, tenantGroup.right.value, GroupName(pocName), CertifyKeycloak)
+          - <- groups.assignRoleToGroup(realm, pocGroup.right.value, pocRole.get, CertifyKeycloak)
 
           //retrieve final Groups
-          tenantGroupFinal <- groups.findGroupById(tenantGroup.right.value)
-          pocGroupFinal <- groups.findGroupById(pocGroup.right.value)
+          tenantGroupFinal <- groups.findGroupById(realm, tenantGroup.right.value, CertifyKeycloak)
+          pocGroupFinal <- groups.findGroupById(realm, pocGroup.right.value, CertifyKeycloak)
 
         } yield {
           (tenantGroupFinal, pocGroupFinal)
@@ -98,13 +101,14 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val group = createNewKeycloakGroup().copy(groupName = GroupName(roleName))
         val roleRepr = new RoleRepresentation()
         roleRepr.setName(roleName)
+        val realm = CertifyKeycloak.defaultRealm
 
         val res = for {
-          _ <- roles.createNewRole(role)
-          role <- roles.findRoleRepresentation(RoleName(roleName))
-          createdGroup <- groups.createGroup(group)
-          _ <- groups.assignRoleToGroup(createdGroup.right.get, role.get)
-          foundGroup <- groups.findGroupById(createdGroup.right.get)
+          _ <- roles.createNewRole(realm, role, CertifyKeycloak)
+          role <- roles.findRoleRepresentation(realm, RoleName(roleName), CertifyKeycloak)
+          createdGroup <- groups.createGroup(realm, group, CertifyKeycloak)
+          _ <- groups.assignRoleToGroup(realm, createdGroup.right.get, role.get, CertifyKeycloak)
+          foundGroup <- groups.findGroupById(realm, createdGroup.right.get, CertifyKeycloak)
         } yield foundGroup
 
         val foundGroup: GroupRepresentation = await(res, 2.seconds).right.get
@@ -119,10 +123,13 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val parentGroup = createNewKeycloakGroup()
         val childGroup = createNewKeycloakGroup()
+        val realm = CertifyKeycloak.defaultRealm
         val res = for {
-          parentGroup <- keycloakGroupService.createGroup(parentGroup)
-          first <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName)
-          second <- keycloakGroupService.addSubGroup(parentGroup.right.value, childGroup.groupName)
+          parentGroup <- keycloakGroupService.createGroup(realm, parentGroup, CertifyKeycloak)
+          first <-
+            keycloakGroupService.addSubGroup(realm, parentGroup.right.value, childGroup.groupName, CertifyKeycloak)
+          second <-
+            keycloakGroupService.addSubGroup(realm, parentGroup.right.value, childGroup.groupName, CertifyKeycloak)
         } yield (first, second)
 
         val (firstGroup, secondGroup) = await(res, 2.seconds)
@@ -138,8 +145,8 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newGroup = createNewKeycloakGroup()
         val res = for {
-          first <- keycloakGroupService.createGroup(newGroup, DeviceKeycloak)
-          second <- keycloakGroupService.createGroup(newGroup, DeviceKeycloak)
+          first <- keycloakGroupService.createGroup(DeviceKeycloak.defaultRealm, newGroup, DeviceKeycloak)
+          second <- keycloakGroupService.createGroup(DeviceKeycloak.defaultRealm, newGroup, DeviceKeycloak)
         } yield (first, second)
 
         val (firstGroup, secondGroup) = await(res, 2.seconds)
@@ -154,7 +161,7 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val keycloakGroupService = injector.get[KeycloakGroupService]
 
         val groupName = GroupName("Unknown group")
-        val result = keycloakGroupService.findGroupByName(groupName)
+        val result = keycloakGroupService.findGroupByName(CertifyKeycloak.defaultRealm, groupName, CertifyKeycloak)
 
         val maybeGroup = await(result, 2.seconds)
         maybeGroup.left.value shouldBe GroupNotFound(groupName)
@@ -166,10 +173,11 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val keycloakGroupService = injector.get[KeycloakGroupService]
 
         val newGroup = createNewKeycloakGroup()
+        val realm = CertifyKeycloak.defaultRealm
         val res = for {
-          _ <- keycloakGroupService.createGroup(newGroup)
-          _ <- keycloakGroupService.deleteGroup(GroupName("Unknown group"))
-          foundGroup <- keycloakGroupService.findGroupByName(newGroup.groupName)
+          _ <- keycloakGroupService.createGroup(realm, newGroup, CertifyKeycloak)
+          _ <- keycloakGroupService.deleteGroup(realm, GroupName("Unknown group"), CertifyKeycloak)
+          foundGroup <- keycloakGroupService.findGroupByName(realm, newGroup.groupName, CertifyKeycloak)
         } yield foundGroup
 
         val maybeFoundGroup = await(res, 2.seconds)
@@ -179,19 +187,39 @@ class KeycloakIntegrationTest extends E2ETestBase {
   }
 
   "KeycloakRolesService" should {
-    "Be able to create, find and in the end delete role" in {
+    "Be able to create, find and in the end delete role in CertifyKeycloak" in {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
         val newRole = KeycloakTestData.createNewKeycloakRole()
+        certifyRealms.map { realm =>
+          val response = for {
+            _ <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
+            foundRole <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
+            _ <- keycloakRolesService.deleteRole(realm, newRole.roleName, CertifyKeycloak)
+            roleAfterDeletion <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
+          } yield (foundRole, roleAfterDeletion)
+          val (maybeCreatedRole, roleAfterDeletion) = await(response, 2.seconds)
+          assert(maybeCreatedRole.isDefined)
+          maybeCreatedRole.value.roleName shouldBe newRole.roleName
+          roleAfterDeletion should not be defined
+        }
+      }
+    }
 
+    "Be able to create, find and in the end delete role in DeviceKeycloak" in {
+      withInjector { injector =>
+        val keycloakRolesService = injector.get[KeycloakRolesService]
+        val newRole = KeycloakTestData.createNewKeycloakRole()
+        val realm = DeviceKeycloak.defaultRealm
+        val instance = DeviceKeycloak
         val response = for {
-          _ <- keycloakRolesService.createNewRole(newRole)
-          foundRole <- keycloakRolesService.findRole(newRole.roleName)
-          _ <- keycloakRolesService.deleteRole(newRole.roleName)
-          roleAfterDeletion <- keycloakRolesService.findRole(newRole.roleName)
+          _ <- keycloakRolesService.createNewRole(realm, newRole, instance)
+          foundRole <- keycloakRolesService.findRole(realm, newRole.roleName, instance)
+          _ <- keycloakRolesService.deleteRole(realm, newRole.roleName, instance)
+          roleAfterDeletion <- keycloakRolesService.findRole(realm, newRole.roleName, instance)
         } yield (foundRole, roleAfterDeletion)
-
         val (maybeCreatedRole, roleAfterDeletion) = await(response, 2.seconds)
+        assert(maybeCreatedRole.isDefined)
         maybeCreatedRole.value.roleName shouldBe newRole.roleName
         roleAfterDeletion should not be defined
       }
@@ -201,10 +229,10 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
         val newRole = KeycloakTestData.createNewKeycloakRole()
-
+        val realm = CertifyKeycloak.defaultRealm
         val response = for {
-          firstCreationResult <- keycloakRolesService.createNewRole(newRole)
-          secondCreationResult <- keycloakRolesService.createNewRole(newRole)
+          firstCreationResult <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
+          secondCreationResult <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
         } yield (firstCreationResult, secondCreationResult)
 
         val (firstCreationResult, secondCreationResult) = await(response, 2.seconds)
@@ -217,7 +245,8 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
 
-        val response = keycloakRolesService.findRole(RoleName("Unknown role"))
+        val response =
+          keycloakRolesService.findRole(CertifyKeycloak.defaultRealm, RoleName("Unknown role"), CertifyKeycloak)
 
         val maybeFoundRole = await(response, 2.seconds)
         maybeFoundRole should not be defined
@@ -228,11 +257,11 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val keycloakRolesService = injector.get[KeycloakRolesService]
         val newRole = KeycloakTestData.createNewKeycloakRole()
-
+        val realm = CertifyKeycloak.defaultRealm
         val response = for {
-          _ <- keycloakRolesService.createNewRole(newRole)
-          _ <- keycloakRolesService.deleteRole(RoleName("Unknown role"))
-          retrievedRole <- keycloakRolesService.findRole(newRole.roleName)
+          _ <- keycloakRolesService.createNewRole(realm, newRole, CertifyKeycloak)
+          _ <- keycloakRolesService.deleteRole(realm, RoleName("Unknown role"), CertifyKeycloak)
+          retrievedRole <- keycloakRolesService.findRole(realm, newRole.roleName, CertifyKeycloak)
         } yield retrievedRole
         val maybeFoundRole = await(response, 2.seconds)
 
@@ -247,22 +276,24 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val keycloakUserService = injector.get[KeycloakUserService]
 
         val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
-        val result = for {
-          _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
-          user <- keycloakUserService.getUserByUserName(newKeycloakUser.userName, DeviceKeycloak)
-          _ <- keycloakUserService.deleteUserByUserName(newKeycloakUser.userName, DeviceKeycloak)
-          userAfterDeletion <- keycloakUserService.getUserByUserName(newKeycloakUser.userName, DeviceKeycloak)
-        } yield (user, userAfterDeletion)
+        certifyRealms.map { realm =>
+          val result = for {
+            _ <- keycloakUserService.createUser(realm, newKeycloakUser, CertifyKeycloak)
+            user <- keycloakUserService.getUserByUserName(realm, newKeycloakUser.userName, CertifyKeycloak)
+            _ <- keycloakUserService.deleteUserByUserName(realm, newKeycloakUser.userName, CertifyKeycloak)
+            userAfterDeletion <- keycloakUserService.getUserByUserName(realm, newKeycloakUser.userName, CertifyKeycloak)
+          } yield (user, userAfterDeletion)
 
-        val (user, userAfterDeletion) = await(result, 5.seconds)
+          val (user, userAfterDeletion) = await(result, 5.seconds)
 
-        user.value.getEmail should equal(newKeycloakUser.email.value)(after.being(lowerCased))
-        user.value.getUsername should equal(newKeycloakUser.email.value)(after.being(lowerCased))
-        user.value.getLastName should equal(newKeycloakUser.lastName.value)(after.being(lowerCased))
-        user.value.getFirstName should equal(newKeycloakUser.firstName.value)(after.being(lowerCased))
-        user.value.isEnabled shouldBe true
+          user.value.getEmail should equal(newKeycloakUser.email.value)(after.being(lowerCased))
+          user.value.getUsername should equal(newKeycloakUser.email.value)(after.being(lowerCased))
+          user.value.getLastName should equal(newKeycloakUser.lastName.value)(after.being(lowerCased))
+          user.value.getFirstName should equal(newKeycloakUser.firstName.value)(after.being(lowerCased))
+          user.value.isEnabled shouldBe true
 
-        userAfterDeletion should not be defined
+          userAfterDeletion should not be defined
+        }
       }
     }
 
@@ -272,8 +303,10 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
         val result = for {
-          firstCreationResult <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
-          secondCreationResult <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
+          firstCreationResult <-
+            keycloakUserService.createUser(DeviceKeycloak.defaultRealm, newKeycloakUser, DeviceKeycloak)
+          secondCreationResult <-
+            keycloakUserService.createUser(DeviceKeycloak.defaultRealm, newKeycloakUser, DeviceKeycloak)
         } yield (firstCreationResult, secondCreationResult)
 
         val (firstCreationResult, secondCreationResult) = await(result, 5.seconds)
@@ -290,8 +323,9 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
         val result = for {
-          _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
-          maybeUser <- keycloakUserService.getUserByUserName(UserName("unknownUser@notanemail.com"))
+          _ <- keycloakUserService.createUser(DeviceKeycloak.defaultRealm, newKeycloakUser, DeviceKeycloak)
+          maybeUser <-
+            keycloakUserService.getUserByUserName(DeviceKeycloak.defaultRealm, UserName("unknownUser@notanemail.com"))
         } yield maybeUser
 
         val maybeUser = await(result, 5.seconds)
@@ -305,9 +339,12 @@ class KeycloakIntegrationTest extends E2ETestBase {
 
         val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
         val result = for {
-          _ <- keycloakUserService.createUser(newKeycloakUser, DeviceKeycloak)
-          _ <- keycloakUserService.deleteUserByUserName(UserName("unknownUser@notanemail.com"), DeviceKeycloak)
-          maybeUser <- keycloakUserService.getUserByUserName(newKeycloakUser.userName)
+          _ <- keycloakUserService.createUser(DeviceKeycloak.defaultRealm, newKeycloakUser, DeviceKeycloak)
+          _ <- keycloakUserService.deleteUserByUserName(
+            DeviceKeycloak.defaultRealm,
+            UserName("unknownUser@notanemail.com"),
+            DeviceKeycloak)
+          maybeUser <- keycloakUserService.getUserByUserName(DeviceKeycloak.defaultRealm, newKeycloakUser.userName)
         } yield maybeUser
 
         val maybeUser = await(result, 5.seconds)
@@ -321,9 +358,13 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val groups = injector.get[KeycloakGroupService]
         val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
         val result = for {
-          group <- groups.createGroup(createNewKeycloakGroup(), DeviceKeycloak)
-          _ <- users.createUser(newKeycloakUser, DeviceKeycloak)
-          success <- users.addGroupToUserByName(newKeycloakUser.userName.value, group.right.value.value, DeviceKeycloak)
+          group <- groups.createGroup(DeviceKeycloak.defaultRealm, createNewKeycloakGroup(), DeviceKeycloak)
+          _ <- users.createUser(DeviceKeycloak.defaultRealm, newKeycloakUser, DeviceKeycloak)
+          success <- users.addGroupToUserByName(
+            DeviceKeycloak.defaultRealm,
+            newKeycloakUser.userName.value,
+            group.right.value.value,
+            DeviceKeycloak)
         } yield success
 
         result.runSyncUnsafe() shouldBe Right(())
@@ -336,9 +377,13 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val groups = injector.get[KeycloakGroupService]
         val newKeycloakUser = KeycloakTestData.createNewCertifyKeycloakUser()
         val result = for {
-          group <- groups.createGroup(createNewKeycloakGroup(), CertifyKeycloak)
-          userId <- users.createUserWithoutUserName(newKeycloakUser, CertifyKeycloak)
-          success <- users.addGroupToUserById(userId.right.get, group.right.value.value, CertifyKeycloak)
+          group <- groups.createGroup(CertifyKeycloak.defaultRealm, createNewKeycloakGroup(), CertifyKeycloak)
+          userId <- users.createUserWithoutUserName(CertifyKeycloak.defaultRealm, newKeycloakUser, CertifyKeycloak)
+          success <- users.addGroupToUserById(
+            CertifyKeycloak.defaultRealm,
+            userId.right.get,
+            group.right.value.value,
+            CertifyKeycloak)
         } yield success
 
         result.runSyncUnsafe() shouldBe Right(())
@@ -352,10 +397,18 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val groups = injector.get[KeycloakGroupService]
 
         val result = for {
-          group <- groups.createGroup(createNewKeycloakGroup(), DeviceKeycloak)
-          _ <- users.createUser(newKeycloakUser, DeviceKeycloak)
-          _ <- users.addGroupToUserByName(newKeycloakUser.userName.value, group.right.get.value, DeviceKeycloak)
-          success <- users.addGroupToUserByName(newKeycloakUser.userName.value, group.right.get.value, DeviceKeycloak)
+          group <- groups.createGroup(DeviceKeycloak.defaultRealm, createNewKeycloakGroup(), DeviceKeycloak)
+          _ <- users.createUser(DeviceKeycloak.defaultRealm, newKeycloakUser, DeviceKeycloak)
+          _ <- users.addGroupToUserByName(
+            DeviceKeycloak.defaultRealm,
+            newKeycloakUser.userName.value,
+            group.right.get.value,
+            DeviceKeycloak)
+          success <- users.addGroupToUserByName(
+            DeviceKeycloak.defaultRealm,
+            newKeycloakUser.userName.value,
+            group.right.get.value,
+            DeviceKeycloak)
         } yield success
         result.runSyncUnsafe() shouldBe Right(())
       }
@@ -365,12 +418,15 @@ class KeycloakIntegrationTest extends E2ETestBase {
       withInjector { injector =>
         val users = injector.get[KeycloakUserService]
         val groups = injector.get[KeycloakGroupService]
-        val userId = UUID.randomUUID().toString
         val group = new GroupRepresentation()
         group.setName("testGroup")
         val result = for {
-          group <- groups.createGroup(createNewKeycloakGroup(), DeviceKeycloak)
-          success <- users.addGroupToUserByName("non-existing-user", group.right.get.value, DeviceKeycloak)
+          group <- groups.createGroup(DeviceKeycloak.defaultRealm, createNewKeycloakGroup(), DeviceKeycloak)
+          success <- users.addGroupToUserByName(
+            DeviceKeycloak.defaultRealm,
+            "non-existing-user",
+            group.right.get.value,
+            DeviceKeycloak)
         } yield (group, success)
         val (g, s) = result.runSyncUnsafe()
         s shouldBe Left(s"user with name non-existing-user wasn't found")
@@ -384,8 +440,12 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val group = new GroupRepresentation()
         group.setName("testGroup")
         val result = for {
-          _ <- users.createUser(newKeycloakUser, DeviceKeycloak)
-          success <- users.addGroupToUserByName(newKeycloakUser.userName.value, "non-existing-group", DeviceKeycloak)
+          _ <- users.createUser(DeviceKeycloak.defaultRealm, newKeycloakUser, DeviceKeycloak)
+          success <- users.addGroupToUserByName(
+            DeviceKeycloak.defaultRealm,
+            newKeycloakUser.userName.value,
+            "non-existing-group",
+            DeviceKeycloak)
         } yield (group, success)
         val (g, s) = result.runSyncUnsafe()
         s shouldBe Left(s"failed to add group non-existing-group to user ${newKeycloakUser.userName.value}")
@@ -401,8 +461,9 @@ class KeycloakIntegrationTest extends E2ETestBase {
           UserRequiredAction.WEBAUTHN_REGISTER,
           UserRequiredAction.UPDATE_PASSWORD)
         val result = for {
-          userId <- users.createUserWithoutUserName(newKeycloakUser, CertifyKeycloak, actions)
-          user <- users.getUserById(userId.right.get, CertifyKeycloak)
+          userId <-
+            users.createUserWithoutUserName(CertifyKeycloak.defaultRealm, newKeycloakUser, CertifyKeycloak, actions)
+          user <- users.getUserById(CertifyKeycloak.defaultRealm, userId.right.get, CertifyKeycloak)
         } yield user
         val userOpt = result.runSyncUnsafe()
         assert(userOpt.isDefined)
@@ -418,18 +479,19 @@ class KeycloakIntegrationTest extends E2ETestBase {
       val keycloakUserService = injector.get[KeycloakUserService]
       val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
       val instance = CertifyKeycloak
+      val realm = CertifyKeycloak.defaultRealm
 
       val r = for {
-        create <- keycloakUserService.createUser(newKeycloakUser, instance)
+        create <- keycloakUserService.createUser(realm, newKeycloakUser, instance)
         id <- create match {
           case Left(err) =>
             Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
           case Right(id) => Task.pure(id)
         }
-        deactivate <- keycloakUserService.deactivate(id.value, instance)
+        deactivate <- keycloakUserService.deactivate(realm, id.value, instance)
         user <- deactivate match {
           case Left(e)  => Task.raiseError(new RuntimeException(e))
-          case Right(_) => keycloakUserService.getUserById(id, instance)
+          case Right(_) => keycloakUserService.getUserById(realm, id, instance)
         }
       } yield user
 
@@ -440,23 +502,24 @@ class KeycloakIntegrationTest extends E2ETestBase {
       val keycloakUserService = injector.get[KeycloakUserService]
       val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
       val instance = CertifyKeycloak
+      val realm = CertifyKeycloak.defaultRealm
 
       val r = for {
-        create <- keycloakUserService.createUser(newKeycloakUser, instance)
+        create <- keycloakUserService.createUser(realm, newKeycloakUser, instance)
         id <- create match {
           case Left(err) =>
             Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
           case Right(id) => Task.pure(id)
         }
-        deactivate <- keycloakUserService.deactivate(id.value, instance)
+        deactivate <- keycloakUserService.deactivate(realm, id.value, instance)
         userDeactivated <- deactivate match {
           case Left(e)  => Task.raiseError(new RuntimeException(e))
-          case Right(_) => keycloakUserService.getUserById(id, instance)
+          case Right(_) => keycloakUserService.getUserById(realm, id, instance)
         }
-        activate <- keycloakUserService.activate(id.value, instance)
+        activate <- keycloakUserService.activate(realm, id.value, instance)
         userActivated <- activate match {
           case Left(e)  => Task.raiseError(new RuntimeException(e))
-          case Right(_) => keycloakUserService.getUserById(id, instance)
+          case Right(_) => keycloakUserService.getUserById(realm, id, instance)
         }
       } yield (userDeactivated, userActivated)
 
@@ -469,21 +532,22 @@ class KeycloakIntegrationTest extends E2ETestBase {
       val keycloakUserService = injector.get[KeycloakUserService]
       val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
       val instance = CertifyKeycloak
+      val realm = CertifyKeycloak.defaultRealm
       val requiredAction = List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
 
       val r = for {
-        create <- keycloakUserService.createUser(newKeycloakUser, instance, requiredAction)
+        create <- keycloakUserService.createUser(realm, newKeycloakUser, instance, requiredAction)
         id <- create match {
           case Left(err) =>
             Task.raiseError(new RuntimeException(s"Could not create user ${err.getClass.getSimpleName}"))
           case Right(id) => Task.pure(id)
         }
-        userRequiredActionsBefore <- keycloakUserService.getUserById(id, instance).flatMap {
+        userRequiredActionsBefore <- keycloakUserService.getUserById(realm, id, instance).flatMap {
           case Some(ur) => Task.pure(ur.getRequiredActions)
           case None     => Task.raiseError(new RuntimeException("User not found"))
         }
-        _ <- keycloakUserService.remove2faToken(id.value, instance)
-        userRequiredActionsAfter <- keycloakUserService.getUserById(id, instance).flatMap {
+        _ <- keycloakUserService.remove2faToken(realm, id.value, instance)
+        userRequiredActionsAfter <- keycloakUserService.getUserById(realm, id, instance).flatMap {
           case Some(ur) => Task.pure(ur.getRequiredActions)
           case None     => Task.raiseError(new RuntimeException("User not found"))
         }
@@ -503,8 +567,11 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val newDeviceKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
         val newCertifyKeycloakUser = KeycloakTestData.createNewCertifyKeycloakUser()
         val result = for {
-          res1 <- keycloakUserService.createUserWithoutUserName(newCertifyKeycloakUser, CertifyKeycloak)
-          res2 <- keycloakUserService.createUser(newDeviceKeycloakUser, DeviceKeycloak)
+          res1 <- keycloakUserService.createUserWithoutUserName(
+            CertifyKeycloak.defaultRealm,
+            newCertifyKeycloakUser,
+            CertifyKeycloak)
+          res2 <- keycloakUserService.createUser(DeviceKeycloak.defaultRealm, newDeviceKeycloakUser, DeviceKeycloak)
         } yield (res1, res2)
 
         val (usr1, usr2) = await(result, 5.seconds)
@@ -520,11 +587,21 @@ class KeycloakIntegrationTest extends E2ETestBase {
         val newDeviceKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
         val newCertifyKeycloakUser = KeycloakTestData.createNewCertifyKeycloakUser()
         val result = for {
-          _ <- keycloakUserService.createUser(newDeviceKeycloakUser, DeviceKeycloak)
-          userId <- keycloakUserService.createUserWithoutUserName(newCertifyKeycloakUser, CertifyKeycloak)
-          _ <- keycloakUserService.deleteUserByUserName(newDeviceKeycloakUser.userName, DeviceKeycloak)
-          deletedUser <- keycloakUserService.getUserByUserName(newDeviceKeycloakUser.userName, DeviceKeycloak)
-          existingUser <- keycloakUserService.getUserById(userId.right.get, CertifyKeycloak)
+          _ <- keycloakUserService.createUser(DeviceKeycloak.defaultRealm, newDeviceKeycloakUser, DeviceKeycloak)
+          userId <- keycloakUserService.createUserWithoutUserName(
+            CertifyKeycloak.defaultRealm,
+            newCertifyKeycloakUser,
+            CertifyKeycloak)
+          _ <- keycloakUserService.deleteUserByUserName(
+            DeviceKeycloak.defaultRealm,
+            newDeviceKeycloakUser.userName,
+            DeviceKeycloak)
+          deletedUser <- keycloakUserService.getUserByUserName(
+            DeviceKeycloak.defaultRealm,
+            newDeviceKeycloakUser.userName,
+            DeviceKeycloak)
+          existingUser <-
+            keycloakUserService.getUserById(CertifyKeycloak.defaultRealm, userId.right.get, CertifyKeycloak)
         } yield (deletedUser, existingUser)
 
         val (deletedUser, existingUser) = await(result, 5.seconds)

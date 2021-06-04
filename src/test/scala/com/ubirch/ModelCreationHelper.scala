@@ -1,5 +1,6 @@
 package com.ubirch
 
+import com.typesafe.config.ConfigFactory
 import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{
   PocEmployeeRepositoryMock,
@@ -37,6 +38,8 @@ object ModelCreationHelper {
   private val tenantNameObj = TenantName("tenantName")
   private val tenantId = TenantId(TenantName(globalTenantName))
 
+  private val pocConfig = new PocConfigImpl(ConfigFactory.load())
+
   def createTenant(
     name: String = globalTenantName,
     sharedAuthCert: Option[SharedAuthCert] = Some(SharedAuthCert(cert))): Tenant = {
@@ -45,9 +48,11 @@ object ModelCreationHelper {
       TenantId(TenantName(name)),
       TenantName(name),
       API,
+      UBIRCH,
       Some(deviceCreationToken),
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),
+      None,
       OrgId(TenantId(TenantName(name)).value),
       sharedAuthCertRequired = true
     ).copy(sharedAuthCert = sharedAuthCert)
@@ -114,20 +119,20 @@ object ModelCreationHelper {
 
   private def getRandomString = Random.alphanumeric.take(10).mkString
 
-  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = PocAdminStatus.init(pocAdmin, poc)
+  def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus = PocAdminStatus.init(pocAdmin, poc, pocConfig)
 
   def createPocStatus(
     pocId: UUID = UUID.randomUUID(),
     adminGroupCreated: Option[Boolean] = None,
     adminRoleAssigned: Option[Boolean] = None,
-    employeeGroupCreated: Option[Boolean] = None,
-    employeeRoleAssigned: Option[Boolean] = None): PocStatus =
+    pocTypeGroupCreated: Option[Boolean] = None): PocStatus =
     PocStatus(
       pocId,
       adminGroupCreated = adminGroupCreated,
       adminRoleAssigned = adminRoleAssigned,
-      employeeGroupCreated = employeeGroupCreated,
-      employeeRoleAssigned = employeeRoleAssigned,
+      pocTypeGroupCreated = pocTypeGroupCreated,
+      employeeGroupCreated = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
+      employeeRoleAssigned = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
       clientCertRequired = false,
       clientCertCreated = None,
       clientCertProvided = None,
@@ -140,6 +145,7 @@ object ModelCreationHelper {
     CreateTenantRequest(
       TenantName("tenantName"),
       API,
+      UBIRCH,
       sharedAuthCertRequired = sharedAuthCertRequired
     )
 

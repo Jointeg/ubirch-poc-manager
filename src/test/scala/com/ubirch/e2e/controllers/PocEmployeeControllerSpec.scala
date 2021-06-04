@@ -85,7 +85,7 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val employeeTable = injector.get[PocEmployeeTable]
-        val (tenant, poc, _) = createTenantWithPocAndPocAdmin(injector)
+        val (tenant, poc, _) = addTenantWithPocAndPocAdminToTable(injector)
         val employee =
           createPocEmployee(pocId = poc.id, tenantId = tenant.id).copy(certifyUserId = Some(UUID.randomUUID()))
         await(employeeTable.createPocEmployee(employee), 5.seconds)
@@ -99,8 +99,9 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-blue")
-          certifyConfig.dataSchemaSettings.dataSchemaId shouldBe "vaccination-v3"
-          certifyConfig.dataSchemaSettings.packagingFormat shouldBe Some("UPP")
+          certifyConfig.dataSchemaSettings.length shouldBe 1
+          certifyConfig.dataSchemaSettings.head.dataSchemaId shouldBe "vaccination-v3"
+          certifyConfig.dataSchemaSettings.head.packagingFormat shouldBe Some("UPP")
         }
       }
     }
@@ -130,8 +131,9 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-bmg-blue")
-          certifyConfig.dataSchemaSettings.dataSchemaId shouldBe "vaccination-bmg-v2"
-          certifyConfig.dataSchemaSettings.packagingFormat shouldBe Some("CBOR")
+          certifyConfig.dataSchemaSettings.length shouldBe 1
+          certifyConfig.dataSchemaSettings.head.dataSchemaId shouldBe "vaccination-bmg-v2"
+          certifyConfig.dataSchemaSettings.head.packagingFormat shouldBe Some("CBOR")
         }
       }
     }
@@ -161,8 +163,9 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe None
-          certifyConfig.dataSchemaSettings.dataSchemaId shouldBe "bvdw-certificate"
-          certifyConfig.dataSchemaSettings.packagingFormat shouldBe Some("UPP")
+          certifyConfig.dataSchemaSettings.length shouldBe 1
+          certifyConfig.dataSchemaSettings.head.dataSchemaId shouldBe "bvdw-certificate"
+          certifyConfig.dataSchemaSettings.head.packagingFormat shouldBe Some("UPP")
         }
       }
     }

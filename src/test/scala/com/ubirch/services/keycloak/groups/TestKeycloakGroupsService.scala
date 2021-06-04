@@ -2,6 +2,7 @@ package com.ubirch.services.keycloak.groups
 
 import com.ubirch.ModelCreationHelper.dataSchemaGroupId
 import com.ubirch.models.keycloak.group._
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
@@ -19,9 +20,10 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
   groupsDeviceDatastore += ((dataSchemaGroupId, dataSchemaGroup))
 
   override def createGroup(
+    realm: KeycloakRealm,
     createKeycloakGroup: CreateKeycloakGroup,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupCreationError, GroupId]] =
-    keycloakInstance match {
+    instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]] =
+    instance match {
       case CertifyKeycloak => insertIfNotExists(groupsCertifyDatastore, createKeycloakGroup)
       case DeviceKeycloak  => insertIfNotExists(groupsDeviceDatastore, createKeycloakGroup)
     }
@@ -41,8 +43,9 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
   }
 
   override def findGroupByName(
+    realm: KeycloakRealm,
     groupName: GroupName,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[GroupNotFound, GroupRepresentation]] =
+    instance: KeycloakInstance): Task[Either[GroupNotFound, GroupRepresentation]] =
     instance match {
       case CertifyKeycloak => findInDatastore(groupsCertifyDatastore, groupName)
       case DeviceKeycloak  => findInDatastore(groupsDeviceDatastore, groupName)
@@ -57,7 +60,10 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     }
   }
 
-  override def findGroupById(groupId: GroupId, instance: KeycloakInstance): Task[Either[String, GroupRepresentation]] =
+  override def findGroupById(
+    realm: KeycloakRealm,
+    groupId: GroupId,
+    instance: KeycloakInstance): Task[Either[String, GroupRepresentation]] =
     Task(instance match {
       case CertifyKeycloak => findIdInDatastore(groupsCertifyDatastore, groupId)
       case DeviceKeycloak  => findIdInDatastore(groupsDeviceDatastore, groupId)
@@ -72,8 +78,8 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     }
   }
 
-  override def deleteGroup(groupName: GroupName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
-    keycloakInstance match {
+  override def deleteGroup(realm: KeycloakRealm, groupName: GroupName, instance: KeycloakInstance): Task[Unit] =
+    instance match {
       case CertifyKeycloak =>
         Task(groupsCertifyDatastore -= groupName.value)
       case DeviceKeycloak =>
@@ -81,6 +87,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     }
 
   override def addSubGroup(
+    realm: KeycloakRealm,
     parentGroupId: GroupId,
     childGroupName: GroupName,
     instance: KeycloakInstance): Task[Either[GroupCreationError, GroupId]] = {
@@ -109,6 +116,7 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
   }
 
   override def assignRoleToGroup(
+    realm: KeycloakRealm,
     groupId: GroupId,
     role: RoleRepresentation,
     instance: KeycloakInstance): Task[Either[String, Unit]] = {
@@ -139,9 +147,10 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
   }
 
   def addMemberToGroup(
+    realm: KeycloakRealm,
     groupId: GroupId,
     user: UserRepresentation,
-    instance: KeycloakInstance = CertifyKeycloak): Task[Either[String, Boolean]] = {
+    instance: KeycloakInstance): Task[Either[String, Boolean]] = {
     Task(Right(true))
   }
 
@@ -167,4 +176,5 @@ class TestKeycloakGroupsService() extends KeycloakGroupService {
     group.setSubGroups(List(group).asJava)
     group
   }
+
 }

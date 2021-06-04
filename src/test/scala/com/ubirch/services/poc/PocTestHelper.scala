@@ -27,8 +27,10 @@ object PocTestHelper extends Awaits {
 
   def createNeededTenantGroups(tenant: Tenant, groups: KeycloakGroupService): Tenant = {
     val tenantGroup = CreateKeycloakGroup(GroupName(TENANT_GROUP_PREFIX + tenant.tenantName.value))
-    val deviceGroup: GroupId = await(groups.createGroup(tenantGroup, DeviceKeycloak), 1.seconds).right.get
-    val userGroup: GroupId = await(groups.createGroup(tenantGroup, CertifyKeycloak), 1.seconds).right.get
+    val deviceGroup: GroupId =
+      await(groups.createGroup(DeviceKeycloak.defaultRealm, tenantGroup, DeviceKeycloak), 1.seconds).right.get
+    val userGroup: GroupId =
+      await(groups.createGroup(CertifyKeycloak.defaultRealm, tenantGroup, CertifyKeycloak), 1.seconds).right.get
     tenant.copy(
       deviceGroupId = TenantDeviceGroupId(deviceGroup.value),
       certifyGroupId = TenantCertifyGroupId(userGroup.value))
@@ -49,6 +51,7 @@ object PocTestHelper extends Awaits {
 
   def createNeededDeviceUser(users: KeycloakUserService, poc: Poc): Either[UserException, UserId] = {
     users.createUser(
+      DeviceKeycloak.defaultRealm,
       CreateBasicKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
       DeviceKeycloak).runSyncUnsafe()
   }
@@ -61,6 +64,7 @@ object PocTestHelper extends Awaits {
       certifyGroupRoleAssigned = true,
       adminGroupCreated = None,
       adminRoleAssigned = None,
+      pocTypeGroupCreated = None,
       employeeGroupCreated = None,
       employeeRoleAssigned = None,
       deviceRoleCreated = true,

@@ -38,9 +38,11 @@ class PocCreatorTest extends UnitTestBase {
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, updatedTenant)
 
         keyCloakRoleService.createNewRole(
+          DeviceKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
           DeviceKeycloak).runSyncUnsafe(3.seconds)
         keyCloakRoleService.createNewRole(
+          CertifyKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
           CertifyKeycloak).runSyncUnsafe(3.seconds)
 
@@ -94,9 +96,11 @@ class PocCreatorTest extends UnitTestBase {
           updatedTenant)
 
         keyCloakRoleService.createNewRole(
+          DeviceKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
           DeviceKeycloak).runSyncUnsafe(3.seconds)
         keyCloakRoleService.createNewRole(
+          CertifyKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
           CertifyKeycloak).runSyncUnsafe(3.seconds)
 
@@ -144,9 +148,11 @@ class PocCreatorTest extends UnitTestBase {
         createNeededDeviceUser(users, poc)
 
         keyCloakRoleService.createNewRole(
+          DeviceKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
           DeviceKeycloak).runSyncUnsafe()
         keyCloakRoleService.createNewRole(
+          CertifyKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
           CertifyKeycloak).runSyncUnsafe()
 
@@ -228,9 +234,11 @@ class PocCreatorTest extends UnitTestBase {
           updatedTenant)
 
         keyCloakRoleService.createNewRole(
+          DeviceKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
           DeviceKeycloak).runSyncUnsafe(3.seconds)
         keyCloakRoleService.createNewRole(
+          CertifyKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + updatedTenant.tenantName.value)),
           CertifyKeycloak).runSyncUnsafe(3.seconds)
 
@@ -273,7 +281,9 @@ class PocCreatorTest extends UnitTestBase {
         val maybeSuccess2 = result2.asInstanceOf[PocCreationMaybeSuccess]
         maybeSuccess2.list.head.isRight shouldBe true
 
-        maybeSuccess2 shouldBe PocCreationMaybeSuccess(List(Right(expected.copy(logoStored = Some(true)))))
+        maybeSuccess2 shouldBe PocCreationMaybeSuccess(List(Right(expected.copy(
+          logoStored = Some(true),
+          errorMessage = None))))
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
         assert(newPoc.isDefined)

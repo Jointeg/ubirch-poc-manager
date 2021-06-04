@@ -6,19 +6,45 @@ import com.ubirch.services.lifeCycle.Lifecycle
 import io.getquill.{ PostgresMonixJdbcContext, SnakeCase }
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.joda.time.DateTime
 
+import java.sql
+import java.sql.Types
+import java.time.Clock
+import java.util.{ Calendar, TimeZone }
 import scala.concurrent.Future
 
 trait QuillMonixJdbcContext {
   val ctx: PostgresMonixJdbcContext[SnakeCase]
+  def systemClock: Clock
+
+  import ctx._
+
+  implicit def dateTimeEncoder: Encoder[DateTime] =
+    encoder(
+      Types.TIMESTAMP,
+      (index, value, row) =>
+        row.setTimestamp(
+          index,
+          new sql.Timestamp(value.getMillis),
+          Calendar.getInstance(TimeZone.getTimeZone(systemClock.getZone)))
+    )
+
+  implicit def dateTimeDecoder: Decoder[DateTime] =
+    decoder((index, row) =>
+      new DateTime(row.getTimestamp(index, Calendar.getInstance(TimeZone.getTimeZone(systemClock.getZone))).getTime))
 
   def withTransaction[T](f: => Task[T]): Task[T]
 }
 
 @Singleton
-case class PostgresQuillMonixJdbcContext @Inject() (lifecycle: Lifecycle)(implicit val scheduler: Scheduler)
+case class PostgresQuillMonixJdbcContext @Inject() (lifecycle: Lifecycle, clock: Clock)(implicit
+val scheduler: Scheduler)
   extends QuillMonixJdbcContext
   with LazyLogging {
+
+  override val systemClock: Clock = clock
+
   val ctx: PostgresMonixJdbcContext[SnakeCase] =
     try {
       new PostgresMonixJdbcContext(SnakeCase, "database")
@@ -37,5 +63,5 @@ case class PostgresQuillMonixJdbcContext @Inject() (lifecycle: Lifecycle)(implic
     }
   }
 
-  lifecycle.addStopHook(() => Future.successful(ctx.close()))
+  lifecycle.addStopHook(() => Future(ctx.close()))
 }

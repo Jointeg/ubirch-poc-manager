@@ -1,6 +1,7 @@
 package com.ubirch.services.keycloak.roles
 
 import com.ubirch.models.keycloak.roles._
+import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.RoleRepresentation
@@ -15,9 +16,10 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   private val rolesDeviceDatastore = mutable.Map[RoleName, KeycloakRole]()
 
   override def createNewRole(
+    realm: KeycloakRealm,
     createKeycloakRole: CreateKeycloakRole,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Either[RoleAlreadyExists, Unit]] =
-    keycloakInstance match {
+    instance: KeycloakInstance): Task[Either[RoleAlreadyExists, Unit]] =
+    instance match {
       case CertifyKeycloak => insertIfNotExists(rolesCertifyDatastore, createKeycloakRole)
       case DeviceKeycloak  => insertIfNotExists(rolesDeviceDatastore, createKeycloakRole)
     }
@@ -38,15 +40,16 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
   }
 
   override def findRole(
+    realm: KeycloakRealm,
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[KeycloakRole]] =
-    keycloakInstance match {
+    instance: KeycloakInstance): Task[Option[KeycloakRole]] =
+    instance match {
       case CertifyKeycloak => Task(rolesCertifyDatastore.get(roleName))
       case DeviceKeycloak  => Task(rolesDeviceDatastore.get(roleName))
     }
 
-  override def deleteRole(roleName: RoleName, keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Unit] =
-    keycloakInstance match {
+  override def deleteRole(realm: KeycloakRealm, roleName: RoleName, instance: KeycloakInstance): Task[Unit] =
+    instance match {
       case CertifyKeycloak =>
         Task {
           rolesCertifyDatastore -= roleName
@@ -60,9 +63,10 @@ class TestKeycloakRolesService() extends KeycloakRolesService {
     }
 
   override def findRoleRepresentation(
+    realm: KeycloakRealm,
     roleName: RoleName,
-    keycloakInstance: KeycloakInstance = CertifyKeycloak): Task[Option[RoleRepresentation]] = {
-    val opt = keycloakInstance match {
+    instance: KeycloakInstance): Task[Option[RoleRepresentation]] = {
+    val opt = instance match {
       case CertifyKeycloak => rolesCertifyDatastore.get(roleName)
       case DeviceKeycloak  => rolesDeviceDatastore.get(roleName)
     }

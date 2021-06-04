@@ -38,9 +38,11 @@ class PocCreationLoopTest extends UnitTestBase {
         createNeededDeviceUser(users, poc)
 
         keyCloakRoleService.createNewRole(
+          DeviceKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
           DeviceKeycloak).runSyncUnsafe(3.seconds)
         keyCloakRoleService.createNewRole(
+          CertifyKeycloak.defaultRealm,
           CreateKeycloakRole(RoleName(TENANT_GROUP_PREFIX + tenant.tenantName.value)),
           CertifyKeycloak).runSyncUnsafe(3.seconds)
 
@@ -62,6 +64,7 @@ class PocCreationLoopTest extends UnitTestBase {
 
   private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
     users.createUser(
+      DeviceKeycloak.defaultRealm,
       CreateBasicKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),
       DeviceKeycloak).runSyncUnsafe()
   }

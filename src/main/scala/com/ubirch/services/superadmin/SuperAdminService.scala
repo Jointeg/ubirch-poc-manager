@@ -38,7 +38,7 @@ class DefaultSuperAdminService @Inject() (
     createTenantRequest: CreateTenantRequest,
     superAdminContext: SuperAdminContext): Task[Either[CreateTenantErrors, TenantId]] = {
     for {
-      deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest.tenantName)
+      deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest)
       tenant = convertToTenant(createTenantRequest, deviceAndCertifyGroup)
 
       _ <- createOrgCert(tenant)
@@ -101,7 +101,7 @@ class DefaultSuperAdminService @Inject() (
   }
 
   private[superadmin] def createOrgUnitCert(tenant: Tenant): Task[Unit] = {
-    val identifier = CertIdentifier.tenantOrgUnitCert
+    val identifier = CertIdentifier.tenantOrgUnitCert(tenant.tenantName)
     certHandler
       .createOrganisationalUnitCertificate(tenant.getOrgId, tenant.orgUnitId.value, identifier)
       .map {
@@ -113,7 +113,7 @@ class DefaultSuperAdminService @Inject() (
 
   private[superadmin] def createSharedAuthCert(tenant: Tenant): Task[SharedAuthResult] = {
 
-    val identifier = CertIdentifier.tenantClientCert
+    val identifier = CertIdentifier.tenantClientCert(tenant.tenantName)
     certHandler
       .createSharedAuthCertificate(tenant.orgUnitId.value, tenant.groupId.value, identifier)
       .map {
@@ -144,9 +144,11 @@ class DefaultSuperAdminService @Inject() (
       tenantId,
       createTenantRequest.tenantName,
       createTenantRequest.usageType,
+      createTenantRequest.tenantType,
       None,
       TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
       TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),
+      deviceAndCertifyGroup.tenantTypeGroup.map(g => TenantTypeGroupId(g.value)),
       orgId = OrgId(tenantId.value),
       sharedAuthCertRequired = createTenantRequest.sharedAuthCertRequired
     )
