@@ -40,7 +40,7 @@ object Validator {
 
   private def validateJsonWithSealId(header: String, str: String, jValue: JValue): AllErrorsOr[Option[JValue]] = {
     Try(Serialization.read[SealJson](str)) match {
-      case Success(_)     => Some(jValue).validNel
+      case Success(_) => Some(jValue).validNel
       case Failure(_) => jsonErrorWhenTenantTypeBMG(header).invalidNel
     }
   }
