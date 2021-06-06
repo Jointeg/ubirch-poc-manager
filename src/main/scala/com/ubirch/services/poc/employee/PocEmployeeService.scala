@@ -47,13 +47,27 @@ class PocEmployeeServiceImpl @Inject() (
 
   private def toGetCertifyConfigDTO(poc: Poc): EitherT[Task, GetCertifyConfigError, GetCertifyConfigDTO] = {
     val dtoOpt = for {
-      dataSchemaId <- pocConfig.pocTypeDataSchemaMap.get(poc.pocType)
+      dataSchemaIds <- pocConfig.pocTypeDataSchemaMap.get(poc.pocType)
+      dataSchemaSettings <-
+        if (dataSchemaIds.isEmpty) {
+          None
+        } else {
+          // @todo These mappings are a temporal solution. these will be configured in the future.
+          val dataSchemaSettings = dataSchemaIds.map { dataSchemaId =>
+            val packagingFormat = if (dataSchemaId.contains("bmg")) Some("CBOR") else Some("UPP")
+            DataSchemaSetting(
+              dataSchemaId,
+              packagingFormat,
+              None,
+              None
+            )
+          }
+          Some(dataSchemaSettings)
+        }
     } yield {
-      // @todo These mappings are a temporal solution. these will be configured in the future.
-      val packagingFormat = if (dataSchemaId.contains("bmg")) Some("CBOR") else Some("UPP")
       val styleTheme =
-        if (dataSchemaId.contains("bmg")) Some("theme-bmg-blue")
-        else if (dataSchemaId == "vaccination-v3") Some("theme-blue")
+        if (poc.pocType.contains("bmg")) Some("theme-bmg-blue")
+        else if (poc.pocType.contains("vac")) Some("theme-blue")
         else None
 
       val logoUrl = s"${pocConfig.pocLogoEndpoint}/${poc.id.toString}"
@@ -64,12 +78,7 @@ class PocEmployeeServiceImpl @Inject() (
         styleTheme,
         poc.address.toString,
         None,
-        Seq(DataSchemaSetting(
-          dataSchemaId,
-          packagingFormat,
-          None,
-          None
-        ))
+        dataSchemaSettings
       )
     }
     EitherT.fromOption[Task](dtoOpt, InvalidDataPocType(poc.pocType, poc.id))

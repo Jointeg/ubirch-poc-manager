@@ -12,9 +12,7 @@ import org.json4s.native.Serialization.read
 import com.ubirch.ModelCreationHelper.createPoc
 import com.ubirch.controllers.PocEmployeeController
 import com.ubirch.db.tables.{ PocLogoRepository, PocTable, TenantTable }
-import com.ubirch.e2e.{ E2ETestBase, KeycloakOperations }
-import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
-import com.ubirch.services.keycloak.{ CertifyKeycloakConnector, KeycloakCertifyConfig }
+import com.ubirch.e2e.E2ETestBase
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import org.scalatest.BeforeAndAfterEach
 
@@ -127,9 +125,11 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           certifyConfig.pocName shouldBe poc.pocName
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-bmg-blue")
-          certifyConfig.dataSchemaSettings.length shouldBe 1
+          certifyConfig.dataSchemaSettings.length shouldBe 2
           certifyConfig.dataSchemaSettings.head.dataSchemaId shouldBe "vaccination-bmg-v2"
           certifyConfig.dataSchemaSettings.head.packagingFormat shouldBe Some("CBOR")
+          certifyConfig.dataSchemaSettings(1).dataSchemaId shouldBe "recovery-bmg"
+          certifyConfig.dataSchemaSettings(1).packagingFormat shouldBe Some("CBOR")
         }
       }
     }
