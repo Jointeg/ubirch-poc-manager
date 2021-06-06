@@ -133,7 +133,7 @@ class PocEmployeeController @Inject() (
 
   private def extractUUIDFromPocRole(pocRole: String)(logic: UUID => Task[ActionResult]) = {
     val splitRole = pocRole.split("_")
-    if (splitRole.length != 3) {
+    if (splitRole.length < 3) {
       Task(BadRequest("pocRole has a wrong format."))
     } else {
       val id = splitRole.last
