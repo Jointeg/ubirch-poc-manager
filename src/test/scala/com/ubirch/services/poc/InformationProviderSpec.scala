@@ -165,7 +165,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       assertThrows[PocCreationError](body.runSyncUnsafe())
     }
 
-    "succeed to create body with tenant's shared auth cert " in {
+    "succeed to create body with tenant's shared auth cert with jsonConfig" in {
       val injector = testInjector(new Binder())
       val infoProvider = injector.get[InformationProviderImpl]
       implicit val formats: Formats = injector.get[Formats]
@@ -188,7 +188,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       parsedObject.config shouldBe Some(parse("""{"test":"hello"}"""))
     }
 
-    "succeed to create body with tenant's shared auth cert with jsonConfig " in {
+    "succeed to create body with tenant's shared auth cert " in {
       val injector = testInjector(new Binder())
       val infoProvider = injector.get[InformationProviderImpl]
       implicit val formats: Formats = injector.get[Formats]
