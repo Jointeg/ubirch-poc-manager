@@ -71,7 +71,7 @@ class PocCreatorImpl @Inject() (
       case pocs =>
         logger.info(s"starting to create ${pocs.size} pocs")
         Task
-          .gather(pocs.map(createPoc))
+          .sequence(pocs.map(createPoc))
           .map(PocCreationMaybeSuccess)
     }
   }
