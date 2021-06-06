@@ -68,7 +68,6 @@ class DeviceHelperImpl @Inject() (users: KeycloakUserService, pocConfig: PocConf
         s"can't find pocType ${poc.pocType} in pocTypeDataSchemaMap: ${poc.pocType}"))
 
     dataSchemaIds.map { dataSchemaId =>
-
       val dataSchemaGroupId = pocConfig.dataSchemaGroupMap.getOrElse(
         dataSchemaId,
         throwError(
