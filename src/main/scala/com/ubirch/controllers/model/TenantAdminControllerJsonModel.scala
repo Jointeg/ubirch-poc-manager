@@ -5,7 +5,7 @@ import org.joda.time.LocalDate
 
 import java.util.UUID
 
-object TenantAdminController {
+object TenantAdminControllerJsonModel {
   case class PocAdmin_OUT(
     id: UUID,
     firstName: String,

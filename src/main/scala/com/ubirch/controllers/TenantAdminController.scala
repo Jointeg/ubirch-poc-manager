@@ -57,7 +57,7 @@ class TenantAdminController @Inject() (
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
-  import com.ubirch.controllers.model.TenantAdminController._
+  import com.ubirch.controllers.model.TenantAdminControllerJsonModel._
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -198,7 +198,16 @@ class TenantAdminController @Inject() (
   get("/poc/:id", operation(getPoc)) {
     tenantAdminEndpoint("Get PoC for a tenant") { tenant =>
       getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
-        tenantAdminService.getPocForTenant(tenant, id).toActionResult
+        tenantAdminService.getPocForTenant(tenant, id).map {
+          case Left(e) => e match {
+            case GetPocForTenantError.NotFound(pocId) =>
+              NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
+            case GetPocForTenantError.AssignedToDifferentTenant(pocId, tenantId) =>
+              Unauthorized(NOK.authenticationError(
+                s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
+          }
+          case Right(p) => Presenter.toJsonResult(p)
+        }
       }
     }
   }
@@ -208,7 +217,18 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
         for {
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          r <- tenantAdminService.updatePoc(tenant, id, read[Poc_IN](body)).toActionResult
+          r <- tenantAdminService.updatePoc(tenant, id, read[Poc_IN](body)).map {
+            case Left(e) => e match {
+              case UpdatePocError.NotFound(pocId) =>
+                NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
+              case UpdatePocError.AssignedToDifferentTenant(pocId, tenantId) =>
+                Unauthorized(NOK.authenticationError(
+                  s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
+              case UpdatePocError.NotCompleted(pocId, status) =>
+                Conflict(NOK.conflict(s"Poc '$pocId' is in wrong status: '$status', required: '$Completed'"))
+            }
+            case Right(p) => Presenter.toJsonResult(p)
+          }
         } yield r
       }
     }
