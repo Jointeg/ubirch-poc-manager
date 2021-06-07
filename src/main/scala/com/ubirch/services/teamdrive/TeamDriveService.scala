@@ -40,7 +40,7 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient, pocConfig: PocCon
         certByteArray <- Task(Base16String.toByteArray(certificate))
         certFileId <- client.putFile(spaceId, fileName, ByteBuffer.wrap(certByteArray))
         passphraseFileId <-
-          client.putFile(spaceId, s"password.txt", ByteBuffer.wrap(passphrase.value.getBytes))
+          client.putFile(spaceId, s"passwort.txt", ByteBuffer.wrap(passphrase.value.getBytes))
       } yield {
         logAuditEventInfo(s"uploaded cert with $fileName to TeamDrive space $spaceName")
         SharedCertificate(
