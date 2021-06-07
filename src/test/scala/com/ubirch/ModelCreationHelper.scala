@@ -33,6 +33,7 @@ object ModelCreationHelper {
   private val deviceCreationToken = EncryptedDeviceCreationToken(encryptedData)
   val dataSchemaGroupId = "data-schema-id"
   val pocTypeValue = "ub_vac_app"
+  val pocBmgTypeValue = "bmg_vac_app"
 
   val globalTenantName = "tenantName"
   private val tenantNameObj = TenantName("tenantName")
@@ -130,7 +131,9 @@ object ModelCreationHelper {
       pocId,
       adminGroupCreated = adminGroupCreated,
       adminRoleAssigned = adminRoleAssigned,
+      pocTypeRoleCreated = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
       pocTypeGroupCreated = pocTypeGroupCreated,
+      pocTypeGroupRoleAssigned = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
       employeeGroupCreated = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
       employeeRoleAssigned = pocTypeGroupCreated, // have to be synchronized with pocTenantTypeGroupCreated
       clientCertRequired = false,

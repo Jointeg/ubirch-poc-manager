@@ -2,8 +2,10 @@ package com.ubirch.e2e
 
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch._
 import com.ubirch.db.context.QuillMonixJdbcContext
+import com.ubirch.e2e.StartupHelperMethods.isPortInUse
 import com.ubirch.services.clock.ClockProvider
 import com.ubirch.formats.TestFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
@@ -48,13 +50,26 @@ class TestPocConfig @Inject() (
 }
 
 @Singleton
-class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCertifyConfig {
+class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCertifyConfig with LazyLogging {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val formats: Formats = DefaultFormats.lossless ++ TestFormats.all
 
-  private val keycloakServer = KeycloakCertifyContainer.container.container.getContainerIpAddress
-  private val keycloakPort = KeycloakCertifyContainer.container.container.getFirstMappedPort
+  private val defaultPort = 8080
+  private val isLocalDockerRunning = isPortInUse(defaultPort)
+
+  private val keycloakServer =
+    if (isLocalDockerRunning) {
+      "localhost"
+    } else {
+      KeycloakCertifyContainer.container.container.getContainerIpAddress
+    }
+  private val keycloakPort =
+    if (isLocalDockerRunning) {
+      defaultPort
+    } else {
+      KeycloakCertifyContainer.container.container.getFirstMappedPort
+    }
 
   private lazy val kid = {
     basicRequest
@@ -79,13 +94,25 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
 }
 
 @Singleton
-class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDeviceConfig {
+class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDeviceConfig with LazyLogging {
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val formats: Formats = DefaultFormats.lossless ++ TestFormats.all
+  private val defaultPort = 8081
+  private val isLocalDockerRunning = isPortInUse(defaultPort)
 
-  private val keycloakServer = KeycloakDeviceContainer.container.container.getContainerIpAddress
-  private val keycloakPort = KeycloakDeviceContainer.container.container.getFirstMappedPort
+  private val keycloakServer =
+    if (isLocalDockerRunning) {
+      "localhost"
+    } else {
+      KeycloakDeviceContainer.container.container.getContainerIpAddress
+    }
+  private val keycloakPort =
+    if (isLocalDockerRunning) {
+      defaultPort
+    } else {
+      KeycloakDeviceContainer.container.container.getFirstMappedPort
+    }
 
   private lazy val kid = {
     basicRequest
@@ -118,7 +145,13 @@ class TestPostgresQuillMonixJdbcContext @Inject() (clock: Clock) extends QuillMo
   override val systemClock: Clock = clock
 }
 
-object StaticTestPostgresJdbcContext {
+object StaticTestPostgresJdbcContext extends LazyLogging {
+  private val defaultPort = 5432
+  private val isLocalDockerRunning = isPortInUse(defaultPort)
+  val portNumber = if (isLocalDockerRunning) defaultPort else PostgresDbContainer.container.container.getFirstMappedPort
+  val serverName =
+    if (isLocalDockerRunning) "localhost" else PostgresDbContainer.container.container.getContainerIpAddress
+
   val ctx: PostgresMonixJdbcContext[SnakeCase] = new PostgresMonixJdbcContext(
     SnakeCase,
     ConfigFactory.parseString(s"""
@@ -126,8 +159,8 @@ object StaticTestPostgresJdbcContext {
                                  |    dataSource.user = postgres
                                  |    dataSource.password = postgres
                                  |    dataSource.databaseName = postgres
-                                 |    dataSource.portNumber = ${PostgresDbContainer.container.container.getFirstMappedPort}
-                                 |    dataSource.serverName = ${PostgresDbContainer.container.container.getContainerIpAddress}
+                                 |    dataSource.portNumber = $portNumber
+                                 |    dataSource.serverName = $serverName
                                  |    connectionTimeout = 30000
                                  |""".stripMargin),
     Runner.default)

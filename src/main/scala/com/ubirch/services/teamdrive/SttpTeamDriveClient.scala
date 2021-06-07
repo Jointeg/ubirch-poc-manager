@@ -60,8 +60,14 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
       case Left(e) =>
         e match {
           case HttpError(body, _) =>
-            Task(read[TeamDriveError_OUT](body)).flatMap(e =>
-              Task.raiseError(TeamDriveHttpError(e.error, e.error_message)))
+            Task(read[TeamDriveError_OUT](body))
+              .onErrorHandle { ex =>
+                logger.error(s"an error occurred parsing error reponse body ($body) by teamdrive", ex)
+                throw TeamDriveHttpError(r.code.code, body)
+              }
+              .flatMap(e => Task.raiseError(TeamDriveHttpError(e.error, e.error_message)))
+
+
           case a @ DeserializationError(_, _) => Task.raiseError(a)
         }
       case Right(v) => onSuccess(v)

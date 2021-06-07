@@ -9,10 +9,12 @@ import com.ubirch.services.poc.PocTestHelper.createPocTriple
 import com.ubirch.{ Awaits, Binder, DefaultUnitTestBinder, InjectorHelper }
 import monix.execution.Scheduler
 import org.json4s.Formats
+import org.json4s.JsonAST.JValue
 import org.json4s.native.Serialization.read
 import org.scalatest.TryValues
 import org.scalatra.test.scalatest.ScalatraWordSpec
 
+import org.json4s.native.JsonMethods._
 import java.util.UUID
 import scala.util.Try
 
@@ -163,7 +165,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       assertThrows[PocCreationError](body.runSyncUnsafe())
     }
 
-    "succeed to create body with tenant's shared auth cert " in {
+    "succeed to create body with tenant's shared auth cert with jsonConfig" in {
       val injector = testInjector(new Binder())
       val infoProvider = injector.get[InformationProviderImpl]
       implicit val formats: Formats = injector.get[Formats]
@@ -177,11 +179,35 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val parsedObject = read[RegisterDeviceCertifyAPI](registerDevice)
 
       parsedObject.role shouldBe Some(poc.roleName)
+      parsedObject.pocType shouldBe poc.pocType
       parsedObject.uuid shouldBe poc.getDeviceId
       parsedObject.password shouldBe pw
       parsedObject.cert.isDefined shouldBe true
       parsedObject.name shouldBe poc.pocName
       parsedObject.location shouldBe None
+      parsedObject.config shouldBe Some(parse("""{"test":"hello"}"""))
+    }
+
+    "succeed to create body with tenant's shared auth cert " in {
+      val injector = testInjector(new Binder())
+      val infoProvider = injector.get[InformationProviderImpl]
+      implicit val formats: Formats = injector.get[Formats]
+      val (poc, status, tenant) = createPocTriple()
+      val goodPoc = poc.copy(clientCertRequired = false, extraConfig = None)
+      val pw = "devicePassword"
+
+      val body = infoProvider.getCertifyApiBody(goodPoc, StatusAndPW(status, pw), tenant)
+      val registerDevice = body.runSyncUnsafe()
+      val parsedObject = read[RegisterDeviceCertifyAPI](registerDevice)
+
+      parsedObject.role shouldBe Some(poc.roleName)
+      parsedObject.pocType shouldBe poc.pocType
+      parsedObject.uuid shouldBe poc.getDeviceId
+      parsedObject.password shouldBe pw
+      parsedObject.cert.isDefined shouldBe true
+      parsedObject.name shouldBe poc.pocName
+      parsedObject.location shouldBe None
+      parsedObject.config shouldBe None
     }
 
     "succeed to create body without role but with location" in {

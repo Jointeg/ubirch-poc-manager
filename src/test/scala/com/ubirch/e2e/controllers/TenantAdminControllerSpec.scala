@@ -62,7 +62,7 @@ class TenantAdminControllerSpec
     "return success without invalid rows" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
@@ -79,7 +79,7 @@ class TenantAdminControllerSpec
     "return Forbidden when user is not a tenant-admin" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        addTenantToDB()
+        addTenantToDB(Injector)
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
@@ -106,7 +106,7 @@ class TenantAdminControllerSpec
     "return invalid csv rows" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         post(
           "/pocs/create",
           body = invalidHeaderPocOnlyCsv.getBytes(),
@@ -120,7 +120,7 @@ class TenantAdminControllerSpec
     "return invalid csv row in case of db errors" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
@@ -183,7 +183,7 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
         val pocTable = Injector.get[PocRepository]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         val r = for {
           _ <- pocTable.createPoc(createPoc(poc1id, tenant.tenantName))
           _ <- pocTable.createPoc(createPoc(poc2id, tenant.tenantName))
@@ -217,7 +217,7 @@ class TenantAdminControllerSpec
 
     "return Success also when list of PoCs is empty" in {
       withInjector { Injector =>
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         val token = Injector.get[FakeTokenCreator]
         get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
@@ -241,7 +241,7 @@ class TenantAdminControllerSpec
     "return PoC page for given index and size" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
 
       val r = for {
         _ <- pocTable.createPoc(createPoc(poc1id, tenant.tenantName))
@@ -268,7 +268,7 @@ class TenantAdminControllerSpec
     "return PoCs for passed search by pocName" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val r = for {
         _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
         _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
@@ -291,7 +291,7 @@ class TenantAdminControllerSpec
     "return PoCs for passed search by city" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val r = for {
         _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, city = "Berlin 1"))
         _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, city = "Berlin 11"))
@@ -314,7 +314,7 @@ class TenantAdminControllerSpec
     "return PoCs ordered asc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val r = for {
         _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
         _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
@@ -337,7 +337,7 @@ class TenantAdminControllerSpec
     "return PoCs ordered desc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val r = for {
         _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
         _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
@@ -360,7 +360,7 @@ class TenantAdminControllerSpec
     "return only pocs with matching status" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val r = for {
         _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
         _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
@@ -383,7 +383,7 @@ class TenantAdminControllerSpec
     "return pocs with each status when filterColumnStatus parameter is empty" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val r = for {
         _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, status = Pending))
         _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, status = Processing))
@@ -582,7 +582,7 @@ class TenantAdminControllerSpec
         val token = injector.get[FakeTokenCreator]
         val tenantTable = injector.get[TenantRepository]
         val aesEncryption = injector.get[AESEncryption]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(injector)
 
         post(
           "/deviceToken",
@@ -635,7 +635,7 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
         val repository = Injector.get[PocAdminRepository]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         val poc = addPocToDb(tenant, Injector.get[PocTable])
 
         val r = for {
@@ -673,7 +673,7 @@ class TenantAdminControllerSpec
 
     "return Success also when list of PoC admins is empty" in {
       withInjector { Injector =>
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         val token = Injector.get[FakeTokenCreator]
         get(s"/poc-admins", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
@@ -697,7 +697,7 @@ class TenantAdminControllerSpec
     "return PoC admins page for given index and size" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
 
       val r = for {
@@ -725,7 +725,7 @@ class TenantAdminControllerSpec
     "return PoC admins for passed search by email" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
         _ <-
@@ -752,7 +752,7 @@ class TenantAdminControllerSpec
     "return PoC admins for passed search by name" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
         _ <-
@@ -791,7 +791,7 @@ class TenantAdminControllerSpec
     "return PoC admins for passed search by surname" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
         _ <-
@@ -830,7 +830,7 @@ class TenantAdminControllerSpec
     "return PoC admins ordered asc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
         _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin1"))
@@ -854,7 +854,7 @@ class TenantAdminControllerSpec
     "return PoC admins ordered desc by field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
         _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, name = "admin1"))
@@ -878,7 +878,7 @@ class TenantAdminControllerSpec
     "return PoC admins ordered by pocName field" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val pocTable = Injector.get[PocTable]
       val r = for {
         pocIdB <- pocTable.createPoc(createPoc(name = "POC B", tenantName = tenant.tenantName))
@@ -906,7 +906,7 @@ class TenantAdminControllerSpec
     "return only poc admins with matching status" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
         _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Pending))
@@ -931,7 +931,7 @@ class TenantAdminControllerSpec
     "return poc admins with each status when filterColumnStatus parameter is empty" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val repository = Injector.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = addPocToDb(tenant, Injector.get[PocTable])
       val r = for {
         _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Pending))
@@ -973,7 +973,7 @@ class TenantAdminControllerSpec
     s"Endpoint GET /pocs must respond with a bad request when provided an invalid value '$value' for '$param'" in withInjector {
       Injector =>
         val token = Injector.get[FakeTokenCreator]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         get(
           "/pocs",
           params = Map(param -> value),
@@ -991,7 +991,7 @@ class TenantAdminControllerSpec
     s"Endpoint GET /poc-admins must respond with a bad request when provided an invalid value '$value' for '$param'" in withInjector {
       Injector =>
         val token = Injector.get[FakeTokenCreator]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         get(
           "/poc-admins",
           params = Map(param -> value),
@@ -1010,7 +1010,7 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
         val pocTable = Injector.get[PocRepository]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         val poc1 = createPoc(poc1id, tenant.tenantName)
         val poc2 = createPoc(poc2id, tenant.tenantName)
         val r = for {
@@ -1039,7 +1039,7 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
         val pocTable = Injector.get[PocRepository]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(Injector)
         val r = for {
           _ <- pocTable.createPoc(createPoc(
             UUID.randomUUID(),
@@ -1073,7 +1073,7 @@ class TenantAdminControllerSpec
         val token = injector.get[FakeTokenCreator]
         val pocTable = injector.get[PocRepository]
         val pocAdminTable = injector.get[PocAdminRepository]
-        val tenant = addTenantToDB()
+        val tenant = addTenantToDB(injector)
         val poc = createPoc(poc1id, tenant.tenantName)
         val pocAdmin = createPocAdmin(pocId = poc.id, tenantId = tenant.id)
         val r = for {
@@ -1282,7 +1282,7 @@ class TenantAdminControllerSpec
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
       val keycloakUserService = i.get[KeycloakUserService]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val realm = CertifyKeycloak.defaultRealm
       val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
@@ -1330,7 +1330,7 @@ class TenantAdminControllerSpec
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
       val keycloakUserService = i.get[KeycloakUserService]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
         CertifyKeycloak.defaultRealm,
@@ -1357,7 +1357,7 @@ class TenantAdminControllerSpec
 
     "return 404 when poc-admin does not exist" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val invalidPocAdminId = UUID.randomUUID()
 
       put(
@@ -1371,7 +1371,7 @@ class TenantAdminControllerSpec
 
     "return 400 when isActive is invalid value" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val invalidPocAdminId = UUID.randomUUID()
 
       put(
@@ -1386,7 +1386,7 @@ class TenantAdminControllerSpec
     "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None, status = Completed)
       val id = await(repository.createPocAdmin(pocAdmin))
@@ -1403,7 +1403,7 @@ class TenantAdminControllerSpec
     "return 401 when poc of poc-admin doesn't belong to tenant " in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None)
       val id = await(repository.createPocAdmin(pocAdmin))
@@ -1447,7 +1447,7 @@ class TenantAdminControllerSpec
       val clock = i.get[Clock]
       val repository = i.get[PocAdminRepository]
       val keycloakUserService = i.get[KeycloakUserService]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val instance = CertifyKeycloak
       val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
@@ -1488,7 +1488,7 @@ class TenantAdminControllerSpec
 
     "return 404 when poc-admin does not exist" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val invalidPocAdminId = UUID.randomUUID()
 
       delete(
@@ -1522,7 +1522,7 @@ class TenantAdminControllerSpec
     "return 409 when poc-admin does not have certifyUserId" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None, status = Completed)
       val id = await(repository.createPocAdmin(pocAdmin))
@@ -1596,21 +1596,16 @@ class TenantAdminControllerSpec
   override protected def beforeAll: Unit = {
     super.beforeAll()
     withInjector { injector =>
-      lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init(CertifyKeycloak, DeviceKeycloak), 2.seconds)
-
       lazy val tenantAdminController = injector.get[TenantAdminController]
       addServlet(tenantAdminController, "/*")
     }
   }
 
-  private def addTenantToDB(): Tenant = {
-    withInjector { implicit injector =>
-      addTenantToDB(globalTenantName)
-    }
+  private def addTenantToDB(injector: InjectorHelper): Tenant = {
+    addTenantToDB(globalTenantName, injector)
   }
 
-  private def addTenantToDB(name: String = globalTenantName)(implicit injector: InjectorHelper): Tenant = {
+  private def addTenantToDB(name: String = globalTenantName, injector: InjectorHelper): Tenant = {
     val tenantTable = injector.get[TenantTable]
     val tenant = createTenant(name = name)
     await(tenantTable.createTenant(tenant), 5.seconds)

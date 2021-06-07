@@ -12,7 +12,7 @@ import javax.inject.{ Inject, Singleton }
 trait PocConfig {
 
   val dataSchemaGroupMap: Map[String, String]
-  val pocTypeDataSchemaMap: Map[String, String]
+  val pocTypeDataSchemaMap: Map[String, Seq[String]]
   val trustedPocGroupMap: Map[String, String]
   val pocTypeEndpointMap: Map[String, String]
   val locationNeeded: Seq[String]
@@ -39,9 +39,9 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
         throw e
     }
 
-  val pocTypeDataSchemaMap: Map[String, String] =
+  val pocTypeDataSchemaMap: Map[String, Seq[String]] =
     try {
-      parse(config.getString(ServicesConfPaths.POC_TYPE_DATA_SCHEMA_MAP)).extract[Map[String, String]]
+      parse(config.getString(ServicesConfPaths.POC_TYPE_DATA_SCHEMA_MAP)).extract[Map[String, Seq[String]]]
     } catch {
       case e: Exception =>
         logger.error(s"can't parse the ${ServicesConfPaths.POC_TYPE_DATA_SCHEMA_MAP} value as Map[String, String]")

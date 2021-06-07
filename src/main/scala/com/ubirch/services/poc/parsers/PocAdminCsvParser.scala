@@ -85,7 +85,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     pocManager: AllErrorsOr[PocManager],
     tenant: Tenant): AllErrorsOr[Poc] =
     (
-      validateString(externalId, csvPocAdmin.externalId),
+      validateExternalId(externalId, csvPocAdmin.externalId, tenant),
       validatePocType(pocType, csvPocAdmin.pocType, pocConfig.pocTypeEndpointMap, tenant),
       validatePocName(pocName, csvPocAdmin.pocName),
       pocAddress,
@@ -93,7 +93,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
       validateAdminCertifyApp(certifyApp, csvPocAdmin.pocCertifyApp),
       validateLogoURL(logoUrl, csvPocAdmin.logoUrl, csvPocAdmin.pocCertifyApp),
       validateClientCertAdmin(clientCert, csvPocAdmin.clientCert),
-      validateJson(jsonConfig, csvPocAdmin.extraConfig),
+      validateJson(jsonConfig, csvPocAdmin.extraConfig, tenant),
       pocManager
     ).mapN {
       (
