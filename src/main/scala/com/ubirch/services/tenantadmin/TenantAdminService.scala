@@ -61,7 +61,7 @@ trait TenantAdminService {
 
   def updatePoc(tenant: Tenant, id: UUID, poc: Poc_IN): Task[Either[UpdatePocError, Unit]]
 
-  def getPocAdminForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocAdminForTenantError, PocAdmin]]
+  def getPocAdminForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocAdminForTenantError, (PocAdmin, Poc)]]
 }
 
 class DefaultTenantAdminService @Inject() (
@@ -295,16 +295,18 @@ class DefaultTenantAdminService @Inject() (
       } yield r
     }
 
-  override def getPocAdminForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocAdminForTenantError, PocAdmin]] =
+  override def getPocAdminForTenant(
+    tenant: Tenant,
+    id: UUID): Task[Either[GetPocAdminForTenantError, (PocAdmin, Poc)]] =
     for {
-      maybePoc <- pocAdminRepository.getPocAdmin(id)
-      r <- maybePoc match {
+      maybePocAdmin <- pocAdminRepository.getPocAdmin(id)
+      pocAdminWithPoc <- maybePocAdmin match {
         case None => Task.pure(GetPocAdminForTenantError.NotFound(id).asLeft)
-        case Some(p) if p.tenantId != tenant.id =>
+        case Some(pa) if pa.tenantId != tenant.id =>
           Task.pure(GetPocAdminForTenantError.AssignedToDifferentTenant(id, tenant.id).asLeft)
-        case Some(p) => Task.pure(p.asRight)
+        case Some(pa) => pocRepository.single(pa.pocId).map { p => (pa, p).asRight }
       }
-    } yield r
+    } yield pocAdminWithPoc
 }
 
 sealed trait CreateWebIdentInitiateIdErrors
@@ -350,6 +352,6 @@ object UpdatePocError {
 
 sealed trait GetPocAdminForTenantError
 object GetPocAdminForTenantError {
-  case class NotFound(pocId: UUID) extends GetPocAdminForTenantError
+  case class NotFound(pocAdminId: UUID) extends GetPocAdminForTenantError
   case class AssignedToDifferentTenant(pocId: UUID, tenantId: TenantId) extends GetPocAdminForTenantError
 }

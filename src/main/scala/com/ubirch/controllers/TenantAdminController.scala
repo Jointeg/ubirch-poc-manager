@@ -488,7 +488,9 @@ class TenantAdminController @Inject() (
   get("/poc-admin/:id", operation(getPocAdmin)) {
     tenantAdminEndpoint("Get PoC Admin for a tenant") { tenant =>
       getParamAsUUID("id", id => s"Invalid poc-admin id '$id'") { id =>
-        tenantAdminService.getPocAdminForTenant(tenant, id).toActionResult
+        tenantAdminService.getPocAdminForTenant(tenant, id)
+          .map(pocAdminWithPoc => pocAdminWithPoc.map { case (pa, p) => PocAdmin_OUT.fromPocAdmin(pa, p) })
+          .toActionResult
       }
     }
   }

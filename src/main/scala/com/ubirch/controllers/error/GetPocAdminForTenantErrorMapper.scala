@@ -1,15 +1,16 @@
 package com.ubirch.controllers.error
 
 import com.ubirch.controllers.concerns.Presenter
+import com.ubirch.controllers.model.TenantAdminController.PocAdmin_OUT
 import com.ubirch.models.NOK
-import com.ubirch.models.poc.PocAdmin
 import com.ubirch.services.tenantadmin.GetPocAdminForTenantError
 import monix.eval.Task
 import org.json4s.Formats
 import org.scalatra.{ ActionResult, NotFound, Unauthorized }
 
-class GetPocAdminForTenantErrorMapper(implicit f: Formats) extends ErrorMapper[GetPocAdminForTenantError, PocAdmin] {
-  override def handle(t: Task[Either[GetPocAdminForTenantError, PocAdmin]]): Task[ActionResult] =
+class GetPocAdminForTenantErrorMapper(implicit f: Formats)
+  extends ErrorMapper[GetPocAdminForTenantError, PocAdmin_OUT] {
+  override def handle(t: Task[Either[GetPocAdminForTenantError, PocAdmin_OUT]]): Task[ActionResult] =
     t.map {
       case Left(e) => e match {
           case GetPocAdminForTenantError.NotFound(pocAdminId) =>

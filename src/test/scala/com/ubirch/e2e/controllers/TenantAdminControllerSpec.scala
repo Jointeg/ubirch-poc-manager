@@ -1731,55 +1731,57 @@ class TenantAdminControllerSpec
 
   def pocToFormattedJson(poc: Poc): String = {
     import poc._
-    s"""{
-       |  "id" : "$id",
-       |  "tenantId" : "${tenantId.value.value}",
-       |  "externalId" : "$externalId",
-       |  "pocType" : "$pocType",
-       |  "pocName" : "$pocName",
-       |  "address" : {
-       |    "street" : "${address.street}",
-       |    "houseNumber" : "${address.houseNumber}",
-       |    "zipcode" : ${address.zipcode},
-       |    "city" : "${address.city}",
-       |    "country" : "${address.country}"
-       |  },
-       |  "phone" : "${poc.phone}",
-       |  "certifyApp" : $certifyApp,
-       |  "clientCertRequired" : $clientCertRequired,
-       |  "extraConfig" : {
-       |    "test" : "hello"
-       |  },
-       |  "manager" : {
-       |    "lastName" : "${manager.managerSurname}",
-       |    "firstName" : "${manager.managerName}",
-       |    "email" : "${manager.managerEmail}",
-       |    "mobilePhone" : "${manager.managerMobilePhone}"
-       |  },
-       |  "roleName" : "$roleName",
-       |  "deviceId" : "$deviceId",
-       |  "status" : "${poc.status.toString.toUpperCase}",
-       |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
-       |  "created" : "${created.dateTime.toInstant}"
-       |}""".stripMargin
+    val json = s"""{
+                  |  "id" : "$id",
+                  |  "tenantId" : "${tenantId.value.value}",
+                  |  "externalId" : "$externalId",
+                  |  "pocType" : "$pocType",
+                  |  "pocName" : "$pocName",
+                  |  "address" : {
+                  |    "street" : "${address.street}",
+                  |    "houseNumber" : "${address.houseNumber}",
+                  |    "zipcode" : ${address.zipcode},
+                  |    "city" : "${address.city}",
+                  |    "country" : "${address.country}"
+                  |  },
+                  |  "phone" : "${poc.phone}",
+                  |  "certifyApp" : $certifyApp,
+                  |  "clientCertRequired" : $clientCertRequired,
+                  |  "extraConfig" : {
+                  |    "test" : "hello"
+                  |  },
+                  |  "manager" : {
+                  |    "lastName" : "${manager.managerSurname}",
+                  |    "firstName" : "${manager.managerName}",
+                  |    "email" : "${manager.managerEmail}",
+                  |    "mobilePhone" : "${manager.managerMobilePhone}"
+                  |  },
+                  |  "roleName" : "$roleName",
+                  |  "deviceId" : "$deviceId",
+                  |  "status" : "${poc.status.toString.toUpperCase}",
+                  |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
+                  |  "created" : "${created.dateTime.toInstant}"
+                  |}""".stripMargin
+    pretty(render(parse(json)))
   }
 
   def pocAdminToFormattedJson(pa: PocAdmin, p: Poc): String = {
-    s"""{
-       |  "id" : "${pa.id}",
-       |  "firstName" : "${pa.name}",
-       |  "lastName" : "${pa.surname}",
-       |  "dateOfBirth" : {
-       |    "year" : ${pa.dateOfBirth.date.year()},
-       |    "month" : ${pa.dateOfBirth.date.monthOfYear()},
-       |    "day" : ${pa.dateOfBirth.date.dayOfMonth()}
-       |   },
-       |   "email" : "${pa.email}",
-       |   "phone" : "${pa.mobilePhone}",
-       |   "pocName" : "${p.pocName}",
-       |   "active": ${pa.active},
-       |   "state" : "${Status.toFormattedString(pa.status)}"
-       |}""".stripMargin
+    val json = s"""{
+                  | "id" : "${pa.id}",
+                  | "firstName" : "${pa.name}",
+                  | "lastName" : "${pa.surname}",
+                  | "dateOfBirth" : {
+                  |   "year" : ${pa.dateOfBirth.date.year().get()},
+                  |   "month" : ${pa.dateOfBirth.date.monthOfYear().get()},
+                  |   "day" : ${pa.dateOfBirth.date.dayOfMonth().get()}
+                  |  },
+                  |  "email" : "${pa.email}",
+                  |  "phone" : "${pa.mobilePhone}",
+                  |  "pocName" : "${p.pocName}",
+                  |  "active" : ${pa.active},
+                  |  "state" : "${Status.toFormattedString(pa.status)}"
+                  |}""".stripMargin
+    pretty(render(parse(json)))
   }
 
   override protected def beforeEach(): Unit = {

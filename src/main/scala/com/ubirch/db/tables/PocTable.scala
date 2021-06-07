@@ -23,6 +23,8 @@ trait PocRepository {
 
   def getPoc(pocId: UUID): Task[Option[Poc]]
 
+  def single(id: UUID): Task[Poc]
+
   def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]]
 
   def getAllPocsByCriteria(criteria: Criteria): Task[PaginatedResult[Poc]]
@@ -30,6 +32,10 @@ trait PocRepository {
   def getAllUncompletedPocs(): Task[List[Poc]]
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]]
+}
+
+object PocRepository {
+  case class PocNotFound(id: UUID) extends RuntimeException(s"Poc with id '$id' does not exist")
 }
 
 @Singleton
@@ -102,6 +108,12 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
   override def deletePoc(pocId: UUID): Task[Unit] = run(removePocQuery(pocId)).void
 
   override def getPoc(pocId: UUID): Task[Option[Poc]] = run(getPocQuery(pocId)).map(_.headOption)
+
+  override def single(id: UUID): Task[Poc] =
+    getPoc(id).flatMap {
+      case Some(v) => Task.pure(v)
+      case None    => Task.raiseError(PocRepository.PocNotFound(id))
+    }
 
   override def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]] =
     run(getAllPocsByTenantIdQuery(tenantId))
