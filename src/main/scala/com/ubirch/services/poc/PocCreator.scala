@@ -71,7 +71,7 @@ class PocCreatorImpl @Inject() (
       case pocs =>
         logger.info(s"starting to create ${pocs.size} pocs")
         Task
-          .gather(pocs.map(createPoc))
+          .sequence(pocs.map(createPoc))
           .map(PocCreationMaybeSuccess)
     }
   }
@@ -115,7 +115,7 @@ class PocCreatorImpl @Inject() (
       PoCCertCreator.pocCreationError(
         "a poc shouldn't require shared auth cert if tenant usageType is API",
         pocAndStatus)
-    else if (pocAndStatus.poc.clientCertRequired && !pocAndStatus.status.clientCertCreated.contains(true)) {
+    else if (pocAndStatus.poc.clientCertRequired && !pocAndStatus.status.clientCertProvided.contains(true)) {
       PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus, ubirchAdminsEmails, stage)(
         certHandler,
         teamDriveService)
@@ -177,9 +177,11 @@ class PocCreatorImpl @Inject() (
       pocAndStatus3 <- assignCertifyRoleToGroup(pocAndStatus2, tenant)
       pocAndStatus4 <- createAdminGroup(pocAndStatus3)
       pocAndStatus5 <- assignAdminRole(pocAndStatus4)
-      pocAndStatus6 <- createPocTenantTypeGroup(pocAndStatus5, tenant)
-      pocAndStatus7 <- createEmployeeGroup(pocAndStatus6)
-      pocAndStatusFinal <- assignEmployeeRole(pocAndStatus7)
+      pocAndStatus6 <- createPocTypeRole(pocAndStatus5)
+      pocAndStatus7 <- createPocTenantTypeGroup(pocAndStatus6, tenant)
+      pocAndStatus8 <- assignPocTypeRoleToGroup(pocAndStatus7)
+      pocAndStatus9 <- createEmployeeGroup(pocAndStatus8)
+      pocAndStatusFinal <- assignEmployeeRole(pocAndStatus9)
     } yield pocAndStatusFinal
   }
 

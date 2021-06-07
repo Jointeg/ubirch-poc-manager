@@ -9,7 +9,7 @@ case class CertIdentifier private (value: String)
 object CertIdentifier {
 
   def pocOrgUnitCert(pocName: String, pocId: UUID): CertIdentifier = {
-    new CertIdentifier(s"${pocName.take(30)} ${pocId.toString.take(5)}")
+    new CertIdentifier(s"${pocName.take(24)} ${pocId.toString.take(5)}")
   }
 
   def pocClientCert(pocName: String, randomId: UUID): CertIdentifier = {
@@ -19,10 +19,10 @@ object CertIdentifier {
   def tenantOrgCert(tenantName: TenantName): CertIdentifier = new CertIdentifier(tenantName.value)
 
   def tenantOrgUnitCert(tenantName: TenantName) =
-    new CertIdentifier(s"${tenantName.value.take(20)} default")
+    new CertIdentifier(s"default point of certificate")
 
   def tenantClientCert(tenantName: TenantName) =
-    new CertIdentifier(s"${tenantName.value.take(40)} default")
+    new CertIdentifier(s"default")
 
   def thingCert(pocName: String, deviceId: DeviceId): CertIdentifier = {
     new CertIdentifier(s"${pocName.take(30)} ${deviceId.toString.take(5)}")

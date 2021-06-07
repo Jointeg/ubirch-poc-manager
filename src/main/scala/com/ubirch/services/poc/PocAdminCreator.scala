@@ -59,7 +59,7 @@ class PocAdminCreatorImpl @Inject() (
         Task(NoWaitingPocAdmin)
       case pocAdmins =>
         logger.info(s"starting to create ${pocAdmins.size} pocAdmins")
-        Task.gather(pocAdmins.map(createPocAdmin))
+        Task.sequence(pocAdmins.map(createPocAdmin))
           .map(PocAdminCreationMaybeSuccess)
     }
   }

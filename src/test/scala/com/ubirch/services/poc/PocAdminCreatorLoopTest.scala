@@ -18,6 +18,7 @@ import monix.reactive.Observable
 import org.scalatest.Assertion
 
 import java.util.UUID
+import scala.concurrent.duration.DurationInt
 
 class PocAdminCreatorLoopTest extends UnitTestBase {
 
@@ -38,8 +39,8 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = SpaceName.ofPoc("local", tenant, poc)
         //start process
-        val pocAdminCreation = loop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
-        Thread.sleep(4000)
+        val pocAdminCreation = loop.startPocAdminCreationLoop(resp => Observable(resp))
+        awaitForTwoTicks(pocAdminCreation)
 
         // not process because the data is not in database
         pocAdminStatusTable.getStatus(pocAdminStatus.pocAdminId).runSyncUnsafe() shouldBe None
@@ -54,11 +55,11 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
           teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
         }.runSyncUnsafe()
 
-        Thread.sleep(3000)
+        awaitForTwoTicks(pocAdminCreation)
         // not processed yet because poc is not completed yet
         pocTable.updatePoc(updatedPoc.copy(status = Completed)).runSyncUnsafe()
 
-        Thread.sleep(4000)
+        awaitForTwoTicks(pocAdminCreation)
         // not process because web ident is not successful yet
         val adminStatusPoc = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe()
         adminStatusPoc.get shouldBe pocAdminStatus
@@ -66,10 +67,9 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
           webIdentInitiated = Some(true),
           webIdentSuccess = Some(true))).runSyncUnsafe()
 
-        Thread.sleep(3000)
+        awaitForTwoTicks(pocAdminCreation)
         val status = pocAdminStatusTable.getStatus(pocAdminStatus.pocAdminId).runSyncUnsafe().get
         assertStatusAllTrue(status)
-        pocAdminCreation.cancel()
       }
     }
   }

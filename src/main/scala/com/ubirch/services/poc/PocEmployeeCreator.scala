@@ -49,7 +49,7 @@ class PocEmployeeCreatorImpl @Inject() (
         Task(NoWaitingPocEmployee)
       case pocEmployees =>
         logger.info(s"starting to create ${pocEmployees.size} pocEmployees")
-        Task.gather(pocEmployees.map(createPocEmployee))
+        Task.sequence(pocEmployees.map(createPocEmployee))
           .map(PocEmployeeCreationMaybeSuccess)
     }
   }

@@ -182,7 +182,10 @@ class KeycloakHelperTest extends UnitTestBase {
         val status1 = pocStatus.copy(
           employeeGroupCreated = Some(false),
           employeeRoleAssigned = Some(false),
-          pocTypeGroupCreated = Some(false))
+          pocTypeRoleCreated = Some(false),
+          pocTypeGroupCreated = Some(false),
+          pocTypeGroupRoleAssigned = Some(false)
+        )
         val certifyGroupId =
           TenantCertifyGroupId(createTenantGroup(CertifyKeycloak.defaultRealm, groups, CertifyKeycloak))
         // use different group name as TestKeycloakGroupsService doesn't adjust three realms
@@ -205,16 +208,20 @@ class KeycloakHelperTest extends UnitTestBase {
 
         val r = for {
           pocAndStatus1 <- helper.createCertifyGroup(PocAndStatus(poc, status1), tenantWithRightGroupId)
-          pocAndStatus2 <- helper.createPocTenantTypeGroup(pocAndStatus1, tenantWithRightGroupId)
-          pocAndStatus3 <- helper.createEmployeeGroup(pocAndStatus2)
-          pocAndStatus4 <- helper.assignEmployeeRole(pocAndStatus3)
-        } yield pocAndStatus4
+          pocAndStatus2 <- helper.createPocTypeRole(pocAndStatus1)
+          pocAndStatus3 <- helper.createPocTenantTypeGroup(pocAndStatus2, tenantWithRightGroupId)
+          pocAndStatus4 <- helper.assignPocTypeRoleToGroup(pocAndStatus3)
+          pocAndStatus5 <- helper.createEmployeeGroup(pocAndStatus4)
+          pocAndStatus6 <- helper.assignEmployeeRole(pocAndStatus5)
+        } yield pocAndStatus6
 
         val pocAndStatus = r.runSyncUnsafe()
         //assert
         pocAndStatus.status.employeeGroupCreated shouldBe Some(true)
         pocAndStatus.status.certifyGroupCreated shouldBe true
+        pocAndStatus.status.pocTypeRoleCreated shouldBe Some(true)
         pocAndStatus.status.pocTypeGroupCreated shouldBe Some(true)
+        pocAndStatus.status.pocTypeGroupRoleAssigned shouldBe Some(true)
         pocAndStatus.status.employeeRoleAssigned shouldBe Some(true)
 
         //assert

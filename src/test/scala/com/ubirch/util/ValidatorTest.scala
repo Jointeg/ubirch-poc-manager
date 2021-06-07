@@ -15,23 +15,54 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   "Validator JValue" should {
 
-    "validate JValue valid" in {
+    val ubirchTenant = createTenant()
+    val bmgTenant = createTenant().copy(tenantType = BMG)
+
+    "validate any JValue valid if tenantType Ubirch" in {
       val json = """{"test": "1", "testArray": ["entry1", "entry2"]}"""
-      val jvalue = validateJson(jsonConfig, json)
+      val jvalue = validateJson(jsonConfig, json, ubirchTenant)
       assert(jvalue.isValid)
     }
 
-    "validate None if emtpy string" in {
+    "validate empty String valid if tenantType Ubirch" in {
       val json = ""
-      val validated = validateJson(jsonConfig, json)
+      val validated = validateJson(jsonConfig, json, ubirchTenant)
       assert(validated.isValid)
       validated
         .map(v => assert(v.isEmpty))
     }
 
+    "validate SealId JValue valid if tenantType BMG" in {
+
+      val json = """{"sealId": "59f25a72-6820-4abe-9e95-5d5c9f1b60a7"}"""
+      val jvalue = validateJson(jsonConfig, json, bmgTenant)
+      assert(jvalue.isValid)
+    }
+
+    "validate Not-SealId JValue invalid if tenantType BMG" in {
+
+      val json = """{"test": "1", "testArray": ["entry1", "entry2"]}"""
+      val validated = validateJson(jsonConfig, json, bmgTenant)
+      assert(validated.isInvalid)
+      validated.leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.jsonErrorWhenTenantTypeBMG(jsonConfig))
+        }
+    }
+
+    "validate empty String invalid if tenantType BMG" in {
+      val json = ""
+      val validated = validateJson(jsonConfig, json, bmgTenant)
+      assert(validated.isInvalid)
+      validated.leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == ValidatorConstants.jsonErrorWhenTenantTypeBMG(jsonConfig))
+        }
+    }
+
     "validate broken json invalid" in {
       val json = """{"test": "1", "testArray: ["entry1", "entry2"]}"""
-      val validated = validateJson(jsonConfig, json)
+      val validated = validateJson(jsonConfig, json, ubirchTenant)
 
       assert(validated.isInvalid)
       validated
@@ -393,6 +424,29 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
         }
     }
 
+  }
+
+  "Validator validationExternalId" should {
+    val ubirchTenant = createTenant()
+    val bmgTenant = ubirchTenant.copy(tenantType = BMG)
+
+    "validate valid when string length is 17 for bmg tenant" in {
+      val validated = validateExternalId(externalId, "a" * 17, bmgTenant)
+      assert(validated.isValid)
+    }
+
+    "validate valid when string length is 30 for ubirch tenant" in {
+      val validated = validateExternalId(externalId, "a" * 30, ubirchTenant)
+      assert(validated.isValid)
+    }
+
+    "validate error when string length is 30 for bmg tenant" in {
+      val validated = validateExternalId(externalId, "a" * 30, bmgTenant)
+      validated.leftMap(_.toList.mkString(comma))
+        .leftMap { error =>
+          assert(error == rangeOverStringError(externalId, 1, 17))
+        }
+    }
   }
 
   "Validator StringOption" should {
