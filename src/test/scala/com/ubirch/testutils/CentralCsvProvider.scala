@@ -50,7 +50,9 @@ object CentralCsvProvider {
   def validHeaderButBadRowsPocAdminCsvForBmg(pocId: UUID): String =
     s"""$pocAdminHeaderLine
        |${pocId.toString};$pocBmgTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;http://www.ubirch.com/logo.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"sealId":"cbd21cc8-e0fb-498e-8a85-ee622063a847"};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;TRUE
-       |123456789012;$pocBmgTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;http://www.ubirch.com/logo.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"sealId":"cbd21cc8-e0fb-498e-8a85-ee622063a847"};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;TRUE
+       |123454ab;$pocBmgTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;http://www.ubirch.com/logo.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"sealId":"cbd21cc8-e0fb-498e-8a85-ee622063a847"};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;TRUE
+       |123456789;$pocBmgTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;http://www.ubirch.com/logo.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"sealId":"cbd21cc8-e0fb-498e-8a85-ee622063a847"};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;TRUE
+       |123ABD;$pocBmgTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+591 74339296;TRUE;http://www.ubirch.com/logo.png;TRUE;Musterfrau;Frau;frau.musterfrau@mail.de;+591 74339296;{"sealId":"cbd21cc8-e0fb-498e-8a85-ee622063a847"};Mustermann;Herr;herr.mustermann@mail.de;+591 74339296;01.01.1971;TRUE
        |""".stripMargin
 
   def validPocAdminCsv(pocId: UUID): String =
