@@ -166,6 +166,8 @@ class PocAdminCreatorTest extends UnitTestBase {
           certifyUserCreated = true,
           keycloakEmailSent = false,
           pocAdminGroupAssigned = false,
+          invitedToTeamDrive = Some(true),
+          invitedToStaticTeamDrive = Some(true),
           errorMessage = Some(s"adminGroupId is missing in poc ${poc.id}")
         )
         assert(updatedPocAdminStatus.isDefined)

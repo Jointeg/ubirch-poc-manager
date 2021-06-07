@@ -218,10 +218,7 @@ object SttpTeamDriveClient {
   case class Space(
     id: Int,
     name: String,
-    creator: String,
-    currentSnapshotId: Int,
     status: String,
     permissionLevel: String,
-    webAccessAllowed: Boolean,
-    hasComments: Boolean)
+    webAccessAllowed: Boolean)
 }
