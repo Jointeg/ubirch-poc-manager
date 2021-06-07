@@ -67,7 +67,6 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
               }
               .flatMap(e => Task.raiseError(TeamDriveHttpError(e.error, e.error_message)))
 
-
           case a @ DeserializationError(_, _) => Task.raiseError(a)
         }
       case Right(v) => onSuccess(v)
