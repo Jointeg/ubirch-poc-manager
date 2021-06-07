@@ -26,7 +26,7 @@ object ValidatorConstants {
     s"column $header must be either 'TRUE' or 'FALSE'"
 
   def bmgExternalIdValidationError(header: String) =
-    s"column $header must include only digit or capital alphabet and have less then 10 length"
+    s"column $header must include only digit and capital alphabet and have less than 10 length"
 
   def certifyAppAdminError(header: String) =
     s"column $header cannot be false, if poc admin shall be created"

@@ -467,7 +467,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
       s"invalid bmg externalId: $id" in {
         val validated = validateExternalId(externalId, id, bmgTenant)
         validated mustBe Invalid(NonEmptyList.fromListUnsafe(
-          List("column external_id* must include only digit or capital alphabet and have less then 10 length")))
+          List("column external_id* must include only digit and capital alphabet and have less than 10 length")))
       }
     }
 
