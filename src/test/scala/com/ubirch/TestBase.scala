@@ -2,7 +2,7 @@ package com.ubirch
 
 import cats.effect.concurrent.Ref
 import monix.eval.Task
-import monix.execution.Scheduler
+import monix.execution.{ CancelableFuture, Scheduler }
 import monix.reactive.Observable
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, WordSpec }
@@ -44,7 +44,7 @@ trait Awaits {
     Await.result(future, atMost)
   }
 
-  private def sleepUntil[C](condition: Task[Boolean], atMost: Duration)(implicit scheduler: Scheduler): Task[Unit] = {
+  private def sleepUntil(condition: Task[Boolean], atMost: Duration)(implicit scheduler: Scheduler): Task[Unit] = {
     for {
       goOn <- condition
       _ <-
@@ -54,7 +54,7 @@ trait Awaits {
           Task.sleep(100.millis).flatMap(_ => sleepUntil(condition, atMost - 100.millis))
         } else {
           Task.raiseError(new RuntimeException(
-            s"Could not complete specified task due to falsy condition ($goOn) or timeout (${atMost.toMillis} millis left)"))
+            s"Could not complete specified task due to timeout"))
         }
     } yield ()
   }
@@ -76,7 +76,8 @@ trait Awaits {
     Await.result(result.runToFuture, atMost)
   }
 
-  def awaitForTwoTicks[T](observable: Observable[T], atMost: Duration)(implicit scheduler: Scheduler) = {
+  def awaitForTwoTicks[T](observable: Observable[T], atMost: Duration = 5.seconds)(implicit
+  scheduler: Scheduler): CancelableFuture[Unit] = {
     val res = for {
       ref <- Ref.of[Task, List[Unit]](List.empty)
       cancelable <-

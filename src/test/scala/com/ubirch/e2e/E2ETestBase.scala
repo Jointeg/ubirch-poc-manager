@@ -50,21 +50,13 @@ trait E2ETestBase
   }
 
   private def prepareDB() = {
+    val truncateStatement =
+      "TRUNCATE poc_manager.poc_admin_table, poc_manager.poc_employee_table, poc_manager.poc_table, poc_manager.tenant_table, poc_manager.user_table, poc_manager.poc_admin_status_table, poc_manager.poc_employee_status_table, poc_manager.poc_status_table CASCADE"
     if (isPortInUse(5432)) {
-      await(
-        StaticTestPostgresJdbcContext.ctx.executeAction(
-          "TRUNCATE poc_manager.poc_admin_table, poc_manager.poc_employee_table, poc_manager.poc_table, poc_manager.tenant_table, poc_manager.user_table, poc_manager.poc_admin_status_table, poc_manager.poc_employee_status_table, poc_manager.poc_status_table CASCADE"
-        ),
-        2.seconds
-      )
+      await(StaticTestPostgresJdbcContext.ctx.executeAction(truncateStatement), 2.seconds)
     } else {
       InitDatabase.migration
-      await(
-        StaticTestPostgresJdbcContext.ctx.executeAction(
-          "TRUNCATE poc_manager.poc_admin_table, poc_manager.poc_employee_table, poc_manager.poc_table, poc_manager.tenant_table, poc_manager.user_table, poc_manager.poc_admin_status_table, poc_manager.poc_employee_status_table, poc_manager.poc_status_table CASCADE"
-        ),
-        2.seconds
-      )
+      await(StaticTestPostgresJdbcContext.ctx.executeAction(truncateStatement), 2.seconds)
     }
   }
 

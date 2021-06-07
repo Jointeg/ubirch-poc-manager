@@ -55,7 +55,8 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val formats: Formats = DefaultFormats.lossless ++ TestFormats.all
 
-  private val isLocalDockerRunning = isPortInUse(8080)
+  private val defaultPort = 8080
+  private val isLocalDockerRunning = isPortInUse(defaultPort)
 
   private val keycloakServer =
     if (isLocalDockerRunning) {
@@ -65,7 +66,7 @@ class TestKeycloakCertifyConfig @Inject() (val conf: Config) extends KeycloakCer
     }
   private val keycloakPort =
     if (isLocalDockerRunning) {
-      8080
+      defaultPort
     } else {
       KeycloakCertifyContainer.container.container.getFirstMappedPort
     }
@@ -97,8 +98,8 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
 
   implicit private val serialization: Serialization.type = org.json4s.native.Serialization
   implicit private val formats: Formats = DefaultFormats.lossless ++ TestFormats.all
-
-  private val isLocalDockerRunning = isPortInUse(8080)
+  private val defaultPort = 8081
+  private val isLocalDockerRunning = isPortInUse(defaultPort)
 
   private val keycloakServer =
     if (isLocalDockerRunning) {
@@ -108,7 +109,7 @@ class TestKeycloakDeviceConfig @Inject() (val conf: Config) extends KeycloakDevi
     }
   private val keycloakPort =
     if (isLocalDockerRunning) {
-      8081
+      defaultPort
     } else {
       KeycloakDeviceContainer.container.container.getFirstMappedPort
     }
@@ -145,8 +146,9 @@ class TestPostgresQuillMonixJdbcContext @Inject() (clock: Clock) extends QuillMo
 }
 
 object StaticTestPostgresJdbcContext extends LazyLogging {
-  private val isLocalDockerRunning = isPortInUse(5432)
-  val portNumber = if (isLocalDockerRunning) 5432 else PostgresDbContainer.container.container.getFirstMappedPort
+  private val defaultPort = 5432
+  private val isLocalDockerRunning = isPortInUse(defaultPort)
+  val portNumber = if (isLocalDockerRunning) defaultPort else PostgresDbContainer.container.container.getFirstMappedPort
   val serverName =
     if (isLocalDockerRunning) "localhost" else PostgresDbContainer.container.container.getContainerIpAddress
 

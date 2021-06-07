@@ -48,13 +48,13 @@ class PocCreationLoopTest extends UnitTestBase {
 
         //start process
         val pocCreation = loop.startPocCreationLoop(resp => Observable(resp))
-        awaitForTwoTicks(pocCreation, 5.seconds)
+        awaitForTwoTicks(pocCreation)
         await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds) shouldBe None
         val updatedPoc = poc.copy(logoUrl = Some(LogoURL(
           new URL("https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png"))))
         val updatedStatus = pocStatus.copy(logoRequired = true, logoStored = Some(true))
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, updatedStatus, updatedTenant)
-        awaitForTwoTicks(pocCreation, 5.seconds)
+        awaitForTwoTicks(pocCreation)
         val status = await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds).get
         assertStatusAllTrue(status)
       }

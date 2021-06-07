@@ -40,7 +40,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         val spaceName = SpaceName.ofPoc("local", tenant, poc)
         //start process
         val pocAdminCreation = loop.startPocAdminCreationLoop(resp => Observable(resp))
-        awaitForTwoTicks(pocAdminCreation, 5.seconds)
+        awaitForTwoTicks(pocAdminCreation)
 
         // not process because the data is not in database
         pocAdminStatusTable.getStatus(pocAdminStatus.pocAdminId).runSyncUnsafe() shouldBe None
@@ -55,11 +55,11 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
           teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
         }.runSyncUnsafe()
 
-        awaitForTwoTicks(pocAdminCreation, 5.seconds)
+        awaitForTwoTicks(pocAdminCreation)
         // not processed yet because poc is not completed yet
         pocTable.updatePoc(updatedPoc.copy(status = Completed)).runSyncUnsafe()
 
-        awaitForTwoTicks(pocAdminCreation, 5.seconds)
+        awaitForTwoTicks(pocAdminCreation)
         // not process because web ident is not successful yet
         val adminStatusPoc = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe()
         adminStatusPoc.get shouldBe pocAdminStatus
@@ -67,7 +67,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
           webIdentInitiated = Some(true),
           webIdentSuccess = Some(true))).runSyncUnsafe()
 
-        awaitForTwoTicks(pocAdminCreation, 5.seconds)
+        awaitForTwoTicks(pocAdminCreation)
         val status = pocAdminStatusTable.getStatus(pocAdminStatus.pocAdminId).runSyncUnsafe().get
         assertStatusAllTrue(status)
       }
