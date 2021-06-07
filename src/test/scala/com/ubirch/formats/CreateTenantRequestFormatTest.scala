@@ -18,16 +18,14 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |{
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
-             |    "tenantType": "${TenantType.UBIRCH_STRING}",
-             |    "sharedAuthCertRequired": false
+             |    "tenantType": "${TenantType.UBIRCH_STRING}"
              |}
              |""".stripMargin)
 
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
           API,
-          tenant.UBIRCH,
-          sharedAuthCertRequired = false
+          tenant.UBIRCH
         )
       }
     }
@@ -40,16 +38,14 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |{
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
-             |    "tenantType": "${TenantType.BMG_STRING}",
-             |    "sharedAuthCertRequired": true,
+             |    "tenantType": "${TenantType.BMG_STRING}"
              |}
              |""".stripMargin)
 
         createTenantRequestJSON.extract[CreateTenantRequest] shouldBe CreateTenantRequest(
           TenantName("someRandomName"),
           API,
-          BMG,
-          sharedAuthCertRequired = true
+          BMG
         )
       }
     }
@@ -86,8 +82,7 @@ class CreateTenantRequestFormatTest extends UnitTestBase {
              |{
              |    "tenantName": "someRandomName",
              |    "usageType": "API",
-             |    "tenantType": "bmgX",
-             |    "sharedAuthCertRequired": true,
+             |    "tenantType": "bmgX"
              |}
              |""".stripMargin)
 

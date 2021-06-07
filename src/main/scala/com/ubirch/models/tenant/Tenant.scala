@@ -16,7 +16,6 @@ case class Tenant(
   deviceGroupId: TenantDeviceGroupId,
   tenantTypeGroupId: Option[TenantTypeGroupId],
   orgId: OrgId,
-  sharedAuthCertRequired: Boolean,
   orgUnitId: OrgUnitId,
   groupId: GroupId,
   sharedAuthCert: Option[SharedAuthCert] = None,
@@ -42,8 +41,7 @@ object Tenant {
     certifyGroupId: TenantCertifyGroupId,
     deviceGroupId: TenantDeviceGroupId,
     tenantSpecificGroupId: Option[TenantTypeGroupId],
-    orgId: OrgId,
-    sharedAuthCertRequired: Boolean): Tenant =
+    orgId: OrgId): Tenant =
     Tenant(
       id,
       tenantName,
@@ -54,7 +52,6 @@ object Tenant {
       deviceGroupId,
       tenantSpecificGroupId,
       orgId,
-      sharedAuthCertRequired,
       getNamespacedOrgUnitId(id),
       getNamespacedGroupId(id)
     )
