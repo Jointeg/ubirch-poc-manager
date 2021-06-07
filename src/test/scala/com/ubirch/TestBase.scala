@@ -1,15 +1,15 @@
 package com.ubirch
 
+import cats.effect.concurrent.Ref
 import monix.eval.Task
-import monix.execution.Scheduler
+import monix.execution.{ CancelableFuture, Scheduler }
 import monix.reactive.Observable
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, WordSpec }
 
 import java.util.concurrent.Executors
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ Duration, _ }
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
-import scala.concurrent.duration._
 
 /**
   * Represents base for a convenient test
@@ -44,4 +44,48 @@ trait Awaits {
     Await.result(future, atMost)
   }
 
+  private def sleepUntil(condition: Task[Boolean], atMost: Duration)(implicit scheduler: Scheduler): Task[Unit] = {
+    for {
+      goOn <- condition
+      _ <-
+        if (goOn) {
+          Task.unit
+        } else if (!goOn && atMost.toMillis > 0) {
+          Task.sleep(100.millis).flatMap(_ => sleepUntil(condition, atMost - 100.millis))
+        } else {
+          Task.raiseError(new RuntimeException(
+            s"Could not complete specified task due to timeout"))
+        }
+    } yield ()
+  }
+
+  def awaitUntil[T](task: Task[T], condition: Task[Boolean], atMost: Duration)(implicit scheduler: Scheduler): T = {
+    val futResult = (for {
+      result <- task
+      _ <- sleepUntil(condition, atMost)
+    } yield result).runToFuture
+    Await.result(futResult, atMost)
+  }
+
+  def awaitUntil[T](observable: Observable[T], condition: Task[Boolean], atMost: Duration)(implicit
+  scheduler: Scheduler): Unit = {
+    val result = for {
+      cancelable <- Task(observable.subscribe())
+      _ <- sleepUntil(condition, atMost)
+    } yield cancelable.cancel()
+    Await.result(result.runToFuture, atMost)
+  }
+
+  def awaitForTwoTicks[T](observable: Observable[T], atMost: Duration = 5.seconds)(implicit
+  scheduler: Scheduler): CancelableFuture[Unit] = {
+    val res = for {
+      ref <- Ref.of[Task, List[Unit]](List.empty)
+      cancelable <-
+        Task(observable.doOnNext(elem => {
+          ref.modify(current => (current :+ (), elem))
+        }).subscribe())
+      _ <- sleepUntil(ref.get.map(elems => elems.length >= 2), atMost)
+    } yield cancelable.cancel()
+    Await.ready(res.runToFuture, atMost)
+  }
 }

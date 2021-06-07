@@ -240,9 +240,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     withInjector { injector =>
-      lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init(DeviceKeycloak, CertifyKeycloak), 2 seconds)
-
       lazy val superAdminController = injector.get[SuperAdminController]
       addServlet(superAdminController, "/*")
     }

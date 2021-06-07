@@ -14,7 +14,6 @@ import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.{ Tenant, TenantName, TenantType }
 import com.ubirch.models.user.UserName
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
-import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -26,7 +25,6 @@ import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.test.FakeTeamDriveClient
 import io.prometheus.client.CollectorRegistry
-import monix.eval.Task
 import monix.reactive.Observable
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.{ DefaultFormats, Formats }
@@ -74,6 +72,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   "It should be possible to create Tenant, PoC, Poc Admin and in the end PoC employees" in {
     withInjector { injector =>
+      performKeycloakCleanup(injector)
       val certifyKeycloakConnector = injector.get[CertifyKeycloakConnector]
       val certifyConfig = injector.get[KeycloakCertifyConfig]
       val users = injector.get[KeycloakUserService]
@@ -144,7 +143,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
       info("Employees should be assigned to correct PoC, tenant and should not be created in Certify keycloak yet")
       verifyEmployeesJustAfterCreation(employees, poc, tenant)
       info("PocEmployeeCreationLoop runs in the background")
-      runPocEmployeeCreationLoop(injector)
+      runPocEmployeeCreationLoop(tenant, injector)
       info("Employees found by PocEmployeeCreationLoop have status changed to Completed and assigned certifyUserId")
       verifyEmployeesAfterPocEmployeeCreationLoop(tenant, injector)
     }
@@ -158,11 +157,15 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     }
   }
 
-  private def runPocEmployeeCreationLoop(injector: InjectorHelper): Unit = {
+  private def runPocEmployeeCreationLoop(tenant: Tenant, injector: InjectorHelper): Unit = {
     val pocEmployeeCreationLoop = injector.get[PocEmployeeCreationLoop]
-    val creationLoop = pocEmployeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)).subscribe()
-    Thread.sleep(3000)
-    creationLoop.cancel()
+    val pocEmployeeTable = injector.get[PocEmployeeTable]
+
+    awaitUntil(
+      pocEmployeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)),
+      pocEmployeeTable.getPocEmployeesByTenantId(tenant.id).map(_.forall(_.status == Completed)),
+      5.seconds
+    )
   }
 
   private def verifyEmployeesJustAfterCreation(employees: List[PocEmployee], poc: Poc, tenant: Tenant): Unit = {
@@ -224,23 +227,29 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
 
   private def processPocAdminByCreationLoop(pocAdmin: PocAdmin, injector: InjectorHelper): PocAdmin = {
     val pocAdminCreationLoop = injector.get[PocAdminCreationLoop]
-    await(
-      for {
-        loop <- Task(pocAdminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe())
-        _ <- Task.sleep(6.seconds)
-        _ <- Task(loop.cancel())
-        pocAdmin <- injector.get[PocAdminRepository].getPocAdmin(pocAdmin.id)
-      } yield pocAdmin.value,
-      10.seconds
+    val pocAdminRepository = injector.get[PocAdminRepository]
+
+    awaitUntil(
+      pocAdminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)),
+      pocAdminRepository.getPocAdmin(pocAdmin.id).map(_.value.status == Completed),
+      5.seconds
     )
+
+    await(pocAdminRepository.getPocAdmin(pocAdmin.id).map(_.value), 5.seconds)
   }
 
   private def processPocByCreationLoop(poc: Poc, injector: InjectorHelper): Poc = {
     val pocCreationLoop = injector.get[PocCreationLoop]
-    val loop = pocCreationLoop.startPocCreationLoop(resp => Observable(resp)).subscribe()
-    Thread.sleep(6000)
-    loop.cancel()
-    await(injector.get[PocRepository].getPoc(poc.id), 5.seconds).value
+    val pocRepository = injector.get[PocRepository]
+    awaitUntil(
+      pocCreationLoop.startPocCreationLoop(resp => Observable(resp)),
+      pocRepository.getPoc(poc.id).map {
+        case None      => false
+        case Some(poc) => if (poc.status == Completed) true else false
+      },
+      5.seconds
+    )
+    await(pocRepository.getPoc(poc.id), 5.seconds).value
   }
 
   private def addDeviceCreationTokenRequest(tenantAdminToken: String): Assertion = {
@@ -308,9 +317,6 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     withInjector { injector =>
-      lazy val pool = injector.get[PublicKeyPoolService]
-      await(pool.init(DeviceKeycloak, CertifyKeycloak), 2.seconds)
-
       lazy val superAdminController = injector.get[SuperAdminController]
       addServlet(superAdminController, "/super-admin")
       lazy val tenantAdminController = injector.get[TenantAdminController]
