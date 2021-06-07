@@ -406,7 +406,7 @@ class TenantAdminControllerSpec
     "return poc for given id" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = createPoc(poc1id, tenant.tenantName)
       val _ = await(pocTable.createPoc(poc))
       val pocFromTable = await(pocTable.getPoc(poc.id)).value
@@ -428,7 +428,7 @@ class TenantAdminControllerSpec
 
     "return 404 when poc does not exists" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
 
       get(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
         status should equal(404)
@@ -436,12 +436,12 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return 401 when poc is not owned by tenant-admin" in withInjector { implicit Injector =>
+    "return 401 when poc is not owned by tenant-admin" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
 
-      val otherTenant = addTenantToDB(name = "otherTenantName")
+      val otherTenant = addTenantToDB("otherTenantName", Injector)
       val poc = createPoc(poc1id, otherTenant.tenantName)
       val _ = await(pocTable.createPoc(poc))
 
@@ -468,7 +468,7 @@ class TenantAdminControllerSpec
     "update poc for given id" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = createPoc(poc1id, tenant.tenantName).copy(status = Completed)
       val _ = await(pocTable.createPoc(poc))
       val updatedPoc = await(pocTable.getPoc(poc.id)).value.copy(
@@ -505,7 +505,7 @@ class TenantAdminControllerSpec
     "return 409 when PoC is not in Completed status" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = createPoc(poc1id, tenant.tenantName).copy(status = Pending)
       val _ = await(pocTable.createPoc(poc))
 
@@ -530,7 +530,7 @@ class TenantAdminControllerSpec
     "return 404 when poc does not exists" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
       val poc = createPoc(poc1id, tenant.tenantName)
 
       put(
@@ -545,9 +545,9 @@ class TenantAdminControllerSpec
     "return 401 when poc is not owned by tenant-admin" in withInjector { implicit Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(Injector)
 
-      val otherTenant = addTenantToDB(name = "otherTenantName")
+      val otherTenant = addTenantToDB("otherTenantName", Injector)
       val poc = createPoc(poc1id, otherTenant.tenantName)
       val _ = await(pocTable.createPoc(poc))
 

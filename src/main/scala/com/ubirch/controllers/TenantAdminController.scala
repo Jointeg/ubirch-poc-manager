@@ -212,12 +212,12 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
         tenantAdminService.getPocForTenant(tenant, id).map {
           case Left(e) => e match {
-            case GetPocForTenantError.NotFound(pocId) =>
-              NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
-            case GetPocForTenantError.AssignedToDifferentTenant(pocId, tenantId) =>
-              Unauthorized(NOK.authenticationError(
-                s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
-          }
+              case GetPocForTenantError.NotFound(pocId) =>
+                NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
+              case GetPocForTenantError.AssignedToDifferentTenant(pocId, tenantId) =>
+                Unauthorized(NOK.authenticationError(
+                  s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
+            }
           case Right(p) => Presenter.toJsonResult(p)
         }
       }
@@ -231,14 +231,14 @@ class TenantAdminController @Inject() (
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
           r <- tenantAdminService.updatePoc(tenant, id, read[Poc_IN](body)).map {
             case Left(e) => e match {
-              case UpdatePocError.NotFound(pocId) =>
-                NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
-              case UpdatePocError.AssignedToDifferentTenant(pocId, tenantId) =>
-                Unauthorized(NOK.authenticationError(
-                  s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
-              case UpdatePocError.NotCompleted(pocId, status) =>
-                Conflict(NOK.conflict(s"Poc '$pocId' is in wrong status: '$status', required: '$Completed'"))
-            }
+                case UpdatePocError.NotFound(pocId) =>
+                  NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
+                case UpdatePocError.AssignedToDifferentTenant(pocId, tenantId) =>
+                  Unauthorized(NOK.authenticationError(
+                    s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
+                case UpdatePocError.NotCompleted(pocId, status) =>
+                  Conflict(NOK.conflict(s"Poc '$pocId' is in wrong status: '$status', required: '$Completed'"))
+              }
             case Right(p) => Presenter.toJsonResult(p)
           }
         } yield r
