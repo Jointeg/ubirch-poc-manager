@@ -31,8 +31,8 @@ trait BearerAuthSupport[TokenType <: AnyRef] extends LazyLogging {
 
   }
 
-  protected def authenticated(p: (TokenType => Boolean)*)(
-    action: TokenType => Any)(implicit request: HttpServletRequest, response: HttpServletResponse): Any = {
+  protected def authenticated[T](p: (TokenType => Boolean)*)(
+    action: TokenType => T)(implicit request: HttpServletRequest, response: HttpServletResponse): T = {
     val predicates: Seq[TokenType => Boolean] = p
     bearerAuth() match {
       case Some(value) if predicates.forall(x => x(value)) => action(value)

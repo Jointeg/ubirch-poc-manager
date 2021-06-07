@@ -63,7 +63,8 @@ class PocAdminController @Inject() (
   certifyUserService: CertifyUserService,
   pocEmployeeRepository: PocEmployeeRepository,
   tenantRepository: TenantRepository,
-  clock: Clock
+  clock: Clock,
+  x509CertSupport: X509CertSupport
 )(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
@@ -181,30 +182,32 @@ class PocAdminController @Inject() (
   }
 
   put("/poc-employee/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
-    pocAdminEndpoint("Switch active flag for PoC Employee") { pocAdmin =>
-      getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { employeeId =>
-        (for {
-          switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
-          r <- pocAdminService.switchActiveForPocEmployee(employeeId, pocAdmin, switch)
-            .map {
-              case Left(e) => e match {
+    x509CertSupport.authenticate(request) {
+      pocAdminEndpoint("Switch active flag for PoC Employee") { pocAdmin =>
+        getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { employeeId =>
+          (for {
+            switch <- Task(ActivateSwitch.fromIntUnsafe(params("isActive").toInt))
+            r <- pocAdminService.switchActiveForPocEmployee(employeeId, pocAdmin, switch)
+              .map {
+                case Left(e) => e match {
                   case ResourceNotFound(id) =>
                     NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' or related tenant was not found'"))
                   case UserNotCompleted => Conflict(NOK.conflict(
-                      s"Poc employee with id '$employeeId' cannot be de/-activated before status is Completed."))
+                    s"Poc employee with id '$employeeId' cannot be de/-activated before status is Completed."))
                   case MissingCertifyUserId(id) =>
                     Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId yet"))
                   case NotAllowedError =>
                     Unauthorized(NOK.authenticationError(
                       s"Poc employee with id '$employeeId' doesn't belong to poc of requesting poc admin."))
                 }
-              case Right(_) => Ok("")
-            }.onErrorHandle { ex =>
+                case Right(_) => Ok("")
+              }.onErrorHandle { ex =>
               logger.error("something unexpected happened during de-/ activating the poc employee", ex)
               InternalServerError(NOK.serverError("unexpected error"))
             }
-        } yield r).onErrorRecover {
-          case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
+          } yield r).onErrorRecover {
+            case e: IllegalValueForActivateSwitch => BadRequest(NOK.badRequest(e.getMessage))
+          }
         }
       }
     }
@@ -252,13 +255,13 @@ class PocAdminController @Inject() (
   }
 
   private def pocAdminEndpoint(description: String)(logic: PocAdmin => Task[ActionResult]) = {
-    authenticated(_.hasRole(Token.POC_ADMIN)) { token: Token =>
-      asyncResult(description) { _ => _ =>
-        retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
-          logic(pocAdmin)
+      authenticated(_.hasRole(Token.POC_ADMIN)) { token: Token =>
+        asyncResult(description) { _ => _ =>
+          retrievePocAdminFromToken(token, pocAdminRepository) { pocAdmin =>
+            logic(pocAdmin)
+          }
         }
       }
-    }
   }
 
   private def handleValidation(pocAdmin: PocAdmin, validSortColumns: Seq[String]): Task[AdminCriteria] =
