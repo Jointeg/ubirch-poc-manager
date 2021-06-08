@@ -13,6 +13,9 @@ object ValidatorConstants {
   val pocNameRegex: Regex =
     "^(?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+([ _.@-](?:(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lm})\\p{Mn}*|\\p{N})+)*$".r
 
+  val bmgExternalIdRegex: Regex =
+    "^[0-9A-Z]{1,9}$".r
+
   def pocNameValidationError(header: String) =
     s"column $header must contain a valid poc name"
 
@@ -21,6 +24,9 @@ object ValidatorConstants {
 
   def booleanError(header: String) =
     s"column $header must be either 'TRUE' or 'FALSE'"
+
+  def bmgExternalIdValidationError(header: String) =
+    s"column $header must include only digits and capital alphabets and have less than 10 length"
 
   def certifyAppAdminError(header: String) =
     s"column $header cannot be false, if poc admin shall be created"

@@ -29,7 +29,7 @@ class TeamDriveServiceTest extends HttpTest {
       httpStub.fileWillBeSent(
         spaceId = 8,
         fileBody = TestCertHandler.passphrase.value.getBytes,
-        fileName = "password.txt",
+        fileName = "passwort.txt",
         fileId = 16)
       httpStub.fileWillBeSent(
         spaceId = 8,
@@ -62,7 +62,7 @@ class TeamDriveServiceTest extends HttpTest {
       httpStub.fileWillBeSent(
         spaceId = 8,
         fileBody = TestCertHandler.passphrase.value.getBytes,
-        fileName = "password.txt",
+        fileName = "passwort.txt",
         fileId = 16)
       httpStub.fileWillBeSent(
         spaceId = 8,
