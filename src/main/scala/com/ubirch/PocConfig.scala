@@ -2,12 +2,14 @@ package com.ubirch
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.{ ServicesConfPaths, TeamDrivePaths }
+import com.ubirch.ConfPaths.{ServicesConfPaths, TeamDrivePaths}
+import com.ubirch.util.CertMaterializer
+import org.bouncycastle.cert.X509CertificateHolder
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 
 import java.nio.charset.StandardCharsets
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 trait PocConfig {
 
@@ -25,6 +27,7 @@ trait PocConfig {
   val certWelcomeMessage: String
   val staticAssetsWelcomeMessage: String
   val pocTypeStaticSpaceNameMap: Map[String, String]
+  val issuerCertMap: Map[String, X509CertificateHolder]
 }
 
 @Singleton
@@ -98,4 +101,17 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
         logger.error(s"can't parse the ${TeamDrivePaths.POC_TYPE_STATIC_SPACE_NAME_MAP} value as Map[String, String]")
         throw e
     }
+
+  val issuerCertMap: Map[String, X509CertificateHolder] = {
+    lazy val chainPems = config.getString(ServicesConfPaths.POC_ISSUE_CERTS).trim
+    if (config.getIsNull(ServicesConfPaths.POC_ISSUE_CERTS) || chainPems.isEmpty) {
+      logger.debug("No chain pems configured")
+      Map.empty[String, X509CertificateHolder]
+    } else {
+      //We want to fail if it is not properly created
+      val holders = chainPems.split(";").toList.map(CertMaterializer.parse).map(_.get).distinct
+      holders.map { holder => holder.getSubject.toString -> holder }.toMap
+    }
+  }
 }
+

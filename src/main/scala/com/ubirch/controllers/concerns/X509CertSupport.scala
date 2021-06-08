@@ -15,13 +15,12 @@ import javax.inject.Inject
 import scala.util.{ Failure, Success, Try }
 
 trait X509CertSupport {
-  // @todo name
-  def authenticate[T](request: HttpServletRequest)(action: => T): T
+  def withVerification[T](request: HttpServletRequest)(action: => T): T
 }
 
 class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSupport {
   private val TLS_HEADER_KEY = "X-Forwarded-Tls-Client-Cert"
-  def authenticate[T](request: HttpServletRequest)(action: => T): T = {
+  def withVerification[T](request: HttpServletRequest)(action: => T): T = {
     (for {
       x509Certs <- Try(Option(request.getHeader(TLS_HEADER_KEY)).getOrElse(throw new RuntimeException("error")))
       splitX509Certs <-

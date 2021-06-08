@@ -182,7 +182,7 @@ class PocAdminController @Inject() (
   }
 
   put("/poc-employee/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
-    x509CertSupport.authenticate(request) {
+    x509CertSupport.withVerification(request) {
       pocAdminEndpoint("Switch active flag for PoC Employee") { pocAdmin =>
         getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { employeeId =>
           (for {
