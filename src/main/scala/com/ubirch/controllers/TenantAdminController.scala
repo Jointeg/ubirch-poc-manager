@@ -11,7 +11,6 @@ import com.ubirch.controllers.SwitchActiveError.{
   UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
-import com.ubirch.controllers.error.ErrorMapper._
 import com.ubirch.controllers.validator.CriteriaValidator
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc._
@@ -490,7 +489,16 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc-admin id '$id'") { id =>
         tenantAdminService.getPocAdminForTenant(tenant, id)
           .map(pocAdminWithPoc => pocAdminWithPoc.map { case (pa, p) => PocAdmin_OUT.fromPocAdmin(pa, p) })
-          .toActionResult
+          .map {
+            case Left(e) => e match {
+                case GetPocAdminForTenantError.NotFound(pocAdminId) =>
+                  NotFound(NOK.resourceNotFoundError(s"PoC Admin with id '$pocAdminId' does not exist"))
+                case GetPocAdminForTenantError.AssignedToDifferentTenant(pocAdminId, tenantId) =>
+                  Unauthorized(NOK.authenticationError(
+                    s"PoC Admin with id '$pocAdminId' does not belong to tenant with id '${tenantId.value.value}'"))
+              }
+            case Right(p) => Presenter.toJsonResult(p)
+          }
       }
     }
   }
@@ -500,21 +508,22 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc-admin id '$id'") { id =>
         for {
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          maybePoc <- pocAdminRepository.getPocAdmin(id)
-          notFound = Task.pure(NotFound(NOK.resourceNotFoundError(s"PoC Admin with id '$id' does not exist")))
-          r <- maybePoc match {
-            case None                                 => notFound
-            case Some(pa) if pa.tenantId != tenant.id => notFound
-            case Some(pa) if pa.status != Completed =>
-              Task.pure(
-                Conflict(NOK.conflict(s"Poc Admin '$id' is in wrong status: '${pa.status}', required: '$Completed'")))
-            case Some(pa) if !pa.webIdentRequired =>
-              Task.pure(Conflict(NOK.conflict(s"PoC Admin has webIdentRequired set to false")))
-            case Some(pa) => pa.webIdentInitiateId match {
-                case Some(_) => Task.pure(Conflict(NOK.conflict(s"PoC Admin already has webIdentInitiateId")))
-                case None =>
-                  pocAdminRepository.updatePocAdmin(read[PocAdmin_IN](body).copyToPocAdmin(pa)) >> Task.pure(Ok(""))
+          r <- tenantAdminService.updatePocAdmin(tenant, id, read[PocAdmin_IN](body)).map {
+            case Left(e) => e match {
+                case UpdatePocAdminError.NotFound(pocAdminId) =>
+                  NotFound(NOK.resourceNotFoundError(s"PoC admin with id '$pocAdminId' does not exist"))
+                case UpdatePocAdminError.AssignedToDifferentTenant(pocAdminId, tenantId) =>
+                  Unauthorized(NOK.authenticationError(
+                    s"PoC admin with id '$id' does not belong to tenant with id '${tenant.id.value.value}'"))
+                case UpdatePocAdminError.NotCompleted(pocAdminId, status) =>
+                  Conflict(
+                    NOK.conflict(s"Poc admin '$pocAdminId' is in wrong status: '$status', required: '$Completed'"))
+                case UpdatePocAdminError.WebIdentRequired =>
+                  Conflict(NOK.conflict(s"Poc admin '$id' has webIdentRequired set to true"))
+                case UpdatePocAdminError.WebIdentInitiateIdNotSet =>
+                  Conflict(NOK.conflict(s"Poc admin '$id' has webIdentInitiateId set"))
               }
+            case Right(_) => Ok()
           }
         } yield r
       }

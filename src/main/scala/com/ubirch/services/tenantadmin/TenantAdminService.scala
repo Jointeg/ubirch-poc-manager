@@ -11,7 +11,7 @@ import com.ubirch.controllers.SwitchActiveError.{
   ResourceNotFound,
   UserNotCompleted
 }
-import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
+import com.ubirch.controllers.model.TenantAdminControllerJsonModel.{ PocAdmin_IN, Poc_IN }
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
@@ -62,6 +62,8 @@ trait TenantAdminService {
   def updatePoc(tenant: Tenant, id: UUID, poc: Poc_IN): Task[Either[UpdatePocError, Unit]]
 
   def getPocAdminForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocAdminForTenantError, (PocAdmin, Poc)]]
+
+  def updatePocAdmin(tenant: Tenant, id: UUID, update: PocAdmin_IN): Task[Either[UpdatePocAdminError, Unit]]
 }
 
 class DefaultTenantAdminService @Inject() (
@@ -307,6 +309,23 @@ class DefaultTenantAdminService @Inject() (
         case Some(pa) => pocRepository.single(pa.pocId).map { p => (pa, p).asRight }
       }
     } yield pocAdminWithPoc
+
+  override def updatePocAdmin(tenant: Tenant, id: UUID, update: PocAdmin_IN): Task[Either[UpdatePocAdminError, Unit]] =
+    quillMonixJdbcContext.withTransaction {
+      for {
+        maybePocAdmin <- pocAdminRepository.getPocAdmin(id)
+        r <- maybePocAdmin match {
+          case None => Task.pure(UpdatePocAdminError.NotFound(id).asLeft)
+          case Some(pa) if pa.tenantId != tenant.id =>
+            Task.pure(UpdatePocAdminError.AssignedToDifferentTenant(id, tenant.id).asLeft)
+          case Some(pa) if pa.status != Completed => Task.pure(UpdatePocAdminError.NotCompleted(id, pa.status).asLeft)
+          case Some(pa) if !pa.webIdentRequired   => Task.pure(UpdatePocAdminError.WebIdentRequired.asLeft)
+          case Some(pa) if pa.webIdentInitiateId.isEmpty =>
+            Task.pure(UpdatePocAdminError.WebIdentInitiateIdNotSet.asLeft)
+          case Some(pa) => pocAdminRepository.updatePocAdmin(update.copyToPocAdmin(pa)) >> Task.pure(().asRight)
+        }
+      } yield r
+    }
 }
 
 sealed trait CreateWebIdentInitiateIdErrors
@@ -354,4 +373,13 @@ sealed trait GetPocAdminForTenantError
 object GetPocAdminForTenantError {
   case class NotFound(pocAdminId: UUID) extends GetPocAdminForTenantError
   case class AssignedToDifferentTenant(pocId: UUID, tenantId: TenantId) extends GetPocAdminForTenantError
+}
+
+sealed trait UpdatePocAdminError
+object UpdatePocAdminError {
+  case class NotFound(pocAdminId: UUID) extends UpdatePocAdminError
+  case class AssignedToDifferentTenant(pocAdminId: UUID, tenantId: TenantId) extends UpdatePocAdminError
+  case class NotCompleted(pocAdminId: UUID, status: Status) extends UpdatePocAdminError
+  case object WebIdentRequired extends UpdatePocAdminError
+  case object WebIdentInitiateIdNotSet extends UpdatePocAdminError
 }
