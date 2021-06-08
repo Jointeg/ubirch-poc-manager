@@ -5,7 +5,7 @@ import cats.data.Validated.{ Invalid, Valid }
 import com.ubirch.ModelCreationHelper.createTenant
 import com.ubirch.TestBase
 import com.ubirch.models.tenant.{ API, APP, BMG, Both }
-import com.ubirch.services.poc.util.CsvConstants._
+import com.ubirch.services.poc.util.CsvConstants.{ externalId, _ }
 import com.ubirch.services.poc.util.ValidatorConstants
 import com.ubirch.services.poc.util.ValidatorConstants._
 import com.ubirch.services.util.Validator._
@@ -426,26 +426,67 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   }
 
+  private val validBmgExternalId: TableFor1[String] = Table(
+    "1" * 9,
+    "A" * 9,
+    "12AB43",
+    "895421ARF",
+    "893343112",
+    "8",
+    "C",
+    "DEG123",
+    "MB4L532"
+  )
+
+  private val inValidBmgExternalId: TableFor1[String] = Table(
+    "1" * 10,
+    "A" * 10,
+    "",
+    "123a",
+    "1234+BGRD",
+    "abc32435",
+    "1123 456",
+    "BGR RED",
+    "AAA@223",
+    "❤️❤️❤️❤️",
+    "<script>"
+  )
+
   "Validator validationExternalId" should {
     val ubirchTenant = createTenant()
     val bmgTenant = ubirchTenant.copy(tenantType = BMG)
 
-    "validate valid when string length is 17 for bmg tenant" in {
-      val validated = validateExternalId(externalId, "a" * 17, bmgTenant)
-      assert(validated.isValid)
+    forAll(validBmgExternalId) { id =>
+      s"valid bmg externalId: $id" in {
+        val validated = validateExternalId(externalId, id, bmgTenant)
+        assert(validated.isValid)
+      }
     }
 
-    "validate valid when string length is 30 for ubirch tenant" in {
-      val validated = validateExternalId(externalId, "a" * 30, ubirchTenant)
-      assert(validated.isValid)
+    forAll(inValidBmgExternalId) { id =>
+      s"invalid bmg externalId: $id" in {
+        val validated = validateExternalId(externalId, id, bmgTenant)
+        validated mustBe Invalid(NonEmptyList.fromListUnsafe(
+          List("column external_id* must include only digits and capital alphabets and have less than 10 length")))
+      }
     }
 
-    "validate error when string length is 30 for bmg tenant" in {
-      val validated = validateExternalId(externalId, "a" * 30, bmgTenant)
-      validated.leftMap(_.toList.mkString(comma))
-        .leftMap { error =>
-          assert(error == rangeOverStringError(externalId, 1, 17))
+    forAll(validBmgExternalId) { id =>
+      s"valid externalId: $id" in {
+        val validated = validateExternalId(externalId, id, ubirchTenant)
+        assert(validated.isValid)
+      }
+    }
+
+    forAll(inValidBmgExternalId) { id =>
+      s"valid externalId: $id" in {
+        val validated = validateExternalId(externalId, id, ubirchTenant)
+        if (id.isEmpty) {
+          validated mustBe Invalid(NonEmptyList.fromListUnsafe(List("column external_id* cannot be empty")))
+        } else {
+          assert(validated.isValid)
         }
+      }
     }
   }
 

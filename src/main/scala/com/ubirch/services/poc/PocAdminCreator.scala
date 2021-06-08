@@ -87,10 +87,10 @@ class PocAdminCreatorImpl @Inject() (
     val creationResult =
       for {
         aAs1 <- createCertifyUserWithRequiredActions(aAs)
-        aAs2 <- addGroupsToCertifyUser(aAs1, poc)
-        aAs3 <- sendEmailToCertifyUser(aAs2)
-        aAs4 <- invitePocAdminToTeamDrive(aAs3, poc, tenant)
-        completeStatus <- invitePocAdminToStaticTeamDrive(aAs4, poc)
+        aAs2 <- invitePocAdminToTeamDrive(aAs1, poc, tenant)
+        aAs3 <- invitePocAdminToStaticTeamDrive(aAs2, poc)
+        aAs4 <- addGroupsToCertifyUser(aAs3, poc)
+        completeStatus <- sendEmailToCertifyUser(aAs4)
       } yield completeStatus
 
     (for {
