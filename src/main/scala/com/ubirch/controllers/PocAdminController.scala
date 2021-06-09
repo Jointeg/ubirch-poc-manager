@@ -34,7 +34,7 @@ import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError.UserNotFou
 import com.ubirch.services.poc.Remove2faTokenError.KeycloakError
 import com.ubirch.services.poc.employee.{ EmptyCSVError, _ }
 import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenError }
-import com.ubirch.services.pocadmin.{ GetPocsAdminErrors, PocAdminService }
+import com.ubirch.services.pocadmin.{ GetEmployeeForPocAdminError, GetPocsAdminErrors, PocAdminService }
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -104,6 +104,13 @@ class PocAdminController @Inject() (
       .summary("Get Employees")
       .description("Retrieve Employees that belong to the querying employee.")
       .tags("PoCs", "PoC Admins", "Poc-Employee")
+      .authorizations()
+
+  val getEmployee: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve an employee by id")
+      .summary("Get Employee")
+      .description("Retrieve Employee that belong to the querying PocAdmin.")
+      .tags("PoC", "PoC Admin", "Poc-Employee")
       .authorizations()
 
   val switchActiveOnPocEmployee: SwaggerSupportSyntax.OperationBuilder =
@@ -180,7 +187,23 @@ class PocAdminController @Inject() (
     }
   }
 
-  put("/poc-employee/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
+  get("/employees/:id", operation(getEmployee)) {
+    pocAdminEndpoint("Retrieve employee by id") { pocAdmin =>
+      getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { id =>
+        pocAdminService.getEmployeeForPocAdmin(pocAdmin, id).map {
+          case Right(pe) => Presenter.toJsonResult(PocEmployee_OUT.fromPocEmployee(pe))
+          case Left(e) => e match {
+              case GetEmployeeForPocAdminError.NotFound(id) =>
+                NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
+              case GetEmployeeForPocAdminError.DoesNotBelongToTenant(_, _) =>
+                Unauthorized(NOK.authenticationError("Unauthorized"))
+            }
+        }
+      }
+    }
+  }
+
+  put("/employees/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
     pocAdminEndpoint("Switch active flag for PoC Employee") { pocAdmin =>
       getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { employeeId =>
         (for {
@@ -210,7 +233,7 @@ class PocAdminController @Inject() (
     }
   }
 
-  delete("/poc-employee/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
+  delete("/employees/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
     if (true) NotFound(NOK.noRouteFound("Sorry, this method is not yet fully implemented."))
     else {
       pocAdminEndpoint("Delete 2FA token for PoC admin") { pocAdmin =>
@@ -270,13 +293,16 @@ class PocAdminController @Inject() (
       case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
     }
 
-  private def getParamAsUUID(paramName: String, errorMsg: String => String)(logic: UUID => Task[ActionResult]) = {
+  private def getParamAsUUID(
+    paramName: String,
+    errorMsg: String => String)(logic: UUID => Task[ActionResult]): Task[ActionResult] = {
     val id = params(paramName)
     Try(UUID.fromString(id)) match {
       case Success(uuid) => logic(uuid)
       case Failure(ex) =>
-        logger.error(errorMsg(id), ex)
-        Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
+        val error = errorMsg(id)
+        logger.error(error, ex)
+        Task(BadRequest(NOK.badRequest(error)))
     }
   }
 }

@@ -30,6 +30,9 @@ trait PocAdminService {
     pocAdmin: PocAdmin,
     active: ActivateSwitch): Task[Either[SwitchActiveError, Unit]]
 
+  def getEmployeeForPocAdmin(
+    pocAdmin: PocAdmin,
+    pocEmployeeId: UUID): Task[Either[GetEmployeeForPocAdminError, PocEmployee]]
 }
 
 @Singleton
@@ -94,10 +97,29 @@ class PocAdminServiceImpl @Inject() (
         }
       case None => Task(ResourceNotFound(pocAdmin.tenantId.asUUID()).asLeft)
     }
+
+  override def getEmployeeForPocAdmin(
+    pocAdmin: PocAdmin,
+    pocEmployeeId: UUID): Task[Either[GetEmployeeForPocAdminError, PocEmployee]] =
+    for {
+      maybePocEmployee <- employeeRepository.getPocEmployee(pocEmployeeId)
+      r <- maybePocEmployee match {
+        case None => Task.pure(GetEmployeeForPocAdminError.NotFound(pocEmployeeId).asLeft)
+        case Some(pe) if pe.tenantId != pocAdmin.tenantId =>
+          Task.pure(GetEmployeeForPocAdminError.DoesNotBelongToTenant(pe.id, pocAdmin.tenantId).asLeft)
+        case Some(pe) => Task.pure(pe.asRight)
+      }
+    } yield r
 }
 
 sealed trait GetPocsAdminErrors
 object GetPocsAdminErrors {
   case class PocAdminNotInCompletedStatus(pocAdminId: UUID) extends GetPocsAdminErrors
   case class UnknownTenant(tenantId: TenantId) extends GetPocsAdminErrors
+}
+
+sealed trait GetEmployeeForPocAdminError
+object GetEmployeeForPocAdminError {
+  case class NotFound(id: UUID) extends GetEmployeeForPocAdminError
+  case class DoesNotBelongToTenant(id: UUID, tenantId: TenantId) extends GetEmployeeForPocAdminError
 }
