@@ -1,13 +1,14 @@
 package com.ubirch.util
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.InvalidX509Exception
 import org.bouncycastle.cert.X509CertificateHolder
+
 import java.io.{ ByteArrayInputStream, InputStreamReader, StringWriter }
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.security.cert.CertificateFactory
 import java.util.Date
-
 import com.ubirch.crypto.utils.Utils
 import org.bouncycastle.asn1.x500.{ RDN, X500Name }
 import org.bouncycastle.asn1.x500.style.IETFUtils
@@ -18,9 +19,6 @@ import org.bouncycastle.util.io.pem.PemReader
 
 import scala.annotation.tailrec
 import scala.util.{ Failure, Success, Try }
-
-// @todo move it
-case class InvalidX509Exception(message: String) extends Exception(message)
 
 object CertMaterializer extends LazyLogging {
 
@@ -45,14 +43,14 @@ object CertMaterializer extends LazyLogging {
       factory <- Try(CertificateFactory.getInstance("X.509", Utils.SECURITY_PROVIDER_NAME))
       reader <- Try(new PemReader(new InputStreamReader(new ByteArrayInputStream(pem.getBytes()))))
       content <- Try(reader.readPemObject().getContent).recoverWith {
-        case e: Exception => throw new Exception("Can't read PEM Object", e)
+        case e: Exception => Failure(InvalidX509Exception("Can't read PEM Object"))
       }
       certificate <- Try(factory.generateCertificate(new ByteArrayInputStream(content)))
       x509CertificateHolder <- Try(new X509CertificateHolder(certificate.getEncoded))
     } yield {
       x509CertificateHolder
     }).recoverWith {
-      case e: Exception => Failure(InvalidX509Exception("Invalid Cert"))
+      case _: Exception => Failure(InvalidX509Exception("Invalid Cert"))
     }
   }
 
@@ -63,11 +61,13 @@ object CertMaterializer extends LazyLogging {
     } yield verifiedSignature && verifiedValidDates
 
   def verifyChainedSignatures(x509Holders: Seq[X509CertificateHolder]): Try[Boolean] = {
-    def go(x509Holders: Seq[X509CertificateHolder]) = {
+    def go(x509Holders: Seq[X509CertificateHolder]): Try[Boolean] = {
       x509Holders.length match {
         case 0 =>
           Failure(InvalidX509Exception("Invalid Signature"))
         case 1 =>
+          // Self-signed cert is not acceptable
+          logger.info("cert is not chain")
           Success(false)
         case n =>
           (for {
@@ -85,6 +85,7 @@ object CertMaterializer extends LazyLogging {
             isChainValid
           }).recover {
             case e: Exception =>
+              logger.info("fail to verify signature", e)
               throw InvalidX509Exception("Invalid Signature")
           }
       }
@@ -92,13 +93,14 @@ object CertMaterializer extends LazyLogging {
 
     val buffer = scala.collection.mutable.ListBuffer.empty[X509CertificateHolder]
 
-    x509Holders.foreach { x =>
-      if (!buffer.exists(_.getEncoded.sameElements(x.getEncoded))) buffer += x
-      else throw InvalidX509Exception("Invalid Signature")
+    Try {
+      x509Holders.foreach { x =>
+        if (!buffer.exists(_.getEncoded.sameElements(x.getEncoded))) buffer += x
+        else throw InvalidX509Exception("Invalid Chain")
+      }
+    }.flatMap { _ =>
+      go(buffer.toList)
     }
-
-    go(buffer.toList)
-
   }
 
   def verifySignature(cert: X509CertificateHolder, issuer: X509CertificateHolder): Try[Boolean] =
@@ -124,6 +126,7 @@ object CertMaterializer extends LazyLogging {
     }
   }
 
+  @throws[InvalidX509Exception]
   def sortCerts(certs: Seq[X509CertificateHolder]): Seq[X509CertificateHolder] = {
     val map = certs.map { certificateHolder =>
       certificateHolder.getSubject.toString -> certificateHolder
@@ -159,15 +162,6 @@ object CertMaterializerSample {
     logging(CertMaterializer.parse(cert3))
     logging(CertMaterializer.parse(cert4))
     logging(CertMaterializer.parse(cert5))
-
-    logging(CertMaterializer.parse(CertMaterializer.pemFromEncodedContent("MIIDRTCCAuqgAwIBAgIUM6%2B%2F%2BmJPd8SCJ6Pzvx5W4NrGdfYwCgYIKoZIzj0EAwIwbTELMAkGA1UEBhMCREUxEDAOBgNVBAcMB0NvbG9nbmUxFDASBgNVBAoMC3ViaXJjaCBHbWJIMScwJQYDVQQDDB51YmlyY2ggR3JvdXAgQWNjZXNzIElzc3VpbmcgQ0ExDTALBgNVBC4TBGRlbW8wHhcNMjEwNDE2MDcyMjU0WhcNMjMwNDE2MDcyMjU0WjByMQswCQYDVQQGEwJERTEQMA4GA1UEBwwHQ29sb2duZTEUMBIGA1UECgwLdWJpcmNoIEdtYkgxLDAqBgNVBAMMI3ViaXJjaCBHcm91cCBBY2Nlc3M6IGJtZy12YWMgKGRlbW8pMQ0wCwYDVQQuEwRkZW1vMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5GQQ5DSV7y1CO%2F8oImrf9rcN1J4552fyybzcGdWBiLYWdOPBkXJBWQwZIYORX0oRQXZZCxKjDeo37%2BTCDEkTbqOCAWEwggFdMB0GA1UdDgQWBBQLNGawcgkL2AyDvndtoG9XYpt52DAfBgNVHSMEGDAWgBQS0eimV8TqnHmROdUuTEhPbAbewTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB%2FwQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjBgBggrBgEFBQcBAQRUMFIwUAYIKwYBBQUHMAKGRGh0dHBzOi8vdHJ1c3QudWJpcmNoLmNvbS9kZW1vL2FpYS91YmlyY2hfR3JvdXBfQWNjZXNzX0lzc3VpbmdfQ0EucGVtMFUGA1UdHwROMEwwSqBIoEaGRGh0dHBzOi8vdHJ1c3QudWJpcmNoLmNvbS9kZW1vL2NybC91YmlyY2hfR3JvdXBfQWNjZXNzX0lzc3VpbmdfQ0EucGVtMC8GA1UdEQQoMCaBJGJtZy12YWNAZ3JvdXAtYWNjZXNzLmRlbW8udWJpcmNoLmNvbTAKBggqhkjOPQQDAgNJADBGAiEAzzPV4ukVZewiY3UlMW4E%2BQdeKQnLID1SXajFS5I2KwwCIQCBHm5up3NIStgRLTQo2FvYVEHfkC4yN9%2FWWBSPJdgmbw%3D%3D")))
-
-    val serverCert =
-      "MIIDjTCCAnWgAwIBAgIJAKM9YDT55MA8MA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNV%0D%0ABAYTAkRFMQ8wDQYDVQQIDAZCZXJsaW4xDzANBgNVBAcMBkJlcmxpbjEUMBIGA1UE%0D%0ACgwLVWJpcmNoIEdtYkgxDDAKBgNVBAsMA0RldjAgFw0yMTA1MDcwODQxMDZaGA8y%0D%0AMTIxMDQxMzA4NDEwNlowGzEZMBcGA1UEAwwQd3d3LmhvZ2Vob2dlLmNvbTCCASIw%0D%0ADQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALq7EM%2Fe2%2FT9abl72myZC0HcziA%2B%0D%0Af0VEyZ%2BW3Gus3O0WwHP6k0TYBwOv5pp4gV25PrqxJ71NjgDboREP0WHJy%2Fdor4mh%0D%0A7GgOzgdpENvQDcCbdzingPPG88N9QbhMJqzN8rLvIDSJiYofYotTazRCSTSOiWRv%0D%0ANmh7XSi78V8OmL%2FZ51TQgClZy2MXbAIPiW4ItA7b7XI9qO9EqXNQBREEivEkGHJs%0D%0ABx2kHuqqijA7nmmaHlMsROJuHWWrkitrpOmghUZZ3YisrPHU%2F7RSGv9u2DwfVdyF%0D%0AJyAgl%2FnyFNIVHjh3xDxqjuMGu5a0i26wAM3qhMmlY9mtk411WwD9w7pis30CAwEA%0D%0AAaOBmTCBljAMBgNVHRMBAf8EAjAAMAsGA1UdDwQEAwIFoDAdBgNVHSUEFjAUBggr%0D%0ABgEFBQcDAQYIKwYBBQUHAwIwHQYDVR0OBBYEFCg%2F2ldMBGNxjb0kCEtoDt%2BjgcTt%0D%0AMB8GA1UdIwQYMBaAFG0QDoK2U%2FoMpC7YTCJEreC4GnulMBoGA1UdEQQTMBGCD3d3%0D%0Ady5leGFtcGxlLmNvbTANBgkqhkiG9w0BAQsFAAOCAQEAFpXTDD7MtTXEIXPhy5tZ%0D%0AxpaeOWTLnxpVgBHAABpSByI3ms3G7FIgxi8h5c3BsP%2F8HbMqugJUj4BN3YB%2B3%2Bkg%0D%0AT7BAewXZYcWCZl6oqNwWtljg24jjk6p6zdRNGWIW3ZWmtEA%2FDg4wkgv2ilNxO2hu%0D%0A9vxY4mHPafrvCJRbYOOgVf9pABpQrv4R6mIGQGuxAtYr%2Bw5%2FQRgBPvjB3apuu9Pa%0D%0AdbGv2JMhzGtaH%2F4n9b9elxVNnplpU%2BMM993I6Oj7LIB9ZNDDmTR7StlnlkoFvcBx%0D%0AJOnRETy0JvIh0%2BaqNoAwAiiqS%2Bb0GjzfiSZZ01t6eBwsjZ8c0emBBCkiHqGFz3Cq%0D%0AkA%3D%3D"
-    val rootCert =
-      "MIIDqjCCApKgAwIBAgIJAJY8LkbVdLZAMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkRFMQ8wDQYDVQQIDAZCZXJsaW4xDzANBgNVBAcMBkJlcmxpbjEUMBIGA1UECgwLVWJpcmNoIEdtYkgxDDAKBgNVBAsMA0RldjAgFw0yMTA0MTMwODA1NTFaGA8yMTIxMDMyMDA4MDU1MVowUzELMAkGA1UEBhMCREUxDzANBgNVBAgMBkJlcmxpbjEPMA0GA1UEBwwGQmVybGluMRQwEgYDVQQKDAtVYmlyY2ggR21iSDEMMAoGA1UECwwDRGV2MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyILKUzAm2EFynZcEuVdSi8WOAKY9hpUld3lP%2FViZNz6i4w3p46F13HCagqvvYODVCDYUP8UjNjyb6mcxe3KOrIxKyEba%2BUJxhMb8wrRCmCbiQc4GA8VAoXLgGgnnXcuqL7LnCEzUMsLTwn%2FvllzHjOCUuy8%2BiyrpeM0bhj%2B98Gw%2BYtmfvbHaz8HSISws8Tyy6YZdJDFWNtFg4pZ%2Bf0q8PHjWttDRETyDbvlOwuAtFkdwDNkPbZKtqDs4LZ4FCBDmjSDEv9%2FQ5tfpmulPjUBo25eIMRB2scsFp4pleKzfSC%2F%2F%2FlQMqUyoZNvIywfVpL%2F8EFAqlf6DcfFixjK7BdCa2QIDAQABo38wfTAPBgNVHRMBAf8EBTADAQH%2FMAsGA1UdDwQEAwIBBjAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwHQYDVR0OBBYEFG0QDoK2U%2FoMpC7YTCJEreC4GnulMB8GA1UdIwQYMBaAFG0QDoK2U%2FoMpC7YTCJEreC4GnulMA0GCSqGSIb3DQEBCwUAA4IBAQCQVRR6gxpk%2Fni%2FOtp0edPA914wPJcWzQWnOmWT13lbyC5ezA5Vl1nqr9%2BVK43VWWhGqvtED1PRXfLnE%2FH6fwlZ66eJMUzzilPl15lBai1NfafZM0c56%2B3SmCkybFZTOqFl%2FdFCT%2FCWXlwmAAeP%2Fhgdtvmt0VcwdkBETokfk%2BfRg4zyvmtmKWljravhCSAmsekgkFqjVbswE783Sxq4PNWGjOFBYk%2BuoJlv13bNPKjWyrPbJucWFfrKZ988yxahaGcHBncJqiEp4wMyzREJz5h8haWuGR53MEqBHuh9tjUosl5TGK8V4dGmQRTffe%2BWrjbSRcyuPdN6%2B5ewJnrvZc5J"
-    logging(CertMaterializer.parse(CertMaterializer.pemFromEncodedContent(serverCert)))
-    logging(CertMaterializer.parse(CertMaterializer.pemFromEncodedContent(rootCert)))
   }
 
   def logging(x: Try[X509CertificateHolder]): Unit = x match {

@@ -2,14 +2,14 @@ package com.ubirch
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.{ServicesConfPaths, TeamDrivePaths}
+import com.ubirch.ConfPaths.{ ServicesConfPaths, TeamDrivePaths }
 import com.ubirch.util.CertMaterializer
 import org.bouncycastle.cert.X509CertificateHolder
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 
 import java.nio.charset.StandardCharsets
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 trait PocConfig {
 
@@ -114,4 +114,3 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     }
   }
 }
-

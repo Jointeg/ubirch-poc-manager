@@ -58,7 +58,7 @@ class DefaultSuperAdminService @Inject() (
       sharedAuthResult.passphrase,
       sharedAuthResult.pkcs12).onErrorHandleWith {
       case ex: Exception =>
-        val msg = s"Could not persist shared cert in TenantDrive because: ${ex.getMessage}"
+        val msg = s"Could not persist shared cert in TeamDrive because: ${ex.getMessage}"
         logger.error(msg)
         Task.raiseError(TenantCreationException(msg))
     }

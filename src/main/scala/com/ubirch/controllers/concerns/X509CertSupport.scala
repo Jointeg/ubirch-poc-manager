@@ -1,96 +1,47 @@
 package com.ubirch.controllers.concerns
 
-import org.scalatra.{ halt, ScalatraBase }
+import org.scalatra.halt
 
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.HttpServletRequest
 import cats.syntax.traverse._
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.models.NOK
 import com.ubirch.util.CertMaterializer
-import org.bouncycastle.cert.X509CertificateHolder
-import org.scalatra.auth.{ ScentryStrategy, ScentrySupport }
 
-import javax.inject.Inject
+import javax.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Success, Try }
 
 trait X509CertSupport {
   def withVerification[T](request: HttpServletRequest)(action: => T): T
 }
 
-class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSupport {
+@Singleton
+class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSupport with LazyLogging {
   private val TLS_HEADER_KEY = "X-Forwarded-Tls-Client-Cert"
+
+  /**
+    * Verify incoming X509 client certificate. The certificate is expected as a comma-separated chain cert.
+    * As a verification step, the configured issuer certs also are used for the chain verification.
+    */
   def withVerification[T](request: HttpServletRequest)(action: => T): T = {
     (for {
-      x509Certs <- Try(Option(request.getHeader(TLS_HEADER_KEY)).getOrElse(throw new RuntimeException("error")))
+      x509Certs <- Try(Option(request.getHeader(TLS_HEADER_KEY)).getOrElse(throw new IllegalArgumentException(
+        s"Header is missing (${TLS_HEADER_KEY})")))
       splitX509Certs <-
         x509Certs.split(",").toList.traverse(pem => CertMaterializer.parse(CertMaterializer.pemFromEncodedContent(pem)))
-      // @todo add issuerCert
-      sortedCerts <- Try(CertMaterializer.sortCerts(splitX509Certs))
-      isValid <- CertMaterializer.verifyChainedCert(sortedCerts)
+      issuers = splitX509Certs.map(_.getIssuer.toString).flatMap(x => pocConfig.issuerCertMap.get(x).toList).distinct
+      chain <- Try(CertMaterializer.sortCerts(splitX509Certs)).map(sorted => (sorted ++ issuers).distinct)
+      isValid <- CertMaterializer.verifyChainedCert(chain)
     } yield isValid) match {
       case Success(result) =>
         if (result) action
-        // @todo message
-        else halt(403, NOK.authenticationError("Forbidden"))
+        else {
+          logger.warn("the incoming certificate is invalid")
+          halt(403, NOK.authenticationError("Forbidden"))
+        }
       case Failure(exception) =>
-        // @todo message
-        halt(403, NOK.authenticationError(exception.getMessage))
-    }
-  }
-}
-
-object X509AuthStrategy {
-
-  implicit def request2X509AuthRequest(r: HttpServletRequest): X509AuthRequest = new X509AuthRequest(r)
-
-  private val TLS_HEADER_KEY = "X-Forwarded-Tls-Client-Cert"
-
-  class X509AuthRequest(r: HttpServletRequest) {
-    def param: Option[String] = Option(r.getHeader(TLS_HEADER_KEY))
-    def providesAuth: Boolean = param.isDefined
-    private val credentials = param.map(_.split(",").toList).getOrElse(Seq.empty[String])
-    def pems: Seq[String] = credentials
-  }
-}
-
-class X509AuthenticationStrategy(protected val app: ScalatraBase, pocConfig: PocConfig)
-  extends ScentryStrategy[Seq[X509CertificateHolder]] {
-  import X509AuthStrategy.request2X509AuthRequest
-  protected def validate(pems: Seq[String]): Option[Seq[X509CertificateHolder]] = (for {
-    x509Certs <- pems.toList.traverse(pem => CertMaterializer.parse(CertMaterializer.pemFromEncodedContent(pem)))
-    // @todo add issuerCert
-    sortedCerts <- Try(CertMaterializer.sortCerts(x509Certs))
-    isValid <- CertMaterializer.verifyChainedCert(sortedCerts)
-  } yield {
-    Some(sortedCerts)
-  }).recover {
-    case e =>
-      // @todo logging
-      None
-  }.getOrElse(None)
-
-  override def isValid(implicit request: HttpServletRequest): Boolean = request.providesAuth
-
-  override def authenticate()(
-    implicit request: HttpServletRequest,
-    response: HttpServletResponse): Option[Seq[X509CertificateHolder]] = {
-    validate(request.pems)
-  }
-}
-
-trait X509AuthenticationSupport extends LazyLogging {
-  self: ScalatraBase with ScentrySupport[Seq[X509CertificateHolder]] =>
-
-  protected def basicAuth(): Option[Seq[X509CertificateHolder]] = scentry.authenticate("X509")
-
-  protected def authenticated(action: Seq[X509CertificateHolder] => Any)(
-    implicit request: HttpServletRequest,
-    response: HttpServletResponse): Any = {
-    basicAuth() match {
-      case Some(value) => action(value)
-      case _ =>
-        logger.warn("the incoming token is invalid.")
+        logger.warn("the incoming certificate is invalid", exception)
         halt(403, NOK.authenticationError("Forbidden"))
     }
   }

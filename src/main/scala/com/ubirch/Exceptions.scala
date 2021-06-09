@@ -7,3 +7,4 @@ abstract class ServiceException(message: String) extends Exception(message) with
 }
 
 case class InvalidClaimsException(message: String, value: String) extends ServiceException(message)
+case class InvalidX509Exception(message: String) extends ServiceException(message)
