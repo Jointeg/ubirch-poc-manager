@@ -306,7 +306,9 @@ class DefaultTenantAdminService @Inject() (
         case None => Task.pure(GetPocAdminForTenantError.NotFound(id).asLeft)
         case Some(pa) if pa.tenantId != tenant.id =>
           Task.pure(GetPocAdminForTenantError.AssignedToDifferentTenant(id, tenant.id).asLeft)
-        case Some(pa) => pocRepository.single(pa.pocId).map { p => (pa, p).asRight }
+        case Some(pa) =>
+          // PocNotFound won't be thrown here, as long as there is a foreign key constraint on respective tables
+          pocRepository.single(pa.pocId).map { p => (pa, p).asRight }
       }
     } yield pocAdminWithPoc
 
