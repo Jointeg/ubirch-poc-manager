@@ -4,21 +4,23 @@ import cats.data.EitherT
 import cats.implicits.catsSyntaxEitherId
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
 import com.ubirch.controllers.SwitchActiveError._
-import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError }
+import com.ubirch.controllers.model.PocAdminControllerJsonModel.PocEmployee_IN
+import com.ubirch.controllers.{EndpointHelpers, SwitchActiveError}
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.model.{ AdminCriteria, PaginatedResult }
-import com.ubirch.db.tables.{ PocEmployeeRepository, TenantRepository }
-import com.ubirch.models.poc.{ Completed, PocAdmin }
+import com.ubirch.db.tables.model.{AdminCriteria, PaginatedResult}
+import com.ubirch.db.tables.{PocEmployeeRepository, TenantRepository}
+import com.ubirch.models.poc.{Completed, PocAdmin, Status}
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
-import com.ubirch.services.pocadmin.GetPocsAdminErrors.{ PocAdminNotInCompletedStatus, UnknownTenant }
+import com.ubirch.services.pocadmin.GetPocsAdminErrors.{PocAdminNotInCompletedStatus, UnknownTenant}
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
+import org.keycloak.models.jpa.entities.UserFederationProviderEntity
 
 import java.util.UUID
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 trait PocAdminService {
   def getEmployees(
@@ -33,6 +35,8 @@ trait PocAdminService {
   def getEmployeeForPocAdmin(
     pocAdmin: PocAdmin,
     pocEmployeeId: UUID): Task[Either[GetEmployeeForPocAdminError, PocEmployee]]
+
+  def updateEmployee(pocAdmin: PocAdmin, id: UUID, value: PocEmployee_IN): Task[Either[UpdatePocEmployeeError, PocEmployee]]
 }
 
 @Singleton
@@ -110,6 +114,23 @@ class PocAdminServiceImpl @Inject() (
         case Some(pe) => Task.pure(pe.asRight)
       }
     } yield r
+
+  override def updateEmployee(pocAdmin: PocAdmin, pocEmployeeId: UUID, pocEmployeeIn: PocEmployee_IN): Task[Either[UpdatePocEmployeeError, PocEmployee]] =
+    quillMonixJdbcContext.withTransaction {
+      getEmployeeForPocAdmin(pocAdmin, pocEmployeeId).flatMap {
+        case Right(pe) if pe.status != Completed =>
+          Task.pure(UpdatePocEmployeeError.WrongStatus(pe.id, pe.status, Completed).asLeft)
+        case Right(pe) =>
+          val updated = pocEmployeeIn.copyToPocEmployee(pe)
+          employeeRepository.updatePocEmployee(updated) >> Task.pure(updated.asRight)
+        case Left(e) => e match {
+          case GetEmployeeForPocAdminError.NotFound(id) =>
+            Task.pure(UpdatePocEmployeeError.NotFound(id).asLeft)
+          case GetEmployeeForPocAdminError.DoesNotBelongToTenant(id, tenantId) =>
+            Task.pure(UpdatePocEmployeeError.DoesNotBelongToTenant(id, tenantId).asLeft)
+        }
+      }
+    }
 }
 
 sealed trait GetPocsAdminErrors
@@ -122,4 +143,11 @@ sealed trait GetEmployeeForPocAdminError
 object GetEmployeeForPocAdminError {
   case class NotFound(id: UUID) extends GetEmployeeForPocAdminError
   case class DoesNotBelongToTenant(id: UUID, tenantId: TenantId) extends GetEmployeeForPocAdminError
+}
+
+sealed trait UpdatePocEmployeeError
+object UpdatePocEmployeeError {
+  case class NotFound(id: UUID) extends UpdatePocEmployeeError
+  case class DoesNotBelongToTenant(id: UUID, tenantId: TenantId) extends UpdatePocEmployeeError
+  case class WrongStatus(id: UUID, status: Status, expectedStatus: Status) extends UpdatePocEmployeeError
 }

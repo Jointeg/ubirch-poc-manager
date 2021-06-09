@@ -1,28 +1,28 @@
 package com.ubirch.e2e.controllers
 
-import com.ubirch.{ FakeTokenCreator, InjectorHelper }
+import com.ubirch.{FakeTokenCreator, InjectorHelper}
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.PocAdminController
-import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
+import com.ubirch.controllers.model.PocAdminControllerJsonModel.PocEmployee_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.PocEmployeeTable
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.e2e.controllers.PocAdminControllerSpec._
-import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
+import com.ubirch.models.poc.{Completed, Pending, Poc, PocAdmin, _}
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.models.user.UserId
-import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.{Paginated_OUT, ValidationErrorsResponse}
 import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.{CustomFormats, JodaDateTimeFormats}
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.DateTime
-import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
-import org.json4s.jackson.JsonMethods.{ parse, pretty, render }
+import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
+import org.json4s.jackson.JsonMethods.{parse, pretty, render}
 import org.json4s.native.Serialization.read
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -670,11 +670,7 @@ class PocAdminControllerSpec
     "return PocEmployee by id" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocEmployeeTable]
-      val keycloakUserService = i.get[KeycloakUserService]
       val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
-
-      //      val certifyUserId = await(createKeycloakUserForPocEmployee(keycloakUserService, poc))
-      //        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui.value)
 
       val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
       val id = await(repository.createPocEmployee(pocEmployee))
@@ -684,7 +680,7 @@ class PocAdminControllerSpec
         headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocEmployeeToJson(pocEmployee)
+        pretty(render(parse(body))) shouldBe pocEmployee.toPocEmployeeOutJson
       }
     }
 
@@ -745,6 +741,123 @@ class PocAdminControllerSpec
 
       get(
         uri = s"/employees/${pocEmployee.id}-i",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(400)
+        assert(body.contains(s"Invalid PocEmployee id '${pocEmployee.id}-i'"))
+      }
+    }
+  }
+
+  "Endpoint PUT /employees/:id" should {
+    "update PocEmployee by id" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+
+      val certifyUserId = await(createKeycloakUserForPocEmployee(keycloakUserService, poc))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui.value)
+
+      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId), status = Completed)
+      val id = await(repository.createPocEmployee(pocEmployee))
+      val updatedPocEmployee = pocEmployee.copy(name = "new name", surname = "new surname")
+
+      put(
+        uri = s"/employees/$id",
+        body = updatedPocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(200)
+      }
+
+      get(
+        uri = s"/employees/$id",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(200)
+        pretty(render(parse(body))) shouldBe updatedPocEmployee.toPocEmployeeOutJson
+      }
+    }
+
+    "return 404 when PocEmployee does not exists" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+      val id = UUID.randomUUID()
+      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+
+      put(
+        uri = s"/employees/$id",
+        body = pocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(404)
+      }
+    }
+
+    "return 401 when PocEmployee does not belong to requesting PocAdmin" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, _) = addTenantWithPocAndPocAdminToTable(i)
+      val (_, _, otherAdmin) = addTenantWithPocAndPocAdminToTable(injector = i, tenantName = "OtherTenant")
+
+      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+      val _ = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/${pocEmployee.id}",
+        body = pocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.pocAdmin(otherAdmin.certifyUserId.value).prepare)
+      ) {
+        status should equal(401)
+      }
+    }
+
+    "return 409 when PocEmployee is not in Completed state" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+
+      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Processing)
+      val _ = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/${pocEmployee.id}",
+        body = pocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc employee '${pocEmployee.id}' is in wrong status: '$Processing', required: '$Completed'"))
+      }
+    }
+
+    "return 403 when requesting user is not a poc admin" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, _) = addTenantWithPocAndPocAdminToTable(i)
+      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+      val _ = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/${pocEmployee.id}",
+        body = pocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.superAdmin.prepare)
+      ) {
+        status should equal(403)
+        assert(body.contains(s"Forbidden"))
+      }
+    }
+
+    "return 400 when passed id is not a valid UUID" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+      val _ = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/${pocEmployee.id}-i",
+        body = pocEmployee.toPocEmployeeInJson.getBytes,
         headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
       ) {
         status should equal(400)
@@ -815,16 +928,27 @@ object PocAdminControllerSpec {
     def toPocEmployeeOut: PocEmployee_OUT = PocEmployee_OUT.fromPocEmployee(employee)
   }
 
-  def pocEmployeeToJson(pe: PocEmployee): String = {
-    val json =
-      s"""{
-         | "id": "${pe.id}",
-         | "firstName": "${pe.name}",
-         | "lastName": "${pe.surname}",
-         | "email": "${pe.email}",
-         | "active": ${pe.active},
-         | "status": "${Status.toFormattedString(pe.status)}"
-         |}""".stripMargin
-    pretty(render(parse(json)))
+  implicit class PocEmployeeOps(pe: PocEmployee) {
+    def toPocEmployeeOutJson: String = {
+      val json =
+        s"""{
+           | "id": "${pe.id}",
+           | "firstName": "${pe.name}",
+           | "lastName": "${pe.surname}",
+           | "email": "${pe.email}",
+           | "active": ${pe.active},
+           | "status": "${Status.toFormattedString(pe.status)}"
+           |}""".stripMargin
+      pretty(render(parse(json)))
+    }
+
+    def toPocEmployeeInJson: String = {
+      val json =
+        s"""{
+           | "firstName": "${pe.name}",
+           | "lastName": "${pe.surname}"
+           |}""".stripMargin
+      pretty(render(parse(json)))
+    }
   }
 }
