@@ -433,41 +433,38 @@ class TenantAdminController @Inject() (
   }
 
   delete("/poc-admin/:id/2fa-token", operation(delete2FATokenOnPocAdmin)) {
-    if (true) NotFound(NOK.noRouteFound("Sorry, this method is not yet fully implemented."))
-    else {
-      tenantAdminEndpoint("Delete 2FA token for PoC admin") { tenant =>
-        getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
-          for {
-            maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-            notFoundMessage = s"Poc admin with id '$pocAdminId' not found'"
-            r <- maybePocAdmin match {
-              case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
-              case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
-                Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
-              case Some(pocAdmin) if pocAdmin.status != Completed =>
-                Task.pure(Conflict(NOK.conflict(
-                  s"Poc admin '$pocAdminId' is in wrong status: '${pocAdmin.status}', required: '${Completed}'")))
-              case Some(pocAdmin) => certifyUserService.remove2FAToken(CertifyKeycloak.defaultRealm, pocAdmin)
-                  .flatMap {
-                    case Left(e) => e match {
-                        case Remove2faTokenError.KeycloakError(_, error) =>
-                          error match {
-                            case Remove2faTokenKeycloakError.UserNotFound(error) =>
-                              Task.pure(NotFound(NOK.resourceNotFoundError(error)))
-                            case Remove2faTokenKeycloakError.KeycloakError(error) =>
-                              Task.pure(InternalServerError(NOK.serverError(error)))
-                          }
-                        case Remove2faTokenError.MissingCertifyUserId(id) =>
-                          Task.pure(Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId")))
-                      }
-                    case Right(_) =>
-                      pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
-                        Some(DateTime.parse(clock.instant().toString)))) >>
-                        Task.pure(Ok(""))
-                  }
-            }
-          } yield r
-        }
+    tenantAdminEndpoint("Delete 2FA token for PoC admin") { tenant =>
+      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+        for {
+          maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+          notFoundMessage = s"Poc admin with id '$pocAdminId' not found'"
+          r <- maybePocAdmin match {
+            case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+            case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
+              Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+            case Some(pocAdmin) if pocAdmin.status != Completed =>
+              Task.pure(Conflict(NOK.conflict(
+                s"Poc admin '$pocAdminId' is in wrong status: '${pocAdmin.status}', required: '${Completed}'")))
+            case Some(pocAdmin) => certifyUserService.remove2FAToken(CertifyKeycloak.defaultRealm, pocAdmin)
+                .flatMap {
+                  case Left(e) => e match {
+                      case Remove2faTokenError.KeycloakError(_, error) =>
+                        error match {
+                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                            Task.pure(NotFound(NOK.resourceNotFoundError(error)))
+                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                            Task.pure(InternalServerError(NOK.serverError(error)))
+                        }
+                      case Remove2faTokenError.MissingCertifyUserId(id) =>
+                        Task.pure(Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId")))
+                    }
+                  case Right(_) =>
+                    pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
+                      Some(DateTime.parse(clock.instant().toString)))) >>
+                      Task.pure(Ok(""))
+                }
+          }
+        } yield r
       }
     }
   }
