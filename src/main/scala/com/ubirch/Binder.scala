@@ -12,6 +12,7 @@ import com.ubirch.services.clock.ClockProvider
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
 import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.healthcheck.{ DefaultHealthCheckService, HealthCheckService }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
 import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, KeycloakGroupService }
@@ -212,6 +213,12 @@ class Binder extends AbstractModule {
   def PocEmployeeService: ScopedBindingBuilder =
     bind(classOf[PocEmployeeService]).to(classOf[PocEmployeeServiceImpl])
 
+  def HealthCheckRepository: ScopedBindingBuilder =
+    bind(classOf[HealthCheckRepository]).to(classOf[DefaultHealthCheckRepository])
+
+  def HealthCheckService: ScopedBindingBuilder =
+    bind(classOf[HealthCheckService]).to(classOf[DefaultHealthCheckService])
+
   override def configure(): Unit = {
     Config
     Clock
@@ -277,6 +284,8 @@ class Binder extends AbstractModule {
     CsvProcessPocEmployee
     ImageLoader
     PocEmployeeService
+    HealthCheckRepository
+    HealthCheckService
     ()
   }
 }
