@@ -6,11 +6,13 @@ import com.ubirch.models.keycloak.user.{
   UserException,
   UserRequiredAction
 }
-import com.ubirch.models.user.{ UserId, UserName }
+import com.ubirch.models.pocEmployee.PocEmployee
+import com.ubirch.models.user.{ FirstName, LastName, UserId, UserName }
 import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
+import cats.syntax.either._
 
 import java.util.UUID
 import javax.inject.Singleton
@@ -120,4 +122,23 @@ class TestKeycloakUserService() extends KeycloakUserService {
     id: UUID,
     instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
     Task.pure(Right(()))
+
+  override def updateEmployee(
+    realm: KeycloakRealm,
+    pocEmployee: PocEmployee,
+    firstName: FirstName,
+    lastName: LastName): Task[Either[UpdateEmployeeKeycloakError, Unit]] =
+    pocEmployee.certifyUserId match {
+      case None => Task.pure(UpdateEmployeeKeycloakError.MissingCertifyUserId(pocEmployee.id).asLeft)
+      case Some(certifyUserId) => Task {
+          val userId = UserId(certifyUserId)
+          keycloakCertifyDatastore.get(userId) match {
+            case None => UpdateEmployeeKeycloakError.UserNotFound(s"user with id $certifyUserId wasn't found").asLeft
+            case Some(user) =>
+              keycloakCertifyDatastore.put(userId, user.copy(firstName = firstName, lastName = lastName))
+              ().asRight
+          }
+        }
+    }
+
 }

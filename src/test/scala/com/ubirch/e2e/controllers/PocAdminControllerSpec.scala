@@ -1,6 +1,6 @@
 package com.ubirch.e2e.controllers
 
-import com.ubirch.{FakeTokenCreator, InjectorHelper}
+import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.PocAdminController
 import com.ubirch.controllers.model.PocAdminControllerJsonModel.PocEmployee_OUT
@@ -8,21 +8,21 @@ import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.PocEmployeeTable
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.e2e.controllers.PocAdminControllerSpec._
-import com.ubirch.models.poc.{Completed, Pending, Poc, PocAdmin, _}
+import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.models.user.UserId
-import com.ubirch.models.{Paginated_OUT, ValidationErrorsResponse}
+import com.ubirch.models.user.{ UserId, UserName }
+import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.formats.{CustomFormats, JodaDateTimeFormats}
+import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.DateTime
-import org.json4s.ext.{JavaTypesSerializers, JodaTimeSerializers}
-import org.json4s.jackson.JsonMethods.{parse, pretty, render}
+import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
+import org.json4s.jackson.JsonMethods.{ parse, pretty, render }
 import org.json4s.native.Serialization.read
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -759,7 +759,8 @@ class PocAdminControllerSpec
       val certifyUserId = await(createKeycloakUserForPocEmployee(keycloakUserService, poc))
         .fold(ue => fail(ue.getClass.getSimpleName), ui => ui.value)
 
-      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId), status = Completed)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId), status = Completed)
       val id = await(repository.createPocEmployee(pocEmployee))
       val updatedPocEmployee = pocEmployee.copy(name = "new name", surname = "new surname")
 
@@ -778,6 +779,10 @@ class PocAdminControllerSpec
         status should equal(200)
         pretty(render(parse(body))) shouldBe updatedPocEmployee.toPocEmployeeOutJson
       }
+
+      val ur = await(keycloakUserService.getUserById(poc.getRealm, UserId(certifyUserId), CertifyKeycloak)).value
+      ur.getFirstName shouldBe updatedPocEmployee.name
+      ur.getLastName shouldBe updatedPocEmployee.surname
     }
 
     "return 404 when PocEmployee does not exists" in withInjector { i =>
@@ -827,7 +832,8 @@ class PocAdminControllerSpec
         headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
       ) {
         status should equal(409)
-        assert(body.contains(s"Poc employee '${pocEmployee.id}' is in wrong status: '$Processing', required: '$Completed'"))
+        assert(
+          body.contains(s"Poc employee '${pocEmployee.id}' is in wrong status: '$Processing', required: '$Completed'"))
       }
     }
 

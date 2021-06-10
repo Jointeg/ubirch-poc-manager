@@ -5,39 +5,54 @@ import com.google.inject.Provider
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
-import com.ubirch.controllers.SwitchActiveError.{MissingCertifyUserId, NotAllowedError, ResourceNotFound, UserNotCompleted}
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  ResourceNotFound,
+  UserNotCompleted
+}
 import com.ubirch.controllers.concerns._
 import com.ubirch.controllers.validator.AdminCriteriaValidator
 import com.ubirch.db.tables.model.AdminCriteria
-import com.ubirch.models.poc.{Completed, PocAdmin, Processing, Status}
+import com.ubirch.models.poc.{ Completed, PocAdmin, Processing, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.{Paginated_OUT, ValidationError, ValidationErrorsResponse}
-import com.ubirch.controllers.concerns.{ControllerBase, KeycloakBearerAuthStrategy, KeycloakBearerAuthenticationSupport, Token}
+import com.ubirch.models.{ Paginated_OUT, ValidationError, ValidationErrorsResponse }
+import com.ubirch.controllers.concerns.{
+  ControllerBase,
+  KeycloakBearerAuthStrategy,
+  KeycloakBearerAuthenticationSupport,
+  Token
+}
 import com.ubirch.controllers.model.PocAdminControllerJsonModel._
-import com.ubirch.db.tables.{PocAdminRepository, PocEmployeeRepository, TenantRepository}
+import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository, TenantRepository }
 import com.ubirch.models.NOK
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.clock.ClockProvider
-import com.ubirch.services.jwt.{PublicKeyPoolService, TokenVerificationService}
+import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
 import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError.UserNotFound
 import com.ubirch.services.poc.Remove2faTokenError.KeycloakError
-import com.ubirch.services.poc.employee.{EmptyCSVError, _}
-import com.ubirch.services.poc.{CertifyUserService, Remove2faTokenError}
-import com.ubirch.services.pocadmin.{GetEmployeeForPocAdminError, GetPocsAdminErrors, PocAdminService, UpdatePocEmployeeError}
+import com.ubirch.services.poc.employee.{ EmptyCSVError, _ }
+import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenError }
+import com.ubirch.services.pocadmin.{
+  GetEmployeeForPocAdminError,
+  GetPocsAdminErrors,
+  PocAdminService,
+  UpdatePocEmployeeError
+}
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.joda.time.DateTime
 import org.json4s.Formats
 import org.scalatra._
-import org.scalatra.swagger.{Swagger, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 import org.json4s.native.Serialization.read
 
 import java.time.Clock
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 import scala.concurrent.ExecutionContext
 import scala.util._
 
@@ -193,11 +208,11 @@ class PocAdminController @Inject() (
         pocAdminService.getEmployeeForPocAdmin(pocAdmin, id).map {
           case Right(pe) => Presenter.toJsonResult(PocEmployee_OUT.fromPocEmployee(pe))
           case Left(e) => e match {
-            case GetEmployeeForPocAdminError.NotFound(id) =>
-              NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
-            case GetEmployeeForPocAdminError.DoesNotBelongToTenant(_, _) =>
-              Unauthorized(NOK.authenticationError("Unauthorized"))
-          }
+              case GetEmployeeForPocAdminError.NotFound(id) =>
+                NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
+              case GetEmployeeForPocAdminError.DoesNotBelongToTenant(_, _) =>
+                Unauthorized(NOK.authenticationError("Unauthorized"))
+            }
         }
       }
     }
@@ -211,13 +226,14 @@ class PocAdminController @Inject() (
           r <- pocAdminService.updateEmployee(pocAdmin, id, read[PocEmployee_IN](body)).map {
             case Right(_) => Ok()
             case Left(e) => e match {
-              case UpdatePocEmployeeError.NotFound(id) =>
-                NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
-              case UpdatePocEmployeeError.DoesNotBelongToTenant(_, _) =>
-                Unauthorized(NOK.authenticationError("Unauthorized"))
-              case UpdatePocEmployeeError.WrongStatus(id, status, expectedStatus) =>
-                Conflict(NOK.conflict(s"Poc employee '$id' is in wrong status: '$status', required: '$expectedStatus'"))
-            }
+                case UpdatePocEmployeeError.NotFound(id) =>
+                  NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
+                case UpdatePocEmployeeError.DoesNotBelongToTenant(_, _) =>
+                  Unauthorized(NOK.authenticationError("Unauthorized"))
+                case UpdatePocEmployeeError.WrongStatus(id, status, expectedStatus) =>
+                  Conflict(
+                    NOK.conflict(s"Poc employee '$id' is in wrong status: '$status', required: '$expectedStatus'"))
+              }
           }
         } yield r
       }
@@ -327,4 +343,3 @@ class PocAdminController @Inject() (
     }
   }
 }
-

@@ -8,7 +8,7 @@ import com.ubirch.models.keycloak.user.UserException
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.models.user.UserId
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserId }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.PocTestHelper.await

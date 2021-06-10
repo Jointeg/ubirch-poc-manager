@@ -5,9 +5,10 @@ import cats.syntax.either._
 import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user._
-import com.ubirch.models.user.{ UserId, UserName }
+import com.ubirch.models.pocEmployee.PocEmployee
+import com.ubirch.models.user.{ FirstName, LastName, UserId, UserName }
 import com.ubirch.services.keycloak.KeycloakRealm
-import com.ubirch.services.{ DeviceKeycloak, KeycloakConnector, KeycloakInstance }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
@@ -82,6 +83,12 @@ trait KeycloakUserService {
     realm: KeycloakRealm,
     id: UUID,
     instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]]
+
+  def updateEmployee(
+    realm: KeycloakRealm,
+    pocEmployee: PocEmployee,
+    firstName: FirstName,
+    lastName: LastName): Task[Either[UpdateEmployeeKeycloakError, Unit]]
 }
 
 @Singleton
@@ -300,6 +307,33 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
       Remove2faTokenKeycloakError.KeycloakError(message).asLeft
     }
 
+  override def updateEmployee(
+    realm: KeycloakRealm,
+    pocEmployee: PocEmployee,
+    firstName: FirstName,
+    lastName: LastName): Task[Either[UpdateEmployeeKeycloakError, Unit]] =
+    pocEmployee.certifyUserId match {
+      case None => Task.pure(UpdateEmployeeKeycloakError.MissingCertifyUserId(pocEmployee.id).asLeft)
+      case Some(certifyUserId) =>
+        val instance = CertifyKeycloak
+        getUserById(realm, UserId(certifyUserId), instance).flatMap {
+          case None =>
+            Task.pure(UpdateEmployeeKeycloakError.UserNotFound(s"user with id $certifyUserId wasn't found").asLeft)
+          case Some(ur) => update(
+              realm,
+              certifyUserId, {
+                ur.setFirstName(firstName.value)
+                ur.setLastName(lastName.value)
+                ur
+              },
+              instance).map(_ => ().asRight)
+        }.onErrorHandle { ex =>
+          val message = s"Could not update the employee: ${ex.getMessage}"
+          logger.error(message, ex)
+          UpdateEmployeeKeycloakError.KeycloakError(message).asLeft
+        }
+    }
+
   private def processCreationResponse(response: Response, userName: String): Either[UserException, UserId] = {
 
     if (response.getStatusInfo.equals(Status.CREATED)) {
@@ -335,8 +369,14 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
 }
 
 sealed trait Remove2faTokenKeycloakError
-
 object Remove2faTokenKeycloakError {
   case class UserNotFound(error: String) extends Remove2faTokenKeycloakError
   case class KeycloakError(error: String) extends Remove2faTokenKeycloakError
+}
+
+sealed trait UpdateEmployeeKeycloakError
+object UpdateEmployeeKeycloakError {
+  case class UserNotFound(error: String) extends UpdateEmployeeKeycloakError
+  case class KeycloakError(error: String) extends UpdateEmployeeKeycloakError
+  case class MissingCertifyUserId(userId: UUID) extends UpdateEmployeeKeycloakError
 }
