@@ -485,7 +485,7 @@ object FakeX509Certs {
 
   val validX509Header = HeaderKeys.TLS_HEADER_KEY -> Seq(client, issuing, intermediate, root).mkString(",")
   val invalidSingleX509Header = HeaderKeys.TLS_HEADER_KEY -> client
-  val x509HeaderWithoutIntermediate = HeaderKeys.TLS_HEADER_KEY -> Seq(client, issuing, root).mkString(",")
+  val x509HeaderUntilIssuer = HeaderKeys.TLS_HEADER_KEY -> Seq(client, issuing).mkString(",")
   val x509HeaderWithWrongOrder = HeaderKeys.TLS_HEADER_KEY -> Seq(client, root, intermediate, issuing).mkString(",")
   val invalidX509Header = HeaderKeys.TLS_HEADER_KEY -> Seq(client, root).mkString(",")
 }

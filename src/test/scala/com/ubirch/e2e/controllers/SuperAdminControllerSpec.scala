@@ -154,7 +154,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         post(
           Endpoint,
           body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.x509HeaderWithoutIntermediate)
+          headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.x509HeaderUntilIssuer)
         ) {
           status should equal(200)
           assert(body == "")

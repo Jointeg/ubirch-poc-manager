@@ -30,7 +30,7 @@ class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSuppo
       splitX509Certs <-
         x509Certs.split(",").toList.traverse(pem => CertMaterializer.parse(CertMaterializer.pemFromEncodedContent(pem)))
       issuers = splitX509Certs.map(_.getIssuer.toString).flatMap(x => pocConfig.issuerCertMap.get(x).toList).distinct
-      chain <- Try(CertMaterializer.sortCerts((splitX509Certs ++ issuers).distinct))
+      chain <- Try(CertMaterializer.sortCerts(splitX509Certs)).map(sorted => (sorted ++ issuers).distinct)
       isValid <- CertMaterializer.verifyChainedCert(chain)
     } yield isValid) match {
       case Success(result) =>
