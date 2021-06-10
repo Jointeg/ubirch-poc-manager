@@ -13,6 +13,7 @@ import monix.eval.Task
 import org.keycloak.representations.idm.UserRepresentation
 
 import java.util.UUID
+import javax.ws.rs.NotFoundException
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
 import scala.collection.JavaConverters.{ mapAsJavaMapConverter, seqAsJavaListConverter }
@@ -148,7 +149,9 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
         .users()
         .get(userId.value.toString)
         .toRepresentation)
-    )
+    ).onErrorRecover {
+      case _: NotFoundException => None
+    }
   }
 
   override def getUserByUserName(

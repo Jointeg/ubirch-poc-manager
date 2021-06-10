@@ -870,6 +870,47 @@ class PocAdminControllerSpec
         assert(body.contains(s"Invalid PocEmployee id '${pocEmployee.id}-i'"))
       }
     }
+
+    "return 500 when PocEmployee is not assigned to keycloak user" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Completed, certifyUserId = None)
+      val _ = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/${pocEmployee.id}",
+        body = pocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(500)
+        assert(body.contains(s"Poc employee '${pocEmployee.id}' is not assigned to certify user"))
+      }
+    }
+
+    "return 500 when certify user assigned to the PocEmployee is not found" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+
+      val pocEmployee = createPocEmployee(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        status = Completed,
+        certifyUserId = Some(UUID.randomUUID()))
+      val _ = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/${pocEmployee.id}",
+        body = pocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(500)
+        assert(body.contains(s"Poc employee '${pocEmployee.id}' is assigned to not existing certify user"))
+      }
+    }
   }
 
   private val invalidParameter =

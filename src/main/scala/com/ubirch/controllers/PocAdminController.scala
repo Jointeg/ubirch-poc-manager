@@ -29,7 +29,7 @@ import com.ubirch.models.NOK
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.clock.ClockProvider
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
+import com.ubirch.services.keycloak.users.{ Remove2faTokenKeycloakError, UpdateEmployeeKeycloakError }
 import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError.UserNotFound
 import com.ubirch.services.poc.Remove2faTokenError.KeycloakError
 import com.ubirch.services.poc.employee.{ EmptyCSVError, _ }
@@ -233,6 +233,15 @@ class PocAdminController @Inject() (
                 case UpdatePocEmployeeError.WrongStatus(id, status, expectedStatus) =>
                   Conflict(
                     NOK.conflict(s"Poc employee '$id' is in wrong status: '$status', required: '$expectedStatus'"))
+                case UpdatePocEmployeeError.KeycloakError(e) => e match {
+                    case UpdateEmployeeKeycloakError.UserNotFound(_) =>
+                      InternalServerError(
+                        NOK.serverError(s"Poc employee '$id' is assigned to not existing certify user"))
+                    case UpdateEmployeeKeycloakError.KeycloakError(error) =>
+                      InternalServerError(NOK.serverError(s"Certify user services responded with error: $error"))
+                    case UpdateEmployeeKeycloakError.MissingCertifyUserId(_) =>
+                      InternalServerError(NOK.serverError(s"Poc employee '$id' is not assigned to certify user"))
+                  }
               }
           }
         } yield r
