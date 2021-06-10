@@ -1,6 +1,7 @@
 package com.ubirch.services.poc
 
 import cats.data.EitherT
+import cats.implicits.catsSyntaxApply
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
@@ -71,7 +72,7 @@ class PocCreatorImpl @Inject() (
       case pocs =>
         logger.info(s"starting to create ${pocs.size} pocs")
         Task
-          .sequence(pocs.map(createPoc))
+          .sequence(pocs.map(poc => Task.cancelBoundary *> createPoc(poc).uncancelable))
           .map(PocCreationMaybeSuccess)
     }
   }
