@@ -515,13 +515,13 @@ class TenantAdminController @Inject() (
                 case UpdatePocAdminError.AssignedToDifferentTenant(pocAdminId, tenantId) =>
                   Unauthorized(NOK.authenticationError(
                     s"PoC admin with id '$id' does not belong to tenant with id '${tenant.id.value.value}'"))
-                case UpdatePocAdminError.NotCompleted(pocAdminId, status) =>
+                case UpdatePocAdminError.InvalidStatus(pocAdminId, status) =>
                   Conflict(
                     NOK.conflict(s"Poc admin '$pocAdminId' is in wrong status: '$status', required: '$Completed'"))
                 case UpdatePocAdminError.WebIdentRequired =>
-                  Conflict(NOK.conflict(s"Poc admin '$id' has webIdentRequired set to true"))
-                case UpdatePocAdminError.WebIdentInitiateIdNotSet =>
-                  Conflict(NOK.conflict(s"Poc admin '$id' has webIdentInitiateId set"))
+                  Conflict(NOK.conflict(s"Poc admin '$id' has webIdentRequired set to false"))
+                case UpdatePocAdminError.WebIdentInitiateIdAlreadySet =>
+                  Conflict(NOK.conflict(s"Poc admin '$id' webIdentInitiateId is set"))
               }
             case Right(_) => Ok()
           }

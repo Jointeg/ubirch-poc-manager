@@ -1560,8 +1560,7 @@ class TenantAdminControllerSpec
       val tenant = addTenantToDB(Injector)
       val poc = createPoc(poc1id, tenant.tenantName)
       await(pocTable.createPoc(poc))
-      val pocAdmin =
-        createPocAdmin(tenantId = tenant.id, pocId = poc.id).copy(webIdentInitiateId = Some(UUID.randomUUID()))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
       val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
 
@@ -1632,9 +1631,9 @@ class TenantAdminControllerSpec
       await(pocTable.createPoc(poc))
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
         .copy(
-          status = Completed,
+          status = Pending,
           webIdentRequired = true,
-          webIdentInitiateId = Some(UUID.randomUUID())
+          webIdentInitiateId = None
         )
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
       val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
@@ -1660,14 +1659,19 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return 409 when poc-admin is not in Completed status" in withInjector { Injector =>
+    "return 409 when poc-admin is in Completed status" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB(Injector)
       val pocAdminRepository = Injector.get[PocAdminRepository]
       val poc = createPoc(poc1id, tenant.tenantName)
       val _ = await(pocTable.createPoc(poc))
-      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id).copy(status = Processing)
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        status = Completed,
+        webIdentRequired = true,
+        webIdentInitiateId = None)
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
 
       put(
@@ -1676,7 +1680,7 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(409)
-        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Processing', required: 'Completed'"))
+        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Completed'"))
       }
     }
 
@@ -1689,33 +1693,8 @@ class TenantAdminControllerSpec
       val _ = await(pocTable.createPoc(poc))
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
         .copy(
-          status = Completed,
+          status = Pending,
           webIdentRequired = false,
-          webIdentInitiateId = Some(UUID.randomUUID())
-        )
-      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
-
-      put(
-        s"/poc-admin/$id",
-        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
-      ) {
-        status should equal(409)
-        assert(body.contains(s"Poc admin '$id' has webIdentRequired set to true"))
-      }
-    }
-
-    "return 409 when poc-admin webIdentInitiateId is not set" in withInjector { Injector =>
-      val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB(Injector)
-      val pocAdminRepository = Injector.get[PocAdminRepository]
-      val poc = createPoc(poc1id, tenant.tenantName)
-      val _ = await(pocTable.createPoc(poc))
-      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
-        .copy(
-          status = Completed,
-          webIdentRequired = true,
           webIdentInitiateId = None
         )
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
@@ -1726,7 +1705,32 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(409)
-        assert(body.contains(s"Poc admin '$id' has webIdentInitiateId set"))
+        assert(body.contains(s"Poc admin '$id' has webIdentRequired set to false"))
+      }
+    }
+
+    "return 409 when poc-admin webIdentInitiateId is set" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = true,
+          webIdentInitiateId = Some(UUID.randomUUID())
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' webIdentInitiateId is set"))
       }
     }
 
@@ -1840,8 +1844,7 @@ class TenantAdminControllerSpec
                   |  "phone" : "${pa.mobilePhone}",
                   |  "pocName" : "${p.pocName}",
                   |  "active" : ${pa.active},
-                  |  "state" : "${Status.toFormattedString(pa.status)}",
-                  |  "webIdentInitiateId" : "${pa.webIdentInitiateId.orNull}"
+                  |  "state" : "${Status.toFormattedString(pa.status)}"
                   |}""".stripMargin
     pretty(render(parse(json)))
   }

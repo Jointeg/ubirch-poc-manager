@@ -320,10 +320,10 @@ class DefaultTenantAdminService @Inject() (
           case None => Task.pure(UpdatePocAdminError.NotFound(id).asLeft)
           case Some(pa) if pa.tenantId != tenant.id =>
             Task.pure(UpdatePocAdminError.AssignedToDifferentTenant(id, tenant.id).asLeft)
-          case Some(pa) if pa.status != Completed => Task.pure(UpdatePocAdminError.NotCompleted(id, pa.status).asLeft)
+          case Some(pa) if pa.status == Completed => Task.pure(UpdatePocAdminError.InvalidStatus(id, pa.status).asLeft)
           case Some(pa) if !pa.webIdentRequired   => Task.pure(UpdatePocAdminError.WebIdentRequired.asLeft)
-          case Some(pa) if pa.webIdentInitiateId.isEmpty =>
-            Task.pure(UpdatePocAdminError.WebIdentInitiateIdNotSet.asLeft)
+          case Some(pa) if pa.webIdentInitiateId.isDefined =>
+            Task.pure(UpdatePocAdminError.WebIdentInitiateIdAlreadySet.asLeft)
           case Some(pa) => pocAdminRepository.updatePocAdmin(update.copyToPocAdmin(pa)) >> Task.pure(().asRight)
         }
       } yield r
@@ -381,7 +381,7 @@ sealed trait UpdatePocAdminError
 object UpdatePocAdminError {
   case class NotFound(pocAdminId: UUID) extends UpdatePocAdminError
   case class AssignedToDifferentTenant(pocAdminId: UUID, tenantId: TenantId) extends UpdatePocAdminError
-  case class NotCompleted(pocAdminId: UUID, status: Status) extends UpdatePocAdminError
+  case class InvalidStatus(pocAdminId: UUID, status: Status) extends UpdatePocAdminError
   case object WebIdentRequired extends UpdatePocAdminError
-  case object WebIdentInitiateIdNotSet extends UpdatePocAdminError
+  case object WebIdentInitiateIdAlreadySet extends UpdatePocAdminError
 }
