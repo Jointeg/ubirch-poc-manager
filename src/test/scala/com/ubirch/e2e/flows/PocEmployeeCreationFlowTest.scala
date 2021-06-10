@@ -2,7 +2,7 @@ package com.ubirch.e2e.flows
 
 import com.ubirch.ModelCreationHelper.pocTypeValue
 import cats.implicits.toTraverseOps
-import com.ubirch.{ InjectorHelper, PocConfig }
+import com.ubirch.{ FakeX509Certs, InjectorHelper, PocConfig }
 import com.ubirch.controllers.{ PocAdminController, SuperAdminController, TenantAdminController }
 import com.ubirch.db.tables._
 import com.ubirch.e2e.{ DiscoveryServiceType, E2ETestBase, KeycloakOperations, RealDiscoverService, TenantAdmin }
@@ -300,7 +300,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     post(
       "/super-admin/tenants/create",
       body = createTenantJson(tenantAdminName).getBytes(),
-      headers = Map("authorization" -> superAdminToken)
+      headers = Map("authorization" -> superAdminToken, FakeX509Certs.validX509Header)
     ) {
       status should equal(200)
       assert(body == "")

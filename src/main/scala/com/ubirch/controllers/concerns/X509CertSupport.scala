@@ -6,6 +6,7 @@ import javax.servlet.http.HttpServletRequest
 import cats.syntax.traverse._
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
+import com.ubirch.controllers.concerns.HeaderKeys.TLS_HEADER_KEY
 import com.ubirch.models.NOK
 import com.ubirch.util.CertMaterializer
 
@@ -18,8 +19,6 @@ trait X509CertSupport {
 
 @Singleton
 class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSupport with LazyLogging {
-  private val TLS_HEADER_KEY = "X-Forwarded-Tls-Client-Cert"
-
   /**
     * Verify incoming X509 client certificate. The certificate is expected as a comma-separated chain cert.
     * As a verification step, the configured issuer certs also are used for the chain verification.
@@ -31,7 +30,7 @@ class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSuppo
       splitX509Certs <-
         x509Certs.split(",").toList.traverse(pem => CertMaterializer.parse(CertMaterializer.pemFromEncodedContent(pem)))
       issuers = splitX509Certs.map(_.getIssuer.toString).flatMap(x => pocConfig.issuerCertMap.get(x).toList).distinct
-      chain <- Try(CertMaterializer.sortCerts(splitX509Certs)).map(sorted => (sorted ++ issuers).distinct)
+      chain <- Try(CertMaterializer.sortCerts((splitX509Certs ++ issuers).distinct))
       isValid <- CertMaterializer.verifyChainedCert(chain)
     } yield isValid) match {
       case Success(result) =>
