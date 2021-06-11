@@ -1588,6 +1588,41 @@ class TenantAdminControllerSpec
     } */
   }
 
+  def pocToFormattedJson(poc: Poc): String = {
+    import poc._
+    s"""{
+       |  "id" : "$id",
+       |  "tenantId" : "${tenantId.value.value}",
+       |  "externalId" : "$externalId",
+       |  "pocType" : "$pocType",
+       |  "pocName" : "$pocName",
+       |  "address" : {
+       |    "street" : "${address.street}",
+       |    "houseNumber" : "${address.houseNumber}",
+       |    "zipcode" : ${address.zipcode},
+       |    "city" : "${address.city}",
+       |    "country" : "${address.country}"
+       |  },
+       |  "phone" : "$phone",
+       |  "certifyApp" : $certifyApp,
+       |  "clientCertRequired" : $clientCertRequired,
+       |  "extraConfig" : {
+       |    "test" : "hello"
+       |  },
+       |  "manager" : {
+       |    "lastName" : "${manager.managerSurname}",
+       |    "firstName" : "${manager.managerName}",
+       |    "email" : "${manager.managerEmail}",
+       |    "mobilePhone" : "${manager.managerMobilePhone}"
+       |  },
+       |  "roleName" : "$roleName",
+       |  "deviceId" : "$deviceId",
+       |  "status" : "${poc.status.toString.toUpperCase}",
+       |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
+       |  "created" : "${created.dateTime.toInstant}"
+       |}""".stripMargin
+  }
+
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
   }

@@ -14,6 +14,7 @@ import com.ubirch.controllers.SwitchActiveError.{
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import cats.syntax.either._
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
+import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.poc._
@@ -58,6 +59,10 @@ trait TenantAdminService {
     tenant: Tenant,
     tenantContext: TenantAdminContext,
     addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
+
+  def getPocForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocForTenantError, Poc]]
+
+  def updatePoc(tenant: Tenant, id: UUID, pocIn: Poc_IN): Task[Either[UpdatePocError, Unit]]
 }
 
 class DefaultTenantAdminService @Inject() (

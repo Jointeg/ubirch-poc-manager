@@ -11,6 +11,7 @@ import com.ubirch.controllers.SwitchActiveError.{
   UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
+import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.controllers.validator.CriteriaValidator
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc._
@@ -107,6 +108,17 @@ class TenantAdminController @Inject() (
       .description("Retrieve PoCs that belong to the querying tenant.")
       .tags("Tenant-Admin", "PoCs")
       .authorizations()
+  val getPoc: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve poc by id")
+      .summary("Get PoC")
+      .description("Retrieve PoC that belong to the querying tenant.")
+      .tags("Tenant-Admin", "PoC")
+      .authorizations()
+  val putPoc: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Update poc by id")
+      .summary("Update PoC")
+      .description("Update PoC that belong to the querying tenant.")
+      .tags("Tenant-Admin", "PoC")
   val getPocAdmins: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve all poc admins of the requesting tenant")
       .summary("Get PoC admins")
@@ -204,7 +216,7 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
         for {
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          r <- tenantAdminService.updatePoc(tenant, id, read[Poc_IN](body)).map {
+          r <- tenantAdminService.updatePoc(tenant, id, Serialization.read[Poc_IN](body)).map {
             case Left(e) => e match {
                 case UpdatePocError.NotFound(pocId) =>
                   NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
