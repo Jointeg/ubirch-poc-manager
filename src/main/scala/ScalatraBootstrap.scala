@@ -1,5 +1,6 @@
 import com.ubirch.Service
 import com.ubirch.controllers.{
+  HealthChecksController,
   InfoController,
   PocAdminController,
   PocEmployeeController,
@@ -21,6 +22,7 @@ class ScalatraBootstrap extends LifeCycle {
     lazy val pocAdminController = Service.get[PocAdminController]
     lazy val resourcesController = Service.get[ResourcesController]
     lazy val pocEmployeeController = Service.get[PocEmployeeController]
+    lazy val healthCheckController = Service.get[HealthChecksController]
 
     context.setInitParameter("org.scalatra.cors.preflightMaxAge", "5")
     context.setInitParameter("org.scalatra.cors.allowCredentials", "false")
@@ -55,6 +57,11 @@ class ScalatraBootstrap extends LifeCycle {
       handler = resourcesController,
       urlPattern = "/api-docs",
       name = "Resources"
+    )
+    context.mount(
+      handler = healthCheckController,
+      urlPattern = "/health-check",
+      name = "health-check"
     )
   }
 
