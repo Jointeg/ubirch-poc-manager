@@ -1,5 +1,6 @@
 package com.ubirch.test
 
+import com.ubirch.services.teamdrive.SttpTeamDriveClient.Space
 import com.ubirch.services.teamdrive.model._
 import monix.eval.Task
 
@@ -51,9 +52,15 @@ class FakeTeamDriveClient extends TeamDriveClient {
       }
     }
 
-  override def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]] = Task {
-    spaces.filter(_._2 == spaceName.v).keys.headOption
+  override def getSpaceByName(spaceName: SpaceName): Task[Option[Space]] = Task {
+    spaces.filter(_._2 == spaceName.v).headOption.map {
+      case (spaceId, name) =>
+        Space(spaceId.v, name, Active.value, "read", true)
+    }
   }
+
+  override def getSpaceByNameWithActivation(spaceName: SpaceName): Task[Option[Space]] =
+    getSpaceByName(spaceName)
 
   def emailIsInvited(spaceId: SpaceId, email: String): Boolean =
     invitations(spaceId).contains(email)
@@ -68,4 +75,6 @@ class FakeTeamDriveClient extends TeamDriveClient {
   override def withLogin[T](mainTask: => Task[T]): Task[T] = mainTask
 
   override def login(): Task[Unit] = Task.unit
+
+  override def activateSpace(spaceId: SpaceId): Task[Unit] = Task.unit
 }

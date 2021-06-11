@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.models.auth.Base16String
 import com.ubirch.models.auth.cert.Passphrase
+import com.ubirch.services.teamdrive.SttpTeamDriveClient.Space
 import com.ubirch.services.teamdrive.TeamDriveService.SharedCertificate
 import com.ubirch.services.teamdrive.model._
 import com.ubirch.util.PocAuditLogging
@@ -64,9 +65,9 @@ class TeamDriveServiceImpl @Inject() (client: TeamDriveClient, pocConfig: PocCon
       }.onErrorHandleWith {
         case ex if ex.getMessage.contains("exists") =>
           logger.warn(s"$spaceName was already created.")
-          client.getSpaceIdByName(spaceName).attempt.map {
-            case Right(spaceIdOpt) =>
-              spaceIdOpt.getOrElse(throw TeamDriveError(s"$spaceName was not found."))
+          client.getSpaceByNameWithActivation(spaceName).attempt.map {
+            case Right(spaceOpt) =>
+              spaceOpt.map(s => SpaceId(s.id)).getOrElse(throw TeamDriveError(s"$spaceName was not found."))
             case Left(exception) =>
               logger.error(s"unexpected error occurred when retrieving space: $spaceName.", exception)
               throw exception

@@ -1,5 +1,6 @@
 package com.ubirch.services.teamdrive
 
+import cats.data.OptionT
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.teamdrive.model._
@@ -122,7 +123,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
         .send()
     }
 
-  override def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]] = {
+  override def getSpaceByName(spaceName: SpaceName): Task[Option[Space]] = {
     callGetSpaces().map {
       _.body match {
         case Right(spaces) =>
@@ -136,7 +137,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
             logger.error(s"found duplicate space names: $spaceInfo")
             throw TeamDriveError(errorMsg)
           } else {
-            Some(SpaceId(filteredSpaces.head.id))
+            Some(filteredSpaces.head)
           }
         case Left(ex) =>
           val errorMsg = s"couldn't retrieve space by ${spaceName.v}, error: $ex"
@@ -144,6 +145,20 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
           throw TeamDriveError(errorMsg)
       }
     }
+  }
+
+  override def getSpaceByNameWithActivation(spaceName: SpaceName): Task[Option[Space]] = {
+    (for {
+      space <- OptionT(getSpaceByName(spaceName))
+      _ <-
+        if (space.status == Active) {
+          OptionT.liftF[Task, Space] {
+            activateSpace(SpaceId(space.id)).map(_ => space)
+          }
+        } else OptionT.some[Task](space)
+    } yield {
+      space
+    }).value
   }
 
   private def callGetSpaces(): Task[Response[Either[ResponseError[Exception], Seq[Space]]]] = {
@@ -195,6 +210,26 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
         .response(asJson[LoginInformation])
         .send()
     }
+
+  override def activateSpace(spaceId: SpaceId): Task[Unit] =
+    callJoinSpace(spaceId).map {
+      _.body match {
+        case Right(response: String) =>
+          logger.debug(s"activate the space: ${spaceId.v}. ${response}")
+        case Left(ex) =>
+          throw TeamDriveError(ex)
+      }
+    }
+
+  private def callJoinSpace(spaceId: SpaceId): Task[Response[Either[String, String]]] =
+    Task.deferFuture {
+      basicRequestWithTimeout
+        .contentType(MediaType.ApplicationJson.charset(StandardCharsets.UTF_8))
+        .get(uri"${config.url}/api/joinSpace")
+        .body(JoinSpace_IN(spaceId.v.toString))
+        .response(asString)
+        .send()
+    }
 }
 
 object SttpTeamDriveClient {
@@ -213,6 +248,9 @@ object SttpTeamDriveClient {
   case class InviteMember_OUT(result: Boolean)
 
   case class Login_IN(username: String, password: String)
+
+  case class JoinSpace_IN(id: String)
+  case class JoinSpace_OUT(result: Boolean)
 
   // these are some of fields from the getSpace endpoint
   case class Space(

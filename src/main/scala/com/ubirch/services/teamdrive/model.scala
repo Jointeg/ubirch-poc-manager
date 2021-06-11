@@ -2,12 +2,16 @@ package com.ubirch.services.teamdrive
 
 import com.ubirch.models.poc.Poc
 import com.ubirch.models.tenant.Tenant
+import com.ubirch.services.teamdrive.SttpTeamDriveClient.Space
 import monix.eval.Task
 
 import java.nio.ByteBuffer
 
 object model {
   sealed trait PermissionLevel
+  sealed trait SpaceStatus {
+    val value: String
+  }
 
   trait TeamDriveClient {
     def createSpace(name: SpaceName, path: String): Task[SpaceId]
@@ -17,10 +21,16 @@ object model {
       email: String,
       welcomeMessage: String,
       permissionLevel: PermissionLevel): Task[Boolean]
-    def getSpaceIdByName(spaceName: SpaceName): Task[Option[SpaceId]]
+    def getSpaceByName(spaceName: SpaceName): Task[Option[Space]]
+
+    /**
+      * This method gets space and makes the space active when the space is archived
+      */
+    def getSpaceByNameWithActivation(spaceName: SpaceName): Task[Option[Space]]
     def getLoginInformation(): Task[LoginInformation]
     def login(): Task[Unit]
     def withLogin[T](mainTask: => Task[T]): Task[T]
+    def activateSpace(spaceId: SpaceId): Task[Unit]
   }
 
   case class SpaceId(v: Int) extends AnyVal {
@@ -64,5 +74,13 @@ object model {
       case Read      => "read"
       case ReadWrite => "readWrite"
     }
+  }
+
+  case object Active extends SpaceStatus {
+    val value = "active"
+  }
+
+  case object Archived extends SpaceStatus {
+    val value = "archived"
   }
 }
