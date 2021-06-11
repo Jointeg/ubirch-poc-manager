@@ -8,6 +8,7 @@ import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.PocEmployeeTable
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.e2e.controllers.PocAdminControllerSpec._
+import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
@@ -26,9 +27,11 @@ import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.prop.TableDrivenPropertyChecks
 
+import scala.jdk.CollectionConverters._
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 
 class PocAdminControllerSpec
   extends E2ETestBase
@@ -762,7 +765,9 @@ class PocAdminControllerSpec
       val pocEmployee =
         createPocEmployee(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId), status = Completed)
       val id = await(repository.createPocEmployee(pocEmployee))
-      val updatedPocEmployee = pocEmployee.copy(name = "new name", surname = "new surname")
+      val newEmail = (getRandomString + "@test.de").toLowerCase
+      val updatedPocEmployee =
+        pocEmployee.copy(name = "new name", surname = "new surname", email = newEmail)
 
       put(
         uri = s"/employees/$id",
@@ -783,6 +788,8 @@ class PocAdminControllerSpec
       val ur = await(keycloakUserService.getUserById(poc.getRealm, UserId(certifyUserId), CertifyKeycloak)).value
       ur.getFirstName shouldBe updatedPocEmployee.name
       ur.getLastName shouldBe updatedPocEmployee.surname
+      ur.getEmail shouldBe updatedPocEmployee.email
+      ur.getRequiredActions.asScala shouldBe Seq(UserRequiredAction.VERIFY_EMAIL.toString)
     }
 
     "return 404 when PocEmployee does not exists" in withInjector { i =>
@@ -993,7 +1000,8 @@ object PocAdminControllerSpec {
       val json =
         s"""{
            | "firstName": "${pe.name}",
-           | "lastName": "${pe.surname}"
+           | "lastName": "${pe.surname}",
+           | "email": "${pe.email}"
            |}""".stripMargin
       pretty(render(parse(json)))
     }

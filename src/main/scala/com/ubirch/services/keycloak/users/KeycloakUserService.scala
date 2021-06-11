@@ -6,7 +6,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.models.keycloak.user._
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.user.{ FirstName, LastName, UserId, UserName }
+import com.ubirch.models.user._
 import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
@@ -89,7 +89,8 @@ trait KeycloakUserService {
     realm: KeycloakRealm,
     pocEmployee: PocEmployee,
     firstName: FirstName,
-    lastName: LastName): Task[Either[UpdateEmployeeKeycloakError, Unit]]
+    lastName: LastName,
+    email: Email): Task[Either[UpdateEmployeeKeycloakError, Unit]]
 }
 
 @Singleton
@@ -314,7 +315,8 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     realm: KeycloakRealm,
     pocEmployee: PocEmployee,
     firstName: FirstName,
-    lastName: LastName): Task[Either[UpdateEmployeeKeycloakError, Unit]] =
+    lastName: LastName,
+    email: Email): Task[Either[UpdateEmployeeKeycloakError, Unit]] =
     pocEmployee.certifyUserId match {
       case None => Task.pure(UpdateEmployeeKeycloakError.MissingCertifyUserId(pocEmployee.id).asLeft)
       case Some(certifyUserId) =>
@@ -327,9 +329,15 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
               certifyUserId, {
                 ur.setFirstName(firstName.value)
                 ur.setLastName(lastName.value)
+                if (ur.getEmail != email.value) {
+                  ur.setEmail(email.value)
+                  ur.setRequiredActions(
+                    (ur.getRequiredActions.asScala :+ UserRequiredAction.VERIFY_EMAIL.toString).distinct.asJava)
+                }
                 ur
               },
-              instance).map(_ => ().asRight)
+              instance
+            ).map(_ => ().asRight)
         }.onErrorHandle { ex =>
           val message = s"Could not update the employee: ${ex.getMessage}"
           logger.error(message, ex)

@@ -244,6 +244,4 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       addServlet(superAdminController, "/*")
     }
   }
-
-  private def getRandomString: String = Random.alphanumeric.take(10).mkString("")
 }

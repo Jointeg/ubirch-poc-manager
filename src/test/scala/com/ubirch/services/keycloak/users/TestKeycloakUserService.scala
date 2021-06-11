@@ -7,7 +7,7 @@ import com.ubirch.models.keycloak.user.{
   UserRequiredAction
 }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.user.{ FirstName, LastName, UserId, UserName }
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserId, UserName }
 import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakInstance }
 import monix.eval.Task
@@ -127,7 +127,8 @@ class TestKeycloakUserService() extends KeycloakUserService {
     realm: KeycloakRealm,
     pocEmployee: PocEmployee,
     firstName: FirstName,
-    lastName: LastName): Task[Either[UpdateEmployeeKeycloakError, Unit]] =
+    lastName: LastName,
+    email: Email): Task[Either[UpdateEmployeeKeycloakError, Unit]] =
     pocEmployee.certifyUserId match {
       case None => Task.pure(UpdateEmployeeKeycloakError.MissingCertifyUserId(pocEmployee.id).asLeft)
       case Some(certifyUserId) => Task {
@@ -135,7 +136,7 @@ class TestKeycloakUserService() extends KeycloakUserService {
           keycloakCertifyDatastore.get(userId) match {
             case None => UpdateEmployeeKeycloakError.UserNotFound(s"user with id $certifyUserId wasn't found").asLeft
             case Some(user) =>
-              keycloakCertifyDatastore.put(userId, user.copy(firstName = firstName, lastName = lastName))
+              keycloakCertifyDatastore.put(userId, user.copy(firstName = firstName, lastName = lastName, email = email))
               ().asRight
           }
         }

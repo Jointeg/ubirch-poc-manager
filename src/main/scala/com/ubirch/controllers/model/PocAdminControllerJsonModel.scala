@@ -13,8 +13,8 @@ object PocAdminControllerJsonModel {
     active: Boolean,
     status: Status)
 
-  case class PocEmployee_IN(firstName: String, lastName: String) {
-    def copyToPocEmployee(pe: PocEmployee): PocEmployee = pe.copy(name = firstName, surname = lastName)
+  case class PocEmployee_IN(firstName: String, lastName: String, email: String) {
+    def copyToPocEmployee(pe: PocEmployee): PocEmployee = pe.copy(name = firstName, surname = lastName, email = email)
   }
 
   object PocEmployee_OUT {

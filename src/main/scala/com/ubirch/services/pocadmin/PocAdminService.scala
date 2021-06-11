@@ -12,7 +12,7 @@ import com.ubirch.db.tables.{ PocEmployeeRepository, PocRepository, TenantReposi
 import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.TenantId
-import com.ubirch.models.user.{ FirstName, LastName }
+import com.ubirch.models.user.{ Email, FirstName, LastName }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.{
   KeycloakUserService,
@@ -141,7 +141,8 @@ class PocAdminServiceImpl @Inject() (
                 poc.getRealm,
                 pe,
                 FirstName(pocEmployeeIn.firstName),
-                LastName(pocEmployeeIn.lastName))
+                LastName(pocEmployeeIn.lastName),
+                Email(pocEmployeeIn.email))
               updateEmployee <- updateKeycloak match {
                 case Left(e) => Task.pure(UpdatePocEmployeeError.KeycloakError(e).asLeft)
                 case Right(_) =>
