@@ -34,11 +34,11 @@ scheduler: Scheduler)
         val header = lines.next()
 
         header.split(columnSeparator).map(_.trim).length match {
-          case colNum if colNum >= pocAdminHeaderColOrderLength && tenant.usageType == API =>
+          case colNum if colNum == pocAdminHeaderColOrderLength && tenant.usageType == API =>
             Task(Left("cannot parse admin creation for a tenant with usageType API"))
-          case colNum if colNum >= pocAdminHeaderColOrderLength =>
+          case colNum if colNum == pocAdminHeaderColOrderLength =>
             processPocAdmin.createListOfPoCsAndAdmin(csv, tenant, tenantContext)
-          case colNum if colNum >= pocHeaderColOrderLength =>
+          case colNum if colNum == pocHeaderColOrderLength =>
             processPoc.createListOfPoCs(csv, tenant, tenantContext)
           case colNum =>
             Task(Left(s"The number of header columns $colNum is not enough."))
