@@ -10,7 +10,7 @@ import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
-import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.{ FieldError, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
@@ -1640,8 +1640,8 @@ class TenantAdminControllerSpec
       val updatePocAdmin = pocAdminFromTable.copy(
         name = "new name",
         surname = "new surname",
-        email = "new email",
-        mobilePhone = "123321123",
+        email = "email@email.com",
+        mobilePhone = "+46-498-313789",
         dateOfBirth = BirthDate(LocalDate.parse("1989-11-25"))
       )
 
@@ -1656,6 +1656,43 @@ class TenantAdminControllerSpec
       get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
         status should equal(200)
         pretty(render(parse(body))) shouldBe pocAdminToFormattedGetPocAdminOutJson(updatePocAdmin, poc)
+      }
+    }
+
+    "return validation errors when invalid values are passed" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB(Injector)
+      val poc = createPoc(poc1id, tenant.tenantName)
+      await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = true,
+          webIdentInitiateId = None
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+      val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
+      val updatePocAdmin = pocAdminFromTable.copy(
+        name = "new name",
+        surname = "new surname",
+        email = "new email",
+        mobilePhone = "59145678464",
+        dateOfBirth = BirthDate(LocalDate.parse("1989-11-25"))
+      )
+
+      put(
+        uri = s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(updatePocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(400)
+        val errorResponse = read[ValidationErrorsResponse](body)
+        errorResponse.validationErrors should contain theSameElementsAs Seq(
+          FieldError("email", "Invalid email address 'new email'"),
+          FieldError("phone", "Invalid phone number '59145678464'")
+        )
       }
     }
 

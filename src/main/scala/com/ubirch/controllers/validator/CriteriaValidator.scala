@@ -3,14 +3,7 @@ package com.ubirch.controllers.validator
 import cats.data.Validated._
 import cats.data._
 import cats.implicits._
-import com.ubirch.controllers.validator.CriteriaValidator.{
-  validateFilterColumnStatus,
-  validatePageIndex,
-  validatePageSize,
-  validateSortColumn,
-  validateSortOrder,
-  PocCriteriaValidationResult
-}
+import com.ubirch.controllers.validator.CriteriaValidator.PocCriteriaValidationResult
 import com.ubirch.db.tables.model.{ AdminCriteria, Criteria, StatusFilter }
 import com.ubirch.models.common.{ ASC, Order, Page, Sort }
 import com.ubirch.models.poc.Status
