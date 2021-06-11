@@ -15,6 +15,7 @@ trait PocConfig {
   val pocTypeDataSchemaMap: Map[String, Seq[String]]
   val trustedPocGroupMap: Map[String, String]
   val pocTypeEndpointMap: Map[String, String]
+  val pocTypePocNameMap: Map[String, String]
   val locationNeeded: Seq[String]
   val roleNeeded: Seq[String]
 
@@ -45,6 +46,15 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     } catch {
       case e: Exception =>
         logger.error(s"can't parse the ${ServicesConfPaths.POC_TYPE_DATA_SCHEMA_MAP} value as Map[String, String]")
+        throw e
+    }
+
+  val pocTypePocNameMap: Map[String, String] =
+    try {
+      parse(config.getString(ServicesConfPaths.POC_TYPE_POC_NAME_MAP)).extract[Map[String, String]]
+    } catch {
+      case e: Exception =>
+        logger.error(s"can't parse the ${ServicesConfPaths.POC_TYPE_POC_NAME_MAP} value as Map[String, String]")
         throw e
     }
 

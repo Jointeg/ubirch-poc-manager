@@ -70,10 +70,12 @@ class PocEmployeeServiceImpl @Inject() (
         else if (poc.pocType.contains("vac")) Some("theme-blue")
         else None
 
+      val pocName = pocConfig.pocTypePocNameMap.getOrElse(poc.pocType, poc.pocName)
+
       val logoUrl = s"${pocConfig.pocLogoEndpoint}/${poc.id.toString}"
       GetCertifyConfigDTO(
         poc.externalId,
-        poc.pocName,
+        pocName,
         logoUrl,
         styleTheme,
         poc.address.toString,
