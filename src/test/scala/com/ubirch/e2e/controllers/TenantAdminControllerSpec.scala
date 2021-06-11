@@ -1684,6 +1684,31 @@ class TenantAdminControllerSpec
       }
     }
 
+    "return 409 when poc-admin is in Processing status" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        status = Processing,
+        webIdentRequired = true,
+        webIdentInitiateId = None)
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Processing'"))
+      }
+    }
+
     "return 409 when poc-admin webIdentRequired is false" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]

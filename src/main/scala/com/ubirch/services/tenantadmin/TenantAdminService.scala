@@ -320,7 +320,7 @@ class DefaultTenantAdminService @Inject() (
           case None => Task.pure(UpdatePocAdminError.NotFound(id).asLeft)
           case Some(pa) if pa.tenantId != tenant.id =>
             Task.pure(UpdatePocAdminError.AssignedToDifferentTenant(id, tenant.id).asLeft)
-          case Some(pa) if pa.status == Completed => Task.pure(UpdatePocAdminError.InvalidStatus(id, pa.status).asLeft)
+          case Some(pa) if pa.status != Pending => Task.pure(UpdatePocAdminError.InvalidStatus(id, pa.status).asLeft)
           case Some(pa) if !pa.webIdentRequired   => Task.pure(UpdatePocAdminError.WebIdentRequired.asLeft)
           case Some(pa) if pa.webIdentInitiateId.isDefined =>
             Task.pure(UpdatePocAdminError.WebIdentInitiateIdAlreadySet.asLeft)
