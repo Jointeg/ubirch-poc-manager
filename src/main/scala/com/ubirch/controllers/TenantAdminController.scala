@@ -28,7 +28,7 @@ import monix.execution.Scheduler
 import org.joda.time.{ DateTime, LocalDate }
 import org.json4s.Formats
 import org.json4s.native.Serialization
-import org.json4s.native.Serialization.{ read, write }
+import org.json4s.native.Serialization.write
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
@@ -56,7 +56,7 @@ class TenantAdminController @Inject() (
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
 
-  import com.ubirch.controllers.model.TenantAdminControllerJsonModel._
+  import TenantAdminController._
 
   implicit override protected def jsonFormats: Formats = jFormats
 
@@ -106,18 +106,6 @@ class TenantAdminController @Inject() (
       .summary("Get PoCs")
       .description("Retrieve PoCs that belong to the querying tenant.")
       .tags("Tenant-Admin", "PoCs")
-      .authorizations()
-  val getPoc: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("retrieve poc by id")
-      .summary("Get PoC")
-      .description("Retrieve PoC that belong to the querying tenant.")
-      .tags("Tenant-Admin", "PoC")
-      .authorizations()
-  val putPoc: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("Update poc by id")
-      .summary("Update PoC")
-      .description("Update PoC that belong to the querying tenant.")
-      .tags("Tenant-Admin", "PoC")
       .authorizations()
   val getPocAdmins: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve all poc admins of the requesting tenant")
@@ -190,45 +178,6 @@ class TenantAdminController @Inject() (
       }.onErrorHandle { ex =>
         InternalServerError(NOK.serverError(
           s"something went wrong retrieving pocs for tenant with id ${tenant.id}" + ex.getMessage))
-      }
-    }
-  }
-
-  get("/poc/:id", operation(getPoc)) {
-    tenantAdminEndpoint("Get PoC for a tenant") { tenant =>
-      getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
-        tenantAdminService.getPocForTenant(tenant, id).map {
-          case Left(e) => e match {
-              case GetPocForTenantError.NotFound(pocId) =>
-                NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
-              case GetPocForTenantError.AssignedToDifferentTenant(pocId, tenantId) =>
-                Unauthorized(NOK.authenticationError(
-                  s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
-            }
-          case Right(p) => Presenter.toJsonResult(p)
-        }
-      }
-    }
-  }
-
-  put("/poc/:id", operation(putPoc)) {
-    tenantAdminEndpoint("Update PoC for a tenant") { tenant =>
-      getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
-        for {
-          body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          r <- tenantAdminService.updatePoc(tenant, id, read[Poc_IN](body)).map {
-            case Left(e) => e match {
-                case UpdatePocError.NotFound(pocId) =>
-                  NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
-                case UpdatePocError.AssignedToDifferentTenant(pocId, tenantId) =>
-                  Unauthorized(NOK.authenticationError(
-                    s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
-                case UpdatePocError.NotCompleted(pocId, status) =>
-                  Conflict(NOK.conflict(s"Poc '$pocId' is in wrong status: '$status', required: '$Completed'"))
-              }
-            case Right(p) => Presenter.toJsonResult(p)
-          }
-        } yield r
       }
     }
   }
@@ -433,38 +382,41 @@ class TenantAdminController @Inject() (
   }
 
   delete("/poc-admin/:id/2fa-token", operation(delete2FATokenOnPocAdmin)) {
-    tenantAdminEndpoint("Delete 2FA token for PoC admin") { tenant =>
-      getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
-        for {
-          maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
-          notFoundMessage = s"Poc admin with id '$pocAdminId' not found'"
-          r <- maybePocAdmin match {
-            case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
-            case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
-              Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
-            case Some(pocAdmin) if pocAdmin.status != Completed =>
-              Task.pure(Conflict(NOK.conflict(
-                s"Poc admin '$pocAdminId' is in wrong status: '${pocAdmin.status}', required: '${Completed}'")))
-            case Some(pocAdmin) => certifyUserService.remove2FAToken(CertifyKeycloak.defaultRealm, pocAdmin)
-                .flatMap {
-                  case Left(e) => e match {
-                      case Remove2faTokenError.KeycloakError(_, error) =>
-                        error match {
-                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
-                            Task.pure(NotFound(NOK.resourceNotFoundError(error)))
-                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
-                            Task.pure(InternalServerError(NOK.serverError(error)))
-                        }
-                      case Remove2faTokenError.MissingCertifyUserId(id) =>
-                        Task.pure(Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId")))
-                    }
-                  case Right(_) =>
-                    pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
-                      Some(DateTime.parse(clock.instant().toString)))) >>
-                      Task.pure(Ok(""))
-                }
-          }
-        } yield r
+    if (true) NotFound(NOK.noRouteFound("Sorry, this method is not yet fully implemented."))
+    else {
+      tenantAdminEndpoint("Delete 2FA token for PoC admin") { tenant =>
+        getParamAsUUID("id", id => s"Invalid PocAdmin id '$id'") { pocAdminId =>
+          for {
+            maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+            notFoundMessage = s"Poc admin with id '$pocAdminId' not found'"
+            r <- maybePocAdmin match {
+              case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+              case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
+                Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+              case Some(pocAdmin) if pocAdmin.status != Completed =>
+                Task.pure(Conflict(NOK.conflict(
+                  s"Poc admin '$pocAdminId' is in wrong status: '${pocAdmin.status}', required: '${Completed}'")))
+              case Some(pocAdmin) => certifyUserService.remove2FAToken(CertifyKeycloak.defaultRealm, pocAdmin)
+                  .flatMap {
+                    case Left(e) => e match {
+                        case Remove2faTokenError.KeycloakError(_, error) =>
+                          error match {
+                            case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                              Task.pure(NotFound(NOK.resourceNotFoundError(error)))
+                            case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                              Task.pure(InternalServerError(NOK.serverError(error)))
+                          }
+                        case Remove2faTokenError.MissingCertifyUserId(id) =>
+                          Task.pure(Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId")))
+                      }
+                    case Right(_) =>
+                      pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
+                        Some(DateTime.parse(clock.instant().toString)))) >>
+                        Task.pure(Ok(""))
+                  }
+            }
+          } yield r
+        }
       }
     }
   }
@@ -522,3 +474,36 @@ class TenantAdminController @Inject() (
 }
 
 case class AddDeviceCreationTokenRequest(token: String)
+
+object TenantAdminController {
+  case class PocAdmin_OUT(
+    id: UUID,
+    firstName: String,
+    lastName: String,
+    dateOfBirth: LocalDate,
+    email: String,
+    phone: String,
+    pocName: String,
+    active: Boolean,
+    state: Status,
+    webIdentInitiateId: Option[UUID],
+    webIdentSuccessId: Option[String]
+  )
+
+  object PocAdmin_OUT {
+    def fromPocAdmin(pocAdmin: PocAdmin, poc: Poc): PocAdmin_OUT =
+      PocAdmin_OUT(
+        id = pocAdmin.id,
+        firstName = pocAdmin.name,
+        lastName = pocAdmin.surname,
+        dateOfBirth = pocAdmin.dateOfBirth.date,
+        email = pocAdmin.email,
+        phone = pocAdmin.mobilePhone,
+        pocName = poc.pocName,
+        active = pocAdmin.active,
+        state = pocAdmin.status,
+        webIdentInitiateId = pocAdmin.webIdentInitiateId,
+        webIdentSuccessId = pocAdmin.webIdentId
+      )
+  }
+}

@@ -528,13 +528,12 @@ class KeycloakIntegrationTest extends E2ETestBase {
       result._2.value.isEnabled shouldBe true
     }
 
-    // This test does not do too much as we can't test manually performed operations (update password, 2FA).
     "remove 2fa token" in withInjector { injector =>
       val keycloakUserService = injector.get[KeycloakUserService]
       val newKeycloakUser = KeycloakTestData.createNewDeviceKeycloakUser()
       val instance = CertifyKeycloak
       val realm = CertifyKeycloak.defaultRealm
-      val requiredAction = List(UserRequiredAction.UPDATE_PASSWORD)
+      val requiredAction = List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
 
       val r = for {
         create <- keycloakUserService.createUser(realm, newKeycloakUser, instance, requiredAction)
@@ -555,8 +554,8 @@ class KeycloakIntegrationTest extends E2ETestBase {
       } yield (userRequiredActionsBefore, userRequiredActionsAfter)
       val (requiredActionsBefore, requiredActionsAfter) = await(r)
 
-      requiredActionsBefore should contain theSameElementsAs List("UPDATE_PASSWORD")
-      requiredActionsAfter should contain theSameElementsAs List("UPDATE_PASSWORD", "webauthn-register")
+      requiredActionsBefore should contain theSameElementsAs List("UPDATE_PASSWORD", "webauthn-register")
+      requiredActionsAfter should contain theSameElementsAs List("UPDATE_PASSWORD")
     }
   }
 
