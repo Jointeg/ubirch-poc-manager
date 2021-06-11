@@ -1265,8 +1265,7 @@ class TenantAdminControllerSpec
         s"/poc-admin/${pocAdmin.id}/2fa-token",
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
-        status should equal(400)
-        println(body)
+        status should equal(404)
       }
     }
 
