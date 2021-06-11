@@ -13,7 +13,7 @@ import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.models.user.{ UserId, UserName }
-import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.{ FieldError, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -790,6 +790,34 @@ class PocAdminControllerSpec
       ur.getLastName shouldBe updatedPocEmployee.surname
       ur.getEmail shouldBe updatedPocEmployee.email
       ur.getRequiredActions.asScala shouldBe Seq(UserRequiredAction.VERIFY_EMAIL.toString)
+    }
+
+    "return validation errors" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+
+      val certifyUserId = await(createKeycloakUserForPocEmployee(keycloakUserService, poc))
+        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui.value)
+
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, certifyUserId = Some(certifyUserId), status = Completed)
+      val id = await(repository.createPocEmployee(pocEmployee))
+      val updatedPocEmployee =
+        pocEmployee.copy(name = "new name", surname = "new surname", email = "newEmail@.com")
+
+      put(
+        uri = s"/employees/$id",
+        body = updatedPocEmployee.toPocEmployeeInJson.getBytes,
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        status should equal(400)
+        val errorResponse = read[ValidationErrorsResponse](body)
+        errorResponse.validationErrors should contain theSameElementsAs Seq(
+          FieldError("email", "Invalid email address 'newEmail@.com'")
+        )
+      }
     }
 
     "return 404 when PocEmployee does not exists" in withInjector { i =>

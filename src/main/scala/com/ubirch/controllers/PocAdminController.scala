@@ -12,7 +12,7 @@ import com.ubirch.controllers.SwitchActiveError.{
   UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
-import com.ubirch.controllers.validator.AdminCriteriaValidator
+import com.ubirch.controllers.validator.{ AdminCriteriaValidator, PocEmployeeInValidator }
 import com.ubirch.db.tables.model.AdminCriteria
 import com.ubirch.models.poc.{ Completed, PocAdmin, Processing, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
@@ -223,24 +223,32 @@ class PocAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { id =>
         for {
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          r <- pocAdminService.updateEmployee(pocAdmin, id, read[PocEmployee_IN](body)).map {
-            case Right(_) => Ok()
-            case Left(e) => e match {
-                case UpdatePocEmployeeError.NotFound(id) =>
-                  NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
-                case UpdatePocEmployeeError.DoesNotBelongToTenant(_, _) =>
-                  Unauthorized(NOK.authenticationError("Unauthorized"))
-                case UpdatePocEmployeeError.WrongStatus(id, status, expectedStatus) =>
-                  Conflict(
-                    NOK.conflict(s"Poc employee '$id' is in wrong status: '$status', required: '$expectedStatus'"))
-                case UpdatePocEmployeeError.KeycloakError(e) => e match {
-                    case UpdateEmployeeKeycloakError.UserNotFound(_) =>
-                      InternalServerError(
-                        NOK.serverError(s"Poc employee '$id' is assigned to not existing certify user"))
-                    case UpdateEmployeeKeycloakError.KeycloakError(error) =>
-                      InternalServerError(NOK.serverError(s"Certify user services responded with error: $error"))
-                    case UpdateEmployeeKeycloakError.MissingCertifyUserId(_) =>
-                      InternalServerError(NOK.serverError(s"Poc employee '$id' is not assigned to certify user"))
+          unvalidatedIn <- Task(read[PocEmployee_IN](body))
+          validatedIn <- Task(PocEmployeeInValidator.validate(unvalidatedIn))
+          r <- validatedIn match {
+            case Validated.Invalid(e) =>
+              Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
+                .map(BadRequest(_))
+            case Validated.Valid(pocEmployeeIn) =>
+              pocAdminService.updateEmployee(pocAdmin, id, pocEmployeeIn).map {
+                case Right(_) => Ok()
+                case Left(e) => e match {
+                    case UpdatePocEmployeeError.NotFound(id) =>
+                      NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
+                    case UpdatePocEmployeeError.DoesNotBelongToTenant(_, _) =>
+                      Unauthorized(NOK.authenticationError("Unauthorized"))
+                    case UpdatePocEmployeeError.WrongStatus(id, status, expectedStatus) =>
+                      Conflict(
+                        NOK.conflict(s"Poc employee '$id' is in wrong status: '$status', required: '$expectedStatus'"))
+                    case UpdatePocEmployeeError.KeycloakError(e) => e match {
+                        case UpdateEmployeeKeycloakError.UserNotFound(_) =>
+                          InternalServerError(
+                            NOK.serverError(s"Poc employee '$id' is assigned to not existing certify user"))
+                        case UpdateEmployeeKeycloakError.KeycloakError(error) =>
+                          InternalServerError(NOK.serverError(s"Certify user services responded with error: $error"))
+                        case UpdateEmployeeKeycloakError.MissingCertifyUserId(_) =>
+                          InternalServerError(NOK.serverError(s"Poc employee '$id' is not assigned to certify user"))
+                      }
                   }
               }
           }
