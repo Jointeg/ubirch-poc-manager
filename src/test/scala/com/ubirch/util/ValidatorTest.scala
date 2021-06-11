@@ -561,7 +561,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     "Nein, danke",
     "<script>",
     "\\write18",
-    "ub\0irch GmbH",
+    "ub\u0000irch GmbH",
     "u\\x08ubirch GmbH",
     "❤️❤️❤️❤️"
   )
