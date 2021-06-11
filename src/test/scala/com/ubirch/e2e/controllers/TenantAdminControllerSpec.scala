@@ -8,7 +8,7 @@ import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
@@ -474,7 +474,7 @@ class TenantAdminControllerSpec
       val poc = createPoc(poc1id, tenant.tenantName).copy(status = Completed)
       val _ = await(pocTable.createPoc(poc))
       val updatedPoc = await(pocTable.getPoc(poc.id)).value.copy(
-        phone = "012345678",
+        phone = "+4974339346",
         address = Address(
           "new street",
           "1234",
@@ -484,7 +484,7 @@ class TenantAdminControllerSpec
           Some("new county"),
           Some("new federal state"),
           "new Germany"),
-        manager = PocManager("new last name", "new name", "new@email.com", "987789987")
+        manager = PocManager("new last name", "new name", "new@email.com", "+4974339296")
       )
 
       put(
@@ -492,6 +492,7 @@ class TenantAdminControllerSpec
         body = pocToFormattedJson(updatedPoc).getBytes,
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
+        body shouldBe "{}"
         status should equal(200)
       }
 
@@ -502,6 +503,40 @@ class TenantAdminControllerSpec
         pretty(render(parse(body))) shouldBe pocToFormattedJson(updatedPoc.copy(lastUpdated =
           updatedPocFromTable.lastUpdated))
       }
+    }
+
+    "return badRequest if update PoC data contains invalid email and phone numbers in wrong format" in withInjector {
+      injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocTable = injector.get[PocRepository]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(poc1id, tenant.tenantName).copy(status = Completed)
+        val _ = await(pocTable.createPoc(poc))
+        val updatedPoc = await(pocTable.getPoc(poc.id)).value.copy(
+          phone = "wrongPhone1",
+          address = Address(
+            "new street",
+            "1234",
+            Some("new additional"),
+            21436,
+            "new Berlin",
+            Some("new county"),
+            Some("new federal state"),
+            "new Germany"),
+          manager = PocManager("new last name", "new name", "notanemail", "+980")
+        )
+
+        put(
+          uri = s"/poc/$poc1id",
+          body = pocToFormattedJson(updatedPoc).getBytes,
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        ) {
+          status should equal(400)
+          body shouldBe NOK.badRequest(
+            """Invalid poc manager email
+              |Invalid phone number
+              |Invalid poc manager phone number""".stripMargin).toString
+        }
     }
 
     "return 409 when PoC is not in Completed status" in withInjector { Injector =>
