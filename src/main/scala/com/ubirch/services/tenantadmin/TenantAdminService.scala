@@ -2,8 +2,8 @@ package com.ubirch.services.tenantadmin
 
 import cats.Applicative
 import cats.data.EitherT
-import cats.syntax.either._
 import com.typesafe.scalalogging.LazyLogging
+import cats.syntax.apply._
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
@@ -11,19 +11,19 @@ import com.ubirch.controllers.SwitchActiveError.{
   ResourceNotFound,
   UserNotCompleted
 }
-import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
+import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import cats.syntax.either._
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.poc._
+import com.ubirch.models.poc.{ Completed, Poc, PocAdmin, PocAdminStatus, Status }
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
 import com.ubirch.services.util.Validator
-import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
@@ -302,7 +302,6 @@ class DefaultTenantAdminService @Inject() (
     }
 
   private def isValidUpdatePocData(poc_IN: Poc_IN): Either[UpdatePocError, Unit] = {
-    import cats.implicits._
     (
       Validator.validateEmail("Invalid poc manager email", poc_IN.manager.email),
       Validator.validatePhone("Invalid phone number", poc_IN.phone),
@@ -311,6 +310,7 @@ class DefaultTenantAdminService @Inject() (
       case _ => ()
     }.toEither.leftMap(errors => UpdatePocError.ValidationError(errors.toList.mkString("\n")))
   }
+
 }
 
 sealed trait CreateWebIdentInitiateIdErrors

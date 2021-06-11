@@ -4,7 +4,7 @@ import cats.implicits._
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.controllers.TenantAdminController.PocAdmin_OUT
+import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
