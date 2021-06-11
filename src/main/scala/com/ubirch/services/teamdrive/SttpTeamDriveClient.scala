@@ -225,7 +225,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
     Task.deferFuture {
       basicRequestWithTimeout
         .contentType(MediaType.ApplicationJson.charset(StandardCharsets.UTF_8))
-        .get(uri"${config.url}/api/joinSpace")
+        .post(uri"${config.url}/api/joinSpace")
         .body(JoinSpace_IN(spaceId.v.toString))
         .response(asString)
         .send()
