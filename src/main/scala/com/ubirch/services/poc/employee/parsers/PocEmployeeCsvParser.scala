@@ -24,7 +24,7 @@ class PocEmployeeCsvParser extends CsvParser[PocEmployeeCsvParseResult] with Laz
       case Success(csvPocEmployee) =>
         val validatedFirstName = validateString(firstName, csvPocEmployee.firstName).map(FirstName.apply)
         val validatedLastName = validateString(lastName, csvPocEmployee.lastName).map(LastName.apply)
-        val validatedEmail = validateEmail(email, csvPocEmployee.email).map(Email.apply)
+        val validatedEmail = validateEmailFromCSV(email, csvPocEmployee.email).map(Email.apply)
 
         validatePocEmployee(validatedFirstName, validatedLastName, validatedEmail) match {
           case Validated.Valid(pocEmployeeFromCsv) => Right(PocEmployeeCsvParseResult(pocEmployeeFromCsv, line))

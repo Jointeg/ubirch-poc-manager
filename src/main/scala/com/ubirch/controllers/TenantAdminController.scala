@@ -225,6 +225,8 @@ class TenantAdminController @Inject() (
                     s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
                 case UpdatePocError.NotCompleted(pocId, status) =>
                   Conflict(NOK.conflict(s"Poc '$pocId' is in wrong status: '$status', required: '$Completed'"))
+                case UpdatePocError.ValidationError(message) =>
+                  BadRequest(NOK.badRequest(message))
               }
             case Right(p) => Presenter.toJsonResult(p)
           }
