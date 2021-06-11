@@ -151,7 +151,7 @@ class SttpTeamDriveClient @Inject() (config: TeamDriveClientConfig)(implicit for
     (for {
       space <- OptionT(getSpaceByName(spaceName))
       _ <-
-        if (space.status == Active) {
+        if (space.status == Archived.value) {
           OptionT.liftF[Task, Space] {
             activateSpace(SpaceId(space.id)).map(_ => space)
           }
