@@ -11,17 +11,18 @@ import com.ubirch.controllers.SwitchActiveError.{
   ResourceNotFound,
   UserNotCompleted
 }
-import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
+import cats.syntax.either._
+import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
-import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
 import com.ubirch.services.util.Validator
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
@@ -57,11 +58,6 @@ trait TenantAdminService {
     tenant: Tenant,
     tenantContext: TenantAdminContext,
     addDeviceToken: AddDeviceCreationTokenRequest): Task[Either[String, Unit]]
-
-  def getPocForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocForTenantError, Poc]]
-
-  def updatePoc(tenant: Tenant, id: UUID, poc: Poc_IN): Task[Either[UpdatePocError, Unit]]
-
 }
 
 class DefaultTenantAdminService @Inject() (

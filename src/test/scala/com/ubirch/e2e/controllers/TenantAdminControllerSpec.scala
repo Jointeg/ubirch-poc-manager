@@ -4,7 +4,7 @@ import cats.implicits._
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
-import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
+import com.ubirch.controllers.TenantAdminController.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
@@ -1471,8 +1471,7 @@ class TenantAdminControllerSpec
         s"/poc-admin/${pocAdmin.id}/2fa-token",
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
-        status should equal(400)
-        println(body)
+        status should equal(404)
       }
     }
 
@@ -1587,41 +1586,6 @@ class TenantAdminControllerSpec
         assert(body.contains(s"Poc admin '$id' is in wrong status: 'Pending', required: 'Completed'"))
       }
     } */
-  }
-
-  def pocToFormattedJson(poc: Poc): String = {
-    import poc._
-    s"""{
-       |  "id" : "$id",
-       |  "tenantId" : "${tenantId.value.value}",
-       |  "externalId" : "$externalId",
-       |  "pocType" : "$pocType",
-       |  "pocName" : "$pocName",
-       |  "address" : {
-       |    "street" : "${address.street}",
-       |    "houseNumber" : "${address.houseNumber}",
-       |    "zipcode" : ${address.zipcode},
-       |    "city" : "${address.city}",
-       |    "country" : "${address.country}"
-       |  },
-       |  "phone" : "$phone",
-       |  "certifyApp" : $certifyApp,
-       |  "clientCertRequired" : $clientCertRequired,
-       |  "extraConfig" : {
-       |    "test" : "hello"
-       |  },
-       |  "manager" : {
-       |    "lastName" : "${manager.managerSurname}",
-       |    "firstName" : "${manager.managerName}",
-       |    "email" : "${manager.managerEmail}",
-       |    "mobilePhone" : "${manager.managerMobilePhone}"
-       |  },
-       |  "roleName" : "$roleName",
-       |  "deviceId" : "$deviceId",
-       |  "status" : "${poc.status.toString.toUpperCase}",
-       |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
-       |  "created" : "${created.dateTime.toInstant}"
-       |}""".stripMargin
   }
 
   override protected def beforeEach(): Unit = {
