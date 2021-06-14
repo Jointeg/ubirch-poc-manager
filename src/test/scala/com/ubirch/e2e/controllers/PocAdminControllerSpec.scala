@@ -319,23 +319,6 @@ class PocAdminControllerSpec
 
     "Endpoint DELETE /poc-employee/:id/2fa-token" should {
 
-      /*
-      "delete 2FA token for poc employee" in withInjector { i =>
-        val token = i.get[FakeTokenCreator]
-
-        val poc = createPoc()
-        val pocAdmin =
-          createPocAdmin(pocId = poc.id, tenantId = poc.tenantId).copy(certifyUserId = Some(UUID.randomUUID()))
-        val employee = createPocEmployee()
-
-        delete(
-          s"/poc-employee/${employee.id}/2fa-token",
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
-        ) {
-          status should equal(404)
-        }
-      }*/
-
       "delete 2FA token for poc employee" in withInjector { i =>
         val token = i.get[FakeTokenCreator]
         val clock = i.get[Clock]

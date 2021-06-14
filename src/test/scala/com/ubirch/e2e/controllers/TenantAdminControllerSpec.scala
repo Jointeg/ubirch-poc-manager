@@ -1458,23 +1458,6 @@ class TenantAdminControllerSpec
   }
 
   "Endpoint DELETE /poc-admin/:id/2fa-token" should {
-    /*"delete 2FA token for poc admin" in withInjector { i =>
-      val token = i.get[FakeTokenCreator]
-
-      val tenant = createTenant()
-      val poc = createPoc()
-      val pocAdmin =
-        createPocAdmin(pocId = poc.id, tenantId = poc.tenantId).copy(certifyUserId = Some(UUID.randomUUID()))
-      val employee = createPocEmployee()
-
-      delete(
-        s"/poc-admin/${pocAdmin.id}/2fa-token",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
-      ) {
-        status should equal(404)
-      }
-    }*/
-
     "delete 2FA token for poc admin" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val clock = i.get[Clock]
