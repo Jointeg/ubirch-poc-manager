@@ -331,6 +331,8 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
                 ur.setLastName(lastName.value)
                 if (ur.getEmail != email.value) {
                   ur.setEmail(email.value)
+                  ur.setEmailVerified(false)
+                  ur.setAttributes(Map("confirmation_mail_sent" -> List("false").asJava).asJava)
                   ur.setRequiredActions(
                     (ur.getRequiredActions.asScala :+ UserRequiredAction.VERIFY_EMAIL.toString).distinct.asJava)
                 }
