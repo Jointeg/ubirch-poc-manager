@@ -330,7 +330,6 @@ class PocAdminControllerSpec
           headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
         ) {
           status should equal(404)
-          println(body)
         }
       }
       /**
