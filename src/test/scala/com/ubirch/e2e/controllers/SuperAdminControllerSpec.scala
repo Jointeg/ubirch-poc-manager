@@ -141,30 +141,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         assert(ubirchGroup.isRight)
         assert(ubirchGroup.right.get.getRealmRoles.contains(ServiceConstants.TENANT_GROUP_PREFIX + ubirchName))
       }
-
-    }
-
-    "be able to successfully create a Tenant without a sharedAuthCert required" in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-
-        val tenantName = getRandomString
-        val createTenantBody = createTenantJsonWithoutClientCert(tenantName)
-
-        post(
-          "/tenants/create",
-          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdmin.prepare)) {
-          status should equal(200)
-          assert(body == "")
-        }
-
-        val tenantRepository = injector.get[TenantRepository]
-        val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
-        maybeTenant.value.tenantName shouldBe TenantName(tenantName)
-        maybeTenant.value.usageType shouldBe API
-        maybeTenant.value.sharedAuthCert shouldBe None
-      }
     }
 
     "not be able to create a Tenant with duplicated tenantName" in {

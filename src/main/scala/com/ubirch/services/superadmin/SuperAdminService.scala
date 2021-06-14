@@ -40,23 +40,13 @@ class DefaultSuperAdminService @Inject() (
     for {
       deviceAndCertifyGroup <- keycloakHelper.doKeycloakRelatedTasks(createTenantRequest)
       tenant = convertToTenant(createTenantRequest, deviceAndCertifyGroup)
-
       _ <- createOrgCert(tenant)
-      tenantId <-
-        if (tenant.sharedAuthCertRequired) {
-          for {
-            _ <- createOrgUnitCert(tenant)
-            response <- createSharedAuthCert(tenant)
-            _ <- createShareCertIntoTD(tenant, response)
-            cert <- getCert(tenant, response)
-            updated = tenant.copy(sharedAuthCert = Some(SharedAuthCert(cert)))
-            tenantId <- persistTenant(updated, superAdminContext)
-          } yield {
-            tenantId
-          }
-        } else {
-          persistTenant(tenant, superAdminContext)
-        }
+      _ <- createOrgUnitCert(tenant)
+      response <- createSharedAuthCert(tenant)
+      _ <- createShareCertIntoTD(tenant, response)
+      cert <- getCert(tenant, response)
+      updated = tenant.copy(sharedAuthCert = Some(SharedAuthCert(cert)))
+      tenantId <- persistTenant(updated, superAdminContext)
     } yield tenantId
   }
 
@@ -149,8 +139,7 @@ class DefaultSuperAdminService @Inject() (
       TenantCertifyGroupId(deviceAndCertifyGroup.certifyGroup.value),
       TenantDeviceGroupId(deviceAndCertifyGroup.deviceGroup.value),
       deviceAndCertifyGroup.tenantTypeGroup.map(g => TenantTypeGroupId(g.value)),
-      orgId = OrgId(tenantId.value),
-      sharedAuthCertRequired = createTenantRequest.sharedAuthCertRequired
+      orgId = OrgId(tenantId.value)
     )
   }
 

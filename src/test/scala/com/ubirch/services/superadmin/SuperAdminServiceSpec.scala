@@ -36,21 +36,6 @@ class SuperAdminServiceSpec extends UnitTestBase {
       }
     }
 
-    "create tenant without sharedCert required successfully" in {
-      withInjector { injector =>
-        val superAdminSvc = injector.get[SuperAdminService]
-        val tenantRepo = injector.get[TenantRepository]
-        val request = tenantRequest.copy(sharedAuthCertRequired = false)
-        val r = superAdminSvc
-          .createTenant(request, superAdminContext)
-          .runSyncUnsafe()
-        r.isRight shouldBe true
-        val t = tenantRepo.getTenant(r.right.get).runSyncUnsafe()
-        t.isDefined shouldBe true
-        t.get.sharedAuthCert.isEmpty shouldBe true
-      }
-    }
-
     "should throw exception on group creation failure" in {
       withInjector { injector =>
         val repo = injector.get[TenantRepository]

@@ -54,8 +54,7 @@ object ModelCreationHelper {
       TenantCertifyGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       TenantDeviceGroupId(TENANT_GROUP_PREFIX + globalTenantName),
       None,
-      OrgId(TenantId(TenantName(name)).value),
-      sharedAuthCertRequired = true
+      OrgId(TenantId(TenantName(name)).value)
     ).copy(sharedAuthCert = sharedAuthCert)
   }
 
@@ -144,12 +143,11 @@ object ModelCreationHelper {
       logoStored = None
     )
 
-  def createTenantRequest(sharedAuthCertRequired: Boolean = true): CreateTenantRequest =
+  def createTenantRequest(): CreateTenantRequest =
     CreateTenantRequest(
       TenantName("tenantName"),
       API,
-      UBIRCH,
-      sharedAuthCertRequired = sharedAuthCertRequired
+      UBIRCH
     )
 
   def createTenantPocAndEmployee: (Tenant, Poc, PocEmployee) = {
