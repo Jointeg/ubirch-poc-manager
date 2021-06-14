@@ -46,8 +46,10 @@ object PoCCertCreator extends LazyLogging {
         sharedAuthResponse.pkcs12
       ).onErrorHandleWith {
         ex =>
-          logger.error(s"Could not upload shared auth certificate in TeamDrive id: $id, pocIc: ${poc.id.toString}", ex)
-          pocCreationError(s"Could not upload shared auth certificate in TeamDrive with id: $id", newPocAndStatus)
+          logger.error(
+            s"Could not upload shared auth certificate in TeamDrive name: $name id: $id, pocIc: ${poc.id.toString}",
+            ex)
+          pocCreationError(s"Could not upload shared auth certificate in TeamDrive with name: $name", newPocAndStatus)
       }
     } yield {
       newPocAndStatus

@@ -12,12 +12,14 @@ import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.SwaggerSupport
 
 import java.io.ByteArrayInputStream
-import java.nio.charset.{ Charset, StandardCharsets }
+import java.nio.charset.Charset
 import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
 import javax.servlet.{ ReadListener, ServletInputStream }
 import scala.concurrent.Future
+import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.io.Source
 import scala.util.Try
+import scala.language.postfixOps
 
 /**
   * Represents a customized ServletInputStream that allows to cache the body of a request.
@@ -106,7 +108,10 @@ abstract class ControllerBase
   }
 
   def asyncResultCore(body: () => CancelableFuture[ActionResult]): AsyncResult = {
-    new AsyncResult() { override val is: Future[_] = body() }
+    new AsyncResult() {
+      override val is: Future[_] = body()
+      implicit override def timeout: Duration = 90 seconds
+    }
   }
 
   def asyncResult(name: String)(body: HttpServletRequest => HttpServletResponse => Task[ActionResult])(

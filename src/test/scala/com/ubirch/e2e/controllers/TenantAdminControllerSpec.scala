@@ -7,10 +7,12 @@ import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
-import com.ubirch.models.{ Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.{ FieldError, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
@@ -472,7 +474,7 @@ class TenantAdminControllerSpec
       val poc = createPoc(poc1id, tenant.tenantName).copy(status = Completed)
       val _ = await(pocTable.createPoc(poc))
       val updatedPoc = await(pocTable.getPoc(poc.id)).value.copy(
-        phone = "012345678",
+        phone = "+4974339346",
         address = Address(
           "new street",
           "1234",
@@ -482,7 +484,7 @@ class TenantAdminControllerSpec
           Some("new county"),
           Some("new federal state"),
           "new Germany"),
-        manager = PocManager("new last name", "new name", "new@email.com", "987789987")
+        manager = PocManager("new last name", "new name", "new@email.com", "+4974339296")
       )
 
       put(
@@ -490,6 +492,7 @@ class TenantAdminControllerSpec
         body = pocToFormattedJson(updatedPoc).getBytes,
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
+        body shouldBe "{}"
         status should equal(200)
       }
 
@@ -500,6 +503,40 @@ class TenantAdminControllerSpec
         pretty(render(parse(body))) shouldBe pocToFormattedJson(updatedPoc.copy(lastUpdated =
           updatedPocFromTable.lastUpdated))
       }
+    }
+
+    "return badRequest if update PoC data contains invalid email and phone numbers in wrong format" in withInjector {
+      injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocTable = injector.get[PocRepository]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(poc1id, tenant.tenantName).copy(status = Completed)
+        val _ = await(pocTable.createPoc(poc))
+        val updatedPoc = await(pocTable.getPoc(poc.id)).value.copy(
+          phone = "wrongPhone1",
+          address = Address(
+            "new street",
+            "1234",
+            Some("new additional"),
+            21436,
+            "new Berlin",
+            Some("new county"),
+            Some("new federal state"),
+            "new Germany"),
+          manager = PocManager("new last name", "new name", "notanemail", "+980")
+        )
+
+        put(
+          uri = s"/poc/$poc1id",
+          body = pocToFormattedJson(updatedPoc).getBytes,
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        ) {
+          status should equal(400)
+          body shouldBe NOK.badRequest(
+            """Invalid poc manager email
+              |Invalid phone number
+              |Invalid poc manager phone number""".stripMargin).toString
+        }
     }
 
     "return 409 when PoC is not in Completed status" in withInjector { Injector =>
@@ -1435,7 +1472,6 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(404)
-        println(body)
       }
     }
 
@@ -1560,8 +1596,7 @@ class TenantAdminControllerSpec
       val tenant = addTenantToDB(Injector)
       val poc = createPoc(poc1id, tenant.tenantName)
       await(pocTable.createPoc(poc))
-      val pocAdmin =
-        createPocAdmin(tenantId = tenant.id, pocId = poc.id).copy(webIdentInitiateId = Some(UUID.randomUUID()))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
       val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
 
@@ -1632,17 +1667,17 @@ class TenantAdminControllerSpec
       await(pocTable.createPoc(poc))
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
         .copy(
-          status = Completed,
+          status = Pending,
           webIdentRequired = true,
-          webIdentInitiateId = Some(UUID.randomUUID())
+          webIdentInitiateId = None
         )
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
       val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
       val updatePocAdmin = pocAdminFromTable.copy(
         name = "new name",
         surname = "new surname",
-        email = "new email",
-        mobilePhone = "123321123",
+        email = "email@email.com",
+        mobilePhone = "+46-498-313789",
         dateOfBirth = BirthDate(LocalDate.parse("1989-11-25"))
       )
 
@@ -1660,14 +1695,56 @@ class TenantAdminControllerSpec
       }
     }
 
-    "return 409 when poc-admin is not in Completed status" in withInjector { Injector =>
+    "return validation errors when invalid values are passed" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB(Injector)
+      val poc = createPoc(poc1id, tenant.tenantName)
+      await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = true,
+          webIdentInitiateId = None
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+      val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
+      val updatePocAdmin = pocAdminFromTable.copy(
+        name = "new name",
+        surname = "new surname",
+        email = "new email",
+        mobilePhone = "59145678464",
+        dateOfBirth = BirthDate(LocalDate.parse("1989-11-25"))
+      )
+
+      put(
+        uri = s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(updatePocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(400)
+        val errorResponse = read[ValidationErrorsResponse](body)
+        errorResponse.validationErrors should contain theSameElementsAs Seq(
+          FieldError("email", "Invalid email address 'new email'"),
+          FieldError("phone", "Invalid phone number '59145678464'")
+        )
+      }
+    }
+
+    "return 409 when poc-admin is in Completed status" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
       val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB(Injector)
       val pocAdminRepository = Injector.get[PocAdminRepository]
       val poc = createPoc(poc1id, tenant.tenantName)
       val _ = await(pocTable.createPoc(poc))
-      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id).copy(status = Processing)
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        status = Completed,
+        webIdentRequired = true,
+        webIdentInitiateId = None)
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
 
       put(
@@ -1676,7 +1753,32 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(409)
-        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Processing', required: 'Completed'"))
+        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Completed'"))
+      }
+    }
+
+    "return 409 when poc-admin is in Processing status" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        status = Processing,
+        webIdentRequired = true,
+        webIdentInitiateId = None)
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Processing'"))
       }
     }
 
@@ -1689,33 +1791,8 @@ class TenantAdminControllerSpec
       val _ = await(pocTable.createPoc(poc))
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
         .copy(
-          status = Completed,
+          status = Pending,
           webIdentRequired = false,
-          webIdentInitiateId = Some(UUID.randomUUID())
-        )
-      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
-
-      put(
-        s"/poc-admin/$id",
-        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
-      ) {
-        status should equal(409)
-        assert(body.contains(s"Poc admin '$id' has webIdentRequired set to true"))
-      }
-    }
-
-    "return 409 when poc-admin webIdentInitiateId is not set" in withInjector { Injector =>
-      val token = Injector.get[FakeTokenCreator]
-      val pocTable = Injector.get[PocRepository]
-      val tenant = addTenantToDB(Injector)
-      val pocAdminRepository = Injector.get[PocAdminRepository]
-      val poc = createPoc(poc1id, tenant.tenantName)
-      val _ = await(pocTable.createPoc(poc))
-      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
-        .copy(
-          status = Completed,
-          webIdentRequired = true,
           webIdentInitiateId = None
         )
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
@@ -1726,7 +1803,32 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(409)
-        assert(body.contains(s"Poc admin '$id' has webIdentInitiateId set"))
+        assert(body.contains(s"Poc admin '$id' has webIdentRequired set to false"))
+      }
+    }
+
+    "return 409 when poc-admin webIdentInitiateId is set" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = true,
+          webIdentInitiateId = Some(UUID.randomUUID())
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' webIdentInitiateId is set"))
       }
     }
 
@@ -1840,8 +1942,7 @@ class TenantAdminControllerSpec
                   |  "phone" : "${pa.mobilePhone}",
                   |  "pocName" : "${p.pocName}",
                   |  "active" : ${pa.active},
-                  |  "state" : "${Status.toFormattedString(pa.status)}",
-                  |  "webIdentInitiateId" : "${pa.webIdentInitiateId.orNull}"
+                  |  "state" : "${Status.toFormattedString(pa.status)}"
                   |}""".stripMargin
     pretty(render(parse(json)))
   }

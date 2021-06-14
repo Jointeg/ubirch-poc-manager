@@ -10,7 +10,8 @@ import com.ubirch.models.user._
 import com.ubirch.services.keycloak.KeycloakRealm
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
-import org.keycloak.representations.idm.UserRepresentation
+import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import scala.util.Try
 
 import java.util.UUID
 import javax.ws.rs.NotFoundException
@@ -295,21 +296,59 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     realm: KeycloakRealm,
     id: UUID,
     instance: KeycloakInstance): Task[Either[Remove2faTokenKeycloakError, Unit]] =
-    getUserById(realm, UserId(id), instance).flatMap {
-      case Some(ur) => update(
+    Task.parZip2(getUserById(realm, UserId(id), instance), getUserCredentials(realm, UserId(id), instance)).flatMap {
+      case (Some(ur), credentials) => {
+        val webAuthNCredentials = credentials.find(_.getType == "webauthn")
+        update(
           realm,
           id, {
             ur.setRequiredActions(
-              ur.getRequiredActions.asScala.filterNot(_ == UserRequiredAction.WEBAUTHN_REGISTER.toString).asJava)
+              (ur.getRequiredActions.asScala :+ UserRequiredAction.WEBAUTHN_REGISTER.toString).distinct.asJava
+            )
             ur
           },
-          instance).map(_ => ().asRight)
-      case None => Task.pure(Remove2faTokenKeycloakError.UserNotFound(s"user with id $id wasn't found").asLeft)
+          instance).flatMap(_ => {
+          if (webAuthNCredentials.isDefined) {
+            removeCredentials(realm, UserId(id), instance, webAuthNCredentials.get)
+          } else {
+            Task.unit
+          }
+        }).map(_ => ().asRight)
+      }
+      case _ => Task.pure(Remove2faTokenKeycloakError.UserNotFound(s"user with id $id wasn't found").asLeft)
     }.onErrorHandle { ex =>
       val message = s"Could not remove 2FA token: ${ex.getMessage}"
       logger.error(message, ex)
       Remove2faTokenKeycloakError.KeycloakError(message).asLeft
     }
+
+  private def removeCredentials(
+    realm: KeycloakRealm,
+    userId: UserId,
+    instance: KeycloakInstance,
+    credentials: CredentialRepresentation): Task[Unit] = {
+    Task(
+      keycloakConnector
+        .getKeycloak(instance)
+        .realm(realm.name)
+        .users()
+        .get(userId.value.toString)
+        .removeCredential(credentials.getId)
+    )
+  }
+
+  private def getUserCredentials(realm: KeycloakRealm, userId: UserId, instance: KeycloakInstance) = {
+    Task(
+      Option(keycloakConnector
+        .getKeycloak(instance)
+        .realm(realm.name)
+        .users()
+        .get(userId.value.toString)
+        .credentials()
+        .asScala)
+        .getOrElse(List.empty)
+    )
+  }
 
   override def updateEmployee(
     realm: KeycloakRealm,

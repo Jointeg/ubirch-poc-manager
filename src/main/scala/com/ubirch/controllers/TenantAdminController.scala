@@ -11,7 +11,7 @@ import com.ubirch.controllers.SwitchActiveError.{
   UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
-import com.ubirch.controllers.validator.CriteriaValidator
+import com.ubirch.controllers.validator.{ CriteriaValidator, PocAdminInValidator }
 import com.ubirch.db.tables.{ PocAdminRepository, PocRepository, PocStatusRepository, TenantTable }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
@@ -22,6 +22,7 @@ import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
 import com.ubirch.services.poc.{ CertifyUserService, PocBatchHandlerImpl, Remove2faTokenError }
 import com.ubirch.services.tenantadmin.GetPocAdminStatusErrors._
 import com.ubirch.services.tenantadmin._
+import com.ubirch.services.util.Validator
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -119,6 +120,7 @@ class TenantAdminController @Inject() (
       .description("Update PoC that belong to the querying tenant.")
       .tags("Tenant-Admin", "PoC")
       .authorizations()
+
   val getPocAdmins: SwaggerSupportSyntax.OperationBuilder =
     apiOperation[String]("retrieve all poc admins of the requesting tenant")
       .summary("Get PoC admins")
@@ -228,7 +230,7 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc id '$id'") { id =>
         for {
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          r <- tenantAdminService.updatePoc(tenant, id, read[Poc_IN](body)).map {
+          r <- tenantAdminService.updatePoc(tenant, id, Serialization.read[Poc_IN](body)).map {
             case Left(e) => e match {
                 case UpdatePocError.NotFound(pocId) =>
                   NotFound(NOK.resourceNotFoundError(s"PoC with id '$pocId' does not exist"))
@@ -237,6 +239,8 @@ class TenantAdminController @Inject() (
                     s"PoC with id '$pocId' does not belong to tenant with id '${tenantId.value.value}'"))
                 case UpdatePocError.NotCompleted(pocId, status) =>
                   Conflict(NOK.conflict(s"Poc '$pocId' is in wrong status: '$status', required: '$Completed'"))
+                case UpdatePocError.ValidationError(message) =>
+                  BadRequest(NOK.badRequest(message))
               }
             case Right(p) => Presenter.toJsonResult(p)
           }
@@ -508,22 +512,30 @@ class TenantAdminController @Inject() (
       getParamAsUUID("id", id => s"Invalid poc-admin id '$id'") { id =>
         for {
           body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
-          r <- tenantAdminService.updatePocAdmin(tenant, id, read[PocAdmin_IN](body)).map {
-            case Left(e) => e match {
-                case UpdatePocAdminError.NotFound(pocAdminId) =>
-                  NotFound(NOK.resourceNotFoundError(s"PoC admin with id '$pocAdminId' does not exist"))
-                case UpdatePocAdminError.AssignedToDifferentTenant(pocAdminId, tenantId) =>
-                  Unauthorized(NOK.authenticationError(
-                    s"PoC admin with id '$id' does not belong to tenant with id '${tenant.id.value.value}'"))
-                case UpdatePocAdminError.NotCompleted(pocAdminId, status) =>
-                  Conflict(
-                    NOK.conflict(s"Poc admin '$pocAdminId' is in wrong status: '$status', required: '$Completed'"))
-                case UpdatePocAdminError.WebIdentRequired =>
-                  Conflict(NOK.conflict(s"Poc admin '$id' has webIdentRequired set to true"))
-                case UpdatePocAdminError.WebIdentInitiateIdNotSet =>
-                  Conflict(NOK.conflict(s"Poc admin '$id' has webIdentInitiateId set"))
+          unvalidatedIn <- Task(read[PocAdmin_IN](body))
+          validatedIn <- Task(PocAdminInValidator.validate(unvalidatedIn))
+          r <- validatedIn match {
+            case Validated.Invalid(e) =>
+              Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
+                .map(BadRequest(_))
+            case Validated.Valid(pocAdminIn) =>
+              tenantAdminService.updatePocAdmin(tenant, id, pocAdminIn).map {
+                case Left(e) => e match {
+                    case UpdatePocAdminError.NotFound(pocAdminId) =>
+                      NotFound(NOK.resourceNotFoundError(s"PoC admin with id '$pocAdminId' does not exist"))
+                    case UpdatePocAdminError.AssignedToDifferentTenant(_, _) =>
+                      Unauthorized(NOK.authenticationError(
+                        s"PoC admin with id '$id' does not belong to tenant with id '${tenant.id.value.value}'"))
+                    case UpdatePocAdminError.InvalidStatus(pocAdminId, status) =>
+                      Conflict(
+                        NOK.conflict(s"Poc admin '$pocAdminId' is in wrong status: '$status', required: '$Completed'"))
+                    case UpdatePocAdminError.WebIdentRequired =>
+                      Conflict(NOK.conflict(s"Poc admin '$id' has webIdentRequired set to false"))
+                    case UpdatePocAdminError.WebIdentInitiateIdAlreadySet =>
+                      Conflict(NOK.conflict(s"Poc admin '$id' webIdentInitiateId is set"))
+                  }
+                case Right(_) => Ok()
               }
-            case Right(_) => Ok()
           }
         } yield r
       }
