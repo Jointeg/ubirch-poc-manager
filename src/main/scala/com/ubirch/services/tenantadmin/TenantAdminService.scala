@@ -317,7 +317,6 @@ class DefaultTenantAdminService @Inject() (
     }.toEither.leftMap(errors => UpdatePocError.ValidationError(errors.toList.mkString("\n")))
   }
 
-
   override def getPocAdminForTenant(
     tenant: Tenant,
     id: UUID): Task[Either[GetPocAdminForTenantError, (PocAdmin, Poc)]] =

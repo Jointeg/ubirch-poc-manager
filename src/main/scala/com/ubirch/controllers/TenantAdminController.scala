@@ -29,7 +29,7 @@ import monix.execution.Scheduler
 import org.joda.time.DateTime
 import org.json4s.Formats
 import org.json4s.native.Serialization
-import org.json4s.native.Serialization.write
+import org.json4s.native.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
 
