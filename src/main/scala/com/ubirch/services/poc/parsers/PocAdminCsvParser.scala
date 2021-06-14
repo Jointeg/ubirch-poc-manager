@@ -46,8 +46,8 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     (
       validateString(technicianName, csvPocAdmin.adminName),
       validateString(technicianSurname, csvPocAdmin.adminSurname),
-      validateEmail(technicianEmail, csvPocAdmin.adminEmail),
-      validatePhone(technicianMobilePhone, csvPocAdmin.adminMobilePhone),
+      validateEmailFromCSV(technicianEmail, csvPocAdmin.adminEmail),
+      validatePhoneFromCSV(technicianMobilePhone, csvPocAdmin.adminMobilePhone),
       validateDate(technicianDateOfBirth, csvPocAdmin.adminDateOfBirth),
       validateBoolean(webIdentRequired, csvPocAdmin.webIdentRequired),
       pocV
@@ -89,7 +89,7 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
       validatePocType(pocType, csvPocAdmin.pocType, pocConfig.pocTypeEndpointMap, tenant),
       validatePocName(pocName, csvPocAdmin.pocName),
       pocAddress,
-      validatePhone(phone, csvPocAdmin.pocPhone),
+      validatePhoneFromCSV(phone, csvPocAdmin.pocPhone),
       validateAdminCertifyApp(certifyApp, csvPocAdmin.pocCertifyApp),
       validateLogoURL(logoUrl, csvPocAdmin.logoUrl, csvPocAdmin.pocCertifyApp),
       validateClientCertAdmin(clientCert, csvPocAdmin.clientCert),
@@ -130,8 +130,8 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     (
       validateString(managerSurname, csvPocAdmin.managerSurname),
       validateString(managerName, csvPocAdmin.managerName),
-      validateEmail(managerEmail, csvPocAdmin.managerEmail),
-      validatePhone(managerMobilePhone, csvPocAdmin.managerMobilePhone)
+      validateEmailFromCSV(managerEmail, csvPocAdmin.managerEmail),
+      validatePhoneFromCSV(managerMobilePhone, csvPocAdmin.managerMobilePhone)
     ).mapN { (managerSurname, managerName, managerEmail, managerMobilePhone) =>
       PocManager(
         managerSurname,

@@ -77,13 +77,13 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate Email valid" in {
       val str = "test@test.de"
-      val validated = validateEmail(managerEmail, str)
+      val validated = validateEmailFromCSV(managerEmail, str)
       assert(validated.isValid)
     }
 
     "validate broken Email invalid" in {
       val str = "test@test@.de"
-      val validated = validateEmail(managerEmail, str)
+      val validated = validateEmailFromCSV(managerEmail, str)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))
@@ -335,14 +335,14 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
   forAll(validPhoneNumbers) { phoneNumber =>
     s"Validator Phone $phoneNumber" in {
-      val validated = validatePhone(phone, phoneNumber)
+      val validated = validatePhoneFromCSV(phone, phoneNumber)
       assert(validated.isValid)
     }
   }
 
   forAll(invalidPhoneNumbers) { phoneNumber =>
     s"Validator Phone $phoneNumber" in {
-      val validated = validatePhone(phone, phoneNumber)
+      val validated = validatePhoneFromCSV(phone, phoneNumber)
       assert(validated.isInvalid)
     }
   }
@@ -561,7 +561,7 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
     "Nein, danke",
     "<script>",
     "\\write18",
-    "ub\0irch GmbH",
+    "ub\u0000irch GmbH",
     "u\\x08ubirch GmbH",
     "❤️❤️❤️❤️"
   )

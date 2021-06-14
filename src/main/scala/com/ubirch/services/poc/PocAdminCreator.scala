@@ -7,7 +7,7 @@ import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocR
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.PocAdminCreator.throwAndLogError
-import com.ubirch.services.teamdrive.model.{ Read, SpaceName, TeamDriveClient }
+import com.ubirch.services.teamdrive.model.{ Read, SpaceId, SpaceName, TeamDriveClient }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
@@ -111,9 +111,9 @@ class PocAdminCreatorImpl @Inject() (
     if (poc.clientCertRequired && aAs.status.invitedToTeamDrive.contains(false)) {
       val spaceName = SpaceName.ofPoc(pocConfig.teamDriveStage, tenant, poc)
       teamDriveClient.withLogin {
-        teamDriveClient.getSpaceIdByName(spaceName).flatMap {
-          case Some(spaceId) =>
-            teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.certWelcomeMessage, Read)
+        teamDriveClient.getSpaceByNameWithActivation(spaceName).flatMap {
+          case Some(space) =>
+            teamDriveClient.inviteMember(SpaceId(space.id), aAs.admin.email, pocConfig.certWelcomeMessage, Read)
               .map { _ =>
                 logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
               }
@@ -137,9 +137,13 @@ class PocAdminCreatorImpl @Inject() (
       if (poc.clientCertRequired && aAs.status.invitedToStaticTeamDrive.contains(false)) {
         val spaceName = SpaceName.of(pocConfig.teamDriveStage, name)
         teamDriveClient.withLogin {
-          teamDriveClient.getSpaceIdByName(spaceName).flatMap {
-            case Some(spaceId) =>
-              teamDriveClient.inviteMember(spaceId, aAs.admin.email, pocConfig.staticAssetsWelcomeMessage, Read)
+          teamDriveClient.getSpaceByNameWithActivation(spaceName).flatMap {
+            case Some(space) =>
+              teamDriveClient.inviteMember(
+                SpaceId(space.id),
+                aAs.admin.email,
+                pocConfig.staticAssetsWelcomeMessage,
+                Read)
                 .map { _ =>
                   logAuditEventInfo(s"invited poc admin ${aAs.admin.id} to TeamDrive space $spaceName")
                 }

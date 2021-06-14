@@ -50,7 +50,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       validatePocType(pocType, csvPoc.pocType, pocConfig.pocTypeEndpointMap, tenant),
       validatePocName(pocName, csvPoc.pocName),
       pocAddress,
-      validatePhone(phone, csvPoc.pocPhone),
+      validatePhoneFromCSV(phone, csvPoc.pocPhone),
       validateBoolean(certifyApp, csvPoc.pocCertifyApp),
       validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocCertifyApp),
       validateClientCert(clientCert, csvPoc.clientCert, tenant),
@@ -92,8 +92,8 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
     (
       validateString(managerSurname, csvPoc.managerSurname),
       validateString(managerName, csvPoc.managerName),
-      validateEmail(managerEmail, csvPoc.managerEmail),
-      validatePhone(managerMobilePhone, csvPoc.managerMobilePhone)
+      validateEmailFromCSV(managerEmail, csvPoc.managerEmail),
+      validatePhoneFromCSV(managerMobilePhone, csvPoc.managerMobilePhone)
     ).mapN { (managerSurname, managerName, managerEmail, managerMobilePhone) =>
       PocManager(
         managerSurname,

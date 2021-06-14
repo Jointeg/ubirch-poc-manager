@@ -122,7 +122,7 @@ class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with
           status should equal(200)
           val certifyConfig = read[GetCertifyConfigDTO](body)
           certifyConfig.pocId shouldBe poc.externalId
-          certifyConfig.pocName shouldBe poc.pocName
+          certifyConfig.pocName shouldBe "Robert Koch-Institut"
           certifyConfig.logoUrl shouldBe "https://api.dev.ubirch.com/poc-employee/logo/" + poc.id.toString
           certifyConfig.styleTheme shouldBe Some("theme-bmg-blue")
           certifyConfig.dataSchemaSettings.length shouldBe 2

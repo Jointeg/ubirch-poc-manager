@@ -48,14 +48,18 @@ object Validator {
   /**
     * parsable to Email
     */
-  def validateEmail(header: String, str: String): AllErrorsOr[String] = {
+  def validateEmail(errorMsg: String, mail: String): AllErrorsOr[String] = {
     Try {
-      val email = new InternetAddress(str)
+      val email = new InternetAddress(mail)
       email.validate()
     } match {
-      case Success(_) => str.validNel
-      case Failure(_) => emailError(header).invalidNel
+      case Success(_) => mail.validNel
+      case Failure(_) => errorMsg.invalidNel
     }
+  }
+
+  def validateEmailFromCSV(header: String, str: String): AllErrorsOr[String] = {
+    validateEmail(emailError(header), str)
   }
 
   /**
@@ -122,11 +126,15 @@ object Validator {
   /**
     * exactly 1 number in this regex https://www.regextester.com/97440
     */
-  def validatePhone(header: String, str: String): AllErrorsOr[String] = {
-    str match {
-      case phoneRegex(_*) => str.validNel
-      case _              => phoneValidationError(header).invalidNel
+  def validatePhone(errorMsg: String, phoneString: String): AllErrorsOr[String] = {
+    phoneString match {
+      case phoneRegex(_*) => phoneString.validNel
+      case _              => errorMsg.invalidNel
     }
+  }
+
+  def validatePhoneFromCSV(header: String, str: String): AllErrorsOr[String] = {
+    validatePhone(phoneValidationError(header), str)
   }
 
   /**

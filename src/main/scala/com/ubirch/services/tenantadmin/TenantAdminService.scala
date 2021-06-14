@@ -2,8 +2,8 @@ package com.ubirch.services.tenantadmin
 
 import cats.Applicative
 import cats.data.EitherT
-import cats.syntax.either._
 import com.typesafe.scalalogging.LazyLogging
+import cats.syntax.apply._
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
@@ -13,6 +13,10 @@ import com.ubirch.controllers.SwitchActiveError.{
 }
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.{ PocAdmin_IN, Poc_IN }
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
+import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError, TenantAdminContext }
+import cats.syntax.either._
+import com.ubirch.controllers.AddDeviceCreationTokenRequest
+import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.poc._
@@ -21,6 +25,7 @@ import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
+import com.ubirch.services.util.Validator
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
@@ -59,7 +64,7 @@ trait TenantAdminService {
 
   def getPocForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocForTenantError, Poc]]
 
-  def updatePoc(tenant: Tenant, id: UUID, poc: Poc_IN): Task[Either[UpdatePocError, Unit]]
+  def updatePoc(tenant: Tenant, id: UUID, pocIn: Poc_IN): Task[Either[UpdatePocError, Unit]]
 
   def getPocAdminForTenant(tenant: Tenant, id: UUID): Task[Either[GetPocAdminForTenantError, (PocAdmin, Poc)]]
 
@@ -292,10 +297,26 @@ class DefaultTenantAdminService @Inject() (
           case Some(p) if p.tenantId != tenant.id =>
             Task.pure(UpdatePocError.AssignedToDifferentTenant(id, tenant.id).asLeft)
           case Some(p) if p.status != Completed => Task.pure(UpdatePocError.NotCompleted(id, p.status).asLeft)
-          case Some(p)                          => pocRepository.updatePoc(pocIn.copyToPoc(p)) >> Task.pure(().asRight)
+          case Some(p) =>
+            (for {
+              _ <- EitherT(Task(isValidUpdatePocData(pocIn)))
+              _ <-
+                EitherT(pocRepository.updatePoc(pocIn.copyToPoc(p)).map[Either[UpdatePocError, Unit]](_ => Right(())))
+            } yield ()).value
         }
       } yield r
     }
+
+  private def isValidUpdatePocData(poc_IN: Poc_IN): Either[UpdatePocError, Unit] = {
+    (
+      Validator.validateEmail("Invalid poc manager email", poc_IN.manager.email),
+      Validator.validatePhone("Invalid phone number", poc_IN.phone),
+      Validator.validatePhone("Invalid poc manager phone number", poc_IN.manager.mobilePhone)
+    ).mapN {
+      case _ => ()
+    }.toEither.leftMap(errors => UpdatePocError.ValidationError(errors.toList.mkString("\n")))
+  }
+
 
   override def getPocAdminForTenant(
     tenant: Tenant,
@@ -369,6 +390,7 @@ object UpdatePocError {
   case class NotFound(pocId: UUID) extends UpdatePocError
   case class AssignedToDifferentTenant(pocId: UUID, tenantId: TenantId) extends UpdatePocError
   case class NotCompleted(pocId: UUID, status: Status) extends UpdatePocError
+  case class ValidationError(message: String) extends UpdatePocError
 }
 
 sealed trait GetPocAdminForTenantError
