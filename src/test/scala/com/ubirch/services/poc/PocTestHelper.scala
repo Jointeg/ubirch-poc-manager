@@ -1,10 +1,10 @@
 package com.ubirch.services.poc
 import com.ubirch.Awaits
-import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant }
-import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
+import com.ubirch.ModelCreationHelper.{ createPoc, createPocStatus, createTenant, globalTenantName }
+import com.ubirch.db.tables.{ PocRepository, PocStatusRepository, TenantRepository }
 import com.ubirch.models.keycloak.group.{ CreateKeycloakGroup, GroupId, GroupName }
 import com.ubirch.models.keycloak.user.{ CreateBasicKeycloakUser, UserException }
-import com.ubirch.models.poc.{ Completed, Pending, Poc, PocStatus, Status }
+import com.ubirch.models.poc.{ Pending, Poc, PocStatus, Status }
 import com.ubirch.models.tenant.{ Tenant, TenantCertifyGroupId, TenantDeviceGroupId }
 import com.ubirch.models.user._
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
@@ -18,8 +18,11 @@ import scala.concurrent.duration.DurationInt
 
 object PocTestHelper extends Awaits {
 
-  def createPocTriple(clientCertRequired: Boolean = false, status: Status = Pending): (Poc, PocStatus, Tenant) = {
-    val tenant = createTenant()
+  def createPocTriple(
+    tenantName: String = globalTenantName,
+    clientCertRequired: Boolean = false,
+    status: Status = Pending): (Poc, PocStatus, Tenant) = {
+    val tenant = createTenant(tenantName)
     val poc = createPoc(tenantName = tenant.tenantName, clientCertRequired = clientCertRequired, status = status)
     val pocStatus = createPocStatus(poc.id)
     (poc, pocStatus, tenant)
@@ -37,9 +40,9 @@ object PocTestHelper extends Awaits {
   }
 
   def addPocTripleToRepository(
-    tenantTable: TenantRepositoryMock,
-    pocTable: PocRepositoryMock,
-    pocStatusTable: PocStatusRepositoryMock,
+    tenantTable: TenantRepository,
+    pocTable: PocRepository,
+    pocStatusTable: PocStatusRepository,
     poc: Poc,
     pocStatus: PocStatus,
     updatedTenant: Tenant): Unit = {

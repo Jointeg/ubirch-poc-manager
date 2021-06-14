@@ -83,7 +83,7 @@ trait Awaits {
       cancelable <-
         Task(observable.doOnNext(_ => {
           ref.update(current => current + 1)
-        }).subscribe())
+        }).subscribe()).timeout(atMost.toMillis.millis)
       _ <- sleepUntil(ref.get.map(elems => elems >= 2), atMost)
     } yield cancelable.cancel()
     Await.ready(res.runToFuture, atMost)
