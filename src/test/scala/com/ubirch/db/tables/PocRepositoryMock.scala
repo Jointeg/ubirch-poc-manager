@@ -43,6 +43,12 @@ class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) exte
     Task(pocDatastore.get(pocId))
   }
 
+  override def single(id: UUID): Task[Poc] =
+    getPoc(id).flatMap {
+      case Some(v) => Task.pure(v)
+      case None    => Task.raiseError(PocRepository.PocNotFound(id))
+    }
+
   override def deletePoc(id: UUID): Task[Unit] =
     Task(pocDatastore.remove(id))
 

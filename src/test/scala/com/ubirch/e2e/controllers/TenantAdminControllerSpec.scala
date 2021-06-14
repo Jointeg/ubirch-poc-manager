@@ -1,7 +1,6 @@
 package com.ubirch.e2e.controllers
 
 import cats.implicits._
-import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
@@ -13,18 +12,19 @@ import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
+import com.ubirch.models.{ FieldError, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.columnSeparator
+import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, firstName }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
+import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import io.prometheus.client.CollectorRegistry
-import monix.eval.Task
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.joda.time.{ DateTime, DateTimeZone, LocalDate }
 import org.json4s._
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.jackson.JsonMethods._
@@ -34,7 +34,7 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 import org.scalatra.{ BadRequest, Conflict, Ok }
 
 import java.nio.charset.StandardCharsets
-import java.time.{ Clock, Instant }
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
@@ -1588,39 +1588,378 @@ class TenantAdminControllerSpec
     } */
   }
 
+  "Endpoint GET /poc-admin/:id" must {
+    "return poc-admin for given id" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB(Injector)
+      val poc = createPoc(poc1id, tenant.tenantName)
+      await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+      val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
+
+      get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        status should equal(200)
+        pretty(render(parse(body))) shouldBe pocAdminToFormattedGetPocAdminOutJson(pocAdminFromTable, poc)
+      }
+    }
+
+    "return 403 when requesting user is not a tenant-admin" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+
+      get(s"/poc-admin/$poc1id", headers = Map("authorization" -> token.superAdmin.prepare)) {
+        status should equal(403)
+        assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
+      }
+    }
+
+    "return 404 when poc-admin does not exists" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val tenant = addTenantToDB(Injector)
+
+      get(
+        s"/poc-admin/$poc1id",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        status should equal(404)
+        assert(body.contains(s"PoC Admin with id '$poc1id' does not exist"))
+      }
+    }
+
+    "return 401 when poc-admin is not owned by tenant-admin" in withInjector { implicit Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+
+      val tenant = addTenantToDB(Injector)
+      val otherTenant = addTenantToDB("otherTenantName", Injector)
+      val poc = createPoc(poc1id, otherTenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val id = await(pocAdminRepository.createPocAdmin(createPocAdmin(tenantId = otherTenant.id, pocId = poc.id)))
+
+      get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        status should equal(401)
+        assert(body.contains(s"PoC Admin with id '$id' does not belong to tenant with id '${tenant.id.value.value}'"))
+      }
+    }
+
+    "return 400 when tenant-admin does not exists" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+
+      get(
+        s"/poc-admin/$poc1id",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+        status should equal(400)
+        assert(
+          body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
+      }
+    }
+  }
+
+  "Endpoint PUT /poc-admin/:id" must {
+    "update poc-admin for given id" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB(Injector)
+      val poc = createPoc(poc1id, tenant.tenantName)
+      await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = true,
+          webIdentInitiateId = None
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+      val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
+      val updatePocAdmin = pocAdminFromTable.copy(
+        name = "new name",
+        surname = "new surname",
+        email = "email@email.com",
+        mobilePhone = "+46-498-313789",
+        dateOfBirth = BirthDate(LocalDate.parse("1989-11-25"))
+      )
+
+      put(
+        uri = s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(updatePocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(200)
+      }
+
+      get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        status should equal(200)
+        pretty(render(parse(body))) shouldBe pocAdminToFormattedGetPocAdminOutJson(updatePocAdmin, poc)
+      }
+    }
+
+    "return validation errors when invalid values are passed" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB(Injector)
+      val poc = createPoc(poc1id, tenant.tenantName)
+      await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = true,
+          webIdentInitiateId = None
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+      val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
+      val updatePocAdmin = pocAdminFromTable.copy(
+        name = "new name",
+        surname = "new surname",
+        email = "new email",
+        mobilePhone = "59145678464",
+        dateOfBirth = BirthDate(LocalDate.parse("1989-11-25"))
+      )
+
+      put(
+        uri = s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(updatePocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(400)
+        val errorResponse = read[ValidationErrorsResponse](body)
+        errorResponse.validationErrors should contain theSameElementsAs Seq(
+          FieldError("email", "Invalid email address 'new email'"),
+          FieldError("phone", "Invalid phone number '59145678464'")
+        )
+      }
+    }
+
+    "return 409 when poc-admin is in Completed status" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        status = Completed,
+        webIdentRequired = true,
+        webIdentInitiateId = None)
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Completed'"))
+      }
+    }
+
+    "return 409 when poc-admin is in Processing status" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        status = Processing,
+        webIdentRequired = true,
+        webIdentInitiateId = None)
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' is in wrong status: 'Processing'"))
+      }
+    }
+
+    "return 409 when poc-admin webIdentRequired is false" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = false,
+          webIdentInitiateId = None
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' has webIdentRequired set to false"))
+      }
+    }
+
+    "return 409 when poc-admin webIdentInitiateId is set" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val tenant = addTenantToDB(Injector)
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+        .copy(
+          status = Pending,
+          webIdentRequired = true,
+          webIdentInitiateId = Some(UUID.randomUUID())
+        )
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc admin '$id' webIdentInitiateId is set"))
+      }
+    }
+
+    "return 403 when requesting user is not a tenant-admin" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+
+      put(s"/poc-admin/${UUID.randomUUID()}", headers = Map("authorization" -> token.superAdmin.prepare)) {
+        status should equal(403)
+        assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
+      }
+    }
+
+    "return 404 when poc-admin does not exists" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val tenant = addTenantToDB(Injector)
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc1id)
+
+      put(
+        s"/poc-admin/${pocAdmin.id}",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"PoC admin with id '${pocAdmin.id}' does not exist"))
+      }
+    }
+
+    "return 401 when poc-admin is not owned by tenant-admin" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+      val pocTable = Injector.get[PocRepository]
+      val pocAdminRepository = Injector.get[PocAdminRepository]
+      val tenant = addTenantToDB(Injector)
+      val poc = createPoc(poc1id, tenant.tenantName)
+      val _ = await(pocTable.createPoc(poc))
+      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id).copy(status = Processing)
+      val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
+
+      val otherTenant = addTenantToDB("otherTenantName", Injector)
+
+      put(
+        s"/poc-admin/$id",
+        body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(otherTenant.tenantName).prepare)
+      ) {
+        status should equal(401)
+        assert(
+          body.contains(s"PoC admin with id '$id' does not belong to tenant with id '${otherTenant.id.value.value}'"))
+      }
+    }
+
+    "return 400 when tenant-admin does not exists" in withInjector { Injector =>
+      val token = Injector.get[FakeTokenCreator]
+
+      put(
+        s"/poc-admin/${UUID.randomUUID()}",
+        headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+        status should equal(400)
+        assert(
+          body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
+      }
+    }
+  }
+
   def pocToFormattedJson(poc: Poc): String = {
     import poc._
-    s"""{
-       |  "id" : "$id",
-       |  "tenantId" : "${tenantId.value.value}",
-       |  "externalId" : "$externalId",
-       |  "pocType" : "$pocType",
-       |  "pocName" : "$pocName",
-       |  "address" : {
-       |    "street" : "${address.street}",
-       |    "houseNumber" : "${address.houseNumber}",
-       |    "zipcode" : ${address.zipcode},
-       |    "city" : "${address.city}",
-       |    "country" : "${address.country}"
-       |  },
-       |  "phone" : "$phone",
-       |  "certifyApp" : $certifyApp,
-       |  "clientCertRequired" : $clientCertRequired,
-       |  "extraConfig" : {
-       |    "test" : "hello"
-       |  },
-       |  "manager" : {
-       |    "lastName" : "${manager.managerSurname}",
-       |    "firstName" : "${manager.managerName}",
-       |    "email" : "${manager.managerEmail}",
-       |    "mobilePhone" : "${manager.managerMobilePhone}"
-       |  },
-       |  "roleName" : "$roleName",
-       |  "deviceId" : "$deviceId",
-       |  "status" : "${poc.status.toString.toUpperCase}",
-       |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
-       |  "created" : "${created.dateTime.toInstant}"
-       |}""".stripMargin
+    val json = s"""{
+                  |  "id" : "$id",
+                  |  "tenantId" : "${tenantId.value.value}",
+                  |  "externalId" : "$externalId",
+                  |  "pocType" : "$pocType",
+                  |  "pocName" : "$pocName",
+                  |  "address" : {
+                  |    "street" : "${address.street}",
+                  |    "houseNumber" : "${address.houseNumber}",
+                  |    "zipcode" : ${address.zipcode},
+                  |    "city" : "${address.city}",
+                  |    "country" : "${address.country}"
+                  |  },
+                  |  "phone" : "${poc.phone}",
+                  |  "certifyApp" : $certifyApp,
+                  |  "clientCertRequired" : $clientCertRequired,
+                  |  "extraConfig" : {
+                  |    "test" : "hello"
+                  |  },
+                  |  "manager" : {
+                  |    "lastName" : "${manager.managerSurname}",
+                  |    "firstName" : "${manager.managerName}",
+                  |    "email" : "${manager.managerEmail}",
+                  |    "mobilePhone" : "${manager.managerMobilePhone}"
+                  |  },
+                  |  "roleName" : "$roleName",
+                  |  "deviceId" : "$deviceId",
+                  |  "status" : "${poc.status.toString.toUpperCase}",
+                  |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
+                  |  "created" : "${created.dateTime.toInstant}"
+                  |}""".stripMargin
+    pretty(render(parse(json)))
+  }
+
+  def pocAdminToFormattedGetPocAdminOutJson(pa: PocAdmin, p: Poc): String = {
+    val json = s"""{
+                  | "id" : "${pa.id}",
+                  | "firstName" : "${pa.name}",
+                  | "lastName" : "${pa.surname}",
+                  | "dateOfBirth" : {
+                  |   "year" : ${pa.dateOfBirth.date.year().get()},
+                  |   "month" : ${pa.dateOfBirth.date.monthOfYear().get()},
+                  |   "day" : ${pa.dateOfBirth.date.dayOfMonth().get()}
+                  |  },
+                  |  "email" : "${pa.email}",
+                  |  "phone" : "${pa.mobilePhone}",
+                  |  "pocName" : "${p.pocName}",
+                  |  "active" : ${pa.active},
+                  |  "state" : "${Status.toFormattedString(pa.status)}"
+                  |}""".stripMargin
+    pretty(render(parse(json)))
+  }
+
+  def pocAdminToFormattedPutPocAdminINJson(pa: PocAdmin): String = {
+    val json = s"""{
+                  | "firstName" : "${pa.name}",
+                  | "lastName" : "${pa.surname}",
+                  | "dateOfBirth" : {
+                  |   "year" : ${pa.dateOfBirth.date.year().get()},
+                  |   "month" : ${pa.dateOfBirth.date.monthOfYear().get()},
+                  |   "day" : ${pa.dateOfBirth.date.dayOfMonth().get()}
+                  |  },
+                  |  "email" : "${pa.email}",
+                  |  "phone" : "${pa.mobilePhone}"
+                  |}""".stripMargin
+    pretty(render(parse(json)))
   }
 
   override protected def beforeEach(): Unit = {

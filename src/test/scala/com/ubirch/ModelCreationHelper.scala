@@ -91,7 +91,7 @@ object ModelCreationHelper {
     name: String = getRandomString,
     surname: String = getRandomString,
     email: String = getRandomString + "@test.de",
-    mobilePhone: String = getRandomString,
+    mobilePhone: String = "+4930-7387862",
     webIdentRequired: Boolean = true,
     webIdentInitiateId: Option[UUID] = None,
     webIdentId: Option[String] = None,

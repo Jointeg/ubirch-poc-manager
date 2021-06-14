@@ -39,18 +39,18 @@ object PocAdmin {
     webIdentRequired: Boolean,
     dateOfBirth: LocalDate): PocAdmin = {
     PocAdmin(
-      id,
-      pocId,
-      tenantId,
-      name,
-      surName,
-      email,
-      mobilePhone,
-      webIdentRequired,
-      None,
-      None,
-      None,
-      BirthDate(dateOfBirth)
+      id = id,
+      pocId = pocId,
+      tenantId = tenantId,
+      name = name,
+      surname = surName,
+      email = email,
+      mobilePhone = mobilePhone,
+      webIdentRequired = webIdentRequired,
+      webIdentInitiateId = None,
+      webIdentId = None,
+      certifyUserId = None,
+      dateOfBirth = BirthDate(dateOfBirth)
     )
   }
 
