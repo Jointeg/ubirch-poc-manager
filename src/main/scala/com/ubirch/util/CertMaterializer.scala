@@ -127,7 +127,7 @@ object CertMaterializer extends LazyLogging {
   }
 
   @throws[InvalidX509Exception]
-  def sortCerts(certs: Seq[X509CertificateHolder]): Seq[X509CertificateHolder] = {
+  def sortCerts(certs: Seq[X509CertificateHolder]): Try[Seq[X509CertificateHolder]] = Try {
     val map = certs.map { certificateHolder =>
       certificateHolder.getSubject.toString -> certificateHolder
     }.toMap
@@ -139,7 +139,7 @@ object CertMaterializer extends LazyLogging {
         go(currentList :+ next, length)
       }
     }
-    go(Seq(certs.head), certs.length)
+    go(certs.headOption.toSeq, certs.length)
   }
 
 }

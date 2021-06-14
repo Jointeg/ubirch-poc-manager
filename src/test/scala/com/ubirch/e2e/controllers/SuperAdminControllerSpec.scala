@@ -290,6 +290,23 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
         }
       }
     }
+
+    "respond with 403 if the X509 header is missing" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val tenantName = getRandomString
+        val createTenantBody = createTenantJson(tenantName)
+
+        post(
+          Endpoint,
+          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
+          headers = Map("authorization" -> token.superAdminOnDevicesKeycloak.prepare)
+        ) {
+          status should equal(403)
+          assert(body.contains("Forbidden"))
+        }
+      }
+    }
   }
 
   override protected def beforeEach(): Unit = {

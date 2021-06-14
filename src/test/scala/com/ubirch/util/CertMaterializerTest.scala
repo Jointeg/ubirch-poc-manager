@@ -1,6 +1,7 @@
 package com.ubirch.util
 
 import com.ubirch.{ InvalidX509Exception, TestBase }
+import org.bouncycastle.cert.X509CertificateHolder
 
 class CertMaterializerTest extends TestBase {
   "Parse pem" should {
@@ -56,7 +57,8 @@ class CertMaterializerTest extends TestBase {
         "-----BEGIN CERTIFICATE-----\nMIIDkjCCAnqgAwIBAgIJAIP7v3WvGKgHMA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNV\nBAYTAkRFMRAwDgYDVQQIDAdDb2xvZ25lMRQwEgYDVQQKDAt1YmlyY2ggR21iSDEQ\nMA4GA1UEAwwHVGVzdCBDQTAgFw0yMTA2MDkxMzUyMDFaGA8yMTIxMDUxNjEzNTIw\nMVowRzELMAkGA1UEBhMCREUxEDAOBgNVBAgMB0NvbG9nbmUxFDASBgNVBAoMC3Vi\naXJjaCBHbWJIMRAwDgYDVQQDDAdUZXN0IENBMIIBIjANBgkqhkiG9w0BAQEFAAOC\nAQ8AMIIBCgKCAQEAyQSXklBB4+yHDwJNQpxQCwXaAH03Cq1XQPVIpMdUuVkByDxn\nTEPu0jQ9vtZODpO8NDaCUL9FGzstaK19jXnS++OKBq2emaLXTmGrSnTb46i6bkib\nBKklQoHjSGM9NJXzkQd6J5bK7Gg+Pni+nXxUy6dvFPIR2QSuIOGLBlojwW+FvKPf\n0Ly3NRr3eRWTVtNmg+KiOsDQbJKFJdtF58saQgrsrkIX4T0BJYghWf2glrkqHICw\n4JR/N0JKJS4BoPuw1SL8edKzfEr4cKtW7Kzi718oY4guSDf7xw4NzxumvC7NtjS+\nDYPy570H0s9RE1EPfoxOF2V7kSwCciY730rwpwIDAQABo38wfTAPBgNVHRMBAf8E\nBTADAQH/MAsGA1UdDwQEAwIBBjAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUH\nAwIwHQYDVR0OBBYEFNVJtruqAgaBbYaSyKhJH0n5hWkCMB8GA1UdIwQYMBaAFNVJ\ntruqAgaBbYaSyKhJH0n5hWkCMA0GCSqGSIb3DQEBCwUAA4IBAQBiJr4e5wHcSw7w\n/lkTHVJeHBdjNrwnXg7JWZa/USikKij+8WAlThKmUCP1SvQb4h/ukapJ0dQFOyER\nNNzQ9dkJsGb93xEOLLaM6kwoYjgMndkm3Q2VX5iO8eeme4eVbCqmmAqP4Dan1y1t\nBC2aDJQCAyugTl3oDAc35UitJFMQD5HSngNNd4sHsCLTZhN7pWGjbGe76SFC/szl\nIwIVwRgWvZrUCMg/8bYoFLsHyIn5fDyvI1iWaSNtUOzhXoAbb6VK/6hMvygrcoPq\nGAz+Vu1GfovwGiVEbAsykEDLkNP2ewHWuDECJLcAHHjslVX7S14q4Wesacn1Xi1O\nwnDlBHO/\n-----END CERTIFICATE-----"
       val wrongChain = Seq(cert1, cert3, cert2, cert4).map(CertMaterializer.parse(_).get)
       val sortedChain = CertMaterializer.sortCerts(wrongChain)
-      val result = CertMaterializer.verifyChainedCert(sortedChain)
+      assert(sortedChain.isSuccess)
+      val result = CertMaterializer.verifyChainedCert(sortedChain.get)
       assert(result.isSuccess)
       result.foreach { boolean =>
         assert(boolean)
@@ -104,6 +106,34 @@ class CertMaterializerTest extends TestBase {
       result.foreach { boolean =>
         assert(!boolean)
       }
+    }
+  }
+
+  "sortCerts" should {
+    "sort certs successfully" in {
+      val cert1 =
+        "-----BEGIN CERTIFICATE-----\nMIIDjjCCAnagAwIBAgIJAKY0mtzrX+otMA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNV\nBAYTAkRFMRAwDgYDVQQIDAdDb2xvZ25lMRQwEgYDVQQKDAt1YmlyY2ggR21iSDEQ\nMA4GA1UEAwwHSXNzdWluZzAgFw0yMTA2MDkxMzU1MTRaGA8yMTIxMDUxNjEzNTUx\nNFowRjELMAkGA1UEBhMCREUxEDAOBgNVBAgMB0NvbG9nbmUxFDASBgNVBAoMC3Vi\naXJjaCBHbWJIMQ8wDQYDVQQDDAZDbGllbnQwggEiMA0GCSqGSIb3DQEBAQUAA4IB\nDwAwggEKAoIBAQC4xjQoCmAf4ZApLazvuohQA0aN0oKPpLxGyCW7QztYUJ9w+ggs\nyDJFX+86iOGAgkRrwl4GPq0njN+WltP10k0cl88mC2Z6hmgl1wo06Lg6BQbEjNI0\ngM7lu9QEKdhlJeT5NPKSI7/HmrSYEK8j0+CzSiyBLn/fkC9fRfSPdZO+U8t1GlNs\nmVl7sDpKQRGz0BmbtaDCNGGzCozrdFCx30aR0npFLDf0LxYQ3jkMDsgVv1uAmekX\nS7bENioQjEpqZGgyc/iZ9EaPTjJIlzqcZWoddBBmnTuvM1Ik8bLc9ukQMl9a5Uuu\nWwatbQrayp5rruiGgjnhqmKi8/HXzhXim6NRAgMBAAGjfDB6MAwGA1UdEwEB/wQC\nMAAwCwYDVR0PBAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAd\nBgNVHQ4EFgQULf3132pXWtG0RrCs4ImmfnJ+2cEwHwYDVR0jBBgwFoAUfhoS1LQT\nqNxNwpDMDxPuLRPzM4UwDQYJKoZIhvcNAQELBQADggEBAKFkZ4Z+fe1uMWVIXZmo\nCydMNhej/AG4BnBTYHhXhhT1JCQUeNbXhk9O4rmcBUHE2SfIgUesOuIbAfzyDI9o\nkwwu+0TzRBDIk7woqVP3EUqCWrUoiPW356t+M5675EU/mR7CjPWll4VywJGr4GNl\nZZFDjrsQc2lMJtZBCKNMhB0b07bwaewXzcB4EHJqOqGpNC5IgMdGkAs6aI+2ivma\nMfQKBpAhAgEgcwD9Z+2c7lOTdiB4OgyM6WME4FmtKQZBjDovuK8HXzMBshu+WCZg\ncK2KF6bGCLQ535TkTeVqjcJV9dqV+XVCTFmhcuS2WSwg+h08wy/QF1ufGDyQpGqz\n2DE=\n-----END CERTIFICATE-----"
+      val cert2 =
+        "-----BEGIN CERTIFICATE-----\nMIIDlDCCAnygAwIBAgIJAJB6q3lyhdnCMA0GCSqGSIb3DQEBCwUAMEwxCzAJBgNV\nBAYTAkRFMRAwDgYDVQQIDAdDb2xvZ25lMRQwEgYDVQQKDAt1YmlyY2ggR21iSDEV\nMBMGA1UEAwwMSW50ZXJtZWRpYXRlMCAXDTIxMDYwOTEzNTQ0NVoYDzIxMjEwNTE2\nMTM1NDQ1WjBHMQswCQYDVQQGEwJERTEQMA4GA1UECAwHQ29sb2duZTEUMBIGA1UE\nCgwLdWJpcmNoIEdtYkgxEDAOBgNVBAMMB0lzc3VpbmcwggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQDhrRcDbjd4pSK2CXF8Zqzez28cmpAJU/g7O8CsJeiS\nKCBMsTvPgbh6q2S2nT9XD98dycczkvbH4NpxuKUawU9MMSZVNCTqxwF9qhULfMcc\nTYw/mKE2DjM6QFUeF1lyXM98oGu4PhdbdUWdrkeiXYwBWZ7vdRC9qsA/mcSJ14Cm\nW05AXQ5/zW4UpdJu15TdpHFfOsPPfno3vHTXYa+mYhgyXm1Cm9KVAuNnjOcvNnBM\nNj5iml1G1ZnveKKNWx3fII1/+UxoxJhsVkYKBiTpDXb0fU37yBGyF25p3Bq5gCPT\na0JqdATujg3Rd+sWkud8lKsojkkEeT5EsISlQnVczn3JAgMBAAGjfDB6MAwGA1Ud\nEwEB/wQCMAAwCwYDVR0PBAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEF\nBQcDAjAdBgNVHQ4EFgQUfhoS1LQTqNxNwpDMDxPuLRPzM4UwHwYDVR0jBBgwFoAU\nK/KC+PI97mF57Oe0Ye02lk+/nB8wDQYJKoZIhvcNAQELBQADggEBAKpGnQZp9kr0\n26r03pE59sIt8nzLsysgdD85ImyHQZZIJjnK8HUs5p1JFqKXYuvIOgYEWOfM9m39\nbZ9dJsgXjqB33mVq7WVQjdo4MsJvKsn0qXQJQURKZ7fAEFVshNO6LvbEG6ZfeCLJ\nqDoarByp8lxi/xhpc/+aduZAUpB7AjJBXhrJYGl4xS5iYvLA+PupNTfhU9Djz3tz\nZcndmZDkt8vcnoHpKw29YsSNCg2zrHNWext6hhDWDF4chUfV+6K3p3+ft3F4jueJ\nufJmbf0FM4EHC513Ev7xCj4rXTlbfGMIpBW3WwrAENffgkMdz03r9idRy1ffSAzg\nI3mwX7Dxhvc=\n-----END CERTIFICATE-----"
+      val cert3 =
+        "-----BEGIN CERTIFICATE-----\nMIIDlDCCAnygAwIBAgIJAI0n2KVDlDe0MA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNV\nBAYTAkRFMRAwDgYDVQQIDAdDb2xvZ25lMRQwEgYDVQQKDAt1YmlyY2ggR21iSDEQ\nMA4GA1UEAwwHVGVzdCBDQTAgFw0yMTA2MDkxMzU0MjdaGA8yMTIxMDUxNjEzNTQy\nN1owTDELMAkGA1UEBhMCREUxEDAOBgNVBAgMB0NvbG9nbmUxFDASBgNVBAoMC3Vi\naXJjaCBHbWJIMRUwEwYDVQQDDAxJbnRlcm1lZGlhdGUwggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQC40ZaY7IREHs4zI7YpvFeoRRzxwqeSRICaYUIpwb+L\nNxpuyE/0ygwZV+rvt/TCzkcXFDXQ/VmimSeXzWUy8E7hDyFhIzgTiuiGPF2l39IX\ncjYvm/U0mu9Ipb+bMrEtacXGnF8qienP5alvZuAPOYCNF6gO704hWNcnvBHPG7OW\nv/RXrpoz8KNmsbdlMJx1+f/ukMb8fTj4SuyMKnWgpXLbTPxA32yoyR/FYmnCLETq\nxGZsSxKsjjkcsPje21chJU5NEAhw900je+8g0yCD5R7wqps2QLtMtjGi/v8b+O79\nYmpLKWlQewCV1VJq23nLzarApHamFhVq1469QAVY/dH3AgMBAAGjfDB6MAwGA1Ud\nEwEB/wQCMAAwCwYDVR0PBAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEF\nBQcDAjAdBgNVHQ4EFgQUK/KC+PI97mF57Oe0Ye02lk+/nB8wHwYDVR0jBBgwFoAU\n1Um2u6oCBoFthpLIqEkfSfmFaQIwDQYJKoZIhvcNAQELBQADggEBAJGiNszmyEkC\nHc7fPJIFcMIU9QLgHj1lUcz6/yLVmMAg/1dz7riX8uvmyH+OQ6wJmJAfjrTLcSCg\nnwcNsWwOOSNZqmd+z9ZO5wvjC4eEg9nPVMOS+2QDbNXZ4vSShIxczICesm7l79B+\n3dBwHNwd9102cZXucR6yXNckqPR6KbUfSgub/fad8tsfPRi9feOh2t+fRNXeU2/C\nRPg4jl9pUCNCVQnlCI0Z85C1PgbyQHTALzSCTtkZwJFnZYRQdpyY3A4ZwL9e0x0P\nSbiEsDkquO1cB0ua1+Z2DCQqM++xTrWqdWHybJnBBShBHYHmxT+xTCrx9jAkhouH\nGIAmq9CXzgY=\n-----END CERTIFICATE-----"
+      val cert4 =
+        "-----BEGIN CERTIFICATE-----\nMIIDkjCCAnqgAwIBAgIJAIP7v3WvGKgHMA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNV\nBAYTAkRFMRAwDgYDVQQIDAdDb2xvZ25lMRQwEgYDVQQKDAt1YmlyY2ggR21iSDEQ\nMA4GA1UEAwwHVGVzdCBDQTAgFw0yMTA2MDkxMzUyMDFaGA8yMTIxMDUxNjEzNTIw\nMVowRzELMAkGA1UEBhMCREUxEDAOBgNVBAgMB0NvbG9nbmUxFDASBgNVBAoMC3Vi\naXJjaCBHbWJIMRAwDgYDVQQDDAdUZXN0IENBMIIBIjANBgkqhkiG9w0BAQEFAAOC\nAQ8AMIIBCgKCAQEAyQSXklBB4+yHDwJNQpxQCwXaAH03Cq1XQPVIpMdUuVkByDxn\nTEPu0jQ9vtZODpO8NDaCUL9FGzstaK19jXnS++OKBq2emaLXTmGrSnTb46i6bkib\nBKklQoHjSGM9NJXzkQd6J5bK7Gg+Pni+nXxUy6dvFPIR2QSuIOGLBlojwW+FvKPf\n0Ly3NRr3eRWTVtNmg+KiOsDQbJKFJdtF58saQgrsrkIX4T0BJYghWf2glrkqHICw\n4JR/N0JKJS4BoPuw1SL8edKzfEr4cKtW7Kzi718oY4guSDf7xw4NzxumvC7NtjS+\nDYPy570H0s9RE1EPfoxOF2V7kSwCciY730rwpwIDAQABo38wfTAPBgNVHRMBAf8E\nBTADAQH/MAsGA1UdDwQEAwIBBjAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUH\nAwIwHQYDVR0OBBYEFNVJtruqAgaBbYaSyKhJH0n5hWkCMB8GA1UdIwQYMBaAFNVJ\ntruqAgaBbYaSyKhJH0n5hWkCMA0GCSqGSIb3DQEBCwUAA4IBAQBiJr4e5wHcSw7w\n/lkTHVJeHBdjNrwnXg7JWZa/USikKij+8WAlThKmUCP1SvQb4h/ukapJ0dQFOyER\nNNzQ9dkJsGb93xEOLLaM6kwoYjgMndkm3Q2VX5iO8eeme4eVbCqmmAqP4Dan1y1t\nBC2aDJQCAyugTl3oDAc35UitJFMQD5HSngNNd4sHsCLTZhN7pWGjbGe76SFC/szl\nIwIVwRgWvZrUCMg/8bYoFLsHyIn5fDyvI1iWaSNtUOzhXoAbb6VK/6hMvygrcoPq\nGAz+Vu1GfovwGiVEbAsykEDLkNP2ewHWuDECJLcAHHjslVX7S14q4Wesacn1Xi1O\nwnDlBHO/\n-----END CERTIFICATE-----"
+      val wrongChain = Seq(cert1, cert3, cert2, cert4).map(CertMaterializer.parse(_).get)
+      val sortedChainTry = CertMaterializer.sortCerts(wrongChain)
+      assert(sortedChainTry.isSuccess)
+      val sortedChain = sortedChainTry.get
+      val expected = Seq(cert1, cert2, cert3, cert4).map(CertMaterializer.parse(_).get)
+      assert(expected.length == sortedChain.length)
+      (expected, sortedChain).zipped.foreach {
+        case (c1, c2) =>
+          assert(c1 == c2)
+      }
+    }
+
+    "no error when certs is empty" in {
+      val result = CertMaterializer.sortCerts(Seq.empty[X509CertificateHolder])
+      assert(result.isSuccess)
     }
   }
 }
