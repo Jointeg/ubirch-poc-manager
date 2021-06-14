@@ -137,6 +137,8 @@ class PocAdminServiceImpl @Inject() (
             val updated = pocEmployeeIn.copyToPocEmployee(pe)
             for {
               poc <- pocRepository.single(pe.pocId)
+              updatedEmployee = pocEmployeeIn.copyToPocEmployee(pe)
+              _ <- employeeRepository.updatePocEmployee(updatedEmployee)
               updateKeycloak <- keycloakUserService.updateEmployee(
                 poc.getRealm,
                 pe,
@@ -144,10 +146,8 @@ class PocAdminServiceImpl @Inject() (
                 LastName(pocEmployeeIn.lastName),
                 Email(pocEmployeeIn.email))
               updateEmployee <- updateKeycloak match {
-                case Left(e) => Task.pure(UpdatePocEmployeeError.KeycloakError(e).asLeft)
-                case Right(_) =>
-                  employeeRepository.updatePocEmployee(pocEmployeeIn.copyToPocEmployee(pe))
-                    .map(_ => updated.asRight)
+                case Left(e)  => Task.pure(UpdatePocEmployeeError.KeycloakError(e).asLeft)
+                case Right(_) => Task.pure(updatedEmployee.asRight)
               }
             } yield updateEmployee
         }
