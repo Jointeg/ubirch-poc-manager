@@ -211,45 +211,42 @@ class PocAdminController @Inject() (
   }
 
   delete("/poc-employee/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
-    if (true) NotFound(NOK.noRouteFound("Sorry, this method is not yet fully implemented."))
-    else {
-      pocAdminEndpoint("Delete 2FA token for PoC admin") { pocAdmin =>
-        getParamAsUUID("id", id => s"Invalid poc employee id: '$id'") { id =>
-          for {
-            maybePocEmployee <- pocEmployeeRepository.getPocEmployee(id)
-            maybeTenant <- tenantRepository.getTenant(pocAdmin.tenantId)
-            notFoundMessage = s"Poc employee with id '$id' not found'"
-            r <- maybePocEmployee match {
-              case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
-              case Some(certifyUser) if certifyUser.pocId != pocAdmin.pocId =>
-                Task.pure(Unauthorized(NOK.authenticationError(notFoundMessage)))
-              case Some(certifyUser) if certifyUser.status != Completed =>
-                Task.pure(Conflict(NOK.conflict(
-                  s"Poc employee '$id' is in wrong status: '${certifyUser.status}', required: '$Completed'")))
-              case Some(_) if maybeTenant.isEmpty =>
-                Task.pure(NotFound(NOK.resourceNotFoundError(s"Related tenant was not found for poc employee $id")))
-              case Some(certifyUser) =>
-                certifyUserService.remove2FAToken(maybeTenant.get.getRealm, certifyUser)
-                  .flatMap {
-                    case Left(e) => e match {
-                        case KeycloakError(_, keyCloakError) =>
-                          keyCloakError match {
-                            case UserNotFound(error) =>
-                              Task.pure(NotFound(NOK.resourceNotFoundError(error)))
-                            case Remove2faTokenKeycloakError.KeycloakError(error) =>
-                              Task.pure(InternalServerError(NOK.serverError(error)))
-                          }
-                        case Remove2faTokenError.MissingCertifyUserId(id) =>
-                          Task.pure(Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId")))
-                      }
-                    case Right(_) =>
-                      pocEmployeeRepository.updatePocEmployee(certifyUser.copy(webAuthnDisconnected =
-                        Some(DateTime.parse(clock.instant().toString)))) >>
-                        Task.pure(Ok(""))
-                  }
-            }
-          } yield r
-        }
+    pocAdminEndpoint("Delete 2FA token for PoC admin") { pocAdmin =>
+      getParamAsUUID("id", id => s"Invalid poc employee id: '$id'") { id =>
+        for {
+          maybePocEmployee <- pocEmployeeRepository.getPocEmployee(id)
+          maybeTenant <- tenantRepository.getTenant(pocAdmin.tenantId)
+          notFoundMessage = s"Poc employee with id '$id' not found'"
+          r <- maybePocEmployee match {
+            case None => Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+            case Some(certifyUser) if certifyUser.pocId != pocAdmin.pocId =>
+              Task.pure(Unauthorized(NOK.authenticationError(notFoundMessage)))
+            case Some(certifyUser) if certifyUser.status != Completed =>
+              Task.pure(Conflict(NOK.conflict(
+                s"Poc employee '$id' is in wrong status: '${certifyUser.status}', required: '$Completed'")))
+            case Some(_) if maybeTenant.isEmpty =>
+              Task.pure(NotFound(NOK.resourceNotFoundError(s"Related tenant was not found for poc employee $id")))
+            case Some(certifyUser) =>
+              certifyUserService.remove2FAToken(maybeTenant.get.getRealm, certifyUser)
+                .flatMap {
+                  case Left(e) => e match {
+                      case KeycloakError(_, keyCloakError) =>
+                        keyCloakError match {
+                          case UserNotFound(error) =>
+                            Task.pure(NotFound(NOK.resourceNotFoundError(error)))
+                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                            Task.pure(InternalServerError(NOK.serverError(error)))
+                        }
+                      case Remove2faTokenError.MissingCertifyUserId(id) =>
+                        Task.pure(Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId")))
+                    }
+                  case Right(_) =>
+                    pocEmployeeRepository.updatePocEmployee(certifyUser.copy(webAuthnDisconnected =
+                      Some(DateTime.parse(clock.instant().toString)))) >>
+                      Task.pure(Ok(""))
+                }
+          }
+        } yield r
       }
     }
   }
