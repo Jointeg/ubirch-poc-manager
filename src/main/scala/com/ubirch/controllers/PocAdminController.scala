@@ -141,7 +141,7 @@ class PocAdminController @Inject() (
       )
 
   val delete2FATokenOnPocEmployee: SwaggerSupportSyntax.OperationBuilder =
-    apiOperation[String]("Delete 2FA token")
+    apiOperation[String]("Delete Employee 2FA token")
       .summary("Deletes 2FA token for PoC employee")
       .description("Deletes 2FA token for PoC employee")
       .tags("Poc-Admin", "Poc-employee")

@@ -199,14 +199,18 @@ class DefaultKeycloakGroupService @Inject() (keycloakConnector: KeycloakConnecto
     response: Response,
     groupName: GroupName): Either[GroupCreationException, GroupId] = {
 
-    if (response.getStatusInfo.equals(Status.CREATED)) {
-      Right(getIdFromPath(response))
-    } else if (response.getStatusInfo.equals(Status.CONFLICT)) {
-      logger.info(s"group with name ${groupName.value} already existed")
-      Left(GroupAlreadyExists(groupName))
-    } else {
-      logger.error(s"failed to create group ${groupName.value}; response has status ${response.getStatus}")
-      Left(GroupCreationError(s"failed to create group ${groupName.value}"))
+    try {
+      if (response.getStatusInfo.equals(Status.CREATED)) {
+        Right(getIdFromPath(response))
+      } else if (response.getStatusInfo.equals(Status.CONFLICT)) {
+        logger.info(s"group with name ${groupName.value} already existed")
+        Left(GroupAlreadyExists(groupName))
+      } else {
+        logger.error(s"failed to create group ${groupName.value}; response has status ${response.getStatus}")
+        Left(GroupCreationError(s"failed to create group ${groupName.value}"))
+      }
+    } finally {
+      response.close()
     }
   }
 

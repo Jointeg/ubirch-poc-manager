@@ -7,15 +7,14 @@ import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.{ NOK, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.models.keycloak.user.UserRequiredAction
+import com.ubirch.models.{ NOK, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
 import com.ubirch.models.{ FieldError, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
-import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, firstName }
@@ -24,6 +23,7 @@ import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validP
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import io.prometheus.client.CollectorRegistry
+import monix.eval.Task
 import org.joda.time.{ DateTime, DateTimeZone, LocalDate }
 import org.json4s._
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
@@ -34,7 +34,7 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 import org.scalatra.{ BadRequest, Conflict, Ok }
 
 import java.nio.charset.StandardCharsets
-import java.time.Instant
+import java.time.{ Clock, Instant }
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
@@ -1460,24 +1460,6 @@ class TenantAdminControllerSpec
   "Endpoint DELETE /poc-admin/:id/2fa-token" should {
     "delete 2FA token for poc admin" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
-
-      val tenant = createTenant()
-      val poc = createPoc()
-      val pocAdmin =
-        createPocAdmin(pocId = poc.id, tenantId = poc.tenantId).copy(certifyUserId = Some(UUID.randomUUID()))
-      val employee = createPocEmployee()
-
-      delete(
-        s"/poc-admin/${pocAdmin.id}/2fa-token",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
-      ) {
-        status should equal(404)
-      }
-    }
-
-    /*
-    "delete 2FA token for poc admin" in withInjector { i =>
-      val token = i.get[FakeTokenCreator]
       val clock = i.get[Clock]
       val repository = i.get[PocAdminRepository]
       val keycloakUserService = i.get[KeycloakUserService]
@@ -1513,7 +1495,7 @@ class TenantAdminControllerSpec
       ) {
         status should equal(200)
         body shouldBe empty
-        await(requiredAction) should contain theSameElementsAs List("UPDATE_PASSWORD")
+        await(requiredAction) should contain theSameElementsAs List("webauthn-register", "UPDATE_PASSWORD")
         await(getPocAdmin).value.webAuthnDisconnected shouldBe Some(new DateTime(
           clock.instant().toString,
           DateTimeZone.forID(clock.getZone.getId)))
@@ -1537,12 +1519,12 @@ class TenantAdminControllerSpec
     "return 404 when poc-admin is not owned by tenant-admin" in withInjector { implicit i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
       val id = await(repository.createPocAdmin(pocAdmin))
 
-      val otherTenant = addTenantToDB("otherTenant")
+      val otherTenant = addTenantToDB("otherTenant", i)
 
       delete(
         s"/poc-admin/$id/2fa-token",
@@ -1573,7 +1555,7 @@ class TenantAdminControllerSpec
     "return 409 when poc-admin is not in Completed status" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocAdminRepository]
-      val tenant = addTenantToDB()
+      val tenant = addTenantToDB(i)
       val poc = addPocToDb(tenant, i.get[PocTable])
       val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id, certifyUserId = None, status = Pending)
       val id = await(repository.createPocAdmin(pocAdmin))
@@ -1585,7 +1567,7 @@ class TenantAdminControllerSpec
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' is in wrong status: 'Pending', required: 'Completed'"))
       }
-    } */
+    }
   }
 
   "Endpoint GET /poc-admin/:id" must {

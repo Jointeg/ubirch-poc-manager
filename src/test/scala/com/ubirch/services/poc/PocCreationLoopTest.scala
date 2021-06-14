@@ -1,15 +1,15 @@
 package com.ubirch.services.poc
-import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.UnitTestBase
+import com.ubirch.db.tables.{ PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
 import com.ubirch.models.keycloak.user.CreateBasicKeycloakUser
 import com.ubirch.models.poc.{ LogoURL, Poc, PocStatus }
 import com.ubirch.models.user.{ Email, FirstName, LastName, UserName }
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
-import com.ubirch.services.keycloak.users.TestKeycloakUserService
+import com.ubirch.services.keycloak.users.{ KeycloakUserService, TestKeycloakUserService }
 import com.ubirch.services.poc.PocTestHelper._
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.reactive.Observable
 import org.scalatest.Assertion
@@ -61,7 +61,7 @@ class PocCreationLoopTest extends UnitTestBase {
     }
   }
 
-  private def createNeededDeviceUser(users: TestKeycloakUserService, poc: Poc) = {
+  private def createNeededDeviceUser(users: KeycloakUserService, poc: Poc) = {
     users.createUser(
       DeviceKeycloak.defaultRealm,
       CreateBasicKeycloakUser(FirstName(""), LastName(""), UserName(poc.getDeviceId), Email("email")),

@@ -229,7 +229,8 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
             .getKeycloak(instance)
             .realm(realm.name)
             .users()
-            .delete(user.getId)))
+            .delete(user.getId)
+            .close()))
       _ = logger.debug(s"Successfully deleted $username user")
     } yield ()).value.void
   }
@@ -387,15 +388,18 @@ class DefaultKeycloakUserService @Inject() (keycloakConnector: KeycloakConnector
     }
 
   private def processCreationResponse(response: Response, userName: String): Either[UserException, UserId] = {
-
-    if (response.getStatusInfo.equals(Status.CREATED)) {
-      Right(getIdFromPath(response))
-    } else if (response.getStatusInfo.equals(Status.CONFLICT)) {
-      logger.info(s"user with name $userName already existed")
-      Left(UserAlreadyExists(userName))
-    } else {
-      logger.error(s"failed to create user $userName; response has status ${response.getStatus}")
-      Left(UserCreationError(s"failed to create user $userName; response has status ${response.getStatus}"))
+    try {
+      if (response.getStatusInfo.equals(Status.CREATED)) {
+        Right(getIdFromPath(response))
+      } else if (response.getStatusInfo.equals(Status.CONFLICT)) {
+        logger.info(s"user with name $userName already existed")
+        Left(UserAlreadyExists(userName))
+      } else {
+        logger.error(s"failed to create user $userName; response has status ${response.getStatus}")
+        Left(UserCreationError(s"failed to create user $userName; response has status ${response.getStatus}"))
+      }
+    } finally {
+      response.close()
     }
   }
 
