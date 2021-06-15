@@ -27,7 +27,7 @@ object CentralCsvProvider {
        |${pocId.toString};$pocTypeValue;pocName;pocStreet;;;;;Wunschkreis;Wunschland;Deutschland;+4974339296;;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
        |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;certification;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
        |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;http://www.ubirch.com/logo.png;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;http://www.ubirch.com/logo.png;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;+4974339296;http://www.ubirch.com/logo.png;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   // header has wrong names
   val invalidHeaderPocOnlyCsv: String =

@@ -70,7 +70,7 @@ class PocCsvParserTest extends TestBase {
         3).left.get == s"""${pocId.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;certification;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]};column logo_url must contain a valid url http://www.ubirch.com if pocType is set to *_app,column extra_config must contain a valid json string,column manager_email* must contain a proper mail address,column manager_mobile_phone* must contain a valid phone number e.g. +46-498-313789""")
       assert(result(4).isRight)
       assert(result.last.left.get ==
-        s"""${pocId.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]};the number of column 17 is invalid. should be 18.""")
+        s"""${pocId.toString};ub_vac_app;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;+4974339296;http://www.ubirch.com/logo.png;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]};the number of column 17 is invalid. should be 18.""")
     }
   }
 }
