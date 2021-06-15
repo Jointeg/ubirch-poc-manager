@@ -16,6 +16,7 @@ object TenantAdminControllerJsonModel {
     pocName: String,
     active: Boolean,
     state: Status,
+    webIdentRequired: Boolean,
     webIdentInitiateId: Option[UUID],
     webIdentSuccessId: Option[String]
   )
@@ -100,6 +101,7 @@ object TenantAdminControllerJsonModel {
         pocName = poc.pocName,
         active = pocAdmin.active,
         state = pocAdmin.status,
+        webIdentRequired = pocAdmin.webIdentRequired,
         webIdentInitiateId = pocAdmin.webIdentInitiateId,
         webIdentSuccessId = pocAdmin.webIdentId
       )
