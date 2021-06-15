@@ -32,6 +32,16 @@ class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyL
     }
   }
 
+  def increaseHeaderSize(server: Server): Unit = {
+    server.getConnectors.foreach { connector =>
+      connector.getConnectionFactories
+        .stream()
+        .filter(cf => cf.isInstanceOf[HttpConnectionFactory])
+        //Default size is 8 * 1024; Because of the certs, the size increased past the default size.
+        .forEach(cf => cf.asInstanceOf[HttpConnectionFactory].getHttpConfiguration.setRequestHeaderSize(16 * 1024))
+    }
+  }
+
   def start(): Unit = {
     val server = initializeServer
     startServer(server)
@@ -41,6 +51,7 @@ class RestService @Inject() (config: Config, lifecycle: Lifecycle) extends LazyL
   private def initializeServer: Server = {
     val server = createServer
     disableServerVersionHeader(server)
+    increaseHeaderSize(server)
     val contexts = createContextsOfTheServer
     server.setHandler(contexts)
     server
