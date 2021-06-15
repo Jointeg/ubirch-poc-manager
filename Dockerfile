@@ -29,6 +29,7 @@ ENTRYPOINT [ \
    -Dcom.sun.management.jmxremote.ssl=false \
    -Dconfig.resource=application-docker.conf \
    -Dlogback.configurationFile=logback-docker.xml \
+   -Dfile.encoding=UTF8 \
    -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9020 \
    $JAVA_OPTS -jar /usr/share/service/main.jar" \
 ]

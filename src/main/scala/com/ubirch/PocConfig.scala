@@ -91,9 +91,7 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
   val teamDriveStage: String = config.getString(TeamDrivePaths.STAGE)
   val pocLogoEndpoint: String = config.getString(ServicesConfPaths.POC_LOGO_ENDPOINT)
   val certWelcomeMessage: String = config.getString(TeamDrivePaths.CERT_WELCOME_MESSAGE)
-  println(certWelcomeMessage)
   val staticAssetsWelcomeMessage: String = config.getString(TeamDrivePaths.STATIC_ASSETS_WELCOME_MESSAGE)
-  println(staticAssetsWelcomeMessage)
 
   val pocTypeStaticSpaceNameMap: Map[String, String] =
     try {
