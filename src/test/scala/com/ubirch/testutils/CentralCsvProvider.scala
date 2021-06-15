@@ -26,13 +26,13 @@ object CentralCsvProvider {
        |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;Musterfrau;Frau;frau.musterfraumail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
        |${pocId.toString};$pocTypeValue;pocName;pocStreet;;;;;Wunschkreis;Wunschland;Deutschland;+4974339296;;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
        |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;certification;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
-       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;http://www.ubirch.com/logo.png;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}
+       |${pocId.toString};$pocTypeValue;pocName;pocStreet;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;http://www.ubirch.com/logo.png;Musterfrau;Frau;frau.musterfrau@mail.de;+4974339296;{"vaccines":["vaccine1", "vaccine2"]}""".stripMargin
 
   // header has wrong names
   val invalidHeaderPocOnlyCsv: String =
-    s"""poc_id*;poc_type*;poc_name*;poc_178street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;client_cert;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
-      s"a5a62b0f-6694-4916-b188-89e69264458f;$pocTypeValue;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;TRUE;;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1: vaccine2\"]}""".stripMargin
+    s"""poc_id*;poc_type*;poc_name*;poc_178street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;logo_url;manager_surname*;manager_name*;manager_email*;manager_mobile_phone*;extra_config\n" +
+      s"a5a62b0f-6694-4916-b188-89e69264458f;$pocTypeValue;Impfzentrum zum Löwen;An der Heide;101;;12636;Wunschstadt;Wunschkreis;Wunschland;Deutschland;+4974339296;;CBOR;Impfzentrum;Musterfrau;Frau;frau.musterfrau@mail.de;0176-543;{\"vaccines\":[\"vaccine1: vaccine2\"]}""".stripMargin
 
   val notEnoughHeaderPocOnlyCsv: String =
     s"""poc_id*;poc_type*;poc_name*;poc_178street*;poc_house_number*;poc_additional_address;poc_zipcode*;poc_city*;poc_county;poc_federal_state;poc_country*;poc_phone*;certify_app*;logo_url;encoding*;extra_signing_key_id;manager_surname*;manager_name*;manager_email*;extra_config\n" +

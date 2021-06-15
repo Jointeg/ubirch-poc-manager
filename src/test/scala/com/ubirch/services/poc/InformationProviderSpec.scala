@@ -70,7 +70,10 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
       val statusProvided = pocStatus.copy(certifyApiProvided = true)
-      val r = infoProvider.infoToCertifyAPI(poc, statusAndPW, tenant).runSyncUnsafe()
+      val r = infoProvider.infoToCertifyAPI(
+        poc.copy(sharedAuthCertId = Some(UUID.randomUUID())),
+        statusAndPW,
+        tenant).runSyncUnsafe()
       // assert
       r.status shouldBe statusProvided
     }
@@ -132,11 +135,15 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val infoProvider = injector.get[InformationProvider]
       val errorState =
         pocStatus.copy(errorMessage = Some("an error occurred when providing info to certify api; missing scheme"))
+      val pocWithSharedAuthCertId = poc.copy(sharedAuthCertId = Some(UUID.randomUUID()))
 
-      assertThrows[PocCreationError](infoProvider.infoToCertifyAPI(poc, statusAndPW, tenant).runSyncUnsafe())
+      assertThrows[PocCreationError](infoProvider.infoToCertifyAPI(
+        pocWithSharedAuthCertId,
+        statusAndPW,
+        tenant).runSyncUnsafe())
       //test the same in a different way
       infoProvider
-        .infoToCertifyAPI(poc, statusAndPW, tenant)
+        .infoToCertifyAPI(pocWithSharedAuthCertId, statusAndPW, tenant)
         .onErrorHandle {
           case PocCreationError(state, _) =>
             state.status shouldBe errorState
@@ -181,7 +188,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val parsedObject = read[RegisterDeviceCertifyAPI](registerDevice)
 
       parsedObject.role shouldBe Some(poc.roleName)
-      parsedObject.pocType shouldBe poc.pocType
+      parsedObject.pocType shouldBe goodPoc.pocType
       parsedObject.uuid shouldBe poc.getDeviceId
       parsedObject.password shouldBe pw
       parsedObject.cert.isDefined shouldBe true
@@ -203,7 +210,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val parsedObject = read[RegisterDeviceCertifyAPI](registerDevice)
 
       parsedObject.role shouldBe Some(poc.roleName)
-      parsedObject.pocType shouldBe poc.pocType
+      parsedObject.pocType shouldBe goodPoc.pocType
       parsedObject.uuid shouldBe poc.getDeviceId
       parsedObject.password shouldBe pw
       parsedObject.cert.isDefined shouldBe true
@@ -218,7 +225,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       implicit val formats: Formats = injector.get[Formats]
 
       val (poc, status, tenant) = createPocTriple()
-      val goodPoc = poc.copy(pocType = TestData.Poc.pocTypeApi)
+      val goodPoc = poc.copy(pocType = "bmg_vac_api")
       val pw = "devicePassword"
 
       val body = infoProvider.getCertifyApiBody(goodPoc, StatusAndPW(status, pw), tenant)

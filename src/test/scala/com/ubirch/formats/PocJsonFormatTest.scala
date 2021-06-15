@@ -43,8 +43,6 @@ class PocJsonFormatTest extends UnitTestBase {
           |    "country":"France"
           |  },
           |  "phone":"pocPhone",
-          |  "certifyApp":true,
-          |  "clientCertRequired":false,
           |  "extraConfig":{
           |    "test":"hello"
           |  },
