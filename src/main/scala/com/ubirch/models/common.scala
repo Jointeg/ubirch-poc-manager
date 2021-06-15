@@ -25,4 +25,11 @@ object common {
         case "desc" => DESC
       }
   }
+
+  sealed trait LoopState
+  case object Starting extends LoopState
+  case object Cancelled extends LoopState
+  case object ErrorTerminated extends LoopState
+  case object Running extends LoopState
+  case object Completed extends LoopState
 }

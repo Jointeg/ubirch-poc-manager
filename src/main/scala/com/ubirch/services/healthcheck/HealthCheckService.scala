@@ -1,11 +1,15 @@
 package com.ubirch.services.healthcheck
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.db.tables.HealthCheckRepository
+import com.ubirch.models.common
+import com.ubirch.models.common._
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak._
+import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
 import com.ubirch.services.teamdrive.model.TeamDriveClient
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
+import monix.execution.atomic.AtomicAny
 
 import javax.inject.Inject
 import scala.concurrent.duration.DurationInt
@@ -36,6 +40,11 @@ class DefaultHealthCheckService @Inject() (
     val deviceDefaultRealmHealthCheck =
       keycloakHealthCheck(keycloakConnector, DeviceKeycloak, DeviceDefaultRealm)
     val teamDriveHealthCheck = performTeamDriveHealthCheck()
+    val pocCreationLoopHealthCheck = performLoopCreationHealthCheck(PocCreationLoop.loopState, "PoC creation loop")
+    val pocAdminCreationLoopHealthCheck =
+      performLoopCreationHealthCheck(PocAdminCreationLoop.loopState, "PoC admin creation loop")
+    val pocEmployeeCreationLoopHealthCheck =
+      performLoopCreationHealthCheck(PocEmployeeCreationLoop.loopState, "PoC employee creation loop")
 
     Task.gather(List(
       postgresHealthCheck,
@@ -44,7 +53,10 @@ class DefaultHealthCheckService @Inject() (
       certifyBmgRealmHealthCheck,
       certifyUbirchRealmHealthCheck,
       deviceDefaultRealmHealthCheck,
-      teamDriveHealthCheck
+      teamDriveHealthCheck,
+      pocCreationLoopHealthCheck,
+      pocAdminCreationLoopHealthCheck,
+      pocEmployeeCreationLoopHealthCheck
     )).map(Services).map(_.toReadinessStatus)
   }
 
@@ -67,6 +79,23 @@ class DefaultHealthCheckService @Inject() (
         UnhealthyService
     }
   }
+
+  private def performLoopCreationHealthCheck(state: AtomicAny[LoopState], loopName: String) = Task(state.get() match {
+    case common.Running =>
+      HealthyService
+    case common.Starting =>
+      logger.error(s"$loopName is starting")
+      UnhealthyService
+    case common.Cancelled =>
+      logger.error(s"$loopName is cancelled")
+      UnhealthyService
+    case common.ErrorTerminated =>
+      logger.error(s"$loopName is terminated because unexpected error has happened")
+      UnhealthyService
+    case common.Completed =>
+      logger.error(s"$loopName has been completed")
+      UnhealthyService
+  })
 
   private def performPostgresHealthCheck() = {
     healthCheckRepository.healthCheck().timeout(1.second).map(_ => HealthyService).onErrorHandle {
