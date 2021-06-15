@@ -5,7 +5,6 @@ import com.google.inject.Provider
 import com.typesafe.config.Config
 import com.ubirch.ConfPaths.GenericConfPaths
 import com.ubirch.controllers.EndpointHelpers._
-import com.ubirch.controllers.PocAdminController.PocEmployee_OUT
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
   NotAllowedError,
@@ -13,9 +12,9 @@ import com.ubirch.controllers.SwitchActiveError.{
   UserNotCompleted
 }
 import com.ubirch.controllers.concerns._
-import com.ubirch.controllers.validator.AdminCriteriaValidator
+import com.ubirch.controllers.validator.{ AdminCriteriaValidator, PocEmployeeInValidator }
 import com.ubirch.db.tables.model.AdminCriteria
-import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
+import com.ubirch.models.poc.{ Completed, PocAdmin, Processing, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.{ Paginated_OUT, ValidationError, ValidationErrorsResponse }
 import com.ubirch.controllers.concerns.{
@@ -24,17 +23,23 @@ import com.ubirch.controllers.concerns.{
   KeycloakBearerAuthenticationSupport,
   Token
 }
+import com.ubirch.controllers.model.PocAdminControllerJsonModel._
 import com.ubirch.db.tables.{ PocAdminRepository, PocEmployeeRepository, TenantRepository }
 import com.ubirch.models.NOK
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.clock.ClockProvider
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
-import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
+import com.ubirch.services.keycloak.users.{ Remove2faTokenKeycloakError, UpdateEmployeeKeycloakError }
 import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError.UserNotFound
 import com.ubirch.services.poc.Remove2faTokenError.KeycloakError
 import com.ubirch.services.poc.employee.{ EmptyCSVError, _ }
 import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenError }
-import com.ubirch.services.pocadmin.{ GetPocsAdminErrors, PocAdminService }
+import com.ubirch.services.pocadmin.{
+  GetEmployeeForPocAdminError,
+  GetPocsAdminErrors,
+  PocAdminService,
+  UpdatePocEmployeeError
+}
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -42,6 +47,7 @@ import org.joda.time.DateTime
 import org.json4s.Formats
 import org.scalatra._
 import org.scalatra.swagger.{ Swagger, SwaggerSupportSyntax }
+import org.json4s.native.Serialization.read
 
 import java.time.Clock
 import java.nio.charset.StandardCharsets
@@ -104,6 +110,22 @@ class PocAdminController @Inject() (
       .summary("Get Employees")
       .description("Retrieve Employees that belong to the querying employee.")
       .tags("PoCs", "PoC Admins", "Poc-Employee")
+      .authorizations()
+
+  val getEmployee: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("retrieve an employee by id")
+      .summary("Get Employee")
+      .description("Retrieve Employee that belong to the querying PocAdmin.")
+      .tags("PoC", "PoC Admin", "Poc-Employee")
+      .parameters(queryParam[UUID]("Id of the Poc Employee"))
+      .authorizations()
+
+  val putEmployee: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Update an employee by id")
+      .summary("Update Employee")
+      .description("Update an Employee that belong to the querying PocAdmin.")
+      .tags("PoC", "PoC Admin", "Poc-Employee")
+      .parameters(queryParam[UUID]("Id of the Poc Employee"))
       .authorizations()
 
   val switchActiveOnPocEmployee: SwaggerSupportSyntax.OperationBuilder =
@@ -180,7 +202,62 @@ class PocAdminController @Inject() (
     }
   }
 
-  put("/poc-employee/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
+  get("/employees/:id", operation(getEmployee)) {
+    pocAdminEndpoint("Retrieve employee by id") { pocAdmin =>
+      getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { id =>
+        pocAdminService.getEmployeeForPocAdmin(pocAdmin, id).map {
+          case Right(pe) => Presenter.toJsonResult(PocEmployee_OUT.fromPocEmployee(pe))
+          case Left(e) => e match {
+              case GetEmployeeForPocAdminError.NotFound(id) =>
+                NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
+              case GetEmployeeForPocAdminError.DoesNotBelongToTenant(_, _) =>
+                Unauthorized(NOK.authenticationError("Unauthorized"))
+            }
+        }
+      }
+    }
+  }
+
+  put("/employees/:id", operation(putEmployee)) {
+    pocAdminEndpoint("Update employee by id") { pocAdmin =>
+      getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { id =>
+        for {
+          body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
+          unvalidatedIn <- Task(read[PocEmployee_IN](body))
+          validatedIn <- Task(PocEmployeeInValidator.validate(unvalidatedIn))
+          r <- validatedIn match {
+            case Validated.Invalid(e) =>
+              Presenter.toJsonStr(ValidationErrorsResponse(e.toNonEmptyList.toList.toMap))
+                .map(BadRequest(_))
+            case Validated.Valid(pocEmployeeIn) =>
+              pocAdminService.updateEmployee(pocAdmin, id, pocEmployeeIn).map {
+                case Right(_) => Ok()
+                case Left(e) => e match {
+                    case UpdatePocEmployeeError.NotFound(id) =>
+                      NotFound(NOK.resourceNotFoundError(s"Poc employee with id '$id' does not exist"))
+                    case UpdatePocEmployeeError.DoesNotBelongToTenant(_, _) =>
+                      Unauthorized(NOK.authenticationError("Unauthorized"))
+                    case UpdatePocEmployeeError.WrongStatus(id, status, expectedStatus) =>
+                      Conflict(
+                        NOK.conflict(s"Poc employee '$id' is in wrong status: '$status', required: '$expectedStatus'"))
+                    case UpdatePocEmployeeError.KeycloakError(e) => e match {
+                        case UpdateEmployeeKeycloakError.UserNotFound(_) =>
+                          InternalServerError(
+                            NOK.serverError(s"Poc employee '$id' is assigned to not existing certify user"))
+                        case UpdateEmployeeKeycloakError.KeycloakError(error) =>
+                          InternalServerError(NOK.serverError(s"Certify user services responded with error: $error"))
+                        case UpdateEmployeeKeycloakError.MissingCertifyUserId(_) =>
+                          InternalServerError(NOK.serverError(s"Poc employee '$id' is not assigned to certify user"))
+                      }
+                  }
+              }
+          }
+        } yield r
+      }
+    }
+  }
+
+  put("/employees/:id/active/:isActive", operation(switchActiveOnPocEmployee)) {
     pocAdminEndpoint("Switch active flag for PoC Employee") { pocAdmin =>
       getParamAsUUID("id", id => s"Invalid PocEmployee id '$id'") { employeeId =>
         (for {
@@ -210,7 +287,7 @@ class PocAdminController @Inject() (
     }
   }
 
-  delete("/poc-employee/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
+  delete("/employees/:id/2fa-token", operation(delete2FATokenOnPocEmployee)) {
     pocAdminEndpoint("Delete 2FA token for PoC admin") { pocAdmin =>
       getParamAsUUID("id", id => s"Invalid poc employee id: '$id'") { id =>
         for {
@@ -267,35 +344,16 @@ class PocAdminController @Inject() (
       case Validated.Invalid(e) => Task.raiseError(ValidationError(e))
     }
 
-  private def getParamAsUUID(paramName: String, errorMsg: String => String)(logic: UUID => Task[ActionResult]) = {
+  private def getParamAsUUID(
+    paramName: String,
+    errorMsg: String => String)(logic: UUID => Task[ActionResult]): Task[ActionResult] = {
     val id = params(paramName)
     Try(UUID.fromString(id)) match {
       case Success(uuid) => logic(uuid)
       case Failure(ex) =>
-        logger.error(errorMsg(id), ex)
-        Task(BadRequest(NOK.badRequest(errorMsg + ex.getMessage)))
+        val error = errorMsg(id)
+        logger.error(error, ex)
+        Task(BadRequest(NOK.badRequest(error)))
     }
-  }
-}
-
-object PocAdminController {
-  case class PocEmployee_OUT(
-    id: String,
-    firstName: String,
-    lastName: String,
-    email: String,
-    active: Boolean,
-    status: Status)
-
-  object PocEmployee_OUT {
-    def fromPocEmployee(pocEmployee: PocEmployee): PocEmployee_OUT =
-      PocEmployee_OUT(
-        id = pocEmployee.id.toString,
-        firstName = pocEmployee.name,
-        lastName = pocEmployee.surname,
-        email = pocEmployee.email,
-        active = pocEmployee.active,
-        status = pocEmployee.status
-      )
   }
 }
