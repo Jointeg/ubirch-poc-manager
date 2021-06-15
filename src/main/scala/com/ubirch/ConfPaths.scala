@@ -65,6 +65,7 @@ object ConfPaths {
     final val GO_CLIENT_TOKEN = "system.services.goClientToken"
     final val POC_CREATION_INTERVAL = "system.services.pocCreationInterval"
     final val POC_LOGO_ENDPOINT = "system.services.pocLogoEndpoint"
+    final val POC_ISSUE_CERTS = "system.services.issueCerts"
   }
 
   trait AESEncryption {
