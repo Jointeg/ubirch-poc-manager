@@ -7,6 +7,7 @@ import com.ubirch.models.auth.Base64String
 import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keyhash.KeyHashVerifierService
+import com.ubirch.services.lifeCycle.Lifecycle
 import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
 import com.ubirch.services.rest.RestService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
@@ -17,6 +18,7 @@ import org.flywaydb.core.api.FlywayException
 
 import java.util.concurrent.CountDownLatch
 import javax.inject.{ Inject, Singleton }
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 /**
   * Represents a bootable service object that starts the system
@@ -30,7 +32,8 @@ class Service @Inject() (
   keyHashVerifierService: KeyHashVerifierService,
   pocCreationLoop: PocCreationLoop,
   adminCreationLoop: PocAdminCreationLoop,
-  employeeCreationLoop: PocEmployeeCreationLoop)(implicit scheduler: Scheduler)
+  employeeCreationLoop: PocEmployeeCreationLoop,
+  lifecycle: Lifecycle)(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
@@ -63,17 +66,19 @@ class Service @Inject() (
       .runSyncUnsafe(15.seconds)
 
     val pocCreation = pocCreationLoop.startPocCreationLoop(resp => Observable(resp)).subscribe()
-
     val adminCreation = adminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
     val employeeCreation = employeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)).subscribe()
 
-    sys.addShutdownHook {
+    lifecycle.addStopHook(() => Future(SttpResources.backend.close()))
+
+    lifecycle.addStopHook(() => {
       logger.info("Shutdown of poc creation loop service")
       pocCreation.cancel()
       adminCreation.cancel()
       employeeCreation.cancel()
-      SttpResources.backend.close()
-    }
+      Thread.sleep(4.seconds.toMillis)
+      Future.successful()
+    })
 
     val cd = new CountDownLatch(1)
     cd.await()
