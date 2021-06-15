@@ -24,7 +24,7 @@ object PocAdminStatus {
   def init(podAdmin: PocAdmin, poc: Poc, pocConfig: PocConfig): PocAdminStatus = {
     val webIdentInitiated = if (podAdmin.webIdentRequired) Some(false) else None
     val webIdentSuccess = if (podAdmin.webIdentRequired) Some(false) else None
-    val invitedToTeamDrive = if (poc.clientCertRequired) Some(false) else None
+    val invitedToTeamDrive = if (poc.typeIsApp) Some(false) else None
     val invitedToStaticTeamDrive = if (pocConfig.pocTypeStaticSpaceNameMap.contains(poc.pocType)) Some(false) else None
     PocAdminStatus(
       podAdmin.id,

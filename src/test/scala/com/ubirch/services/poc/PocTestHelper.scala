@@ -20,10 +20,9 @@ object PocTestHelper extends Awaits {
 
   def createPocTriple(
     tenantName: String = globalTenantName,
-    clientCertRequired: Boolean = false,
     status: Status = Pending): (Poc, PocStatus, Tenant) = {
     val tenant = createTenant(tenantName)
-    val poc = createPoc(tenantName = tenant.tenantName, clientCertRequired = clientCertRequired, status = status)
+    val poc = createPoc(tenantName = tenant.tenantName, status = status)
     val pocStatus = createPocStatus(poc.id)
     (poc, pocStatus, tenant)
   }

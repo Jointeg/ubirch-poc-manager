@@ -152,7 +152,7 @@ formats: Formats)
     }
 
     def clientCert: Task[Option[String]] =
-      if (poc.clientCertRequired) {
+      if (poc.typeIsApp) {
         for {
           certId <- getSharedAuthCertIdOrThrowError
           maybeCert <- certHandler.getCert(certId)

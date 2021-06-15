@@ -15,9 +15,7 @@ case class Poc(
   pocName: String,
   address: Address,
   phone: String,
-  certifyApp: Boolean,
   logoUrl: Option[LogoURL],
-  clientCertRequired: Boolean,
   orgUnitId: Option[OrgUnitId] = None,
   clientCert: Option[ClientCert] = None,
   extraConfig: Option[JsonConfig],
@@ -35,6 +33,8 @@ case class Poc(
   lastUpdated: Updated = Updated(DateTime.now()), //updated automatically on storage in DB
   created: Created = Created(DateTime.now())
 ) {
+  def typeIsApp: Boolean = pocType.endsWith("_app")
+
   def getDeviceId: String = deviceId.value.value.toString
 
   def getRealm: KeycloakRealm = {
@@ -54,9 +54,7 @@ object Poc {
     pocName: String,
     address: Address,
     phone: String,
-    certifyApp: Boolean,
     logoUrl: Option[LogoURL],
-    clientCertRequired: Boolean,
     extraConfig: Option[JsonConfig],
     manager: PocManager,
     status: Status
@@ -71,9 +69,7 @@ object Poc {
       pocName = pocName,
       address = address,
       phone = phone,
-      certifyApp = certifyApp,
       logoUrl = logoUrl,
-      clientCertRequired = clientCertRequired,
       extraConfig = extraConfig,
       manager = manager,
       roleName = roleName,

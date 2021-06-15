@@ -29,7 +29,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true, status = Completed)
+        val (poc, pocStatus, tenant) = createPocTriple(status = Completed)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = SpaceName.ofPoc("local", tenant, poc)
         val updatedPoc =
@@ -76,7 +76,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true, status = Completed)
+        val (poc, pocStatus, tenant) = createPocTriple(status = Completed)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = SpaceName.ofPoc("local", tenant, poc)
         val updatedPoc =
@@ -140,7 +140,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true, status = Completed)
+        val (poc, pocStatus, tenant) = createPocTriple(status = Completed)
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = SpaceName.ofPoc("local", tenant, poc)
         val webIdentSuccessPocAdminStatus =

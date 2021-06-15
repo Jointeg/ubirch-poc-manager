@@ -25,4 +25,9 @@ object TestData {
     val dateOfBirth: BirthDate = BirthDate(LocalDate.now())
     val status: Status = Pending
   }
+
+  object Poc {
+    val pocTypeApp: String = "ub_cust_app"
+    val pocTypeApi: String = "ub_test_api"
+  }
 }

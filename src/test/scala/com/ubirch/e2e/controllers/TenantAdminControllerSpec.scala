@@ -1890,8 +1890,6 @@ class TenantAdminControllerSpec
                   |    "country" : "${address.country}"
                   |  },
                   |  "phone" : "${poc.phone}",
-                  |  "certifyApp" : $certifyApp,
-                  |  "clientCertRequired" : $clientCertRequired,
                   |  "extraConfig" : {
                   |    "test" : "hello"
                   |  },

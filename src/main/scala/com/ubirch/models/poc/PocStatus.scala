@@ -72,18 +72,18 @@ object PocStatus {
   def init(poc: Poc): PocStatus =
     PocStatus(
       pocId = poc.id,
-      clientCertRequired = poc.clientCertRequired,
-      orgUnitCertCreated = if (poc.clientCertRequired) Some(false) else None,
-      clientCertCreated = if (poc.clientCertRequired) Some(false) else None,
-      clientCertProvided = if (poc.clientCertRequired) Some(false) else None,
-      adminGroupCreated = if (poc.certifyApp) Some(false) else None,
-      adminRoleAssigned = if (poc.certifyApp) Some(false) else None,
-      pocTypeRoleCreated = if (poc.certifyApp) Some(false) else None,
-      pocTypeGroupCreated = if (poc.certifyApp) Some(false) else None,
-      pocTypeGroupRoleAssigned = if (poc.certifyApp) Some(false) else None,
-      employeeGroupCreated = if (poc.certifyApp) Some(false) else None,
-      employeeRoleAssigned = if (poc.certifyApp) Some(false) else None,
-      logoRequired = poc.certifyApp,
-      logoStored = if (poc.certifyApp) Some(false) else None
+      clientCertRequired = poc.typeIsApp,
+      orgUnitCertCreated = if (poc.typeIsApp) Some(false) else None,
+      clientCertCreated = if (poc.typeIsApp) Some(false) else None,
+      clientCertProvided = if (poc.typeIsApp) Some(false) else None,
+      adminGroupCreated = if (poc.typeIsApp) Some(false) else None,
+      adminRoleAssigned = if (poc.typeIsApp) Some(false) else None,
+      pocTypeRoleCreated = if (poc.typeIsApp) Some(false) else None,
+      pocTypeGroupCreated = if (poc.typeIsApp) Some(false) else None,
+      pocTypeGroupRoleAssigned = if (poc.typeIsApp) Some(false) else None,
+      employeeGroupCreated = if (poc.typeIsApp) Some(false) else None,
+      employeeRoleAssigned = if (poc.typeIsApp) Some(false) else None,
+      logoRequired = poc.typeIsApp,
+      logoStored = if (poc.typeIsApp) Some(false) else None
     )
 }

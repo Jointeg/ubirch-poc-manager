@@ -89,41 +89,6 @@ object Validator {
   }
 
   /**
-    * parsable to Boolean
-    */
-  def validateAdminCertifyApp(header: String, str: String): AllErrorsOr[Boolean] = {
-    Try(str.toBoolean) match {
-      case Success(true)  => true.validNel
-      case Success(false) => certifyAppAdminError(header).invalidNel
-      case Failure(_)     => booleanError(header).invalidNel
-    }
-  }
-
-  /**
-    * parsable to Boolean
-    */
-  def validateClientCertAdmin(header: String, str: String): AllErrorsOr[Boolean] = {
-    validateBoolean(header, str) match {
-      case Valid(false)   => clientCertAdminError(header).invalidNel
-      case validOrInvalid => validOrInvalid
-    }
-  }
-
-  /**
-    * parsable to Boolean
-    */
-  def validateClientCert(header: String, str: String, tenant: Tenant): AllErrorsOr[Boolean] = {
-    validateBoolean(header, str) match {
-      case Valid(false) if tenant.sharedAuthCert.isEmpty => clientCertError(header).invalidNel
-      case Valid(false) if tenant.usageType == APP =>
-        organisationalUnitCertError(APP, clientCertRequired = false).invalidNel
-      case Valid(true) if tenant.usageType == API =>
-        organisationalUnitCertError(API, clientCertRequired = true).invalidNel
-      case validOrInvalid => validOrInvalid
-    }
-  }
-
-  /**
     * exactly 1 number in this regex https://www.regextester.com/97440
     */
   def validatePhone(errorMsg: String, phoneString: String): AllErrorsOr[String] = {

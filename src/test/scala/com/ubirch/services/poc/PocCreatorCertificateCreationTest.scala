@@ -9,6 +9,7 @@ import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.poc.PocTestHelper._
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import com.ubirch.{ UnitTestBase, UnitTestInjectorHelper }
 
@@ -17,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 class PocCreatorCertificateCreationTest extends UnitTestBase {
 
   "PocCreator" should {
-    "Retrieve certificates from CertManager and mark this information in PocStatus and PoC table when tenant UsageType == APP and clientCertRequired == true" in {
+    "Retrieve certificates from CertManager and mark this information in PocStatus and PoC table when tenant UsageType == APP" in {
       withInjector { injector =>
         //services
         val loop = injector.get[PocCreator]
@@ -25,7 +26,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-          pocChange = poc => poc.copy(clientCertRequired = true),
+          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApp),
           pocStatusChange = pocStatus => pocStatus.copy(clientCertRequired = true, clientCertCreated = Some(false)),
           tenantChange = tenant => tenant.copy(usageType = APP)
         )
@@ -58,7 +59,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
       }
     }
 
-    "Retrieve certificates from CertManager and mark this information in PocStatus when tenant UsageType == Both and clientCertRequired == true" in {
+    "Retrieve certificates from CertManager and mark this information in PocStatus when tenant UsageType == Both and pocType is APP" in {
       withInjector { injector =>
         //services
         val loop = injector.get[PocCreator]
@@ -66,7 +67,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-          pocChange = poc => poc.copy(clientCertRequired = true),
+          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApp),
           pocStatusChange = pocStatus => pocStatus.copy(clientCertRequired = true, clientCertCreated = Some(false)),
           tenantChange = tenant => tenant.copy(usageType = Both)
         )
@@ -100,7 +101,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
     }
 
     List(API, APP, Both).foreach(usageType => {
-      s"Do not retrieve certificates from CertManager and when tenant UsageType == $usageType and clientCertRequired == false" in {
+      s"Do not retrieve certificates from CertManager and when tenant UsageType == $usageType and pocType is API" in {
         withInjector { injector =>
           //services
           val loop = injector.get[PocCreator]
@@ -108,7 +109,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
           val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
           val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-            pocChange = poc => poc.copy(clientCertRequired = false),
+            pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApi),
             tenantChange = tenant => tenant.copy(usageType = usageType))
           //start process
           val result = await(loop.createPocs(), 5.seconds)
@@ -138,7 +139,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
       }
     })
 
-    "Fail to complete the creation of PoC if clientCertRequired is set to true but tenant UsageType is API" in {
+    "Fail to complete the creation of PoC if clientCertRequired is set to true but tenant UsageType is API and pocType is APP" in {
       withInjector { injector =>
         //services
         val loop = injector.get[PocCreator]
@@ -146,7 +147,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-          pocChange = poc => poc.copy(clientCertRequired = true),
+          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApp),
           tenantChange = tenant => tenant.copy(usageType = API))
         //start process
         val result = await(loop.createPocs(), 5.seconds)

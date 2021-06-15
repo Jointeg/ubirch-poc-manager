@@ -35,7 +35,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         val pocAdminStatusTable = injector.get[PocAdminStatusRepositoryMock]
         val teamDriveClient = injector.get[FakeTeamDriveClient]
 
-        val (poc, pocStatus, tenant) = createPocTriple(clientCertRequired = true)
+        val (poc, pocStatus, tenant) = createPocTriple()
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = SpaceName.ofPoc("local", tenant, poc)
         //start process
