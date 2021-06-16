@@ -5,12 +5,14 @@ import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.PocConfig
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
+import com.ubirch.models.common.{ ProcessingElements, WaitingForNewElements }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.services.poc.PocAdminCreator.throwAndLogError
 import com.ubirch.services.teamdrive.model.{ Read, SpaceId, SpaceName, TeamDriveClient }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
+import org.joda.time.DateTime
 
 import javax.inject.Inject
 
@@ -57,11 +59,13 @@ class PocAdminCreatorImpl @Inject() (
     adminRepository.getAllUncompletedPocAdmins().flatMap {
       case pocAdmins if pocAdmins.isEmpty =>
         logger.debug("no poc admins waiting for completion")
-        Task(NoWaitingPocAdmin)
+        Task(PocAdminCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Admin"))) >>
+          Task(NoWaitingPocAdmin)
       case pocAdmins =>
         logger.info(s"starting to create ${pocAdmins.size} pocAdmins")
-        Task.sequence(pocAdmins.map(admin => Task.cancelBoundary *> createPocAdmin(admin).uncancelable))
-          .map(PocAdminCreationMaybeSuccess)
+        Task(ProcessingElements(DateTime.now(), "PoC Admin", pocAdmins.map(_.id.toString).mkString(", "))) >>
+          Task.sequence(pocAdmins.map(admin => Task.cancelBoundary *> createPocAdmin(admin).uncancelable))
+            .map(PocAdminCreationMaybeSuccess)
     }
   }
 

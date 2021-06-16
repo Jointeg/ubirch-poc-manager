@@ -92,6 +92,18 @@ object ConfPaths {
     val POC_TYPE_STATIC_SPACE_NAME_MAP = "system.teamdrive.pocTypeStaticSpaceNameMap"
   }
 
+  trait HealthChecks {
+    object Timeouts {
+      val ELEMENTS_PROCESSING = "healthchecks.timeouts.elementsProcessing"
+      val WAITING_FOR_NEW_ELEMENTS = "healthchecks.timeouts.waitingForNewElements"
+      val STARTUP = "healthchecks.timeouts.startup"
+    }
+  }
+
+  trait Lifecycle {
+    val GENERAL_TIMEOUT = "system.lifecycle.generalTimeout"
+  }
+
   object GenericConfPaths extends GenericConfPaths
 
   object HttpServerConfPaths extends HttpServerConfPaths
@@ -105,4 +117,8 @@ object ConfPaths {
   object PostgresPaths extends PostgresPaths
 
   object TeamDrivePaths extends TeamDrivePaths
+
+  object HealthChecks extends HealthChecks
+
+  object Lifecycle extends Lifecycle
 }

@@ -4,13 +4,14 @@ import cats.implicits.catsSyntaxApply
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
+import com.ubirch.models.common.{ ProcessingElements, WaitingForNewElements }
 import com.ubirch.models.poc.{ Completed, Poc, Processing, Status }
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
+import org.joda.time.DateTime
 
 import javax.inject.Inject
-import scala.concurrent.duration.DurationInt
 
 trait PocEmployeeCreator {
   def createPocEmployees(): Task[PocEmployeeCreationResult]
@@ -27,7 +28,8 @@ object PocEmployeeCreator {
   def throwError(triple: EmployeeTriple, msg: String) =
     throw PocEmployeeCreationError(
       EmployeeAndStatus(employee = triple.employee, status = triple.status.copy(errorMessage = Some(msg))),
-      msg)
+      msg
+    )
 }
 
 case class EmployeeTriple(poc: Poc, employee: PocEmployee, status: PocEmployeeStatus)
@@ -48,11 +50,13 @@ class PocEmployeeCreatorImpl @Inject() (
     employeeTable.getUncompletedPocEmployees().flatMap {
       case pocEmployees if pocEmployees.isEmpty =>
         logger.debug("no poc employees waiting for completion")
-        Task(NoWaitingPocEmployee)
+        Task(PocEmployeeCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Employee"))) >>
+          Task(NoWaitingPocEmployee)
       case pocEmployees =>
         logger.info(s"starting to create ${pocEmployees.size} pocEmployees")
-        Task.sequence(pocEmployees.map(employee => Task.cancelBoundary *> createPocEmployee(employee).uncancelable))
-          .map(PocEmployeeCreationMaybeSuccess)
+        Task(ProcessingElements(DateTime.now(), "PoC Employee", pocEmployees.map(_.id.toString).mkString(", "))) >>
+          Task.sequence(pocEmployees.map(employee => Task.cancelBoundary *> createPocEmployee(employee).uncancelable))
+            .map(PocEmployeeCreationMaybeSuccess)
     }
   }
 

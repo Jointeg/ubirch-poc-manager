@@ -1,6 +1,7 @@
 package com.ubirch.models
 
 import io.getquill.Ord
+import org.joda.time.DateTime
 
 object common {
   sealed trait Order
@@ -25,4 +26,12 @@ object common {
         case "desc" => DESC
       }
   }
+
+  sealed trait LoopState
+  case class Starting(dateTime: DateTime) extends LoopState
+  case object Cancelled extends LoopState
+  case class ErrorTerminated(dateTime: DateTime) extends LoopState
+  case class ProcessingElements(dateTime: DateTime, elementName: String, elementId: String) extends LoopState
+  case class WaitingForNewElements(dateTime: DateTime, elementName: String) extends LoopState
+  case object Completed extends LoopState
 }

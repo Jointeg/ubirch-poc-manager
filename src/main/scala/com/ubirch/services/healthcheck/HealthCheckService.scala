@@ -1,14 +1,21 @@
 package com.ubirch.services.healthcheck
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.PocConfig
 import com.ubirch.db.tables.HealthCheckRepository
+import com.ubirch.models.common
+import com.ubirch.models.common._
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keycloak._
+import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
 import com.ubirch.services.teamdrive.model.TeamDriveClient
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
+import monix.execution.atomic.AtomicAny
+import org.joda.time.DateTime
 
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{ Duration, DurationInt, FiniteDuration }
 
 trait HealthCheckService {
   def performAllHealthChecks(): Task[ReadinessStatus]
@@ -20,9 +27,11 @@ class DefaultHealthCheckService @Inject() (
   keycloakCertifyConfig: KeycloakCertifyConfig,
   keycloakDeviceConfig: KeycloakDeviceConfig,
   keycloakConnector: KeycloakConnector,
-  teamDriveClient: TeamDriveClient
+  teamDriveClient: TeamDriveClient,
+  pocConfig: PocConfig
 ) extends HealthCheckService
   with LazyLogging {
+
   override def performAllHealthChecks(): Task[ReadinessStatus] = {
 
     val postgresHealthCheck: Task[Service] = performPostgresHealthCheck()
@@ -36,6 +45,11 @@ class DefaultHealthCheckService @Inject() (
     val deviceDefaultRealmHealthCheck =
       keycloakHealthCheck(keycloakConnector, DeviceKeycloak, DeviceDefaultRealm)
     val teamDriveHealthCheck = performTeamDriveHealthCheck()
+    val pocCreationLoopHealthCheck = performLoopCreationHealthCheck(PocCreationLoop.loopState, "PoC creation loop")
+    val pocAdminCreationLoopHealthCheck =
+      performLoopCreationHealthCheck(PocAdminCreationLoop.loopState, "PoC admin creation loop")
+    val pocEmployeeCreationLoopHealthCheck =
+      performLoopCreationHealthCheck(PocEmployeeCreationLoop.loopState, "PoC employee creation loop")
 
     Task.gather(List(
       postgresHealthCheck,
@@ -44,7 +58,10 @@ class DefaultHealthCheckService @Inject() (
       certifyBmgRealmHealthCheck,
       certifyUbirchRealmHealthCheck,
       deviceDefaultRealmHealthCheck,
-      teamDriveHealthCheck
+      teamDriveHealthCheck,
+      pocCreationLoopHealthCheck,
+      pocAdminCreationLoopHealthCheck,
+      pocEmployeeCreationLoopHealthCheck
     )).map(Services).map(_.toReadinessStatus)
   }
 
@@ -66,6 +83,51 @@ class DefaultHealthCheckService @Inject() (
         logger.error(s"Keycloak Healthcheck for realm $keycloakRealm returned error: ${ex.getMessage}")
         UnhealthyService
     }
+  }
+
+  private def performLoopCreationHealthCheck(state: AtomicAny[LoopState], loopName: String) = Task(state.get() match {
+    case common.ProcessingElements(dateTime, elementName, elementId) =>
+      val lastTimeProcessed = howLongFromNow(dateTime)
+      if (lastTimeProcessed < pocConfig.elementsProcessingTimeout) {
+        logger.debug(s"$loopName is processing $elementName elements. Last one was processed $lastTimeProcessed ago")
+        HealthyService
+      } else {
+        logger.error(
+          s"$loopName is processing an $elementName elements with ids: [$elementId] from ${dateTime.toDateTimeISO.toString()}. There is a high chance, that this loop is not responsive anymore")
+        UnhealthyService
+      }
+    case common.WaitingForNewElements(dateTime, elementName) =>
+      val lastWaitingTick = howLongFromNow(dateTime)
+      if (lastWaitingTick < pocConfig.waitingForNewElementsTimeout) {
+        logger.debug(
+          s"$loopName is waiting for new elements to be processed. Last Waiting tick was $lastWaitingTick ago")
+        HealthyService
+      } else {
+        logger.error(s"$loopName is waiting for $elementName elements from ${dateTime.toDateTimeISO.toString()}. There is a high chance, that this loop is not responsive anymore")
+        UnhealthyService
+      }
+    case common.Starting(dateTime) =>
+      val startingFrom = howLongFromNow(dateTime)
+      if (startingFrom < pocConfig.startupTimeout) {
+        logger.debug(s"$loopName is starting from $startingFrom")
+        HealthyService
+      } else {
+        logger.error(s"$loopName is start up time is unexpectedly long. It started $startingFrom ago")
+        UnhealthyService
+      }
+    case common.Cancelled =>
+      logger.error(s"$loopName is cancelled")
+      UnhealthyService
+    case common.ErrorTerminated(dateTime) =>
+      logger.error(s"$loopName is terminated because unexpected error has happened at ${dateTime.toDateTimeISO}")
+      UnhealthyService
+    case common.Completed =>
+      logger.error(s"$loopName has been completed")
+      UnhealthyService
+  })
+
+  private def howLongFromNow(from: DateTime): FiniteDuration = {
+    Duration(DateTime.now().getMillis - from.getMillis, TimeUnit.MILLISECONDS)
   }
 
   private def performPostgresHealthCheck() = {

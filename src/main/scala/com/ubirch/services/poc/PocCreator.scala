@@ -8,6 +8,7 @@ import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.ConfPaths.TeamDrivePaths
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocLogoRepository, PocRepository, PocStatusRepository, TenantRepository }
+import com.ubirch.models.common.{ ProcessingElements, WaitingForNewElements }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
 import com.ubirch.services.poc.util.ImageLoader
@@ -15,6 +16,7 @@ import com.ubirch.services.teamdrive.TeamDriveService
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import monix.execution.Scheduler
+import org.joda.time.DateTime
 import org.json4s.Formats
 import org.json4s.native.Serialization
 
@@ -68,12 +70,17 @@ class PocCreatorImpl @Inject() (
     pocTable.getAllUncompletedPocs().flatMap {
       case pocs if pocs.isEmpty =>
         logger.debug("no pocs waiting for completion")
-        Task(PocCreationSuccess)
+        Task(PocCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC"))) >>
+          Task(PocCreationSuccess)
       case pocs =>
         logger.info(s"starting to create ${pocs.size} pocs")
-        Task
-          .sequence(pocs.map(poc => Task.cancelBoundary *> createPoc(poc).uncancelable))
-          .map(PocCreationMaybeSuccess)
+        Task(PocCreationLoop.loopState.set(ProcessingElements(
+          DateTime.now(),
+          "PoC",
+          pocs.map(_.id.toString).mkString(", ")))) >>
+          Task
+            .sequence(pocs.map(poc => Task.cancelBoundary *> createPoc(poc).uncancelable))
+            .map(PocCreationMaybeSuccess)
     }
   }
 
