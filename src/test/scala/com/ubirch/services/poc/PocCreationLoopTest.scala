@@ -10,6 +10,7 @@ import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.{ KeycloakUserService, TestKeycloakUserService }
 import com.ubirch.services.poc.PocTestHelper._
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.reactive.Observable
 import org.scalatest.Assertion
@@ -33,7 +34,7 @@ class PocCreationLoopTest extends UnitTestBase {
         val users = injector.get[TestKeycloakUserService]
 
         //creating needed objects
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(pocType = TestData.Poc.pocTypeBmgVacApi)
         val updatedTenant = createNeededTenantGroups(tenant, groups)
         createNeededDeviceUser(users, poc)
 

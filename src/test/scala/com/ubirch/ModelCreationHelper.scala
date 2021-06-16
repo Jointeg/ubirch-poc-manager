@@ -13,6 +13,7 @@ import com.ubirch.models.poc._
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.models.tenant._
 import com.ubirch.services.poc.PocTestHelper.await
+import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.execution.Scheduler.Implicits.global
 import org.joda.time.LocalDate
@@ -64,20 +65,18 @@ object ModelCreationHelper {
     externalId: String = UUID.randomUUID().toString,
     name: String = "pocName",
     status: Status = Pending,
-    clientCertRequired: Boolean = false,
-    city: String = "Paris"
+    city: String = "Paris",
+    pocType: String = TestData.Poc.pocTypeUbVacApp
   ): Poc =
     Poc(
       id = id,
       tenantId = TenantId(tenantName),
       externalId = externalId,
-      pocType = pocTypeValue,
+      pocType = pocType,
       pocName = name,
       address = Address("An der Heide", "101", None, 67832, city, None, None, "France"),
       phone = "pocPhone",
-      certifyApp = true,
       logoUrl = None,
-      clientCertRequired = clientCertRequired,
       extraConfig = Some(JsonConfig(parse("""{"test":"hello"}"""))),
       manager = PocManager("surname", "", "", "08023-782137"),
       status = status

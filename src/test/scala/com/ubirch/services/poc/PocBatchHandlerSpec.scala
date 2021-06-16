@@ -55,7 +55,7 @@ class PocBatchHandlerSpec extends UnitTestBase {
           .createListOfPoCs(CentralCsvProvider.toShortHeaderCsv(pocId), tenant, tenantContext)
           .runSyncUnsafe()
         assert(r.isLeft)
-        r.left.get shouldBe "The number of header columns 18 is not enough."
+        r.left.get shouldBe "The number of header columns 16 is not enough."
       }
     }
 

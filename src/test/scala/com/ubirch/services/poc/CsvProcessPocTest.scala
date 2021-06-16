@@ -49,9 +49,9 @@ class CsvProcessPocTest extends UnitTestBase {
           result <- processPoc.createListOfPoCs(invalidHeaderPocOnlyCsv, tenant, tenantContext)
           pocs <- pocRepository.getAllPocsByTenantId(tenant.id)
         } yield {
-          result.left.get.shouldBe("poc_id* didn't equal expected header external_id*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,certify_app*,logo_url,client_cert*,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
+          result.left.get.shouldBe("poc_id* didn't equal expected header external_id*; the right header order would be: external_id*,poc_type*,poc_name*,street*,street_number*,additional_address,zipcode*,city*,county,federal_state,country*,phone*,logo_url,manager_surname*,manager_name*,manager_email*,manager_mobile_phone*,extra_config")
           assert(pocs.isEmpty)
-        }).onErrorHandle(e => fail(e)).runSyncUnsafe()
+        }).runSyncUnsafe()
       }
     }
 

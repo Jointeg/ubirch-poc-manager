@@ -41,7 +41,7 @@ object ValidatorConstants {
     s"Could not create organisational unit because Tenant usage type is set to $userType but clientCertRequired is set to $clientCertRequired"
 
   def logoUrlNoValidUrlError(header: String) =
-    s"column $header must contain a valid url http://www.ubirch.com if certifyApp is set to true"
+    s"column $header must contain a valid url http://www.ubirch.com if pocType is set to *_app"
 
   def logoUrlNoValidFileFormatError(header: String) =
     s"column $header must contain a valid file extension (jpg, jpeg, png)"

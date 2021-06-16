@@ -109,9 +109,9 @@ class PocCreatorImpl @Inject() (
   }
 
   def doOrganisationUnitCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
-    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
+    if (pocAndStatus.poc.typeIsApp && tenant.usageType == API)
       PoCCertCreator.pocCreationError("a poc shouldn't require client cert if tenant usageType is API", pocAndStatus)
-    else if (pocAndStatus.poc.clientCertRequired && !pocAndStatus.status.orgUnitCertCreated.contains(true)) {
+    else if (pocAndStatus.poc.typeIsApp && !pocAndStatus.status.orgUnitCertCreated.contains(true)) {
       PoCCertCreator.createPoCOrganisationalUnitCertificate(tenant, pocAndStatus)(certHandler)
     } else {
       Task(pocAndStatus)
@@ -119,11 +119,11 @@ class PocCreatorImpl @Inject() (
   }
 
   private def doSharedAuthCertificateTasks(tenant: Tenant, pocAndStatus: PocAndStatus): Task[PocAndStatus] = {
-    if (pocAndStatus.poc.clientCertRequired && tenant.usageType == API)
+    if (pocAndStatus.poc.typeIsApp && tenant.usageType == API)
       PoCCertCreator.pocCreationError(
         "a poc shouldn't require shared auth cert if tenant usageType is API",
         pocAndStatus)
-    else if (pocAndStatus.poc.clientCertRequired && !pocAndStatus.status.clientCertProvided.contains(true)) {
+    else if (pocAndStatus.poc.typeIsApp && !pocAndStatus.status.clientCertProvided.contains(true)) {
       PoCCertCreator.createPoCSharedAuthCertificate(tenant, pocAndStatus, ubirchAdminsEmails, stage)(
         certHandler,
         teamDriveService)

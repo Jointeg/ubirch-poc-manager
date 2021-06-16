@@ -11,6 +11,7 @@ import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.poc.PocTestHelper._
+import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 
 import java.net.URL
@@ -33,7 +34,7 @@ class PocCreatorTest extends UnitTestBase {
         val keyCloakRoleService = injector.get[KeycloakRolesService]
 
         //creating needed objects
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(pocType = TestData.Poc.pocTypeBmgVacApi)
         val updatedTenant = createNeededTenantGroups(tenant, groups)
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, updatedTenant)
 
@@ -81,7 +82,7 @@ class PocCreatorTest extends UnitTestBase {
         val keyCloakRoleService = injector.get[KeycloakRolesService]
 
         //creating needed objects
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(pocType = TestData.Poc.pocTypeBmgVacApi)
         // This test may be failed in the future when the url is not available.
         val pocWithLogo = poc.copy(logoUrl = Some(LogoURL(
           new URL("https://www.scala-lang.org/resources/img/frontpage/scala-spiral.png"))))
@@ -143,7 +144,7 @@ class PocCreatorTest extends UnitTestBase {
         val keyCloakRoleService = injector.get[KeycloakRolesService]
 
         //creating needed objects
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(pocType = TestData.Poc.pocTypeBmgVacApi)
         addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, poc, pocStatus, tenant)
         createNeededDeviceUser(users, poc)
 
@@ -219,7 +220,7 @@ class PocCreatorTest extends UnitTestBase {
         val keyCloakRoleService = injector.get[KeycloakRolesService]
 
         //creating needed objects
-        val (poc, pocStatus, tenant) = createPocTriple()
+        val (poc, pocStatus, tenant) = createPocTriple(pocType = TestData.Poc.pocTypeBmgVacApi)
         // wrong url which isn't image
         val pocWithLogo = poc.copy(logoUrl = Some(LogoURL(
           new URL("https://www.scala-lang.org"))))
