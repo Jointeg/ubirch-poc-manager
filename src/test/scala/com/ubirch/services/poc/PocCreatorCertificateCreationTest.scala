@@ -26,7 +26,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApp),
+          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeUbVacApp),
           pocStatusChange = pocStatus => pocStatus.copy(clientCertRequired = true, clientCertCreated = Some(false)),
           tenantChange = tenant => tenant.copy(usageType = APP)
         )
@@ -67,7 +67,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApp),
+          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeUbVacApp),
           pocStatusChange = pocStatus => pocStatus.copy(clientCertRequired = true, clientCertCreated = Some(false)),
           tenantChange = tenant => tenant.copy(usageType = Both)
         )
@@ -109,7 +109,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
           val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
           val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-            pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApi),
+            pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeBmgVacApi),
             tenantChange = tenant => tenant.copy(usageType = usageType))
           //start process
           val result = await(loop.createPocs(), 5.seconds)
@@ -147,7 +147,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
         val pocStatusTable = injector.get[PocStatusRepositoryMock]
 
         val (poc, pocStatus, _) = createPocWithStatusAndTenant(injector)(
-          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeApp),
+          pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeUbVacApp),
           tenantChange = tenant => tenant.copy(usageType = API))
         //start process
         val result = await(loop.createPocs(), 5.seconds)

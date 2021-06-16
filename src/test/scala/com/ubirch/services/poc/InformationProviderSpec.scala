@@ -90,7 +90,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
     "should not provide certifyApi if pocType is APP but sharedAuthCertId is not set up on PoC level" in {
       val injector = testInjector(new SuccessUnitTestBinder)
       val infoProvider = injector.get[InformationProvider]
-      val pocWithoutSharedAuthCertId = poc.copy(sharedAuthCertId = None, pocType = TestData.Poc.pocTypeApp)
+      val pocWithoutSharedAuthCertId = poc.copy(sharedAuthCertId = None, pocType = TestData.Poc.pocTypeUbVacApp)
       val r = Try(infoProvider.infoToCertifyAPI(pocWithoutSharedAuthCertId, statusAndPW, tenant).runSyncUnsafe())
       r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status.certifyApiProvided shouldBe false
       r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status shouldBe pocStatus.copy(errorMessage =
@@ -101,7 +101,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val injector = testInjector(new CertHandlerReturnErrorBinder)
       val infoProvider = injector.get[InformationProvider]
       val pocWithoutSharedAuthCertId =
-        poc.copy(sharedAuthCertId = Some(UUID.randomUUID()), pocType = TestData.Poc.pocTypeApp)
+        poc.copy(sharedAuthCertId = Some(UUID.randomUUID()), pocType = TestData.Poc.pocTypeUbVacApp)
       val r = Try(infoProvider.infoToCertifyAPI(pocWithoutSharedAuthCertId, statusAndPW, tenant).runSyncUnsafe())
       r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status.certifyApiProvided shouldBe false
       r.failure.exception.asInstanceOf[PocCreationError].pocAndStatus.status shouldBe pocStatus.copy(errorMessage =
@@ -167,7 +167,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val injector = testInjector(new Binder())
       val infoProvider = injector.get[InformationProviderImpl]
       val (poc, status, tenant) = createPocTriple()
-      val badPocType = poc.copy(pocType = TestData.Poc.pocTypeApi)
+      val badPocType = poc.copy(pocType = TestData.Poc.pocTypeUbVacApi)
       val badTenant = tenant.copy(sharedAuthCert = None)
 
       val body = infoProvider.getCertifyApiBody(badPocType, StatusAndPW(status, "devicePassword"), badTenant)
@@ -180,7 +180,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       implicit val formats: Formats = injector.get[Formats]
 
       val (poc, status, tenant) = createPocTriple()
-      val goodPoc = poc.copy(pocType = TestData.Poc.pocTypeApi)
+      val goodPoc = poc.copy(pocType = TestData.Poc.pocTypeUbVacApi)
       val pw = "devicePassword"
 
       val body = infoProvider.getCertifyApiBody(goodPoc, StatusAndPW(status, pw), tenant)
@@ -202,7 +202,7 @@ class InformationProviderSpec extends ScalatraWordSpec with Awaits with TryValue
       val infoProvider = injector.get[InformationProviderImpl]
       implicit val formats: Formats = injector.get[Formats]
       val (poc, status, tenant) = createPocTriple()
-      val goodPoc = poc.copy(pocType = TestData.Poc.pocTypeApi, extraConfig = None)
+      val goodPoc = poc.copy(pocType = TestData.Poc.pocTypeUbVacApi, extraConfig = None)
       val pw = "devicePassword"
 
       val body = infoProvider.getCertifyApiBody(goodPoc, StatusAndPW(status, pw), tenant)

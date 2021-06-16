@@ -27,7 +27,8 @@ object TestData {
   }
 
   object Poc {
-    val pocTypeApp: String = "ub_vac_app"
-    val pocTypeApi: String = "ub_vac_api"
+    val pocTypeUbVacApp: String = "ub_vac_app"
+    val pocTypeUbVacApi: String = "ub_vac_api"
+    val pocTypeBmgVacApi: String = "bmg_vac_api"
   }
 }
