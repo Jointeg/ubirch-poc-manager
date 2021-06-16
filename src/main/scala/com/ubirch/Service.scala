@@ -33,7 +33,8 @@ class Service @Inject() (
   pocCreationLoop: PocCreationLoop,
   adminCreationLoop: PocAdminCreationLoop,
   employeeCreationLoop: PocEmployeeCreationLoop,
-  lifecycle: Lifecycle)(implicit scheduler: Scheduler)
+  lifecycle: Lifecycle,
+  pocConfig: PocConfig)(implicit scheduler: Scheduler)
   extends LazyLogging {
 
   def start(): Unit = {
@@ -76,7 +77,7 @@ class Service @Inject() (
       pocCreation.cancel()
       adminCreation.cancel()
       employeeCreation.cancel()
-      Thread.sleep(4.seconds.toMillis)
+      Thread.sleep(pocConfig.loopCancellationTimeout.seconds.toMillis)
       Future.successful()
     })
 

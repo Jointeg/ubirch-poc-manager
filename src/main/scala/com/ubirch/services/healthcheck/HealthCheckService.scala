@@ -1,7 +1,6 @@
 package com.ubirch.services.healthcheck
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths
+import com.ubirch.PocConfig
 import com.ubirch.db.tables.HealthCheckRepository
 import com.ubirch.models.common
 import com.ubirch.models.common._
@@ -16,7 +15,7 @@ import org.joda.time.DateTime
 
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import scala.concurrent.duration.{ Duration, DurationInt }
+import scala.concurrent.duration.{ Duration, DurationInt, FiniteDuration }
 
 trait HealthCheckService {
   def performAllHealthChecks(): Task[ReadinessStatus]
@@ -29,14 +28,9 @@ class DefaultHealthCheckService @Inject() (
   keycloakDeviceConfig: KeycloakDeviceConfig,
   keycloakConnector: KeycloakConnector,
   teamDriveClient: TeamDriveClient,
-  conf: Config
+  pocConfig: PocConfig
 ) extends HealthCheckService
   with LazyLogging {
-
-  private val elementsProcessingTimeout = conf.getInt(ConfPaths.HealthChecks.Timeouts.ELEMENTS_PROCESSING).minutes
-  private val waitingForNewElementsTimeout =
-    conf.getInt(ConfPaths.HealthChecks.Timeouts.WAITING_FOR_NEW_ELEMENTS).minutes
-  private val startupTimeout = conf.getInt(ConfPaths.HealthChecks.Timeouts.STARTUP).minutes
 
   override def performAllHealthChecks(): Task[ReadinessStatus] = {
 
@@ -94,7 +88,7 @@ class DefaultHealthCheckService @Inject() (
   private def performLoopCreationHealthCheck(state: AtomicAny[LoopState], loopName: String) = Task(state.get() match {
     case common.ProcessingElements(dateTime, elementName, elementId) =>
       val lastTimeProcessed = howLongFromNow(dateTime)
-      if (lastTimeProcessed < elementsProcessingTimeout) {
+      if (lastTimeProcessed < pocConfig.elementsProcessingTimeout) {
         logger.debug(s"$loopName is processing $elementName elements. Last one was processed $lastTimeProcessed ago")
         HealthyService
       } else {
@@ -104,7 +98,7 @@ class DefaultHealthCheckService @Inject() (
       }
     case common.WaitingForNewElements(dateTime, elementName) =>
       val lastWaitingTick = howLongFromNow(dateTime)
-      if (lastWaitingTick < waitingForNewElementsTimeout) {
+      if (lastWaitingTick < pocConfig.waitingForNewElementsTimeout) {
         logger.debug(
           s"$loopName is waiting for new elements to be processed. Last Waiting tick was $lastWaitingTick ago")
         HealthyService
@@ -114,7 +108,7 @@ class DefaultHealthCheckService @Inject() (
       }
     case common.Starting(dateTime) =>
       val startingFrom = howLongFromNow(dateTime)
-      if (startingFrom < startupTimeout) {
+      if (startingFrom < pocConfig.startupTimeout) {
         logger.debug(s"$loopName is starting from $startingFrom")
         HealthyService
       } else {
@@ -132,7 +126,7 @@ class DefaultHealthCheckService @Inject() (
       UnhealthyService
   })
 
-  private def howLongFromNow(from: DateTime) = {
+  private def howLongFromNow(from: DateTime): FiniteDuration = {
     Duration(DateTime.now().getMillis - from.getMillis, TimeUnit.MILLISECONDS)
   }
 

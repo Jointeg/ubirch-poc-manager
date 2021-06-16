@@ -8,8 +8,8 @@ import org.bouncycastle.cert.X509CertificateHolder
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 
-import java.nio.charset.StandardCharsets
 import javax.inject.{ Inject, Singleton }
+import scala.concurrent.duration.{ Duration, DurationInt, FiniteDuration }
 
 trait PocConfig {
 
@@ -28,6 +28,11 @@ trait PocConfig {
   val staticAssetsWelcomeMessage: String
   val pocTypeStaticSpaceNameMap: Map[String, String]
   val issuerCertMap: Map[String, X509CertificateHolder]
+  val elementsProcessingTimeout: Duration
+  val waitingForNewElementsTimeout: Duration
+  val startupTimeout: Duration
+  val generalTimeout: Int
+  val loopCancellationTimeout: Int
 }
 
 @Singleton
@@ -111,6 +116,22 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
       //We want to fail if it is not properly created
       val holders = chainPems.split(";").toList.map(CertMaterializer.parse).map(_.get).distinct
       holders.map { holder => holder.getSubject.toString -> holder }.toMap
+    }
+  }
+
+  override val elementsProcessingTimeout: FiniteDuration =
+    config.getInt(ConfPaths.HealthChecks.Timeouts.ELEMENTS_PROCESSING).minutes
+  override val waitingForNewElementsTimeout: FiniteDuration =
+    config.getInt(ConfPaths.HealthChecks.Timeouts.WAITING_FOR_NEW_ELEMENTS).minutes
+  override val startupTimeout: FiniteDuration = config.getInt(ConfPaths.HealthChecks.Timeouts.STARTUP).minutes
+  override val generalTimeout: Int = config.getInt(ConfPaths.Lifecycle.GENERAL_TIMEOUT)
+  override val loopCancellationTimeout: Int = {
+    val loopTimeout = config.getInt(ConfPaths.Lifecycle.LOOP_CANCELLATION_TIMEOUT)
+    if (loopTimeout >= generalTimeout) {
+      throw new IllegalArgumentException(
+        s"Loop timeout ($loopTimeout) can't be bigger than general timeout ($generalTimeout)")
+    } else {
+      loopTimeout
     }
   }
 }

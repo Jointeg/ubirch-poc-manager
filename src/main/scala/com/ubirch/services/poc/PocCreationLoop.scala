@@ -40,15 +40,9 @@ class PocCreationLoopImpl @Inject() (conf: Config, pocCreator: PocCreator) exten
 
   override def startPocCreationLoop[T](operation: PocCreationResult => Observable[T]): Observable[T] =
     retryWithDelay(startPocCreation.flatMap(operation)).guaranteeCase {
-      case ExitCase.Canceled =>
-        logger.info("Canceled")
-        Task(PocCreationLoop.loopState.set(Cancelled))
-      case ExitCase.Error(_) =>
-        logger.info("Error")
-        Task(PocCreationLoop.loopState.set(ErrorTerminated(DateTime.now())))
-      case ExitCase.Completed =>
-        logger.info("Completed")
-        Task(PocCreationLoop.loopState.set(Completed))
+      case ExitCase.Canceled  => Task(PocCreationLoop.loopState.set(Cancelled))
+      case ExitCase.Error(_)  => Task(PocCreationLoop.loopState.set(ErrorTerminated(DateTime.now())))
+      case ExitCase.Completed => Task(PocCreationLoop.loopState.set(Completed))
     }
 
 }
