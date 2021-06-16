@@ -25,7 +25,6 @@ class PocCreationLoopImpl @Inject() (conf: Config, pocCreator: PocCreator) exten
 
   private val startPocCreation: Observable[PocCreationResult] = {
     for {
-      _ <- Observable.from(Task.sleep(10.seconds))
       _ <- Observable.intervalWithFixedDelay(pocCreatorInterval.seconds)
       result <- Observable.fromTask(pocCreator.createPocs())
     } yield result
