@@ -1,5 +1,6 @@
 package com.ubirch.services.poc
 
+import cats.implicits.catsSyntaxApply
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
@@ -9,6 +10,7 @@ import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 
 import javax.inject.Inject
+import scala.concurrent.duration.DurationInt
 
 trait PocEmployeeCreator {
   def createPocEmployees(): Task[PocEmployeeCreationResult]
@@ -49,7 +51,7 @@ class PocEmployeeCreatorImpl @Inject() (
         Task(NoWaitingPocEmployee)
       case pocEmployees =>
         logger.info(s"starting to create ${pocEmployees.size} pocEmployees")
-        Task.sequence(pocEmployees.map(createPocEmployee))
+        Task.sequence(pocEmployees.map(employee => Task.cancelBoundary *> createPocEmployee(employee).uncancelable))
           .map(PocEmployeeCreationMaybeSuccess)
     }
   }

@@ -7,7 +7,8 @@ import com.ubirch.controllers.concerns.{
   ControllerBase,
   KeycloakBearerAuthStrategy,
   KeycloakBearerAuthenticationSupport,
-  Token
+  Token,
+  X509CertSupport
 }
 import com.ubirch.models.NOK
 import com.ubirch.models.tenant.{ API, APP, Both, CreateTenantRequest }
@@ -32,6 +33,7 @@ class SuperAdminController @Inject() (
   jFormats: Formats,
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
+  x509CertSupport: X509CertSupport,
   tenantService: SuperAdminService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
@@ -79,24 +81,26 @@ class SuperAdminController @Inject() (
   }
 
   post("/tenants/create", operation(createTenantOperation)) {
-    superAdminEndpointWithUserContext("Create tenants") { superAdminContext =>
-      tenantService
-        .createTenant(parsedBody.extract[CreateTenantRequest], superAdminContext)
-        .map {
-          case Left(error) =>
-            logger.error(s"Could not create a tenant because: $error")
-            InternalServerError(NOK.serverError("Failure during tenant creation"))
-          case Right(_) => Ok()
-        }
-        .onErrorHandle {
-          case TenantCreationException(errorMsg) =>
-            InternalServerError(NOK.serverError(s"Failure during tenant creation: $errorMsg"))
+    x509CertSupport.withVerification(request) {
+      superAdminEndpointWithUserContext("Create tenants") { superAdminContext =>
+        tenantService
+          .createTenant(parsedBody.extract[CreateTenantRequest], superAdminContext)
+          .map {
+            case Left(error) =>
+              logger.error(s"Could not create a tenant because: $error")
+              InternalServerError(NOK.serverError("Failure during tenant creation"))
+            case Right(_) => Ok()
+          }
+          .onErrorHandle {
+            case TenantCreationException(errorMsg) =>
+              InternalServerError(NOK.serverError(s"Failure during tenant creation: $errorMsg"))
 
-          case ex: Throwable =>
-            val errorMsg = s"failure on tenant creation"
-            logger.error(errorMsg, ex)
-            InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
-        }
+            case ex: Throwable =>
+              val errorMsg = s"failure on tenant creation"
+              logger.error(errorMsg, ex)
+              InternalServerError(NOK.serverError(errorMsg + ex.getMessage))
+          }
+      }
     }
   }
 

@@ -146,7 +146,9 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
       case Some(s) =>
         quote {
           pocByTenantId
-            .filter(poc => poc.pocName.like(lift(s"$s%")) || poc.address.city.like(lift(s"$s%")))
+            .filter(poc =>
+              poc.pocName.like(lift(s"$s%")) || poc.address.city.like(lift(s"$s%")) || poc.externalId.like(
+                lift(s"$s%")))
         }
       case None => pocByTenantId
     }

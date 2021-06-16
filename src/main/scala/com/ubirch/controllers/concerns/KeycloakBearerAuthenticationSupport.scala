@@ -77,5 +77,4 @@ trait KeycloakBearerAuthenticationSupport extends BearerAuthenticationSupport {
   }
 
   protected def createStrategy(app: ScalatraBase): KeycloakBearerAuthStrategy
-
 }

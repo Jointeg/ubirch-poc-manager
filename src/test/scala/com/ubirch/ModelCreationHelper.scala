@@ -180,6 +180,7 @@ object ModelCreationHelper {
     name: String = "Hans",
     surname: String = "Welsich",
     status: Status = Pending,
+    certifyUserId: Option[UUID] = None,
     email: String = getRandomString + "@test.de"): PocEmployee = {
     PocEmployee(
       employeeId,
@@ -188,7 +189,8 @@ object ModelCreationHelper {
       name,
       surname,
       email,
-      status = status
+      status = status,
+      certifyUserId = certifyUserId
     )
   }
 

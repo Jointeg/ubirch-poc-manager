@@ -2,11 +2,17 @@ package com.ubirch.e2e.controllers
 
 import com.ubirch.InjectorHelper
 import com.ubirch.ModelCreationHelper._
+import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.{ PocAdminTable, PocEmployeeTable, PocTable, TenantTable }
+import com.ubirch.models.keycloak.user.UserException
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserId }
+import com.ubirch.services.CertifyKeycloak
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.PocTestHelper.await
+import monix.eval.Task
 import monix.execution.Scheduler
 
 import java.util.UUID
@@ -58,4 +64,12 @@ trait ControllerSpecHelper {
     employee
   }
 
+  def createKeycloakUserForPocEmployee(
+    keycloakUserService: KeycloakUserService,
+    p: Poc): Task[Either[UserException, UserId]] = {
+    keycloakUserService.createUserWithoutUserName(
+      p.getRealm,
+      KeycloakTestData.createNewCertifyKeycloakUser(),
+      CertifyKeycloak)
+  }
 }

@@ -3,6 +3,7 @@ package com.ubirch
 import com.google.inject.binder.ScopedBindingBuilder
 import com.google.inject.{ AbstractModule, Module, Provider }
 import com.typesafe.config.Config
+import com.ubirch.controllers.concerns.{ X509CertSupport, X509CertSupportImpl }
 import com.ubirch.db.context.{ PostgresQuillMonixJdbcContext, QuillMonixJdbcContext }
 import com.ubirch.db.tables._
 import com.ubirch.db.{ FlywayProvider, FlywayProviderImpl }
@@ -219,6 +220,9 @@ class Binder extends AbstractModule {
   def HealthCheckService: ScopedBindingBuilder =
     bind(classOf[HealthCheckService]).to(classOf[DefaultHealthCheckService])
 
+  def X509CertSupport: ScopedBindingBuilder =
+    bind(classOf[X509CertSupport]).to(classOf[X509CertSupportImpl])
+
   override def configure(): Unit = {
     Config
     Clock
@@ -286,6 +290,7 @@ class Binder extends AbstractModule {
     PocEmployeeService
     HealthCheckRepository
     HealthCheckService
+    X509CertSupport
     ()
   }
 }

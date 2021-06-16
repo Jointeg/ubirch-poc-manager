@@ -1922,7 +1922,8 @@ class TenantAdminControllerSpec
                   |  "phone" : "${pa.mobilePhone}",
                   |  "pocName" : "${p.pocName}",
                   |  "active" : ${pa.active},
-                  |  "state" : "${Status.toFormattedString(pa.status)}"
+                  |  "state" : "${Status.toFormattedString(pa.status)}",
+                  |  "webIdentRequired": ${pa.webIdentRequired}
                   |}""".stripMargin
     pretty(render(parse(json)))
   }

@@ -45,7 +45,7 @@ trait E2ETestBase
     testCode(injector)
   }
 
-  private def getRandomString[A] = {
+  def getRandomString: String = {
     Random.alphanumeric.take(10).mkString("")
   }
 

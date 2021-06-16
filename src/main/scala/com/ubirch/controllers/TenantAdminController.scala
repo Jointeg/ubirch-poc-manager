@@ -22,7 +22,6 @@ import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError
 import com.ubirch.services.poc.{ CertifyUserService, PocBatchHandlerImpl, Remove2faTokenError }
 import com.ubirch.services.tenantadmin.GetPocAdminStatusErrors._
 import com.ubirch.services.tenantadmin._
-import com.ubirch.services.util.Validator
 import io.prometheus.client.Counter
 import monix.eval.Task
 import monix.execution.Scheduler

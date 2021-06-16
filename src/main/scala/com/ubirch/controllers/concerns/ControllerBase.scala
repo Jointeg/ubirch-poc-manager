@@ -110,7 +110,7 @@ abstract class ControllerBase
   def asyncResultCore(body: () => CancelableFuture[ActionResult]): AsyncResult = {
     new AsyncResult() {
       override val is: Future[_] = body()
-      implicit override def timeout: Duration = 90 seconds
+      implicit override def timeout: Duration = 60 seconds
     }
   }
 

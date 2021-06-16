@@ -1,5 +1,6 @@
 package com.ubirch.services.poc
 
+import cats.implicits.catsSyntaxApply
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.PocConfig
 import com.ubirch.db.context.QuillMonixJdbcContext
@@ -59,7 +60,7 @@ class PocAdminCreatorImpl @Inject() (
         Task(NoWaitingPocAdmin)
       case pocAdmins =>
         logger.info(s"starting to create ${pocAdmins.size} pocAdmins")
-        Task.sequence(pocAdmins.map(createPocAdmin))
+        Task.sequence(pocAdmins.map(admin => Task.cancelBoundary *> createPocAdmin(admin).uncancelable))
           .map(PocAdminCreationMaybeSuccess)
     }
   }
