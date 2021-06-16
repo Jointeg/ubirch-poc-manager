@@ -10,9 +10,11 @@ import com.ubirch.services.teamdrive.model.TeamDriveClient
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak, KeycloakConnector, KeycloakInstance }
 import monix.eval.Task
 import monix.execution.atomic.AtomicAny
+import org.joda.time.DateTime
 
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{ Duration, DurationInt }
 
 trait HealthCheckService {
   def performAllHealthChecks(): Task[ReadinessStatus]
@@ -81,21 +83,49 @@ class DefaultHealthCheckService @Inject() (
   }
 
   private def performLoopCreationHealthCheck(state: AtomicAny[LoopState], loopName: String) = Task(state.get() match {
-    case common.Running =>
-      HealthyService
-    case common.Starting =>
-      logger.error(s"$loopName is starting")
-      UnhealthyService
+    case common.ProcessingElements(dateTime, elementName, elementId) =>
+      val lastTimeProcessed = howLongFromNow(dateTime)
+      if (lastTimeProcessed < 5.minutes) {
+        logger.debug(s"$loopName is processing $elementName elements. Last one was processed $lastTimeProcessed ago")
+        HealthyService
+      } else {
+        logger.error(
+          s"$loopName is processing an $elementName elements with ids: [$elementId] from ${dateTime.toDateTimeISO.toString()}. There is a high chance, that this loop is not responsive anymore")
+        UnhealthyService
+      }
+    case common.WaitingForNewElements(dateTime, elementName) =>
+      val lastWaitingTick = howLongFromNow(dateTime)
+      if (lastWaitingTick < 5.minutes) {
+        logger.debug(
+          s"$loopName is waiting for new elements to be processed. Last Waiting tick was $lastWaitingTick ago")
+        HealthyService
+      } else {
+        logger.error(s"$loopName is waiting for $elementName elements from ${dateTime.toDateTimeISO.toString()}. There is a high chance, that this loop is not responsive anymore")
+        UnhealthyService
+      }
+    case common.Starting(dateTime) =>
+      val startingFrom = howLongFromNow(dateTime)
+      if (startingFrom < 1.minute) {
+        logger.debug(s"$loopName is starting from $startingFrom")
+        HealthyService
+      } else {
+        logger.error(s"$loopName is start up time is unexpectedly long. It started $startingFrom ago")
+        UnhealthyService
+      }
     case common.Cancelled =>
       logger.error(s"$loopName is cancelled")
       UnhealthyService
-    case common.ErrorTerminated =>
-      logger.error(s"$loopName is terminated because unexpected error has happened")
+    case common.ErrorTerminated(dateTime) =>
+      logger.error(s"$loopName is terminated because unexpected error has happened at ${dateTime.toDateTimeISO}")
       UnhealthyService
     case common.Completed =>
       logger.error(s"$loopName has been completed")
       UnhealthyService
   })
+
+  private def howLongFromNow(from: DateTime) = {
+    Duration(DateTime.now().getMillis - from.getMillis, TimeUnit.MILLISECONDS)
+  }
 
   private def performPostgresHealthCheck() = {
     healthCheckRepository.healthCheck().timeout(1.second).map(_ => HealthyService).onErrorHandle {

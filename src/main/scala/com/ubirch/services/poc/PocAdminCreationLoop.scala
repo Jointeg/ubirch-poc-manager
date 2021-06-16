@@ -8,6 +8,7 @@ import com.ubirch.models.common._
 import monix.eval.Task
 import monix.execution.atomic.AtomicAny
 import monix.reactive.Observable
+import org.joda.time.DateTime
 
 import javax.inject.Inject
 import scala.concurrent.duration.DurationInt
@@ -25,7 +26,6 @@ class PocAdminCreationLoopImpl @Inject() (conf: Config, pocAdminCreator: PocAdmi
   private val startPocAdminCreation: Observable[PocAdminCreationResult] = {
     for {
       _ <- Observable.intervalWithFixedDelay(pocAdminCreatorInterval.seconds)
-      _ <- Observable.fromTask(Task(PocAdminCreationLoop.loopState.set(Running)))
       result <- Observable.fromTask(pocAdminCreator.createPocAdmins())
     } yield result
   }
@@ -41,11 +41,11 @@ class PocAdminCreationLoopImpl @Inject() (conf: Config, pocAdminCreator: PocAdmi
   override def startPocAdminCreationLoop[T](operation: PocAdminCreationResult => Observable[T]): Observable[T] =
     retryWithDelay(startPocAdminCreation.flatMap(operation)).guaranteeCase {
       case ExitCase.Canceled  => Task(PocAdminCreationLoop.loopState.set(Cancelled))
-      case ExitCase.Error(_)  => Task(PocAdminCreationLoop.loopState.set(ErrorTerminated))
+      case ExitCase.Error(_)  => Task(PocAdminCreationLoop.loopState.set(ErrorTerminated(DateTime.now())))
       case ExitCase.Completed => Task(PocAdminCreationLoop.loopState.set(Completed))
     }
 }
 
 object PocAdminCreationLoop {
-  val loopState: AtomicAny[LoopState] = AtomicAny(Starting)
+  val loopState: AtomicAny[LoopState] = AtomicAny(Starting(DateTime.now()))
 }

@@ -8,6 +8,7 @@ import com.ubirch.models.common._
 import monix.eval.Task
 import monix.execution.atomic.AtomicAny
 import monix.reactive.Observable
+import org.joda.time.DateTime
 
 import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
@@ -24,8 +25,8 @@ class PocCreationLoopImpl @Inject() (conf: Config, pocCreator: PocCreator) exten
 
   private val startPocCreation: Observable[PocCreationResult] = {
     for {
+      _ <- Observable.from(Task.sleep(10.seconds))
       _ <- Observable.intervalWithFixedDelay(pocCreatorInterval.seconds)
-      _ <- Observable.fromTask(Task(PocCreationLoop.loopState.set(Running)))
       result <- Observable.fromTask(pocCreator.createPocs())
     } yield result
   }
@@ -40,13 +41,19 @@ class PocCreationLoopImpl @Inject() (conf: Config, pocCreator: PocCreator) exten
 
   override def startPocCreationLoop[T](operation: PocCreationResult => Observable[T]): Observable[T] =
     retryWithDelay(startPocCreation.flatMap(operation)).guaranteeCase {
-      case ExitCase.Canceled  => Task(PocCreationLoop.loopState.set(Cancelled))
-      case ExitCase.Error(_)  => Task(PocCreationLoop.loopState.set(ErrorTerminated))
-      case ExitCase.Completed => Task(PocCreationLoop.loopState.set(Completed))
+      case ExitCase.Canceled =>
+        logger.info("Canceled")
+        Task(PocCreationLoop.loopState.set(Cancelled))
+      case ExitCase.Error(_) =>
+        logger.info("Error")
+        Task(PocCreationLoop.loopState.set(ErrorTerminated(DateTime.now())))
+      case ExitCase.Completed =>
+        logger.info("Completed")
+        Task(PocCreationLoop.loopState.set(Completed))
     }
 
 }
 
 object PocCreationLoop {
-  val loopState: AtomicAny[LoopState] = AtomicAny(Starting)
+  val loopState: AtomicAny[LoopState] = AtomicAny(Starting(DateTime.now()))
 }
