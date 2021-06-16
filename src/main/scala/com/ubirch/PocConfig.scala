@@ -125,13 +125,5 @@ class PocConfigImpl @Inject() (config: Config) extends PocConfig with LazyLoggin
     config.getInt(ConfPaths.HealthChecks.Timeouts.WAITING_FOR_NEW_ELEMENTS).minutes
   override val startupTimeout: FiniteDuration = config.getInt(ConfPaths.HealthChecks.Timeouts.STARTUP).minutes
   override val generalTimeout: Int = config.getInt(ConfPaths.Lifecycle.GENERAL_TIMEOUT)
-  override val loopCancellationTimeout: Int = {
-    val loopTimeout = config.getInt(ConfPaths.Lifecycle.LOOP_CANCELLATION_TIMEOUT)
-    if (loopTimeout >= generalTimeout) {
-      throw new IllegalArgumentException(
-        s"Loop timeout ($loopTimeout) can't be bigger than general timeout ($generalTimeout)")
-    } else {
-      loopTimeout
-    }
-  }
+  override val loopCancellationTimeout: Int = generalTimeout - 2
 }
