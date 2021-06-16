@@ -25,4 +25,10 @@ object TestData {
     val dateOfBirth: BirthDate = BirthDate(LocalDate.now())
     val status: Status = Pending
   }
+
+  object Poc {
+    val pocTypeUbVacApp: String = "ub_vac_app"
+    val pocTypeUbVacApi: String = "ub_vac_api"
+    val pocTypeBmgVacApi: String = "bmg_vac_api"
+  }
 }

@@ -43,8 +43,6 @@ class PocJsonFormatTest extends UnitTestBase {
           |    "country":"France"
           |  },
           |  "phone":"pocPhone",
-          |  "certifyApp":true,
-          |  "clientCertRequired":false,
           |  "extraConfig":{
           |    "test":"hello"
           |  },
@@ -74,9 +72,7 @@ class PocJsonFormatTest extends UnitTestBase {
       pocName = "pocName",
       address = Address("", "", None, 67832, "", None, None, "France"),
       phone = "pocPhone",
-      certifyApp = true,
       logoUrl = None,
-      clientCertRequired = false,
       extraConfig = Some(JsonConfig(parse(""" { "test":"hello" } """))),
       manager = PocManager("surname", "", "", "08023-782137"),
       status = Pending

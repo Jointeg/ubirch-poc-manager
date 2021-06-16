@@ -1,7 +1,7 @@
 package com.ubirch.services.poc.parsers
 
 import cats.data.Validated.{ Invalid, Valid }
-import cats.implicits.{ catsSyntaxTuple10Semigroupal, catsSyntaxTuple4Semigroupal, catsSyntaxTuple8Semigroupal }
+import cats.implicits._
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.PocConfig
 import com.ubirch.models.csv.PocRow
@@ -12,7 +12,6 @@ import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants._
 import com.ubirch.services.util.Validator._
 
-import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.util.{ Failure, Success }
 
@@ -51,9 +50,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
       validatePocName(pocName, csvPoc.pocName),
       pocAddress,
       validatePhoneFromCSV(phone, csvPoc.pocPhone),
-      validateBoolean(certifyApp, csvPoc.pocCertifyApp),
-      validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocCertifyApp),
-      validateClientCert(clientCert, csvPoc.clientCert, tenant),
+      validateLogoURL(logoUrl, csvPoc.logoUrl, csvPoc.pocType.endsWith("_app").toString), // TODO change toString
       validateJson(jsonConfig, csvPoc.extraConfig, tenant),
       pocManager
     ).mapN {
@@ -63,9 +60,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
         pocName,
         address,
         pocPhone,
-        pocCertifyApp,
         logoUrl,
-        clientCert,
         extraConfig,
         manager) =>
         {
@@ -77,9 +72,7 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
             pocName,
             address,
             pocPhone,
-            pocCertifyApp,
             logoUrl.map(LogoURL(_)),
-            clientCert,
             extraConfig.map(JsonConfig(_)),
             manager,
             Pending
