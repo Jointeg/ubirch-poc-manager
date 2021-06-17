@@ -152,6 +152,12 @@ object CertMaterializerSample {
     logging(CertMaterializer.parse(cert))
   }
 
+  def analyzeChainWithComma(raw: String) = {
+    raw.split(",").foreach { rawPem =>
+      logging(CertMaterializer.parse(CertMaterializer.pemFromEncodedContent(rawPem)))
+    }
+  }
+
   def logging(x: Try[X509CertificateHolder]): Unit = x match {
     case Failure(exception) =>
       println(exception.getMessage)
