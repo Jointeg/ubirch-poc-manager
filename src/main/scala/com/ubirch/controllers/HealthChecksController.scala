@@ -6,8 +6,8 @@ import com.ubirch.services.healthcheck.{ HealthCheckService, NotOperational, Ope
 import io.prometheus.client.Counter
 import monix.execution.Scheduler
 import org.json4s.Formats
-import org.scalatra.{ Ok, ServiceUnavailable }
 import org.scalatra.swagger.Swagger
+import org.scalatra.{ Ok, ServiceUnavailable }
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -38,14 +38,14 @@ class HealthChecksController @Inject() (
   implicit override protected def jsonFormats: Formats = jFormats
 
   get("/liveness") {
-    Ok()
-  }
-
-  get("/readiness") {
     healthCheckService.performAllHealthChecks().map {
       case NotOperational => ServiceUnavailable()
       case Operational    => Ok()
     }.runToFuture
+  }
+
+  get("/readiness") {
+    Ok()
   }
 
 }
