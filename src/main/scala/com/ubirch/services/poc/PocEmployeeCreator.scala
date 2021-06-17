@@ -1,6 +1,5 @@
 package com.ubirch.services.poc
 
-import cats.implicits.catsSyntaxApply
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
@@ -47,15 +46,23 @@ class PocEmployeeCreatorImpl @Inject() (
   import certifyHelper._
 
   def createPocEmployees(): Task[Unit] = {
-    employeeTable.getUncompletedPocEmployees().flatMap {
-      case pocEmployees if pocEmployees.isEmpty =>
+    employeeTable.getUncompletedPocEmployeesIds().flatMap {
+      case pocEmployeeIds if pocEmployeeIds.isEmpty =>
         logger.debug("no poc employees waiting for completion")
         Task(PocEmployeeCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Employee"))).void
-      case pocEmployees =>
-        logger.info(s"starting to create ${pocEmployees.size} pocEmployees")
-        Task(ProcessingElements(DateTime.now(), "PoC Employee", pocEmployees.map(_.id.toString).mkString(", "))) >>
-          Task.sequence(pocEmployees.map(employee => Task.cancelBoundary *> createPocEmployee(employee).uncancelable))
-            .void
+      case pocEmployeeIds =>
+        Task.sequence(pocEmployeeIds.map(employeeId => {
+          (for {
+            _ <- Task(logger.info(s"Starting to process $employeeId pocEmployee"))
+            _ <- Task.cancelBoundary
+            _ <- Task(ProcessingElements(DateTime.now(), "PoC Employee", employeeId.toString))
+            pocEmployee <- employeeTable.unsafeGetUncompletedPocEmployeeById(employeeId)
+            _ <- createPocEmployee(pocEmployee).uncancelable
+          } yield ()).onErrorHandle(ex => {
+            logger.error(s"Unexpected error happened durring creating PoC Employee with id $pocEmployeeIds", ex)
+            ()
+          })
+        })).void
     }
   }
 

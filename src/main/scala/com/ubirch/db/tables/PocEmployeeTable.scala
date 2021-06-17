@@ -6,7 +6,7 @@ import com.ubirch.models.common.Sort
 import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.TenantId
-import io.getquill.{ Delete, EntityQuery, Insert, Query, Update }
+import io.getquill._
 import monix.eval.Task
 
 import java.util.UUID
@@ -22,6 +22,10 @@ trait PocEmployeeRepository {
   def getPocEmployeesByTenantId(tenantId: TenantId): Task[List[PocEmployee]]
 
   def getUncompletedPocEmployees(): Task[List[PocEmployee]]
+
+  def getUncompletedPocEmployeesIds(): Task[List[UUID]]
+
+  def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee]
 
   def deletePocEmployee(employeeId: UUID): Task[Unit]
 
@@ -52,6 +56,17 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
   private def getAllPocsWithoutStatusQuery(status: Status): Quoted[EntityQuery[PocEmployee]] =
     quote {
       querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.status != lift(status))
+    }
+
+  private def getAllPocEmployeeIdsWithoutStatusQuery(status: Status): Quoted[EntityQuery[UUID]] =
+    quote {
+      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.status != lift(status)).map(_.id)
+    }
+
+  private def getPocEmployeeWithoutStatusById(status: Status, id: UUID) =
+    quote {
+      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(emp =>
+        emp.status != lift(status) && emp.id == lift(id))
     }
 
   private def updatePocEmployeeQuery(pocEmployee: PocEmployee): Quoted[Update[PocEmployee]] =
@@ -145,4 +160,10 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
         PaginatedResult(total, employees)
       }
     }
+
+  override def getUncompletedPocEmployeesIds(): Task[List[UUID]] =
+    run(getAllPocEmployeeIdsWithoutStatusQuery(Completed))
+
+  override def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee] =
+    run(getPocEmployeeWithoutStatusById(Completed, id)).map(_.head)
 }

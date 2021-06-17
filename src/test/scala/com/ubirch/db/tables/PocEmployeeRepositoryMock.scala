@@ -58,9 +58,9 @@ class PocEmployeeRepositoryMock @Inject() (pocAdminRepository: PocAdminRepositor
 
   override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]] =
     Task {
-      pocEmployeeDatastore.collect {
+      pocEmployeeDatastore.collectFirst {
         case (_, pocEmployee: PocEmployee) if pocEmployee.certifyUserId.contains(certifyUserId) => pocEmployee
-      }.headOption
+      }
     }
 
   override def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]] = {
@@ -73,4 +73,9 @@ class PocEmployeeRepositoryMock @Inject() (pocAdminRepository: PocAdminRepositor
         PaginatedResult(employees.size, employees.toSeq)
     }
   }
+
+  override def getUncompletedPocEmployeesIds(): Task[List[UUID]] = getUncompletedPocEmployees().map(_.map(_.id))
+
+  override def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee] =
+    getUncompletedPocEmployees().map(_.find(_.id == id).head)
 }
