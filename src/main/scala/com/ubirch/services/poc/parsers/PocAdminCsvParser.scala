@@ -44,11 +44,11 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
     pocV: AllErrorsOr[Poc]
   ): AllErrorsOr[(Poc, PocAdmin)] = {
     (
-      validateString(technicianName, csvPocAdmin.adminName),
-      validateString(technicianSurname, csvPocAdmin.adminSurname),
+      validateStringCSV(technicianName, csvPocAdmin.adminName),
+      validateStringCSV(technicianSurname, csvPocAdmin.adminSurname),
       validateEmailFromCSV(technicianEmail, csvPocAdmin.adminEmail),
       validatePhoneFromCSV(technicianMobilePhone, csvPocAdmin.adminMobilePhone),
-      validateDate(technicianDateOfBirth, csvPocAdmin.adminDateOfBirth),
+      validateDateCSV(technicianDateOfBirth, csvPocAdmin.adminDateOfBirth),
       validateBoolean(webIdentRequired, csvPocAdmin.webIdentRequired),
       pocV
     ).mapN {
@@ -122,8 +122,8 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
 
   private def validatePocManager(csvPocAdmin: PocAdminRow): AllErrorsOr[PocManager] =
     (
-      validateString(managerSurname, csvPocAdmin.managerSurname),
-      validateString(managerName, csvPocAdmin.managerName),
+      validateStringCSV(managerSurname, csvPocAdmin.managerSurname),
+      validateStringCSV(managerName, csvPocAdmin.managerName),
       validateEmailFromCSV(managerEmail, csvPocAdmin.managerEmail),
       validatePhoneFromCSV(managerMobilePhone, csvPocAdmin.managerMobilePhone)
     ).mapN { (managerSurname, managerName, managerEmail, managerMobilePhone) =>
@@ -137,14 +137,14 @@ class PocAdminCsvParser(pocConfig: PocConfig) extends CsvParser[PocAdminParseRes
 
   private def validatePocAddress(csvPocAdmin: PocAdminRow): AllErrorsOr[Address] =
     (
-      validateString(street, csvPocAdmin.pocStreet),
-      validateString(streetNumber, csvPocAdmin.pocHouseNumber),
+      validateStringCSV(street, csvPocAdmin.pocStreet),
+      validateStringCSV(streetNumber, csvPocAdmin.pocHouseNumber),
       validateStringOption(csvPocAdmin.pocAdditionalAddress),
       validateZipCode(CsvConstants.zipcode, csvPocAdmin.pocZipcode),
-      validateString(CsvConstants.city, csvPocAdmin.pocCity),
+      validateStringCSV(CsvConstants.city, csvPocAdmin.pocCity),
       validateStringOption(csvPocAdmin.pocCounty),
       validateStringOption(csvPocAdmin.pocFederalState),
-      validateString(CsvConstants.country, csvPocAdmin.pocCountry)
+      validateStringCSV(CsvConstants.country, csvPocAdmin.pocCountry)
     ).mapN { (pocStreet, pocHouseNumber, pocAddAddress, pocZipcode, pocCity, pocCounty, pocFederalState, pocCountry) =>
       Address(
         pocStreet,

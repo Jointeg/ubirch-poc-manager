@@ -191,6 +191,22 @@ class TenantAdminController @Inject() (
       .authorizations()
       .parameters(queryParam[UUID]("id").description("PoC admin id"))
 
+  val createPocAdmin: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Create Poc Admin")
+      .summary("Create PoC Admin")
+      .description("Create PoC Admin")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+      .parameters(
+        bodyParam[String]("pocId").description("PoC id"),
+        bodyParam[String]("firstName").description("FirstName of PoC Admin"),
+        bodyParam[String]("lastName").description("LastName of PoC Admin"),
+        bodyParam[String]("email").description("Email of PoC Admin"),
+        bodyParam[String]("phone").description("Phone number of PoC Admin"),
+        bodyParam[String]("dateOfBirth").description("birthday of PoC Admin"),
+        bodyParam[Boolean]("webIdentRequired").description("webIdent is required or not")
+      )
+
   post("/pocs/create", operation(createListOfPocs)) {
     tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
       readBodyWithCharset(request, StandardCharsets.UTF_8).flatMap { body =>
@@ -535,6 +551,20 @@ class TenantAdminController @Inject() (
               }
           }
         } yield r
+      }
+    }
+  }
+
+  post("/poc-admin/create", operation(createPocAdmin)) {
+    tenantAdminEndpointWithUserContext("Create Poc Admin") { (tenant, tenantAdminContext) =>
+      tenantAdminService.createPocAdmin(tenant, tenantAdminContext, parsedBody.extract[CreatePocAdminRequest]).map {
+        case Left(e) => e match {
+            case CreatePocAdminError.NotFound(errorMsg) =>
+              NotFound(NOK.resourceNotFoundError(errorMsg))
+            case CreatePocAdminError.InvalidDataError(errorMsg) =>
+              BadRequest(NOK.badRequest(errorMsg))
+          }
+        case Right(_) => Ok()
       }
     }
   }

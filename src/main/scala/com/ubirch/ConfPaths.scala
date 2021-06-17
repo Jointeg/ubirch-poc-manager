@@ -100,6 +100,10 @@ object ConfPaths {
     }
   }
 
+  trait Lifecycle {
+    val GENERAL_TIMEOUT = "system.lifecycle.generalTimeout"
+  }
+
   object GenericConfPaths extends GenericConfPaths
 
   object HttpServerConfPaths extends HttpServerConfPaths
@@ -115,4 +119,6 @@ object ConfPaths {
   object TeamDrivePaths extends TeamDrivePaths
 
   object HealthChecks extends HealthChecks
+
+  object Lifecycle extends Lifecycle
 }

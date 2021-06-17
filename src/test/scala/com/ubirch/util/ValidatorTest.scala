@@ -222,13 +222,13 @@ class ValidatorTest extends TestBase with TableDrivenPropertyChecks {
 
     "validate String valid if not empty" in {
       val str = "t"
-      val validated = validateString(pocName, str)
+      val validated = validateStringCSV(pocName, str)
       assert(validated.isValid)
     }
 
     "validate empty string invalid" in {
       val str = ""
-      val validated = validateString(pocName, str)
+      val validated = validateStringCSV(pocName, str)
       assert(validated.isInvalid)
       validated
         .leftMap(_.toList.mkString(comma))

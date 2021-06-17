@@ -34,7 +34,7 @@ class SuperAdminController @Inject() (
   publicKeyPoolService: PublicKeyPoolService,
   tokenVerificationService: TokenVerificationService,
   x509CertSupport: X509CertSupport,
-  tenantService: SuperAdminService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
+  superAdminService: SuperAdminService)(implicit val executor: ExecutionContext, scheduler: Scheduler)
   extends ControllerBase
   with KeycloakBearerAuthenticationSupport {
   override protected val applicationDescription: String = "Super Admin controller"
@@ -83,7 +83,7 @@ class SuperAdminController @Inject() (
   post("/tenants/create", operation(createTenantOperation)) {
     x509CertSupport.withVerification(request) {
       superAdminEndpointWithUserContext("Create tenants") { superAdminContext =>
-        tenantService
+        superAdminService
           .createTenant(parsedBody.extract[CreateTenantRequest], superAdminContext)
           .map {
             case Left(error) =>
