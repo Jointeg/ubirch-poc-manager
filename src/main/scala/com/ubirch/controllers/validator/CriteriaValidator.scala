@@ -98,7 +98,7 @@ object CriteriaValidator extends CriteriaValidator {
     )
 
   val validSortColumnsForPocAdmin: Seq[String] =
-    Seq("id", "firstName", "email", "lastName", "pocName", "active", "state")
+    Seq("id", "firstName", "email", "lastName", "pocName", "active", "state", "createdAt")
 
   def validateParams(
     tenantId: TenantId,
@@ -118,7 +118,7 @@ object CriteriaValidator extends CriteriaValidator {
 object AdminCriteriaValidator extends CriteriaValidator {
   type PocCriteriaValidationResult[A] = ValidatedNec[(String, String), A]
 
-  val validSortColumnsForEmployees: Seq[String] = Seq("lastName", "email", "firstName", "active", "status")
+  val validSortColumnsForEmployees: Seq[String] = Seq("lastName", "email", "firstName", "active", "status", "createdAt")
 
   def validateParams(
     pocAdmin: UUID,

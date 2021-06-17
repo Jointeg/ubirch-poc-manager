@@ -157,6 +157,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       case Some("active")    => dynamic.sortBy(r => quote(r._1.active))(sort.ord)
       case Some("state")     => dynamic.sortBy(r => quote(r._1.status))(sort.ord)
       case Some("pocName")   => dynamic.sortBy(r => quote(r._2.pocName))(sort.ord)
+      case Some("createdAt") => dynamic.sortBy(r => quote(r._1.created))(sort.ord)
       case _                 => dynamic
     }
   }
