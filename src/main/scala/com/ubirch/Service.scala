@@ -67,7 +67,7 @@ class Service @Inject() (
 
     val pocCreation = pocCreationLoop.startPocCreationLoop.subscribe()
     val adminCreation = adminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
-    val employeeCreation = employeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)).subscribe()
+    val employeeCreation = employeeCreationLoop.startPocEmployeeCreationLoop.subscribe()
 
     lifecycle.addStopHook(() => Future(SttpResources.backend.close()))
 

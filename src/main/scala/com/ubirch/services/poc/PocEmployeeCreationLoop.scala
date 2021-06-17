@@ -15,7 +15,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.control.NonFatal
 
 trait PocEmployeeCreationLoop {
-  def startPocEmployeeCreationLoop[T](operation: PocEmployeeCreationResult => Observable[T]): Observable[T]
+  def startPocEmployeeCreationLoop: Observable[Unit]
 }
 
 class PocEmployeeCreationLoopImpl @Inject() (conf: Config, employeeCreator: PocEmployeeCreator)
@@ -23,7 +23,7 @@ class PocEmployeeCreationLoopImpl @Inject() (conf: Config, employeeCreator: PocE
   with LazyLogging {
   private val pocEmployeeCreatorInterval = conf.getInt(POC_CREATION_INTERVAL)
 
-  private val startPocEmployeeCreation: Observable[PocEmployeeCreationResult] = {
+  private val startPocEmployeeCreation: Observable[Unit] = {
     for {
       _ <- Observable.intervalWithFixedDelay(pocEmployeeCreatorInterval.seconds)
       result <- Observable.fromTask(employeeCreator.createPocEmployees())
@@ -38,8 +38,8 @@ class PocEmployeeCreationLoopImpl @Inject() (conf: Config, employeeCreator: PocE
     }
   }
 
-  override def startPocEmployeeCreationLoop[T](operation: PocEmployeeCreationResult => Observable[T]): Observable[T] =
-    retryWithDelay(startPocEmployeeCreation.flatMap(operation)).guaranteeCase {
+  override def startPocEmployeeCreationLoop: Observable[Unit] =
+    retryWithDelay(startPocEmployeeCreation).guaranteeCase {
       case ExitCase.Canceled  => Task(PocEmployeeCreationLoop.loopState.set(Cancelled))
       case ExitCase.Error(_)  => Task(PocEmployeeCreationLoop.loopState.set(ErrorTerminated(DateTime.now())))
       case ExitCase.Completed => Task(PocEmployeeCreationLoop.loopState.set(Completed))

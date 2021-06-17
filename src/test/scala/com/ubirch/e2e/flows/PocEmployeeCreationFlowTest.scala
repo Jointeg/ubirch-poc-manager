@@ -162,7 +162,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     val pocEmployeeTable = injector.get[PocEmployeeTable]
 
     awaitUntil(
-      pocEmployeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)),
+      pocEmployeeCreationLoop.startPocEmployeeCreationLoop,
       pocEmployeeTable.getPocEmployeesByTenantId(tenant.id).map(_.forall(_.status == Completed)),
       5.seconds
     )
