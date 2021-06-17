@@ -32,13 +32,6 @@ class PocEmployeeRepositoryMock @Inject() (pocAdminRepository: PocAdminRepositor
     Task(pocEmployeeDatastore.get(pocEmployeeId))
   }
 
-  def getAllUncompletedPocEmployees: Task[List[PocEmployee]] =
-    Task {
-      pocEmployeeDatastore.collect {
-        case (_, pocEmployee: PocEmployee) if pocEmployee.status != Completed => pocEmployee
-      }.toList
-    }
-
   override def getPocEmployeesByTenantId(tenantId: TenantId): Task[List[PocEmployee]] =
     Task {
       pocEmployeeDatastore.collect {
@@ -46,7 +39,7 @@ class PocEmployeeRepositoryMock @Inject() (pocAdminRepository: PocAdminRepositor
       }.toList
     }
 
-  override def getUncompletedPocEmployees(): Task[List[PocEmployee]] =
+  private def getUncompletedPocEmployees(): Task[List[PocEmployee]] =
     Task {
       pocEmployeeDatastore.collect {
         case (_, employee: PocEmployee) if employee.status != Completed => employee

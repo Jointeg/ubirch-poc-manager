@@ -1,6 +1,5 @@
 package com.ubirch.services.poc
 
-import cats.implicits.catsSyntaxApply
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.PocConfig
 import com.ubirch.db.context.QuillMonixJdbcContext
@@ -56,15 +55,23 @@ class PocAdminCreatorImpl @Inject() (
   import certifyHelper._
 
   def createPocAdmins(): Task[Unit] = {
-    adminRepository.getAllUncompletedPocAdmins().flatMap {
-      case pocAdmins if pocAdmins.isEmpty =>
+    adminRepository.getAllUncompletedPocAdminsIds().flatMap {
+      case pocAdminsIds if pocAdminsIds.isEmpty =>
         logger.debug("no poc admins waiting for completion")
         Task(PocAdminCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Admin"))).void
-      case pocAdmins =>
-        logger.info(s"starting to create ${pocAdmins.size} pocAdmins")
-        Task(ProcessingElements(DateTime.now(), "PoC Admin", pocAdmins.map(_.id.toString).mkString(", "))) >>
-          Task.sequence(pocAdmins.map(admin => Task.cancelBoundary *> createPocAdmin(admin).uncancelable))
-            .void
+      case pocAdminsIds =>
+        Task.sequence(pocAdminsIds.map(pocAdminId => {
+          (for {
+            _ <- Task(logger.info(s"Starting to process PoC Admin with id $pocAdminId"))
+            _ <- Task.cancelBoundary
+            _ <- Task(ProcessingElements(DateTime.now(), "PoC Admin", pocAdminId.toString))
+            pocAdmin <- adminRepository.unsafeGetUncompletedPocAdminById(pocAdminId)
+            _ <- createPocAdmin(pocAdmin).uncancelable
+          } yield ()).onErrorHandle(ex => {
+            logger.error(s"Unexpected error has happened while processing PoC Admin with id $pocAdminId", ex)
+            ()
+          })
+        })).void
     }
   }
 

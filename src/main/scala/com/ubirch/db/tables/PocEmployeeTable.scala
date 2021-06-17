@@ -21,8 +21,6 @@ trait PocEmployeeRepository {
 
   def getPocEmployeesByTenantId(tenantId: TenantId): Task[List[PocEmployee]]
 
-  def getUncompletedPocEmployees(): Task[List[PocEmployee]]
-
   def getUncompletedPocEmployeesIds(): Task[List[UUID]]
 
   def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee]
@@ -51,11 +49,6 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
   private def getAllPocEmployeesByTenantIdQuery(tenantId: TenantId): Quoted[EntityQuery[PocEmployee]] =
     quote {
       querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.tenantId == lift(tenantId))
-    }
-
-  private def getAllPocsWithoutStatusQuery(status: Status): Quoted[EntityQuery[PocEmployee]] =
-    quote {
-      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.status != lift(status))
     }
 
   private def getAllPocEmployeeIdsWithoutStatusQuery(status: Status): Quoted[EntityQuery[UUID]] =
@@ -133,8 +126,6 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
   def getPocEmployeesByTenantId(tenantId: TenantId): Task[List[PocEmployee]] = {
     run(getAllPocEmployeesByTenantIdQuery(tenantId))
   }
-
-  def getUncompletedPocEmployees(): Task[List[PocEmployee]] = run(getAllPocsWithoutStatusQuery(Completed))
 
   def updatePocEmployee(pocEmployee: PocEmployee): Task[UUID] =
     run(updatePocEmployeeQuery(pocEmployee)).map(_ => pocEmployee.id)
