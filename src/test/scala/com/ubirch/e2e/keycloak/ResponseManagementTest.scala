@@ -36,7 +36,7 @@ class ResponseManagementTest extends E2ETestBase {
           (poc, pocStatus, updatedTenant)
         }
 
-        awaitForTwoTicks(loop.startPocCreationLoop(resp => Observable(resp)), 30.seconds)
+        awaitForTwoTicks(loop.startPocCreationLoop, 30.seconds)
 
         // if the connection would not be released properly, than the test would fail here with only 10 PoC being transitioned to Processing state
         pocs.foreach {

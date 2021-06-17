@@ -242,7 +242,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     val pocCreationLoop = injector.get[PocCreationLoop]
     val pocRepository = injector.get[PocRepository]
     awaitUntil(
-      pocCreationLoop.startPocCreationLoop(resp => Observable(resp)),
+      pocCreationLoop.startPocCreationLoop,
       pocRepository.getPoc(poc.id).map {
         case None      => false
         case Some(poc) => if (poc.status == Completed) true else false

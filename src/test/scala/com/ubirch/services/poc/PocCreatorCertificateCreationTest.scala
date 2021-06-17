@@ -31,26 +31,20 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
           tenantChange = tenant => tenant.copy(usageType = APP)
         )
         //start process
-        val result = await(loop.createPocs(), 5.seconds)
+        await(loop.createPocs(), 5.seconds)
 
-        //validate result
-        val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-        val resultStatus = maybeSuccess.list.head.right.get
+        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         val allTrue = createPocStatusAllTrue()
         val expected =
           allTrue.copy(
             pocId = poc.id,
-            lastUpdated = resultStatus.lastUpdated,
-            created = resultStatus.created,
+            lastUpdated = status.lastUpdated,
+            created = status.created,
             clientCertRequired = true,
             clientCertCreated = Some(true),
             clientCertProvided = Some(true),
             orgUnitCertCreated = Some(true)
           )
-
-        maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
-
-        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
@@ -72,26 +66,20 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
           tenantChange = tenant => tenant.copy(usageType = Both)
         )
         //start process
-        val result = await(loop.createPocs(), 5.seconds)
+        await(loop.createPocs(), 5.seconds)
 
-        //validate result
-        val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-        val resultStatus = maybeSuccess.list.head.right.get
+        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         val allTrue = createPocStatusAllTrue()
         val expected =
           allTrue.copy(
             pocId = poc.id,
-            lastUpdated = resultStatus.lastUpdated,
-            created = resultStatus.created,
+            lastUpdated = status.lastUpdated,
+            created = status.created,
             clientCertRequired = true,
             clientCertCreated = Some(true),
             clientCertProvided = Some(true),
             orgUnitCertCreated = Some(true)
           )
-
-        maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
-
-        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
@@ -112,24 +100,18 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
             pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeBmgVacApi),
             tenantChange = tenant => tenant.copy(usageType = usageType))
           //start process
-          val result = await(loop.createPocs(), 5.seconds)
+          await(loop.createPocs(), 5.seconds)
 
-          //validate result
-          val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-          val resultStatus = maybeSuccess.list.head.right.get
+          val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
           val allTrue = createPocStatusAllTrue()
           val expected =
             allTrue.copy(
               pocId = poc.id,
-              lastUpdated = resultStatus.lastUpdated,
-              created = resultStatus.created,
+              lastUpdated = status.lastUpdated,
+              created = status.created,
               clientCertCreated = None,
               orgUnitCertCreated = None
             )
-
-          maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
-
-          val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
           status shouldBe expected
 
           val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
@@ -150,12 +132,7 @@ class PocCreatorCertificateCreationTest extends UnitTestBase {
           pocChange = poc => poc.copy(pocType = TestData.Poc.pocTypeUbVacApp),
           tenantChange = tenant => tenant.copy(usageType = API))
         //start process
-        val result = await(loop.createPocs(), 5.seconds)
-
-        //validate result
-        val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-        val resultStatus = maybeSuccess.list.head.left.get
-        assert(resultStatus.contains("a poc shouldn't require client cert if tenant usageType is API"))
+        await(loop.createPocs(), 5.seconds)
 
         val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         status.errorMessage shouldBe Some("a poc shouldn't require client cert if tenant usageType is API")

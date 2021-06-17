@@ -65,7 +65,7 @@ class Service @Inject() (
       .verifyHash(Base64String(config.getString(ConfPaths.AESEncryptionPaths.SECRET_KEY)))
       .runSyncUnsafe(15.seconds)
 
-    val pocCreation = pocCreationLoop.startPocCreationLoop(resp => Observable(resp)).subscribe()
+    val pocCreation = pocCreationLoop.startPocCreationLoop.subscribe()
     val adminCreation = adminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
     val employeeCreation = employeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)).subscribe()
 
@@ -77,7 +77,7 @@ class Service @Inject() (
       adminCreation.cancel()
       employeeCreation.cancel()
       Thread.sleep(4.seconds.toMillis)
-      Future.successful()
+      Future.successful(())
     })
 
     val cd = new CountDownLatch(1)

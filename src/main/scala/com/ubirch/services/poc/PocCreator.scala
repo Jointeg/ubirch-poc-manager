@@ -1,14 +1,13 @@
 package com.ubirch.services.poc
 
 import cats.data.EitherT
-import cats.implicits.catsSyntaxApply
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.ConfPaths.TeamDrivePaths
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocLogoRepository, PocRepository, PocStatusRepository, TenantRepository }
-import com.ubirch.models.common.{ ProcessingElements, WaitingForNewElements }
+import com.ubirch.models.common.WaitingForNewElements
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
 import com.ubirch.services.poc.util.ImageLoader
@@ -22,7 +21,7 @@ import org.json4s.native.Serialization
 
 trait PocCreator {
 
-  def createPocs(): Task[PocCreationResult]
+  def createPocs(): Task[Unit]
 }
 
 object PocCreator {
@@ -66,21 +65,22 @@ class PocCreatorImpl @Inject() (
   import informationProvider._
   import keycloakHelper._
 
-  override def createPocs(): Task[PocCreationResult] = {
-    pocTable.getAllUncompletedPocs().flatMap {
-      case pocs if pocs.isEmpty =>
+  override def createPocs(): Task[Unit] = {
+    pocTable.getAllUncompletedPocsIds().flatMap {
+      case pocIds if pocIds.isEmpty =>
         logger.debug("no pocs waiting for completion")
-        Task(PocCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC"))) >>
-          Task(PocCreationSuccess)
-      case pocs =>
-        logger.info(s"starting to create ${pocs.size} pocs")
-        Task(PocCreationLoop.loopState.set(ProcessingElements(
-          DateTime.now(),
-          "PoC",
-          pocs.map(_.id.toString).mkString(", ")))) >>
-          Task
-            .sequence(pocs.map(poc => Task.cancelBoundary *> createPoc(poc).uncancelable))
-            .map(PocCreationMaybeSuccess)
+        Task(PocCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC"))).void
+      case pocIds =>
+        Task.sequence(pocIds.map(pocId => {
+          (for {
+            _ <- Task.cancelBoundary
+            poc <- pocTable.unsafeGetUncompletedPocByIds(pocId)
+            _ <- createPoc(poc).uncancelable
+          } yield ()).onErrorHandle(ex => {
+            logger.error(s"Unexpected error has happened while creating PoC with id $pocId", ex)
+            ()
+          })
+        })).void
     }
   }
 
@@ -247,8 +247,3 @@ class PocCreatorImpl @Inject() (
 case class StatusAndPW(status: PocStatus, devicePassword: String)
 
 case class PocCreationError(pocAndStatus: PocAndStatus, message: String) extends Exception(message)
-
-trait PocCreationResult
-case object PocCreationFailure extends PocCreationResult
-case object PocCreationSuccess extends PocCreationResult
-case class PocCreationMaybeSuccess(list: Seq[Either[String, PocStatus]]) extends PocCreationResult

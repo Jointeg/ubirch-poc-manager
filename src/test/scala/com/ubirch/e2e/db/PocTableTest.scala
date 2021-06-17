@@ -175,14 +175,14 @@ class PocTableTest extends E2ETestBase {
           _ <- pocRepo.createPoc(poc1)
           _ <- pocRepo.createPoc(poc2)
           _ <- pocRepo.createPoc(pocByDiffTenant)
-          data <- pocRepo.getAllUncompletedPocs()
+          ids <- pocRepo.getAllUncompletedPocsIds()
         } yield {
-          data
+          ids
         }
         val allEmployeesByTenant = await(res, 5.seconds)
         allEmployeesByTenant.size shouldBe 2
-        allEmployeesByTenant.exists(_.id == poc1.id) shouldBe true
-        allEmployeesByTenant.exists(_.id == poc2.id) shouldBe true
+        allEmployeesByTenant.contains(poc1.id) shouldBe true
+        allEmployeesByTenant.contains(poc2.id) shouldBe true
       }
     }
   }
