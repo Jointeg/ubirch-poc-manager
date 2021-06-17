@@ -22,8 +22,8 @@ class PocEmployeeCsvParser extends CsvParser[PocEmployeeCsvParseResult] with Laz
     tenant: Tenant): Either[String, PocEmployeeCsvParseResult] = {
     PocEmployeeRow.fromCsv(cols) match {
       case Success(csvPocEmployee) =>
-        val validatedFirstName = validateString(firstName, csvPocEmployee.firstName).map(FirstName.apply)
-        val validatedLastName = validateString(lastName, csvPocEmployee.lastName).map(LastName.apply)
+        val validatedFirstName = validateStringCSV(firstName, csvPocEmployee.firstName).map(FirstName.apply)
+        val validatedLastName = validateStringCSV(lastName, csvPocEmployee.lastName).map(LastName.apply)
         val validatedEmail = validateEmailFromCSV(email, csvPocEmployee.email).map(Email.apply)
 
         validatePocEmployee(validatedFirstName, validatedLastName, validatedEmail) match {

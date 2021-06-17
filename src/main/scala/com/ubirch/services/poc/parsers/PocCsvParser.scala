@@ -83,8 +83,8 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
 
   private def validatePocManager(csvPoc: PocRow): AllErrorsOr[PocManager] =
     (
-      validateString(managerSurname, csvPoc.managerSurname),
-      validateString(managerName, csvPoc.managerName),
+      validateStringCSV(managerSurname, csvPoc.managerSurname),
+      validateStringCSV(managerName, csvPoc.managerName),
       validateEmailFromCSV(managerEmail, csvPoc.managerEmail),
       validatePhoneFromCSV(managerMobilePhone, csvPoc.managerMobilePhone)
     ).mapN { (managerSurname, managerName, managerEmail, managerMobilePhone) =>
@@ -98,14 +98,14 @@ class PocCsvParser(pocConfig: PocConfig) extends CsvParser[PocParseResult] with 
 
   private def validatePocAddress(csvPoc: PocRow): AllErrorsOr[Address] =
     (
-      validateString(street, csvPoc.pocStreet),
-      validateString(streetNumber, csvPoc.pocHouseNumber),
+      validateStringCSV(street, csvPoc.pocStreet),
+      validateStringCSV(streetNumber, csvPoc.pocHouseNumber),
       validateStringOption(csvPoc.pocAdditionalAddress),
       validateZipCode(CsvConstants.zipcode, csvPoc.pocZipcode),
-      validateString(CsvConstants.city, csvPoc.pocCity),
+      validateStringCSV(CsvConstants.city, csvPoc.pocCity),
       validateStringOption(csvPoc.pocCounty),
       validateStringOption(csvPoc.pocFederalState),
-      validateString(CsvConstants.country, csvPoc.pocCountry)
+      validateStringCSV(CsvConstants.country, csvPoc.pocCountry)
     ).mapN { (pocStreet, pocHouseNumber, pocAddAddress, pocZipcode, pocCity, pocCounty, pocFederalState, pocCountry) =>
       Address(
         pocStreet,
