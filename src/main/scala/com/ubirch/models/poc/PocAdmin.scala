@@ -38,14 +38,13 @@ object PocAdmin {
     email: String,
     mobilePhone: String,
     webIdentRequired: Boolean,
-    dateOfBirth: String
+    dateOfBirth: LocalDate
   ): AllErrorsOr[PocAdmin] = {
     val emailV = validateEmail("email is invalid", email)
     val nameV = validateString("name is invalid", name)
     val surNameV = validateString("surName is invalid", surName)
-    val dateOfBirthV = validateDate("dateOfBirth is invalid", dateOfBirth)
     val mobilePhoneV = validatePhone("phone number is invalid", mobilePhone)
-    (nameV, surNameV, emailV, mobilePhoneV, dateOfBirthV).mapN { (name, surName, email, mobilePhone, dateOfBirth) =>
+    (nameV, surNameV, emailV, mobilePhoneV).mapN { (name, surName, email, mobilePhone) =>
       val id = UUID.randomUUID()
       PocAdmin(
         id = id,
