@@ -198,7 +198,13 @@ class TenantAdminController @Inject() (
       .tags("Tenant-Admin", "Poc-Admin")
       .authorizations()
       .parameters(
-        bodyParam[String]("pocId").description("the id of poc") // @todo fix
+        bodyParam[String]("pocId").description("PoC id"),
+        bodyParam[String]("firstName").description("FirstName of PoC Admin"),
+        bodyParam[String]("lastName").description("LastName of PoC Admin"),
+        bodyParam[String]("email").description("Email of PoC Admin"),
+        bodyParam[String]("phone").description("Phone number of PoC Admin"),
+        bodyParam[String]("dateOfBirth").description("birthday of PoC Admin"),
+        bodyParam[Boolean]("webIdentRequired").description("webIdent is required or not")
       )
 
   post("/pocs/create", operation(createListOfPocs)) {

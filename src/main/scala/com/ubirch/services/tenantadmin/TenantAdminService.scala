@@ -15,6 +15,7 @@ import com.ubirch.controllers.SwitchActiveError.{
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_IN
 import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import cats.syntax.either._
+import com.ubirch.PocConfig
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.db.context.QuillMonixJdbcContext
@@ -84,6 +85,7 @@ class DefaultTenantAdminService @Inject() (
   pocAdminRepository: PocAdminRepository,
   pocAdminStatusRepository: PocAdminStatusRepository,
   keycloakUserService: KeycloakUserService,
+  pocConfig: PocConfig,
   quillMonixJdbcContext: QuillMonixJdbcContext)
   extends TenantAdminService
   with PocAuditLogging
@@ -368,6 +370,8 @@ class DefaultTenantAdminService @Inject() (
           s"poc: ${poc.id.toString} is not assigned the tenant: ${tenant.id.toString}"))
         pocAdmin <- createPocAdminObj(poc, tenant, createPocAdminRequest)
         _ <- EitherT.liftF[Task, CreatePocAdminError, UUID](pocAdminRepository.createPocAdmin(pocAdmin))
+        pocAdminStatus = PocAdminStatus.init(pocAdmin, poc, pocConfig)
+        _ <- EitherT.liftF[Task, CreatePocAdminError, Unit](pocAdminStatusRepository.createStatus(pocAdminStatus))
       } yield {
         logAuditByTenantAdmin(
           s"create an admin ${pocAdmin.id} of poc ${pocAdmin.pocId}",
