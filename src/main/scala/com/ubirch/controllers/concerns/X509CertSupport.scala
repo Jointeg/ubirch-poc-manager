@@ -39,7 +39,7 @@ class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSuppo
       case Success(result) =>
         if (result) action
         else {
-          logger.warn("the incoming certificate is invalid")
+          logger.warn("the incoming certificate is invalid", request.getHeader(TLS_HEADER_KEY))
           halt(403, NOK.authenticationError("Forbidden"))
         }
       case Failure(exception) =>

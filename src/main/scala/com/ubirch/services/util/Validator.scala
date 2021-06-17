@@ -102,12 +102,16 @@ object Validator {
     validatePhone(phoneValidationError(header), str)
   }
 
+  def validateStringCSV(header: String, str: String): AllErrorsOr[String] = {
+    validateString(emptyStringError(header), str)
+  }
+
   /**
     * string not empty
     */
-  def validateString(header: String, str: String): AllErrorsOr[String] = {
+  def validateString(errorMsg: String, str: String): AllErrorsOr[String] = {
     if (str == "")
-      emptyStringError(header).invalidNel
+      errorMsg.invalidNel
     else
       str.validNel
   }
@@ -142,7 +146,7 @@ object Validator {
     */
   def validateExternalId(header: String, externalId: String, tenant: Tenant): AllErrorsOr[String] = {
     tenant.tenantType match {
-      case UBIRCH => validateString(header, externalId)
+      case UBIRCH => validateStringCSV(header, externalId)
       case BMG =>
         externalId match {
           case bmgExternalIdRegex(_*) => externalId.validNel
@@ -184,10 +188,14 @@ object Validator {
   /**
     * Valid Date format
     */
-  def validateDate(header: String, str: String): AllErrorsOr[LocalDate] = {
+  def validateDateCSV(header: String, str: String): AllErrorsOr[LocalDate] = {
+    validateDate(birthOfDateError(header), str)
+  }
+
+  def validateDate(errorMsg: String, str: String): AllErrorsOr[LocalDate] = {
     Try(LocalDate.parse(str, `dd.MM.yyyy`)) match {
       case Success(date) => date.valid
-      case Failure(_)    => birthOfDateError(header).invalidNel
+      case Failure(_)    => errorMsg.invalidNel
     }
   }
 

@@ -2,7 +2,9 @@ package com.ubirch.models.poc
 
 import com.ubirch.models.tenant.TenantId
 import com.ubirch.services.poc.CertifyUserService.HasCertifyUserId
+import com.ubirch.services.util.Validator.{ validateDate, validateEmail, validatePhone, validateString, AllErrorsOr }
 import org.joda.time.{ DateTime, LocalDate }
+import cats.syntax.apply._
 
 import java.util.UUID
 
@@ -27,6 +29,40 @@ case class PocAdmin(
 ) extends HasCertifyUserId
 
 object PocAdmin {
+
+  def create(
+    pocId: UUID,
+    tenantId: TenantId,
+    name: String,
+    surName: String,
+    email: String,
+    mobilePhone: String,
+    webIdentRequired: Boolean,
+    dateOfBirth: String
+  ): AllErrorsOr[PocAdmin] = {
+    val emailV = validateEmail("email is invalid", email)
+    val nameV = validateString("name is invalid", name)
+    val surNameV = validateString("surName is invalid", surName)
+    val dateOfBirthV = validateDate("dateOfBirth is invalid", dateOfBirth)
+    val mobilePhoneV = validatePhone("phone number is invalid", mobilePhone)
+    (nameV, surNameV, emailV, mobilePhoneV, dateOfBirthV).mapN { (name, surName, email, mobilePhone, dateOfBirth) =>
+      val id = UUID.randomUUID()
+      PocAdmin(
+        id = id,
+        pocId = pocId,
+        tenantId = tenantId,
+        name = name,
+        surname = surName,
+        email = email,
+        mobilePhone = mobilePhone,
+        webIdentRequired = webIdentRequired,
+        webIdentInitiateId = None,
+        webIdentId = None,
+        certifyUserId = None,
+        dateOfBirth = BirthDate(dateOfBirth)
+      )
+    }
+  }
 
   def apply(
     id: UUID,
