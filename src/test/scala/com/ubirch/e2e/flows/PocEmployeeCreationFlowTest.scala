@@ -230,7 +230,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     val pocAdminRepository = injector.get[PocAdminRepository]
 
     awaitUntil(
-      pocAdminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)),
+      pocAdminCreationLoop.startPocAdminCreationLoop,
       pocAdminRepository.getPocAdmin(pocAdmin.id).map(_.value.status == Completed),
       5.seconds
     )

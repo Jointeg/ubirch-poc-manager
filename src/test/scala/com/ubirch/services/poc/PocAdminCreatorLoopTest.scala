@@ -39,7 +39,7 @@ class PocAdminCreatorLoopTest extends UnitTestBase {
         val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
         val spaceName = SpaceName.ofPoc("local", tenant, poc)
         //start process
-        val pocAdminCreation = loop.startPocAdminCreationLoop(resp => Observable(resp))
+        val pocAdminCreation = loop.startPocAdminCreationLoop
         awaitForTwoTicks(pocAdminCreation)
 
         // not process because the data is not in database

@@ -17,7 +17,7 @@ import org.joda.time.DateTime
 import javax.inject.Inject
 
 trait PocAdminCreator {
-  def createPocAdmins(): Task[PocAdminCreationResult]
+  def createPocAdmins(): Task[Unit]
 }
 
 object PocAdminCreator {
@@ -55,17 +55,16 @@ class PocAdminCreatorImpl @Inject() (
 
   import certifyHelper._
 
-  def createPocAdmins(): Task[PocAdminCreationResult] = {
+  def createPocAdmins(): Task[Unit] = {
     adminRepository.getAllUncompletedPocAdmins().flatMap {
       case pocAdmins if pocAdmins.isEmpty =>
         logger.debug("no poc admins waiting for completion")
-        Task(PocAdminCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Admin"))) >>
-          Task(NoWaitingPocAdmin)
+        Task(PocAdminCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Admin"))).void
       case pocAdmins =>
         logger.info(s"starting to create ${pocAdmins.size} pocAdmins")
         Task(ProcessingElements(DateTime.now(), "PoC Admin", pocAdmins.map(_.id.toString).mkString(", "))) >>
           Task.sequence(pocAdmins.map(admin => Task.cancelBoundary *> createPocAdmin(admin).uncancelable))
-            .map(PocAdminCreationMaybeSuccess)
+            .void
     }
   }
 
@@ -218,10 +217,6 @@ class PocAdminCreatorImpl @Inject() (
     Left(errorMsg + ex.getMessage)
   }
 }
-
-sealed trait PocAdminCreationResult
-case object NoWaitingPocAdmin extends PocAdminCreationResult
-case class PocAdminCreationMaybeSuccess(list: Seq[Either[String, PocAdminStatus]]) extends PocAdminCreationResult
 
 case class PocAdminAndStatus(admin: PocAdmin, status: PocAdminStatus)
 case class PocAdminCreationError(pocAdminAndStatus: PocAdminAndStatus, message: String) extends Exception(message)
