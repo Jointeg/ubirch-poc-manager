@@ -8,6 +8,7 @@ import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.keycloak.user.UserRequiredAction
+import com.ubirch.models.NOK
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ CreatePocAdminRequest, Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
@@ -17,8 +18,8 @@ import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.{ carriageReturn, columnSeparator, firstName }
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
+import com.ubirch.services.poc.util.CsvConstants.columnSeparator
+import com.ubirch.services.CertifyKeycloak
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
