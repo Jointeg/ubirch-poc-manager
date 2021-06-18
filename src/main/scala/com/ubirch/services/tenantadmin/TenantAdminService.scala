@@ -75,7 +75,7 @@ trait TenantAdminService {
   def createPocAdmin(
     tenant: Tenant,
     tenantAdminContext: TenantAdminContext,
-    createPocAdminRequest: CreatePocAdminRequest): Task[Either[CreatePocAdminError, Unit]]
+    createPocAdminRequest: CreatePocAdminRequest): Task[Either[CreatePocAdminError, UUID]]
 }
 
 class DefaultTenantAdminService @Inject() (
@@ -360,22 +360,25 @@ class DefaultTenantAdminService @Inject() (
   override def createPocAdmin(
     tenant: Tenant,
     tenantAdminContext: TenantAdminContext,
-    createPocAdminRequest: CreatePocAdminRequest): Task[Either[CreatePocAdminError, Unit]] =
+    createPocAdminRequest: CreatePocAdminRequest): Task[Either[CreatePocAdminError, UUID]] =
     quillMonixJdbcContext.withTransaction {
       (for {
         poc <- EitherT.fromOptionF[Task, CreatePocAdminError, Poc](
           pocRepository.getPoc(createPocAdminRequest.pocId),
           CreatePocAdminError.NotFound(s"pocId is not found: ${createPocAdminRequest.pocId.toString}"))
-        _ <- isPocAssignedToTenant[Task, CreatePocAdminError](tenant, poc)(CreatePocAdminError.InvalidDataError(
+        _ <- isPocAssignedToTenant[Task, CreatePocAdminError](tenant, poc)(CreatePocAdminError.NotFound(
           s"poc: ${poc.id.toString} is not assigned the tenant: ${tenant.id.toString}"))
+
         pocAdmin <- createPocAdminObj(poc, tenant, createPocAdminRequest)
         _ <- EitherT.liftF[Task, CreatePocAdminError, UUID](pocAdminRepository.createPocAdmin(pocAdmin))
+
         pocAdminStatus = PocAdminStatus.init(pocAdmin, poc, pocConfig)
         _ <- EitherT.liftF[Task, CreatePocAdminError, Unit](pocAdminStatusRepository.createStatus(pocAdminStatus))
       } yield {
         logAuditByTenantAdmin(
           s"create an admin ${pocAdmin.id} of poc ${pocAdmin.pocId}",
           tenantAdminContext)
+        pocAdmin.id
       }).value.onErrorHandleWith {
         case ex: PSQLException if ex.getMessage.contains("duplicate") =>
           Task.pure(
@@ -412,7 +415,7 @@ class DefaultTenantAdminService @Inject() (
     ) match {
       case Valid(pocAdmin) => EitherT.rightT[Task, CreatePocAdminError](pocAdmin)
       case Invalid(errors) => EitherT.leftT[Task, PocAdmin](
-          CreatePocAdminError.InvalidDataError(s"incoming request is invalid. ${errors.toList.mkString(",")}"))
+          CreatePocAdminError.InvalidDataError(s"the input data is invalid. ${errors.toList.mkString("; ")}"))
     }
   }
 }

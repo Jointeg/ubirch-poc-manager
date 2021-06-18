@@ -557,7 +557,11 @@ class TenantAdminController @Inject() (
 
   post("/poc-admin/create", operation(createPocAdmin)) {
     tenantAdminEndpointWithUserContext("Create Poc Admin") { (tenant, tenantAdminContext) =>
-      tenantAdminService.createPocAdmin(tenant, tenantAdminContext, parsedBody.extract[CreatePocAdminRequest]).map {
+      (for {
+        body <- readBodyWithCharset(request, StandardCharsets.UTF_8)
+        createPocAdminRequest <- Task(read[CreatePocAdminRequest](body))
+        result <- tenantAdminService.createPocAdmin(tenant, tenantAdminContext, createPocAdminRequest)
+      } yield result).map {
         case Left(e) => e match {
             case CreatePocAdminError.NotFound(errorMsg) =>
               NotFound(NOK.resourceNotFoundError(errorMsg))

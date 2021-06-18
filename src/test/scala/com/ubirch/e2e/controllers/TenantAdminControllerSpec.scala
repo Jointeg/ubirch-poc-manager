@@ -9,7 +9,7 @@ import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.tenant.{ CreatePocAdminRequest, Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
 import com.ubirch.models.{ FieldError, NOK, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
@@ -17,7 +17,8 @@ import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.columnSeparator
+import com.ubirch.services.poc.util.CsvConstants.{ carriageReturn, columnSeparator, firstName }
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
@@ -1873,6 +1874,123 @@ class TenantAdminControllerSpec
     }
   }
 
+  "Endpoint POST /poc-admin/create" must {
+    val EndPoint = "/poc-admin/create"
+    "successfully create poc admin" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocId = UUID.randomUUID()
+        val pocTable = injector.get[PocRepository]
+        val tenant = addTenantToDB(injector)
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
+        val poc = createPoc(pocId, tenant.tenantName)
+        pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+        val createPocAdminRequest = CreatePocAdminRequest(
+          poc.id,
+          "first",
+          "last",
+          "test@ubirch.com",
+          "+4911111111",
+          LocalDate.now().minusYears(30),
+          true
+        )
+
+        val requestBody = pocAdminToFormattedCreatePocAdminJson(createPocAdminRequest)
+        post(
+          EndPoint,
+          body = requestBody.getBytes(),
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+          status should equal(200)
+
+          val pocAdmins = pocAdminTable.getByPocId(poc.id).runSyncUnsafe(5.seconds)
+          pocAdmins.size shouldBe 1
+          val pocAdmin = pocAdmins.head
+          val pocAdminStatus = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe(5.seconds)
+
+          pocAdmin.pocId shouldBe createPocAdminRequest.pocId
+          pocAdmin.name shouldBe createPocAdminRequest.firstName
+          pocAdmin.surname shouldBe createPocAdminRequest.lastName
+          pocAdmin.email shouldBe createPocAdminRequest.email
+          pocAdmin.dateOfBirth.date shouldBe createPocAdminRequest.dateOfBirth
+          pocAdmin.webIdentRequired shouldBe createPocAdminRequest.webIdentRequired
+
+          assert(pocAdminStatus.isDefined)
+        }
+      }
+    }
+
+    "return 404 when poc does not exists" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val tenant = addTenantToDB(injector)
+        val createPocAdminRequest = CreatePocAdminRequest(
+          UUID.randomUUID(),
+          "first",
+          "last",
+          "test@ubirch.com",
+          "+4911111111",
+          LocalDate.now().minusYears(30),
+          true
+        )
+
+        post(
+          EndPoint,
+          body = pocAdminToFormattedCreatePocAdminJson(createPocAdminRequest).getBytes,
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        ) {
+          status should equal(404)
+          assert(body.contains(s"pocId is not found: ${createPocAdminRequest.pocId}"))
+        }
+      }
+    }
+
+    "return 400 when tenant-admin does not exists" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+
+        post(
+          EndPoint,
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+          status should equal(400)
+          assert(
+            body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
+        }
+      }
+    }
+
+    "return 400 when incoming request is invalid" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocId = UUID.randomUUID()
+        val pocTable = injector.get[PocRepository]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(pocId, tenant.tenantName)
+        pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+        val createPocAdminRequest = CreatePocAdminRequest(
+          poc.id,
+          "",
+          "",
+          "invalid_email",
+          "1111111",
+          LocalDate.now().minusYears(30),
+          true
+        )
+
+        post(
+          EndPoint,
+          body = pocAdminToFormattedCreatePocAdminJson(createPocAdminRequest).getBytes,
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+        ) {
+          status should equal(400)
+          assert(
+            body.contains("the input data is invalid. name is invalid; surName is invalid; email is invalid; phone number is invalid")
+          )
+        }
+      }
+    }
+  }
+
   def pocToFormattedJson(poc: Poc): String = {
     import poc._
     val json = s"""{
@@ -1938,6 +2056,23 @@ class TenantAdminControllerSpec
                   |  },
                   |  "email" : "${pa.email}",
                   |  "phone" : "${pa.mobilePhone}"
+                  |}""".stripMargin
+    pretty(render(parse(json)))
+  }
+
+  def pocAdminToFormattedCreatePocAdminJson(createPocAdminRequest: CreatePocAdminRequest): String = {
+    val json = s"""{
+                  | "pocId": "${createPocAdminRequest.pocId}",
+                  | "firstName" : "${createPocAdminRequest.firstName}",
+                  | "lastName" : "${createPocAdminRequest.lastName}",
+                  | "dateOfBirth" : {
+                  |   "year" : ${createPocAdminRequest.dateOfBirth.year().get()},
+                  |   "month" : ${createPocAdminRequest.dateOfBirth.monthOfYear().get()},
+                  |   "day" : ${createPocAdminRequest.dateOfBirth.dayOfMonth().get()}
+                  |  },
+                  |  "email" : "${createPocAdminRequest.email}",
+                  |  "phone" : "${createPocAdminRequest.phone}",
+                  |  "webIdentRequired": ${createPocAdminRequest.webIdentRequired}
                   |}""".stripMargin
     pretty(render(parse(json)))
   }
