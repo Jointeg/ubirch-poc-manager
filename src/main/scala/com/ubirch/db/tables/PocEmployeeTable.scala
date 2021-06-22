@@ -101,7 +101,7 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       case Some("status")    => dynamic.sortBy(p => quote(p.status))(sort.ord)
       case Some("active")    => dynamic.sortBy(p => quote(p.active))(sort.ord)
       case Some("createdAt") => dynamic.sortBy(p => quote(p.created))(sort.ord)
-      case _                 => dynamic
+      case _                 => dynamic.sortBy(p => quote(p.surname))(sort.ord)
     }
   }
 

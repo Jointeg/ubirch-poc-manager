@@ -3,19 +3,9 @@ package com.ubirch.e2e.controllers.assertions
 import com.ubirch.models.pocEmployee.PocEmployee
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import org.scalatest.{AppendedClues, Matchers}
+import org.scalatest.Matchers
 
-class PocEmployeesJsonAssertion(json: JValue) extends Matchers with AppendedClues { self =>
-  private val expectedFields: Seq[String] = Seq(
-    "id",
-    "firstName",
-    "lastName",
-    "email",
-    "active",
-    "status",
-    "createdAt"
-  )
-
+class PocEmployeesJsonAssertion(json: JValue) extends Matchers { self =>
   def hasTotal(total: Int): PocEmployeesJsonAssertion = {
     json \ "total" shouldBe JInt(total)
     self
@@ -34,10 +24,7 @@ class PocEmployeesJsonAssertion(json: JValue) extends Matchers with AppendedClue
   }
 
   def hasEmployeeAtIndex(index: Int)(assert: PocEmployeeJsonAssertion => Unit): PocEmployeesJsonAssertion = {
-    val jValue = (json \ "records") (index)
-    val parsedFields = jValue.asInstanceOf[JObject].obj.map(_._1)
-    parsedFields shouldBe expectedFields withClue "returned poc employee's fields did not match expected ones"
-    assert(PocEmployeeJsonAssertion.assertPocEmployeeJson(jValue))
+    assert(PocEmployeeJsonAssertion.assertPocEmployeeJson((json \ "records")(index)))
     self
   }
 

@@ -1,19 +1,28 @@
 package com.ubirch.e2e.controllers.assertions
 
-import org.joda.time.{DateTime, Instant}
-import org.json4s.{JBool, JString, JValue}
+import org.joda.time.DateTime
 import org.json4s.jackson.JsonMethods.parse
-import org.scalatest.Matchers
+import org.json4s.{JBool, JObject, JString, JValue}
+import org.scalatest.{AppendedClues, Matchers}
 
 import java.util.UUID
 
-class PocEmployeeJsonAssertion(json: JValue) extends Matchers { self =>
-  //      "firstName": "${pe.name}",
-  //      "lastName": "${pe.surname}",
-  //      "email": "${pe.email}",
-  //      "active": ${pe.active},
-  //      "status": "${Status.toFormattedString(pe.status)}",
-  //      "createdAt": "${pe.created.dateTime.toInstant}"
+class PocEmployeeJsonAssertion(json: JValue) extends Matchers with AppendedClues { self =>
+  private val expectedFields: Seq[String] = Seq(
+    "id",
+    "firstName",
+    "lastName",
+    "email",
+    "active",
+    "status",
+    "createdAt"
+  )
+
+  {
+    val parsedFields = json.asInstanceOf[JObject].obj.map { case (name, _) => name }
+    parsedFields shouldBe expectedFields withClue "returned poc employee's fields did not match expected ones"
+  }
+
   def hasId(id: UUID): PocEmployeeJsonAssertion = {
     json \ "id" shouldBe JString(id.toString)
     self
