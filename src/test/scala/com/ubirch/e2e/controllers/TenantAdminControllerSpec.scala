@@ -6,9 +6,7 @@ import com.ubirch.controllers.TenantAdminController
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
-import com.ubirch.db.tables.model.{ Criteria, StatusFilter }
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.common.{ ASC, Page, Sort }
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
@@ -26,7 +24,6 @@ import com.ubirch.{ FakeTokenCreator, InjectorHelper }
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
 import org.joda.time
-import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter, ISODateTimeFormat }
 import org.joda.time.{ DateTime, DateTimeZone, LocalDate }
 import org.json4s._
 import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
@@ -740,11 +737,11 @@ class TenantAdminControllerSpec
       val poc = addPocToDb(tenant, Injector.get[PocTable])
 
       val r = for {
-        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
-        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
-        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
-        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
-        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, surname = "admin a"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, surname = "admin b"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, surname = "admin c"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, surname = "admin d"))
+        _ <- repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, surname = "admin e"))
         _ <- repository.createPocAdmin(createPocAdmin(tenantId = TenantId(TenantName("other")), pocId = poc.id))
         records <- repository.getAllPocAdminsByTenantId(tenant.id)
       } yield records

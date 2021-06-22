@@ -2,8 +2,8 @@ package com.ubirch.e2e.controllers.assertions
 
 import org.joda.time.DateTime
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.{JBool, JObject, JString, JValue}
-import org.scalatest.{AppendedClues, Matchers}
+import org.json4s.{ JBool, JObject, JString, JValue }
+import org.scalatest.{ AppendedClues, Matchers }
 
 import java.util.UUID
 
