@@ -16,7 +16,7 @@ import com.ubirch.models.tenant.Tenant
 import com.ubirch.models.user.{ UserId, UserName }
 import com.ubirch.models.{ FieldError, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import io.prometheus.client.CollectorRegistry
@@ -42,7 +42,7 @@ class PocAdminControllerSpec
   with ControllerSpecHelper {
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   private val goodCsv =
     s"""$pocEmployeeHeaderLine

@@ -2,7 +2,7 @@ package com.ubirch.e2e.controllers
 
 import com.ubirch.models.poc.{ Completed, LogoURL, Pending, Poc, PocLogo }
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
-import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.poc.employee.GetCertifyConfigDTO
 import io.prometheus.client.CollectorRegistry
@@ -24,7 +24,7 @@ import scala.concurrent.duration.DurationInt
 
 class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with ControllerSpecHelper {
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   private val ContentTypeKey = "Content-Type"
   private val JsonContentType = "application/json"
