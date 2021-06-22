@@ -19,12 +19,7 @@ class KeycloakUserServiceWithoutMail @Inject() (keycloakConnector: KeycloakConne
       case Some(userRepresentation: UserRepresentation) =>
         val actions = userRepresentation.getRequiredActions
         if (!actions.isEmpty) {
-          userRepresentation.setRequiredActions(List.empty.asJava)
-          Right(keycloakConnector.getKeycloak(instance)
-            .realm(realm.name)
-            .users()
-            .get(userRepresentation.getId)
-            .update(userRepresentation))
+          Right(())
         } else {
           Left(s"no action is setup for user: ${userId.value}.")
         }

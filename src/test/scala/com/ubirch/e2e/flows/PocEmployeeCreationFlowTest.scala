@@ -136,6 +136,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
       info(
         "Normally password would be updated by Keycloak RequiredActions email but in tests we are skipping this step")
       updatePassword(admin.certifyUserId.value.toString, "pocAdminPass")(certifyKeycloakConnector)
+      resetRequiredActions(admin.certifyUserId.value.toString)(certifyKeycloakConnector)
 
       info("PoC Admin should be able to create PoC employees")
       val pocAdminToken = getAuthToken(admin.email, "pocAdminPass", certifyConfig.serverUrl)
