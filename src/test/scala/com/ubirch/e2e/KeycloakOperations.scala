@@ -187,6 +187,12 @@ trait KeycloakOperations extends ExecutionContextsTests with Awaits with OptionV
     keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(userId).update(user)
   }
 
+  def resetRequiredActions(userId: String)(keycloakConnector: CertifyKeycloakConnector): Unit = {
+    val user = keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(userId).toRepresentation
+    user.setRequiredActions(List.empty[String].asJava)
+    keycloakConnector.keycloak.realm(CERTIFY_REALM).users().get(userId).update(user)
+  }
+
   def setConfirmationMailSentAttribute(value: Boolean, userId: UserId)(
     userService: KeycloakUserService,
     keycloakConnector: CertifyKeycloakConnector): Task[Unit] = {

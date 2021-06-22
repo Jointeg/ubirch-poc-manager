@@ -12,17 +12,12 @@ import com.ubirch.db.tables.{ PocEmployeeRepository, PocRepository, TenantReposi
 import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.TenantId
-import com.ubirch.models.user.{ Email, FirstName, LastName }
+import com.ubirch.models.user.{ Email, FirstName, LastName, UserId }
 import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.keycloak.users.{
-  KeycloakUserService,
-  Remove2faTokenKeycloakError,
-  UpdateEmployeeKeycloakError
-}
+import com.ubirch.services.keycloak.users.{ KeycloakUserService, UpdateEmployeeKeycloakError }
 import com.ubirch.services.pocadmin.GetPocsAdminErrors.{ PocAdminNotInCompletedStatus, UnknownTenant }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
-import org.keycloak.models.jpa.entities.UserFederationProviderEntity
 
 import java.util.UUID
 import javax.inject.{ Inject, Singleton }
@@ -134,22 +129,23 @@ class PocAdminServiceImpl @Inject() (
         updated <- updatableEmployee match {
           case Left(e) => Task.pure(e.asLeft)
           case Right(pe) =>
-            val updated = pocEmployeeIn.copyToPocEmployee(pe)
-            for {
-              poc <- pocRepository.single(pe.pocId)
+            (for {
+              poc <- EitherT.right(pocRepository.single(pe.pocId))
               updatedEmployee = pocEmployeeIn.copyToPocEmployee(pe)
-              _ <- employeeRepository.updatePocEmployee(updatedEmployee)
-              updateKeycloak <- keycloakUserService.updateEmployee(
+              _ <- EitherT.right(employeeRepository.updatePocEmployee(updatedEmployee))
+              _ <- EitherT(keycloakUserService.updateEmployee(
                 poc.getRealm,
                 pe,
                 FirstName(pocEmployeeIn.firstName),
                 LastName(pocEmployeeIn.lastName),
-                Email(pocEmployeeIn.email))
-              updateEmployee <- updateKeycloak match {
-                case Left(e)  => Task.pure(UpdatePocEmployeeError.KeycloakError(e).asLeft)
-                case Right(_) => Task.pure(updatedEmployee.asRight)
-              }
-            } yield updateEmployee
+                Email(pocEmployeeIn.email))).leftMap(e => UpdatePocEmployeeError.KeycloakError(e))
+              _ <-
+                EitherT(keycloakUserService.sendRequiredActionsEmail(
+                  poc.getRealm,
+                  UserId(updatedEmployee.certifyUserId.get),
+                  CertifyKeycloak)).leftMap(msg =>
+                  UpdatePocEmployeeError.KeycloakError(UpdateEmployeeKeycloakError.KeycloakError(msg)))
+            } yield updatedEmployee).value
         }
       } yield updated
     }
