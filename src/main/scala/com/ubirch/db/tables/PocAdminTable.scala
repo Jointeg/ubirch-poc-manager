@@ -31,6 +31,8 @@ trait PocAdminRepository {
   def assignWebIdentInitiateId(pocAdminId: UUID, webIdentInitiateId: UUID): Task[Unit]
 
   def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocAdmin]]
+
+  def getByPocId(pocId: UUID): Task[List[PocAdmin]]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, pocAdminStatusTable: PocAdminStatusTable)
@@ -86,6 +88,11 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
   private def getByCertifyUserIdQuery(certifyUserId: UUID) =
     quote {
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.certifyUserId == lift(Option(certifyUserId)))
+    }
+
+  private def getByPocIdQuery(pocId: UUID) =
+    quote {
+      querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.pocId == lift(pocId))
     }
 
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] =
@@ -175,7 +182,11 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
 
   override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocAdmin]] =
     run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
+
   override def getAllUncompletedPocAdminsIds(): Task[List[UUID]] = run(getAllPocAdminsIdsWithoutStatusQuery(Completed))
   override def unsafeGetUncompletedPocAdminById(id: UUID): Task[PocAdmin] =
     run(getPocAdminWithoutStatusById(Completed, id)).map(_.head)
+
+  override def getByPocId(pocId: UUID): Task[List[PocAdmin]] =
+    run(getByPocIdQuery(pocId))
 }
