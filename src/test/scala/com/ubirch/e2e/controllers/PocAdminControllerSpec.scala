@@ -28,6 +28,8 @@ import org.json4s.{ DefaultFormats, Formats }
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.prop.TableDrivenPropertyChecks
 import cats.syntax.option._
+import com.ubirch.e2e.controllers.assertions.PocEmployeeJsonAssertion._
+import com.ubirch.e2e.controllers.assertions.PocEmployeesJsonAssertion._
 
 import scala.jdk.CollectionConverters._
 import java.time.{ Clock, Instant }
@@ -124,7 +126,7 @@ class PocAdminControllerSpec
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc1, pocAdmin1) = createTenantWithPocAndPocAdmin(injector)
         val poc2 = addPocToDb(tenant, injector)
-        val _ = addPocAdminToDB(poc2, tenant, injector)
+        addPocAdminToDB(poc2, tenant, injector)
         val employee1 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
         val employee2 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
         val employee3 = createPocEmployee(pocId = poc2.id, tenantId = tenant.id)
@@ -134,14 +136,15 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds)
-        employees.size shouldBe 3
-        val expectedEmployees = employees.filter(_.pocId == poc1.id).map(_.toPocEmployeeOut)
+        await(r)
+
         get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin1.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 2
-          employeeOut.records shouldBe expectedEmployees
+          assertPocEmployeesJson(body)
+            .hasTotal(2)
+            .hasEmployeeCount(2)
+            .hasEmployeeAtIndex(0, employee1)
+            .hasEmployeeAtIndex(1, employee2)
         }
       }
     }
@@ -980,7 +983,6 @@ class PocAdminControllerSpec
       addServlet(superAdminController, "/*")
     }
   }
-
 }
 
 object PocAdminControllerSpec {
@@ -1004,7 +1006,8 @@ object PocAdminControllerSpec {
            | "lastName": "${pe.surname}",
            | "email": "${pe.email}",
            | "active": ${pe.active},
-           | "status": "${Status.toFormattedString(pe.status)}"
+           | "status": "${Status.toFormattedString(pe.status)}",
+           | "createdAt": "${pe.created.dateTime.toInstant}"
            |}""".stripMargin
       pretty(render(parse(json)))
     }

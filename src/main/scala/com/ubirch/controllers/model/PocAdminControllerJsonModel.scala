@@ -2,6 +2,7 @@ package com.ubirch.controllers.model
 
 import com.ubirch.models.poc.Status
 import com.ubirch.models.pocEmployee.PocEmployee
+import org.joda.time.DateTime
 
 object PocAdminControllerJsonModel {
 
@@ -11,7 +12,8 @@ object PocAdminControllerJsonModel {
     lastName: String,
     email: String,
     active: Boolean,
-    status: Status)
+    status: Status,
+    createdAt: DateTime)
 
   case class PocEmployee_IN(firstName: String, lastName: String, email: String) {
     def copyToPocEmployee(pe: PocEmployee): PocEmployee = pe.copy(name = firstName, surname = lastName, email = email)
@@ -25,7 +27,8 @@ object PocAdminControllerJsonModel {
         lastName = pocEmployee.surname,
         email = pocEmployee.email,
         active = pocEmployee.active,
-        status = pocEmployee.status
+        status = pocEmployee.status,
+        createdAt = pocEmployee.created.dateTime
       )
   }
 }
