@@ -1,7 +1,7 @@
 package com.ubirch.controllers.model
 
 import com.ubirch.models.poc._
-import org.joda.time.LocalDate
+import org.joda.time.{ DateTime, LocalDate }
 
 import java.util.UUID
 
@@ -18,8 +18,28 @@ object TenantAdminControllerJsonModel {
     state: Status,
     webIdentRequired: Boolean,
     webIdentInitiateId: Option[UUID],
-    webIdentSuccessId: Option[String]
+    webIdentSuccessId: Option[String],
+    createdAt: DateTime
   )
+
+  object PocAdmin_OUT {
+    def fromPocAdmin(pocAdmin: PocAdmin, poc: Poc): PocAdmin_OUT =
+      PocAdmin_OUT(
+        id = pocAdmin.id,
+        firstName = pocAdmin.name,
+        lastName = pocAdmin.surname,
+        dateOfBirth = pocAdmin.dateOfBirth.date,
+        email = pocAdmin.email,
+        phone = pocAdmin.mobilePhone,
+        pocName = poc.pocName,
+        active = pocAdmin.active,
+        state = pocAdmin.status,
+        webIdentRequired = pocAdmin.webIdentRequired,
+        webIdentInitiateId = pocAdmin.webIdentInitiateId,
+        webIdentSuccessId = pocAdmin.webIdentId,
+        createdAt = pocAdmin.created.dateTime
+      )
+  }
 
   case class PocAdmin_IN(
     firstName: String,
@@ -86,24 +106,6 @@ object TenantAdminControllerJsonModel {
         managerName = firstName,
         managerEmail = email,
         managerMobilePhone = mobilePhone
-      )
-  }
-
-  object PocAdmin_OUT {
-    def fromPocAdmin(pocAdmin: PocAdmin, poc: Poc): PocAdmin_OUT =
-      PocAdmin_OUT(
-        id = pocAdmin.id,
-        firstName = pocAdmin.name,
-        lastName = pocAdmin.surname,
-        dateOfBirth = pocAdmin.dateOfBirth.date,
-        email = pocAdmin.email,
-        phone = pocAdmin.mobilePhone,
-        pocName = poc.pocName,
-        active = pocAdmin.active,
-        state = pocAdmin.status,
-        webIdentRequired = pocAdmin.webIdentRequired,
-        webIdentInitiateId = pocAdmin.webIdentInitiateId,
-        webIdentSuccessId = pocAdmin.webIdentId
       )
   }
 }
