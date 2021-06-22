@@ -164,9 +164,9 @@ class PocAdminControllerSpec
         val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 0
-          employeeOut.records should have size 0
+          assertPocEmployeesJson(body)
+            .hasTotal(0)
+            .hasEmployeeCount(0)
         }
       }
     }
@@ -189,17 +189,18 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee5)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
-        employees.size shouldBe 5
+        val employees = await(r)
         get(
           EndPoint,
           params = Map("pageIndex" -> "1", "pageSize" -> "2"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          val expectedEmployees = employees.slice(2, 4)
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 5
-          employeeOut.records shouldBe employees.slice(2, 4)
+          assertPocEmployeesJson(body)
+            .hasTotal(5)
+            .hasEmployeeCount(2)
+            .hasEmployees(expectedEmployees)
         }
       }
     }
