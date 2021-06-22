@@ -3,8 +3,11 @@ package com.ubirch
 import com.typesafe.config.ConfigFactory
 import com.ubirch.controllers.TenantAdminContext
 import com.ubirch.db.tables.{
+  PocEmployeeRepository,
   PocEmployeeRepositoryMock,
+  PocEmployeeStatusRepository,
   PocEmployeeStatusRepositoryMock,
+  PocRepository,
   PocRepositoryMock,
   TenantRepository
 }
@@ -211,9 +214,9 @@ object ModelCreationHelper {
   }
 
   def addEmployeeTripleToRepository(
-    pocTable: PocRepositoryMock,
-    employeeTable: PocEmployeeRepositoryMock,
-    statusTable: PocEmployeeStatusRepositoryMock,
+    pocTable: PocRepository,
+    employeeTable: PocEmployeeRepository,
+    statusTable: PocEmployeeStatusRepository,
     poc: Poc,
     employee: PocEmployee,
     status: PocEmployeeStatus): Unit = {

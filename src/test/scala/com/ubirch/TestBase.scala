@@ -2,7 +2,7 @@ package com.ubirch
 
 import cats.effect.concurrent.Ref
 import monix.eval.Task
-import monix.execution.{ CancelableFuture, Scheduler }
+import monix.execution.{ Cancelable, CancelableFuture, Scheduler }
 import monix.reactive.Observable
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, MustMatchers, WordSpec }

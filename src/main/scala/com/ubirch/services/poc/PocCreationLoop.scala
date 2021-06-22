@@ -15,7 +15,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.control.NonFatal
 
 trait PocCreationLoop {
-  def startPocCreationLoop[T](operation: PocCreationResult => Observable[T]): Observable[T]
+  def startPocCreationLoop: Observable[Unit]
 }
 
 @Singleton
@@ -23,7 +23,7 @@ class PocCreationLoopImpl @Inject() (conf: Config, pocCreator: PocCreator) exten
 
   private val pocCreatorInterval = conf.getInt(POC_CREATION_INTERVAL)
 
-  private val startPocCreation: Observable[PocCreationResult] = {
+  private val startPocCreation: Observable[Unit] = {
     for {
       _ <- Observable.intervalWithFixedDelay(pocCreatorInterval.seconds)
       result <- Observable.fromTask(pocCreator.createPocs())
@@ -38,8 +38,8 @@ class PocCreationLoopImpl @Inject() (conf: Config, pocCreator: PocCreator) exten
     }
   }
 
-  override def startPocCreationLoop[T](operation: PocCreationResult => Observable[T]): Observable[T] =
-    retryWithDelay(startPocCreation.flatMap(operation)).guaranteeCase {
+  override def startPocCreationLoop: Observable[Unit] =
+    retryWithDelay(startPocCreation).guaranteeCase {
       case ExitCase.Canceled  => Task(PocCreationLoop.loopState.set(Cancelled))
       case ExitCase.Error(_)  => Task(PocCreationLoop.loopState.set(ErrorTerminated(DateTime.now())))
       case ExitCase.Completed => Task(PocCreationLoop.loopState.set(Completed))

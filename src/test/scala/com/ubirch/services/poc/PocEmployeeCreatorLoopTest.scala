@@ -23,7 +23,7 @@ class PocEmployeeCreatorLoopTest extends UnitTestBase {
         employeeTable.createPocEmployee(employee)
 
         //start process
-        val creationLoop = loop.startPocEmployeeCreationLoop(resp => Observable(resp))
+        val creationLoop = loop.startPocEmployeeCreationLoop
         awaitForTwoTicks(creationLoop)
 
         // not process because the not poc is stored/found in database yet

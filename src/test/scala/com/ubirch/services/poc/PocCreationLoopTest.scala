@@ -48,7 +48,7 @@ class PocCreationLoopTest extends UnitTestBase {
           CertifyKeycloak).runSyncUnsafe(3.seconds)
 
         //start process
-        val pocCreation = loop.startPocCreationLoop(resp => Observable(resp))
+        val pocCreation = loop.startPocCreationLoop
         awaitForTwoTicks(pocCreation)
         await(pocStatusTable.getPocStatus(pocStatus.pocId), 1.seconds) shouldBe None
         val updatedPoc = poc.copy(logoUrl = Some(LogoURL(
