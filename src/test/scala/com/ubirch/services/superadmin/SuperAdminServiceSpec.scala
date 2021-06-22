@@ -5,7 +5,7 @@ import com.ubirch.controllers.SuperAdminContext
 import com.ubirch.db.tables.TenantRepository
 import com.ubirch.models.auth.CertIdentifier
 import com.ubirch.models.keycloak.group.GroupId
-import com.ubirch.models.tenant.{ DeviceAndCertifyGroups, OrgId, TenantId, TenantKeycloakHelper }
+import com.ubirch.models.tenant.{ DeviceAndCertifyGroups, OrgId, TenantId }
 import com.ubirch.services.poc.{ CertHandler, CertificateCreationError }
 import com.ubirch.services.teamdrive.TeamDriveService
 import com.ubirch.{ PocConfig, UnitTestBase }

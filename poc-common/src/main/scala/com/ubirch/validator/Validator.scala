@@ -1,10 +1,10 @@
-package com.ubirch.services.util
+package com.ubirch.validator
 
 import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
 import com.ubirch.models.poc.PocLogo
 import com.ubirch.models.tenant._
-import com.ubirch.services.poc.util.ValidatorConstants._
+import com.ubirch.validator.ValidatorConstants._
 import org.joda.time.LocalDate
 import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
 import org.json4s.ext.JavaTypesSerializers
