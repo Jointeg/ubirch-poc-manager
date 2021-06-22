@@ -13,7 +13,6 @@ import com.ubirch.services.rest.RestService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import monix.eval.Task
 import monix.execution.Scheduler
-import monix.reactive.Observable
 import org.flywaydb.core.api.FlywayException
 
 import java.util.concurrent.CountDownLatch
@@ -66,9 +65,9 @@ class Service @Inject() (
       .verifyHash(Base64String(config.getString(ConfPaths.AESEncryptionPaths.SECRET_KEY)))
       .runSyncUnsafe(15.seconds)
 
-    val pocCreation = pocCreationLoop.startPocCreationLoop(resp => Observable(resp)).subscribe()
-    val adminCreation = adminCreationLoop.startPocAdminCreationLoop(resp => Observable(resp)).subscribe()
-    val employeeCreation = employeeCreationLoop.startPocEmployeeCreationLoop(resp => Observable(resp)).subscribe()
+    val pocCreation = pocCreationLoop.startPocCreationLoop.subscribe()
+    val adminCreation = adminCreationLoop.startPocAdminCreationLoop.subscribe()
+    val employeeCreation = employeeCreationLoop.startPocEmployeeCreationLoop.subscribe()
 
     lifecycle.addStopHook(() => Future(SttpResources.backend.close()))
 
@@ -78,7 +77,7 @@ class Service @Inject() (
       adminCreation.cancel()
       employeeCreation.cancel()
       Thread.sleep(pocConfig.loopCancellationTimeout.seconds.toMillis)
-      Future.successful()
+      Future.successful(())
     })
 
     val cd = new CountDownLatch(1)

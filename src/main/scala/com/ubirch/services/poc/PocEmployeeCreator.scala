@@ -1,6 +1,5 @@
 package com.ubirch.services.poc
 
-import cats.implicits.catsSyntaxApply
 import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
@@ -14,7 +13,7 @@ import org.joda.time.DateTime
 import javax.inject.Inject
 
 trait PocEmployeeCreator {
-  def createPocEmployees(): Task[PocEmployeeCreationResult]
+  def createPocEmployees(): Task[Unit]
 }
 
 object PocEmployeeCreator {
@@ -46,17 +45,24 @@ class PocEmployeeCreatorImpl @Inject() (
 
   import certifyHelper._
 
-  def createPocEmployees(): Task[PocEmployeeCreationResult] = {
-    employeeTable.getUncompletedPocEmployees().flatMap {
-      case pocEmployees if pocEmployees.isEmpty =>
+  def createPocEmployees(): Task[Unit] = {
+    employeeTable.getUncompletedPocEmployeesIds().flatMap {
+      case pocEmployeeIds if pocEmployeeIds.isEmpty =>
         logger.debug("no poc employees waiting for completion")
-        Task(PocEmployeeCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Employee"))) >>
-          Task(NoWaitingPocEmployee)
-      case pocEmployees =>
-        logger.info(s"starting to create ${pocEmployees.size} pocEmployees")
-        Task(ProcessingElements(DateTime.now(), "PoC Employee", pocEmployees.map(_.id.toString).mkString(", "))) >>
-          Task.sequence(pocEmployees.map(employee => Task.cancelBoundary *> createPocEmployee(employee).uncancelable))
-            .map(PocEmployeeCreationMaybeSuccess)
+        Task(PocEmployeeCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Employee"))).void
+      case pocEmployeeIds =>
+        Task.sequence(pocEmployeeIds.map(employeeId => {
+          (for {
+            _ <- Task(logger.info(s"Starting to process $employeeId pocEmployee"))
+            _ <- Task.cancelBoundary
+            _ <- Task(ProcessingElements(DateTime.now(), "PoC Employee", employeeId.toString))
+            pocEmployee <- employeeTable.unsafeGetUncompletedPocEmployeeById(employeeId)
+            _ <- createPocEmployee(pocEmployee).uncancelable
+          } yield ()).onErrorHandle(ex => {
+            logger.error(s"Unexpected error happened durring creating PoC Employee with id $pocEmployeeIds", ex)
+            ()
+          })
+        })).void
     }
   }
 
@@ -138,11 +144,6 @@ class PocEmployeeCreatorImpl @Inject() (
     Left(errorMsg + ex.getMessage)
   }
 }
-
-sealed trait PocEmployeeCreationResult
-case object NoWaitingPocEmployee extends PocEmployeeCreationResult
-case class PocEmployeeCreationMaybeSuccess(list: Seq[Either[String, PocEmployeeStatus]])
-  extends PocEmployeeCreationResult
 
 case class EmployeeAndStatus(employee: PocEmployee, status: PocEmployeeStatus)
 case class PocEmployeeCreationError(employeeAndStatus: EmployeeAndStatus, message: String) extends Exception(message)

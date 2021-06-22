@@ -1,8 +1,7 @@
 package com.ubirch.db.tables
 
-import com.ubirch.models.poc.Completed
 import com.ubirch.db.tables.model.PaginatedResult
-import com.ubirch.models.poc.{ Poc, PocAdmin }
+import com.ubirch.models.poc.{ Completed, Poc, PocAdmin }
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
@@ -43,7 +42,7 @@ class PocAdminRepositoryMock @Inject() (
     }
   }
 
-  def getAllUncompletedPocAdmins(): Task[List[PocAdmin]] = {
+  private def getAllUncompletedPocAdmins(): Task[List[PocAdmin]] = {
     Task {
       pocAdminDatastore.collect {
         case (_, pocAdmin: PocAdmin) if pocAdmin.status != Completed => pocAdmin
@@ -83,5 +82,16 @@ class PocAdminRepositoryMock @Inject() (
       case (_, pocAdmin) if pocAdmin.certifyUserId.contains(certifyUserId) => true
       case _                                                               => false
     }.map(_._2)
+  }
+
+  override def getAllUncompletedPocAdminsIds(): Task[List[UUID]] = getAllUncompletedPocAdmins().map(_.map(_.id))
+  override def unsafeGetUncompletedPocAdminById(id: UUID): Task[PocAdmin] =
+    getAllUncompletedPocAdmins().map(_.find(_.id == id).head)
+
+  override def getByPocId(pocId: UUID): Task[List[PocAdmin]] = Task {
+    pocAdminDatastore.filter {
+      case (_, pocAdmin) if pocAdmin.pocId == pocId => true
+      case _                                        => false
+    }.map(_._2).toList
   }
 }

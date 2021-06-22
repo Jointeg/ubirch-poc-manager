@@ -29,7 +29,9 @@ trait PocRepository {
 
   def getAllPocsByCriteria(criteria: Criteria): Task[PaginatedResult[Poc]]
 
-  def getAllUncompletedPocs(): Task[List[Poc]]
+  def getAllUncompletedPocsIds(): Task[List[UUID]]
+
+  def unsafeGetUncompletedPocByIds(id: UUID): Task[Poc]
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]]
 }
@@ -86,9 +88,14 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
         SimplifiedDeviceInfo(poc.externalId, poc.pocName, poc.deviceId))
     }
 
-  private def getAllPocsWithoutStatusQuery(status: Status) =
+  private def getAllPocIdsWithoutStatusQuery(status: Status) =
     quote {
-      querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status))
+      querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status)).map(_.id)
+    }
+
+  private def getPocWithoutStatusByIdQuery(status: Status, id: UUID) =
+    quote {
+      querySchema[Poc]("poc_manager.poc_table").filter(poc => poc.status != lift(status) && poc.id == lift(id))
     }
 
   override def createPoc(poc: Poc): Task[UUID] = run(createPocQuery(poc)).map(_ => poc.id)
@@ -118,7 +125,10 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
   override def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]] =
     run(getAllPocsByTenantIdQuery(tenantId))
 
-  def getAllUncompletedPocs(): Task[List[Poc]] = run(getAllPocsWithoutStatusQuery(Completed))
+  override def getAllUncompletedPocsIds(): Task[List[UUID]] = run(getAllPocIdsWithoutStatusQuery(Completed))
+
+  override def unsafeGetUncompletedPocByIds(id: UUID): Task[Poc] =
+    run(getPocWithoutStatusByIdQuery(Completed, id)).map(_.head)
 
   override def getAllPocsByCriteria(pocCriteria: Criteria): Task[PaginatedResult[Poc]] =
     transaction {
