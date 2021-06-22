@@ -32,12 +32,15 @@ class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) exte
       }.toList
     }
 
-  override def getAllUncompletedPocs(): Task[List[Poc]] =
+  private def getAllUncompletedPocs(): Task[List[Poc]] =
     Task {
       pocDatastore.collect {
         case (_, poc: Poc) if poc.status != Completed => poc
       }.toList
     }
+
+  override def unsafeGetUncompletedPocByIds(id: UUID): Task[Poc] =
+    getAllUncompletedPocs().map(_.filter(_.id == id).head)
 
   override def getPoc(pocId: UUID): Task[Option[Poc]] = {
     Task(pocDatastore.get(pocId))
@@ -67,4 +70,6 @@ class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) exte
   override def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]] =
     getAllPocsByTenantId(tenantId).map(pocs =>
       pocs.map(poc => SimplifiedDeviceInfo(poc.externalId, poc.pocName, poc.deviceId)))
+
+  override def getAllUncompletedPocsIds(): Task[List[UUID]] = getAllUncompletedPocs().map(_.map(_.id))
 }

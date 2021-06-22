@@ -2,20 +2,17 @@ package com.ubirch.services.poc
 import com.ubirch.UnitTestBase
 import com.ubirch.db.tables.{ PocLogoRepositoryMock, PocRepositoryMock, PocStatusRepositoryMock, TenantRepositoryMock }
 import com.ubirch.models.keycloak.roles.{ CreateKeycloakRole, RoleName }
-import com.ubirch.models.keycloak.user.CreateKeycloakUser
-import com.ubirch.models.poc.{ Completed, LogoURL, Poc, PocStatus, Processing }
+import com.ubirch.models.poc.{ Completed, LogoURL, Poc, Processing }
 import com.ubirch.models.tenant.Tenant
-import com.ubirch.models.user.{ Email, FirstName, LastName, UserName }
-import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.services.keycloak.groups.TestKeycloakGroupsService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.TestKeycloakUserService
 import com.ubirch.services.poc.PocTestHelper._
+import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }
 import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 
 import java.net.URL
-import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
 class PocCreatorTest extends UnitTestBase {
@@ -49,19 +46,13 @@ class PocCreatorTest extends UnitTestBase {
 
         createNeededDeviceUser(users, poc)
         //start process
-        val result = await(loop.createPocs(), 5.seconds)
+        await(loop.createPocs(), 5.seconds)
 
-        //validate result
-        val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-        val resultStatus = maybeSuccess.list.head.right.get
+        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         val allTrue = createPocStatusAllTrue()
         val expected =
-          allTrue.copy(pocId = poc.id, lastUpdated = resultStatus.lastUpdated, created = resultStatus.created)
-
-        maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
-
-        //val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
-        //status shouldBe expected
+          allTrue.copy(pocId = poc.id, lastUpdated = status.lastUpdated, created = status.created)
+        status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
         assert(newPoc.isDefined)
@@ -107,21 +98,18 @@ class PocCreatorTest extends UnitTestBase {
 
         createNeededDeviceUser(users, poc)
         //start process
-        val result = await(loop.createPocs(), 5.seconds)
+        await(loop.createPocs(), 5.seconds)
 
-        //validate result
-        val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-        val resultStatus = maybeSuccess.list.head.right.get
+        val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         val allTrue = createPocStatusAllTrue()
         val expected =
           allTrue.copy(
             pocId = poc.id,
             logoRequired = true,
             logoStored = Some(true),
-            lastUpdated = resultStatus.lastUpdated,
-            created = resultStatus.created)
-
-        maybeSuccess shouldBe PocCreationMaybeSuccess(List(Right(expected)))
+            lastUpdated = status.lastUpdated,
+            created = status.created)
+        status shouldBe expected
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
         assert(newPoc.isDefined)
@@ -158,11 +146,7 @@ class PocCreatorTest extends UnitTestBase {
           CertifyKeycloak).runSyncUnsafe()
 
         //start process
-        val result = await(loop.createPocs(), 5.seconds)
-
-        //validate result
-        val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-        maybeSuccess.list.head.isLeft shouldBe true
+        await(loop.createPocs(), 5.seconds)
 
         //pocStatus should be updated correctly
         val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
@@ -177,11 +161,7 @@ class PocCreatorTest extends UnitTestBase {
         tenantTable.updateTenant(updatedTenant).runSyncUnsafe(5.seconds)
 
         //start processing again
-        val result2 = await(loop.createPocs(), 5.seconds)
-
-        //validate result
-        val maybeSuccess2 = result2.asInstanceOf[PocCreationMaybeSuccess]
-        maybeSuccess2.list.head.isRight shouldBe true
+        await(loop.createPocs(), 5.seconds)
 
         val status2 = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
         val expected2 = pocStatus.copy(
@@ -245,11 +225,7 @@ class PocCreatorTest extends UnitTestBase {
 
         createNeededDeviceUser(users, poc)
         //start process
-        val result = await(loop.createPocs(), 5.seconds)
-
-        //validate result
-        val maybeSuccess = result.asInstanceOf[PocCreationMaybeSuccess]
-        maybeSuccess.list.head.isLeft shouldBe true
+        await(loop.createPocs(), 5.seconds)
 
         //pocStatus should be updated correctly
         val status = pocStatusTable.getPocStatus(pocStatus.pocId).runSyncUnsafe(5.seconds).get
@@ -276,15 +252,7 @@ class PocCreatorTest extends UnitTestBase {
         }.runSyncUnsafe(5.seconds)
 
         //start processing again
-        val result2 = await(loop.createPocs(), 5.seconds)
-
-        //validate result
-        val maybeSuccess2 = result2.asInstanceOf[PocCreationMaybeSuccess]
-        maybeSuccess2.list.head.isRight shouldBe true
-
-        maybeSuccess2 shouldBe PocCreationMaybeSuccess(List(Right(expected.copy(
-          logoStored = Some(true),
-          errorMessage = None))))
+        await(loop.createPocs(), 5.seconds)
 
         val newPoc = pocTable.getPoc(poc.id).runSyncUnsafe()
         assert(newPoc.isDefined)

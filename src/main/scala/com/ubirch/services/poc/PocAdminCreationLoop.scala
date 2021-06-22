@@ -15,7 +15,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.control.NonFatal
 
 trait PocAdminCreationLoop {
-  def startPocAdminCreationLoop[T](operation: PocAdminCreationResult => Observable[T]): Observable[T]
+  def startPocAdminCreationLoop: Observable[Unit]
 }
 
 class PocAdminCreationLoopImpl @Inject() (conf: Config, pocAdminCreator: PocAdminCreator)
@@ -23,7 +23,7 @@ class PocAdminCreationLoopImpl @Inject() (conf: Config, pocAdminCreator: PocAdmi
   with LazyLogging {
   private val pocAdminCreatorInterval = conf.getInt(POC_CREATION_INTERVAL)
 
-  private val startPocAdminCreation: Observable[PocAdminCreationResult] = {
+  private val startPocAdminCreation: Observable[Unit] = {
     for {
       _ <- Observable.intervalWithFixedDelay(pocAdminCreatorInterval.seconds)
       result <- Observable.fromTask(pocAdminCreator.createPocAdmins())
@@ -38,8 +38,8 @@ class PocAdminCreationLoopImpl @Inject() (conf: Config, pocAdminCreator: PocAdmi
     }
   }
 
-  override def startPocAdminCreationLoop[T](operation: PocAdminCreationResult => Observable[T]): Observable[T] =
-    retryWithDelay(startPocAdminCreation.flatMap(operation)).guaranteeCase {
+  override def startPocAdminCreationLoop: Observable[Unit] =
+    retryWithDelay(startPocAdminCreation).guaranteeCase {
       case ExitCase.Canceled  => Task(PocAdminCreationLoop.loopState.set(Cancelled))
       case ExitCase.Error(_)  => Task(PocAdminCreationLoop.loopState.set(ErrorTerminated(DateTime.now())))
       case ExitCase.Completed => Task(PocAdminCreationLoop.loopState.set(Completed))

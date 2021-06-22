@@ -1,7 +1,6 @@
 package com.ubirch.services.poc
 
 import cats.implicits.toTraverseOps
-import com.ubirch.{ PocConfig, UnitTestBase }
 import com.ubirch.db.tables._
 import com.ubirch.models.poc.Completed
 import com.ubirch.services.poc.PocAdminTestHelper.{
@@ -12,6 +11,7 @@ import com.ubirch.services.poc.PocAdminTestHelper.{
 import com.ubirch.services.poc.PocTestHelper.{ addPocTripleToRepository, createPocTriple }
 import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.test.FakeTeamDriveClient
+import com.ubirch.{ PocConfig, UnitTestBase }
 
 import java.util.UUID
 
@@ -42,21 +42,16 @@ class PocAdminCreatorTest extends UnitTestBase {
           teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
         }.runSyncUnsafe()
 
-        val result = creator.createPocAdmins().runSyncUnsafe()
+        creator.createPocAdmins().runSyncUnsafe()
 
-        result match {
-          case NoWaitingPocAdmin => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) =>
-            assert(list.nonEmpty)
-            assert(list.head.isRight)
-            val result = list.head.right.get
-            val allTrue = createPocAdminStatusAllTrue(webIdentRequired)
-            val expected =
-              allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
-
-            result shouldBe expected
-
-        }
+        val expectedPocAdminStatus = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe().value
+        val allTrue = createPocAdminStatusAllTrue(webIdentRequired)
+        val expected =
+          allTrue.copy(
+            pocAdminId = pocAdmin.id,
+            lastUpdated = expectedPocAdminStatus.lastUpdated,
+            created = expectedPocAdminStatus.created)
+        expectedPocAdminStatus shouldBe expected
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
         assert(newPocAdmin.isDefined)
@@ -90,12 +85,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         }.runSyncUnsafe()
 
         // start process
-        val result = creator.createPocAdmins().runSyncUnsafe()
-
-        result match {
-          case NoWaitingPocAdmin                  => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) => assert(list.head.isRight)
-        }
+        creator.createPocAdmins().runSyncUnsafe()
 
         // No change
         val expectedPocAdminStatus = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe()
@@ -107,20 +97,16 @@ class PocAdminCreatorTest extends UnitTestBase {
           webIdentSuccess = Some(true))).runSyncUnsafe()
 
         // restart process
-        val secondResult = creator.createPocAdmins().runSyncUnsafe()
+        creator.createPocAdmins().runSyncUnsafe()
 
-        secondResult match {
-          case NoWaitingPocAdmin => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) =>
-            assert(list.nonEmpty)
-            assert(list.head.isRight)
-            val result = list.head.right.get
-            val allTrue = createPocAdminStatusAllTrue(webIdentRequired)
-            val expected =
-              allTrue.copy(pocAdminId = pocAdmin.id, lastUpdated = result.lastUpdated, created = result.created)
-
-            result shouldBe expected
-        }
+        val expectedPocAdminStatus2 = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe().value
+        val allTrue = createPocAdminStatusAllTrue(webIdentRequired)
+        val expected =
+          allTrue.copy(
+            pocAdminId = pocAdmin.id,
+            lastUpdated = expectedPocAdminStatus2.lastUpdated,
+            created = expectedPocAdminStatus2.created)
+        expectedPocAdminStatus2 shouldBe expected
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
         assert(newPocAdmin.isDefined)
@@ -154,12 +140,7 @@ class PocAdminCreatorTest extends UnitTestBase {
         }.runSyncUnsafe()
 
         // start process
-        val result = creator.createPocAdmins().runSyncUnsafe()
-
-        result match {
-          case NoWaitingPocAdmin                  => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) => assert(list.head.isLeft)
-        }
+        creator.createPocAdmins().runSyncUnsafe()
 
         val updatedPocAdminStatus = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe()
         val expected = webIdentSuccessPocAdminStatus.copy(
@@ -178,23 +159,16 @@ class PocAdminCreatorTest extends UnitTestBase {
           adminGroupId = Some(UUID.randomUUID().toString))).runSyncUnsafe()
 
         // restart process
-        val secondResult = creator.createPocAdmins().runSyncUnsafe()
+        creator.createPocAdmins().runSyncUnsafe()
 
-        secondResult match {
-          case NoWaitingPocAdmin => fail("one poc admin should be found")
-          case PocAdminCreationMaybeSuccess(list) =>
-            assert(list.nonEmpty)
-            assert(list.head.isRight)
-            val result = list.head.right.get
-            val allTrue = createPocAdminStatusAllTrue(webIdentRequired)
-            val expectedFinal =
-              allTrue.copy(
-                pocAdminId = pocAdmin.id,
-                lastUpdated = result.lastUpdated,
-                created = result.created
-              )
-            result shouldBe expectedFinal
-        }
+        val expectedPocAdminStatus = pocAdminStatusTable.getStatus(pocAdmin.id).runSyncUnsafe().value
+        val allTrue = createPocAdminStatusAllTrue(webIdentRequired)
+        val expectedStatus =
+          allTrue.copy(
+            pocAdminId = pocAdmin.id,
+            lastUpdated = expectedPocAdminStatus.lastUpdated,
+            created = expectedPocAdminStatus.created)
+        expectedPocAdminStatus shouldBe expectedStatus
 
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
         assert(newPocAdmin.isDefined)

@@ -6,7 +6,7 @@ import com.ubirch.ModelCreationHelper.{
   createPocEmployeeStatusAllTrue
 }
 import com.ubirch.UnitTestBase
-import com.ubirch.db.tables.{ PocEmployeeRepositoryMock, PocEmployeeStatusRepositoryMock, PocRepositoryMock }
+import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
 import com.ubirch.models.poc.Completed
 
 import java.util.UUID
@@ -17,29 +17,25 @@ class PocEmployeeCreatorTest extends UnitTestBase {
     "create pending poc employee successfully" in {
       withInjector { injector =>
         val creator = injector.get[PocEmployeeCreator]
-        val pocTable = injector.get[PocRepositoryMock]
-        val employeeTable = injector.get[PocEmployeeRepositoryMock]
-        val statusTable = injector.get[PocEmployeeStatusRepositoryMock]
+        val pocTable = injector.get[PocRepository]
+        val employeeTable = injector.get[PocEmployeeRepository]
+        val statusTable = injector.get[PocEmployeeStatusRepository]
 
         val (poc, employee, status) = createEmployeeTriple
         val updatedPoc = poc.copy(employeeGroupId = Some(UUID.randomUUID().toString))
 
         addEmployeeTripleToRepository(pocTable, employeeTable, statusTable, updatedPoc, employee, status)
         employeeTable.getPocEmployee(poc.id).runSyncUnsafe().isDefined shouldBe false
-        val result = creator.createPocEmployees().runSyncUnsafe()
+        creator.createPocEmployees().runSyncUnsafe()
 
-        result match {
-          case NoWaitingPocEmployee => fail("one poc employee should be found")
-          case PocEmployeeCreationMaybeSuccess(list) =>
-            assert(list.nonEmpty)
-            assert(list.head.isRight)
-            val result = list.head.right.get
-            val allTrue = createPocEmployeeStatusAllTrue
-            val expected =
-              allTrue.copy(pocEmployeeId = employee.id, lastUpdated = result.lastUpdated, created = result.created)
-
-            result shouldBe expected
-        }
+        val updatedStatus = statusTable.getStatus(employee.id).runSyncUnsafe().value
+        val allTrue = createPocEmployeeStatusAllTrue
+        val expected =
+          allTrue.copy(
+            pocEmployeeId = employee.id,
+            lastUpdated = updatedStatus.lastUpdated,
+            created = updatedStatus.created)
+        updatedStatus shouldBe expected
 
         val newPocEmployee = employeeTable.getPocEmployee(employee.id).runSyncUnsafe()
         assert(newPocEmployee.isDefined)
@@ -50,21 +46,16 @@ class PocEmployeeCreatorTest extends UnitTestBase {
     "create pending poc employee - after certifyGroupId is created" in {
       withInjector { injector =>
         val creator = injector.get[PocEmployeeCreator]
-        val pocTable = injector.get[PocRepositoryMock]
-        val employeeTable = injector.get[PocEmployeeRepositoryMock]
-        val statusTable = injector.get[PocEmployeeStatusRepositoryMock]
+        val pocTable = injector.get[PocRepository]
+        val employeeTable = injector.get[PocEmployeeRepository]
+        val statusTable = injector.get[PocEmployeeStatusRepository]
 
         val (poc, employee, status) = createEmployeeTriple
         addEmployeeTripleToRepository(pocTable, employeeTable, statusTable, poc, employee, status)
         employeeTable.getPocEmployee(poc.id).runSyncUnsafe().isDefined shouldBe false
 
         // start process
-        val result = creator.createPocEmployees().runSyncUnsafe()
-
-        result match {
-          case NoWaitingPocEmployee                  => fail("one poc employee should be found")
-          case PocEmployeeCreationMaybeSuccess(list) => assert(list.head.isLeft)
-        }
+        creator.createPocEmployees().runSyncUnsafe()
 
         val updatedStatus = statusTable.getStatus(employee.id).runSyncUnsafe()
         val expected = status.copy(
@@ -77,23 +68,17 @@ class PocEmployeeCreatorTest extends UnitTestBase {
         pocTable.updatePoc(poc.copy(employeeGroupId = Some(UUID.randomUUID().toString))).runSyncUnsafe()
 
         // restart process
-        val secondResult = creator.createPocEmployees().runSyncUnsafe()
+        creator.createPocEmployees().runSyncUnsafe()
 
-        secondResult match {
-          case NoWaitingPocEmployee => fail("one poc employee should be found")
-          case PocEmployeeCreationMaybeSuccess(list) =>
-            assert(list.nonEmpty)
-            assert(list.head.isRight)
-            val result = list.head.right.get
-            val allTrue = createPocEmployeeStatusAllTrue
-            val expectedFinal =
-              allTrue.copy(
-                pocEmployeeId = employee.id,
-                lastUpdated = result.lastUpdated,
-                created = result.created
-              )
-            result shouldBe expectedFinal
-        }
+        val updatedStatus2 = statusTable.getStatus(employee.id).runSyncUnsafe().value
+        val allTrue = createPocEmployeeStatusAllTrue
+        val expectedFinal =
+          allTrue.copy(
+            pocEmployeeId = employee.id,
+            lastUpdated = updatedStatus2.lastUpdated,
+            created = updatedStatus2.created
+          )
+        updatedStatus2 shouldBe expectedFinal
 
         val newPocEmployee = employeeTable.getPocEmployee(employee.id).runSyncUnsafe()
         assert(newPocEmployee.isDefined)
