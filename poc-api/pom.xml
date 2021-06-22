@@ -125,6 +125,12 @@
     <dependencies>
 
         <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-poc-common</artifactId>
+            <version>0.0.1</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.5.12</version>
@@ -610,7 +616,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ubirch.Service</mainClass>
+                            <mainClass>com.com.ubirch.Service</mainClass>
                             <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                     </archive>
