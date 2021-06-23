@@ -28,7 +28,7 @@ import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.jackson.JsonMethods.{ parse, pretty, render }
 import org.json4s.native.Serialization.read
 import org.json4s.{ DefaultFormats, Formats }
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{ AppendedClues, BeforeAndAfterEach }
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 import java.time.{ Clock, Instant }
@@ -41,7 +41,8 @@ class PocAdminControllerSpec
   extends E2ETestBase
   with BeforeAndAfterEach
   with TableDrivenPropertyChecks
-  with ControllerSpecHelper {
+  with ControllerSpecHelper
+  with AppendedClues {
 
   implicit private val formats: Formats =
     DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
@@ -127,7 +128,8 @@ class PocAdminControllerSpec
         val (tenant, poc1, pocAdmin1) = createTenantWithPocAndPocAdmin(injector)
         val poc2 = addPocToDb(tenant, injector)
         addPocAdminToDB(poc2, tenant, injector)
-        val employee1 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
+        val employee1 =
+          createPocEmployee(pocId = poc1.id, tenantId = tenant.id, webAuthnDisconnected = Some(DateTime.now()))
         val employee2 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
         val employee3 = createPocEmployee(pocId = poc2.id, tenantId = tenant.id)
         val r = for {
@@ -359,6 +361,14 @@ class PocAdminControllerSpec
           await(getPocEmployee).value.webAuthnDisconnected shouldBe Some(new DateTime(
             clock.instant().toString,
             DateTimeZone.forID(clock.getZone.getId)))
+        }
+
+        get(
+          uri = s"/employees/${employee.id}",
+          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+        ) {
+          status should equal(200) withClue s"Error response: $body"
+          assertPocEmployeeJson(body).hasRevokeTime(DateTime.parse(clock.instant().toString))
         }
       }
 
@@ -665,7 +675,8 @@ class PocAdminControllerSpec
       val repository = i.get[PocEmployeeTable]
       val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
 
-      val employee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+      val employee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, webAuthnDisconnected = Some(DateTime.now()))
       val id = await(repository.createPocEmployee(employee))
 
       get(
@@ -681,6 +692,7 @@ class PocAdminControllerSpec
           .hasActive(employee.active)
           .hasStatus(employee.status.toString.toUpperCase)
           .hasCreatedAt(employee.created.dateTime)
+          .hasRevokeTime(employee.webAuthnDisconnected.value)
       }
     }
 
@@ -787,6 +799,7 @@ class PocAdminControllerSpec
           .hasActive(updatedPocEmployee.active)
           .hasStatus(updatedPocEmployee.status.toString.toUpperCase)
           .hasCreatedAt(updatedPocEmployee.created.dateTime)
+          .doesNotHaveRevokeTime()
       }
 
       val ur = await(keycloakUserService.getUserById(poc.getRealm, UserId(certifyUserId), CertifyKeycloak)).value
