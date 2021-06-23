@@ -578,65 +578,6 @@
                 </executions>
             </plugin>
 
-            <!-- add licenses.txt -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <version>${license-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>attach-licenses</id>
-                        <goals>
-                            <goal>add-third-party</goal>
-                        </goals>
-                        <configuration>
-                            <thirdPartyFilename>licenses.txt</thirdPartyFilename>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>${maven-jar-plugin.version}</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ubirch.Service</mainClass>
-                            <useUniqueVersions>false</useUniqueVersions>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-            <!-- create and/or push the created docker image -->
-            <plugin>
-                <groupId>com.spotify</groupId>
-                <artifactId>dockerfile-maven-plugin</artifactId>
-                <version>${dockerfile-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>default</id>
-                        <goals>
-                            <goal>build</goal>
-                            <goal>push</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <buildDirectory>${project.build.outputDirectory}</buildDirectory>
-                    <repository>ubirch/${project.artifactId}</repository>
-                    <tag>${build.number}</tag>
-                    <buildArgs>
-                        <VERSION>${project.version}</VERSION>
-                        <BUILD>${build.number}</BUILD>
-                        <SERVICE_NAME>${project.name}</SERVICE_NAME>
-                        <JAR_LIBS>target/lib</JAR_LIBS>
-                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
-                    </buildArgs>
-                </configuration>
-            </plugin>
             <!-- for mvn deploy to work, disable the default deploy plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
