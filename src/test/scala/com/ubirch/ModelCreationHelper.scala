@@ -100,6 +100,7 @@ object ModelCreationHelper {
     dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
     status: Status = Pending,
     active: Boolean = true,
+    webAuthnDisconnected: Option[DateTime] = None,
     created: DateTime = DateTime.now()
   ): PocAdmin = {
     PocAdmin(
@@ -117,6 +118,7 @@ object ModelCreationHelper {
       dateOfBirth = dateOfBirth,
       status = status,
       active = active,
+      webAuthnDisconnected = webAuthnDisconnected,
       created = Created(created)
     )
   }
