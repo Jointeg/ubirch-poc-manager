@@ -8,14 +8,16 @@ import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.PocEmployeeTable
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.e2e.controllers.PocAdminControllerSpec._
+import com.ubirch.e2e.controllers.assertions.PocEmployeesJsonAssertion._
+import com.ubirch.e2e.controllers.assertions.PocEmployeeJsonAssertion._
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.Tenant
 import com.ubirch.models.user.UserId
-import com.ubirch.models.{ FieldError, Paginated_OUT, ValidationErrorsResponse }
+import com.ubirch.models.{ FieldError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
-import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
 import com.ubirch.util.KeycloakRealmsHelper._
@@ -43,7 +45,7 @@ class PocAdminControllerSpec
   with ControllerSpecHelper {
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   private val goodCsv =
     s"""$pocEmployeeHeaderLine
@@ -125,7 +127,7 @@ class PocAdminControllerSpec
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc1, pocAdmin1) = createTenantWithPocAndPocAdmin(injector)
         val poc2 = addPocToDb(tenant, injector)
-        val _ = addPocAdminToDB(poc2, tenant, injector)
+        addPocAdminToDB(poc2, tenant, injector)
         val employee1 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
         val employee2 = createPocEmployee(pocId = poc1.id, tenantId = tenant.id)
         val employee3 = createPocEmployee(pocId = poc2.id, tenantId = tenant.id)
@@ -135,14 +137,15 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds)
-        employees.size shouldBe 3
-        val expectedEmployees = employees.filter(_.pocId == poc1.id).map(_.toPocEmployeeOut)
+        await(r)
+
         get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin1.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 2
-          employeeOut.records shouldBe expectedEmployees
+          assertPocEmployeesJson(body)
+            .hasTotal(2)
+            .hasEmployeeCount(2)
+            .hasEmployeeAtIndex(0, employee1)
+            .hasEmployeeAtIndex(1, employee2)
         }
       }
     }
@@ -162,9 +165,9 @@ class PocAdminControllerSpec
         val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 0
-          employeeOut.records should have size 0
+          assertPocEmployeesJson(body)
+            .hasTotal(0)
+            .hasEmployeeCount(0)
         }
       }
     }
@@ -187,17 +190,18 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee5)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
-        employees.size shouldBe 5
+        val employees = await(r)
         get(
           EndPoint,
           params = Map("pageIndex" -> "1", "pageSize" -> "2"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          val expectedEmployees = employees.slice(2, 4)
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 5
-          employeeOut.records shouldBe employees.slice(2, 4)
+          assertPocEmployeesJson(body)
+            .hasTotal(5)
+            .hasEmployeeCount(2)
+            .hasEmployees(expectedEmployees)
         }
       }
     }
@@ -216,17 +220,17 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
-        employees.size shouldBe 3
+        val employees = await(r)
         get(
           EndPoint,
           params = Map("search" -> "employee 1"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 2
-          employeeOut.records shouldBe employees.filter(_.firstName.startsWith("employee 1"))
+          assertPocEmployeesJson(body)
+            .hasTotal(2)
+            .hasEmployeeCount(2)
+            .hasEmployees(employees.filter(_.name.startsWith("employee 1")))
         }
       }
     }
@@ -245,17 +249,17 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
-        employees.size shouldBe 3
+        val employees = await(r)
         get(
           EndPoint,
           params = Map("search" -> "employee 1"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 2
-          employeeOut.records shouldBe employees.filter(_.lastName.startsWith("employee 1"))
+          assertPocEmployeesJson(body)
+            .hasTotal(2)
+            .hasEmployeeCount(2)
+            .hasEmployees(employees.filter(_.surname.startsWith("employee 1")))
         }
       }
     }
@@ -274,17 +278,17 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds).map(_.toPocEmployeeOut)
-        employees.size shouldBe 3
+        val employees = await(r)
         get(
           EndPoint,
           params = Map("search" -> "employee1"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 2
-          employeeOut.records shouldBe employees.filter(_.email.startsWith("employee1"))
+          assertPocEmployeesJson(body)
+            .hasTotal(2)
+            .hasEmployeeCount(2)
+            .hasEmployees(employees.filter(_.email.startsWith("employee 1")))
         }
       }
     }
@@ -303,17 +307,17 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds).sortBy(_.name).map(_.toPocEmployeeOut)
-        employees.size shouldBe 3
+        val employees = await(r).sortBy(_.name)
         get(
           EndPoint,
           params = Map("sortColumn" -> "firstName", "sortOrder" -> "asc"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 3
-          employeeOut.records shouldBe employees
+          assertPocEmployeesJson(body)
+            .hasTotal(3)
+            .hasEmployeeCount(3)
+            .hasEmployees(employees)
         }
       }
     }
@@ -437,26 +441,28 @@ class PocAdminControllerSpec
         val token = injector.get[FakeTokenCreator]
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
-        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 11")
-        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee A")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee B")
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee C")
         val r = for {
           _ <- employeeTable.createPocEmployee(employee1)
           _ <- employeeTable.createPocEmployee(employee2)
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees = await(r, 5.seconds).sortBy(_.name).reverse.map(_.toPocEmployeeOut)
-        employees.size shouldBe 3
+        val employees = await(r).filter(_.name.startsWith("employee 1")).sortBy(_.name).reverse
         get(
           EndPoint,
           params = Map("sortColumn" -> "firstName", "sortOrder" -> "desc"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 3
-          employeeOut.records shouldBe employees
+          assertPocEmployeesJson(body)
+            .hasTotal(3)
+            .hasEmployeeCount(3)
+            .hasEmployeeAtIndex(0)(_.hasFirstName("employee C"))
+            .hasEmployeeAtIndex(1)(_.hasFirstName("employee B"))
+            .hasEmployeeAtIndex(2)(_.hasFirstName("employee A"))
         }
       }
     }
@@ -478,18 +484,17 @@ class PocAdminControllerSpec
           _ <- employeeTable.createPocEmployee(employee3)
           employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
         } yield employees
-        val employees =
-          await(r, 5.seconds).filter(p => Seq(Pending, Processing).contains(p.status)).map(_.toPocEmployeeOut)
-        employees.size shouldBe 2
+        val employees = await(r).filter(p => Seq(Pending, Processing).contains(p.status))
         get(
           EndPoint,
           params = Map("filterColumn[status]" -> "pending,processing"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
-          val employeeOut = read[Paginated_OUT[PocEmployee_OUT]](body)
-          employeeOut.total shouldBe 2
-          employeeOut.records shouldBe employees
+          assertPocEmployeesJson(body)
+            .hasTotal(2)
+            .hasEmployeeCount(2)
+            .hasEmployees(employees)
         }
       }
     }
@@ -661,15 +666,22 @@ class PocAdminControllerSpec
       val repository = i.get[PocEmployeeTable]
       val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
 
-      val pocEmployee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
-      val id = await(repository.createPocEmployee(pocEmployee))
+      val employee = createPocEmployee(tenantId = tenant.id, pocId = poc.id)
+      val id = await(repository.createPocEmployee(employee))
 
       get(
         uri = s"/employees/$id",
         headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocEmployee.toPocEmployeeOutJson
+        assertPocEmployeeJson(body)
+          .hasId(employee.id)
+          .hasFirstName(employee.name)
+          .hasLastName(employee.surname)
+          .hasEmail(employee.email)
+          .hasActive(employee.active)
+          .hasStatus(employee.status.toString.toUpperCase)
+          .hasCreatedAt(employee.created.dateTime)
       }
     }
 
@@ -768,7 +780,14 @@ class PocAdminControllerSpec
         headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe updatedPocEmployee.toPocEmployeeOutJson
+        assertPocEmployeeJson(body)
+          .hasId(updatedPocEmployee.id)
+          .hasFirstName(updatedPocEmployee.name)
+          .hasLastName(updatedPocEmployee.surname)
+          .hasEmail(updatedPocEmployee.email)
+          .hasActive(updatedPocEmployee.active)
+          .hasStatus(updatedPocEmployee.status.toString.toUpperCase)
+          .hasCreatedAt(updatedPocEmployee.created.dateTime)
       }
 
       val ur = await(keycloakUserService.getUserById(poc.getRealm, UserId(certifyUserId), CertifyKeycloak)).value
@@ -981,10 +1000,12 @@ class PocAdminControllerSpec
       addServlet(superAdminController, "/*")
     }
   }
-
 }
 
 object PocAdminControllerSpec {
+  implicit val pocEmployeeOrdering: Ordering[PocEmployee] =
+    (x: PocEmployee, y: PocEmployee) => x.name.compareTo(y.name)
+
   implicit class EmployeeOps(employee: PocEmployee) {
     def datesToIsoFormat: PocEmployee = {
       employee.copy(
@@ -997,19 +1018,6 @@ object PocAdminControllerSpec {
   }
 
   implicit class PocEmployeeOps(pe: PocEmployee) {
-    def toPocEmployeeOutJson: String = {
-      val json =
-        s"""{
-           | "id": "${pe.id}",
-           | "firstName": "${pe.name}",
-           | "lastName": "${pe.surname}",
-           | "email": "${pe.email}",
-           | "active": ${pe.active},
-           | "status": "${Status.toFormattedString(pe.status)}"
-           |}""".stripMargin
-      pretty(render(parse(json)))
-    }
-
     def toPocEmployeeInJson: String = {
       val json =
         s"""{

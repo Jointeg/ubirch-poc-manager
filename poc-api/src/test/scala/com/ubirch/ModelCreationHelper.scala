@@ -19,7 +19,7 @@ import com.ubirch.services.poc.PocTestHelper.await
 import com.ubirch.test.TestData
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import monix.execution.Scheduler.Implicits.global
-import org.joda.time.LocalDate
+import org.joda.time.{ DateTime, LocalDate }
 import org.json4s.native.JsonMethods.parse
 
 import java.util.UUID
@@ -99,7 +99,8 @@ object ModelCreationHelper {
     certifyUserId: Option[UUID] = None,
     dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
     status: Status = Pending,
-    active: Boolean = true
+    active: Boolean = true,
+    created: DateTime = DateTime.now()
   ): PocAdmin = {
     PocAdmin(
       id = pocAdminId,
@@ -115,11 +116,12 @@ object ModelCreationHelper {
       certifyUserId = certifyUserId,
       dateOfBirth = dateOfBirth,
       status = status,
-      active = active
+      active = active,
+      created = Created(created)
     )
   }
 
-  private def getRandomString = Random.alphanumeric.take(10).mkString
+  private def getRandomString = Random.alphanumeric.filter(_.isLetter).take(10).mkString.capitalize
 
   def createPocAdminStatus(pocAdmin: PocAdmin, poc: Poc): PocAdminStatus =
     PocAdminStatus.init(pocAdmin, poc, pocConfig.pocTypeStaticSpaceNameMap)

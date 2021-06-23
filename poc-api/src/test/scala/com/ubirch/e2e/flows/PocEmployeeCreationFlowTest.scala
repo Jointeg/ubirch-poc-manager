@@ -13,7 +13,7 @@ import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.{ Tenant, TenantName, TenantType }
 import com.ubirch.models.user.UserName
-import com.ubirch.services.formats.{ CustomFormats, JodaDateTimeFormats }
+import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.keycloak.groups.KeycloakGroupService
 import com.ubirch.services.keycloak.roles.KeycloakRolesService
 import com.ubirch.services.keycloak.users.KeycloakUserService
@@ -38,7 +38,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
   override protected val useMockKeyDiscoveryService: DiscoveryServiceType = RealDiscoverService
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ JodaDateTimeFormats.all ++ TestFormats.all
+    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ TestFormats.all
 
   val poc1Id: UUID = UUID.randomUUID()
 
