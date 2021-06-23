@@ -188,7 +188,8 @@ object ModelCreationHelper {
     surname: String = "Welsich",
     status: Status = Pending,
     certifyUserId: Option[UUID] = None,
-    email: String = getRandomString + "@test.de"): PocEmployee = {
+    email: String = getRandomString + "@test.de",
+    webAuthnDisconnected: Option[DateTime] = None): PocEmployee = {
     PocEmployee(
       employeeId,
       pocId,
@@ -197,6 +198,7 @@ object ModelCreationHelper {
       surname,
       email,
       status = status,
+      webAuthnDisconnected = webAuthnDisconnected,
       certifyUserId = certifyUserId
     )
   }
