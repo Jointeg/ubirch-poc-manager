@@ -43,8 +43,18 @@ class TestPocConfig @Inject() (
 
   val groupRepresentation = new GroupRepresentation()
   groupRepresentation.setName("vaccination-v3")
-  keycloakConnector.keycloak.realm("ubirch-default-realm").groups().add(groupRepresentation)
-  val id: GroupRepresentation = keycloakConnector.keycloak.realm("ubirch-default-realm").groups().groups().asScala.head
+  keycloakConnector
+    .keycloak
+    .realm("ubirch-default-realm")
+    .groups()
+    .add(groupRepresentation)
+  val id: GroupRepresentation = keycloakConnector
+    .keycloak
+    .realm("ubirch-default-realm")
+    .groups()
+    .groups()
+    .asScala
+    .head
   override val dataSchemaGroupMap = Map("vaccination-v3" -> id.getId)
   override val trustedPocGroupMap: Map[String, String] = Map("vaccination-v3" -> id.getId)
 }

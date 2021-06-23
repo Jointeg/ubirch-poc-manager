@@ -9,7 +9,7 @@ import java.time.Duration
 class KeycloakContainer(underlying: GenericContainer, mountExtension: Boolean, realmExportFile: String)
   extends GenericContainer(underlying) {
   underlying.container.withCopyFileToContainer(
-    MountableFile.forHostPath(s"./keycloak/realms/$realmExportFile"),
+    MountableFile.forHostPath(s"./realms/$realmExportFile"),
     s"/tmp/$realmExportFile")
 }
 
