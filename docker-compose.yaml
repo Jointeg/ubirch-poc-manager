@@ -58,7 +58,7 @@ services:
     networks:
       - db_network
     volumes:
-      - $PWD/src/main/resources/db/migration:/flyway/sql
+      - $PWD/poc-api/src/main/resources/db/migration:/flyway/sql
       - $PWD/flyway.conf:/flyway/conf/flyway.conf
     depends_on:
       - postgres
