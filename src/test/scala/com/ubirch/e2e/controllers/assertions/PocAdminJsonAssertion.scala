@@ -2,7 +2,7 @@ package com.ubirch.e2e.controllers.assertions
 
 import org.joda.time.{ DateTime, LocalDate }
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.{ JBool, JInt, JObject, JString, JValue }
+import org.json4s._
 import org.scalatest.{ AppendedClues, Matchers }
 
 import java.util.UUID
@@ -71,6 +71,11 @@ class PocAdminJsonAssertion(json: JValue) extends Matchers with AppendedClues { 
     self
   }
 
+  def doesNotHaveRevokeTime(): PocAdminJsonAssertion = {
+    json \ "revokeTime" shouldBe JNothing
+    self
+  }
+
   def hasDateOfBirth(dateOfBirth: LocalDate): PocAdminJsonAssertion = {
     json \ "dateOfBirth" \ "year" shouldBe JInt(dateOfBirth.getYear)
     json \ "dateOfBirth" \ "month" shouldBe JInt(dateOfBirth.getMonthOfYear)
@@ -98,8 +103,18 @@ class PocAdminJsonAssertion(json: JValue) extends Matchers with AppendedClues { 
     self
   }
 
+  def doesNotHaveWebIdentInitiateId(): PocAdminJsonAssertion = {
+    json \ "webIdentInitiateId" shouldBe JNothing
+    self
+  }
+
   def hasWebIdentSuccessId(webIdentSuccessId: String): PocAdminJsonAssertion = {
     json \ "webIdentSuccessId" shouldBe JString(webIdentSuccessId)
+    self
+  }
+
+  def doesNotHaveWebIdentSuccessId(): PocAdminJsonAssertion = {
+    json \ "webIdentSuccessId" shouldBe JNothing
     self
   }
 }
