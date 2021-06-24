@@ -50,6 +50,11 @@
 
     <properties>
         <keycloack.version>11.0.2</keycloack.version>
+        <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
+        <bcpkix-jdk15on.version>1.61</bcpkix-jdk15on.version>
+        <bcprov-jdk15on.version>1.61</bcprov-jdk15on.version>
+        <testcontainers.version>1.15.2</testcontainers.version>
+        <flyway.version>7.8.1</flyway.version>
     </properties>
 
     <dependencies>
@@ -107,6 +112,105 @@
             <artifactId>keycloak-model-jpa</artifactId>
             <version>${keycloack.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-crypto</artifactId>
+            <version>${ubirch-crypto.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.14</version>
+        </dependency>
+
+        <!--BouncyCastle-->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>${bcprov-jdk15on.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>${bcpkix-jdk15on.version}</version>
+        </dependency>
+
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-scalatest_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-postgresql_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Wiremock -->
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock-jre8-standalone</artifactId>
+            <version>2.28.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- HTTP client -->
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>core_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>json4s_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>async-http-client-backend-monix_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>slf4j-backend_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/async-http-client-backend-future -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>async-http-client-backend-future_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>${flyway.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>
