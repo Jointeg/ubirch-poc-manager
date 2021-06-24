@@ -1,7 +1,7 @@
 package com.ubirch.services.execution
 
 import com.typesafe.config.Config
-import com.ubirch.ConfPaths.ExecutionContextConfPaths
+import com.ubirch.CommonConf.ExecutionContextConfPaths.THREAD_POOL_SIZE
 import monix.execution.Scheduler
 
 import java.util.concurrent.Executors
@@ -22,10 +22,7 @@ trait Execution {
   * @param config Represents the configuration object
   */
 @Singleton
-class ExecutionProvider @Inject() (config: Config)
-  extends Provider[ExecutionContext]
-  with Execution
-  with ExecutionContextConfPaths {
+class ExecutionProvider @Inject() (config: Config) extends Provider[ExecutionContext] with Execution {
 
   val threadPoolSize: Int = config.getInt(THREAD_POOL_SIZE)
 

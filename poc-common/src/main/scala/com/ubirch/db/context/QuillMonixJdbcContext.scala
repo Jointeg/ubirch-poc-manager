@@ -2,7 +2,7 @@ package com.ubirch.db.context
 
 import com.google.inject.{ Inject, Singleton }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.services.lifeCycle.Lifecycle
+import com.ubirch.services.lifecycle.Lifecycle
 import io.getquill.{ PostgresMonixJdbcContext, SnakeCase }
 import monix.eval.Task
 import monix.execution.Scheduler

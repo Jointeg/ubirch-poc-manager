@@ -12,7 +12,7 @@ import org.json4s.{ DefaultFormats, Formats, StringInput }
 class JsonFormatTests extends UnitTestBase {
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ new CustomFormats().formats ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   "TenantId" should {
     "be serialized to value: uuid format" in {

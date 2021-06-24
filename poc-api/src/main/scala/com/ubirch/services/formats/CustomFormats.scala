@@ -2,10 +2,13 @@ package com.ubirch.services.formats
 
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.json4s.ext.DateParser
-import org.json4s.{ CustomSerializer, JString, MappingException }
+import org.json4s.{ CustomSerializer, JString, MappingException, Serializer }
 
-object CustomFormats {
-  val all = PocFormats.all ++ CommonFormats.all
+import javax.inject.Singleton
+
+@Singleton
+class CustomFormats extends CustomJsonFormats {
+  val formats: Iterable[Serializer[_]] = PocFormats.all ++ CommonFormats.all
 }
 
 trait FormatHelperMethods {

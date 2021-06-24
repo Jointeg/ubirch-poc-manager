@@ -2,8 +2,8 @@ package com.ubirch.services.metrics
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.PrometheusConfPaths
-import com.ubirch.services.lifeCycle.Lifecycle
+import com.ubirch.CommonConf
+import com.ubirch.services.lifecycle.Lifecycle
 import io.prometheus.client.exporter.HTTPServer
 import io.prometheus.client.hotspot.DefaultExports
 
@@ -18,9 +18,9 @@ import scala.concurrent.Future
   * @param lifecycle the life cycle tool
   */
 @Singleton
-class PrometheusMetrics @Inject() (config: Config, lifecycle: Lifecycle) extends PrometheusConfPaths with LazyLogging {
+class PrometheusMetrics @Inject() (config: Config, lifecycle: Lifecycle) extends LazyLogging {
 
-  val port: Int = config.getInt(PORT)
+  val port: Int = config.getInt(CommonConf.PrometheusMetrics.PORT)
 
   logger.debug("Creating Prometheus Server on Port[{}]", port)
 

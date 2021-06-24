@@ -25,7 +25,7 @@ import scala.concurrent.duration.DurationInt
 
 class PocEmployeeControllerSpec extends E2ETestBase with BeforeAndAfterEach with ControllerSpecHelper {
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ new CustomFormats().formats ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   private val ContentTypeKey = "Content-Type"
   private val JsonContentType = "application/json"

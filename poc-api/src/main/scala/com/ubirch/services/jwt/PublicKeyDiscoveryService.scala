@@ -2,7 +2,12 @@ package com.ubirch.services.jwt
 
 import cats.effect.{ ExitCode, Resource }
 import com.ubirch.services.config.ConfigProvider
-import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.formats.{
+  DefaultJsonConverterService,
+  EmptyCustomJsonFormats,
+  JsonConverterService,
+  JsonFormatsProvider
+}
 import com.ubirch.services.keycloak.{
   KeycloakCertifyConfig,
   KeycloakDeviceConfig,
@@ -119,7 +124,7 @@ object DefaultPublicKeyDiscoveryService extends TaskApp {
 
   override def run(args: List[String]): Task[ExitCode] = {
 
-    implicit val formats: Formats = new JsonFormatsProvider().get()
+    implicit val formats: Formats = new JsonFormatsProvider(new EmptyCustomJsonFormats()).get()
     val config = new ConfigProvider().get()
     val keycloakCertifyConfig = new RealKeycloakCertifyConfig(config)
     val keycloakDeviceConfig = new RealKeycloakDeviceConfig(config)

@@ -1,7 +1,8 @@
-package com.ubirch.services.lifeCycle
+package com.ubirch.services.lifecycle
 
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.PocConfig
+import com.ubirch.CommonConf
 
 import java.util.concurrent.{ ConcurrentLinkedDeque, CountDownLatch, TimeUnit }
 import javax.inject._
@@ -69,7 +70,7 @@ trait JVMHook {
   */
 
 @Singleton
-class DefaultJVMHook @Inject() (lifecycle: Lifecycle, pocConfig: PocConfig)(implicit ec: ExecutionContext)
+class DefaultJVMHook @Inject() (lifecycle: Lifecycle, config: Config)(implicit ec: ExecutionContext)
   extends JVMHook
   with LazyLogging {
 
@@ -88,7 +89,7 @@ class DefaultJVMHook @Inject() (lifecycle: Lifecycle, pocConfig: PocConfig)(impl
             countDownLatch.countDown()
         }
 
-        val res = countDownLatch.await(pocConfig.generalTimeout, TimeUnit.SECONDS)
+        val res = countDownLatch.await(config.getInt(CommonConf.Lifecycle.TIMEOUT), TimeUnit.SECONDS)
         if (!res) logger.warn("Taking too much time shutting down :(  ..")
         else logger.info("Bye bye, see you later...")
       }

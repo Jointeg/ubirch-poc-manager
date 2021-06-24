@@ -45,7 +45,7 @@ class PocAdminControllerSpec
   with ControllerSpecHelper {
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ new CustomFormats().formats ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   private val goodCsv =
     s"""$pocEmployeeHeaderLine

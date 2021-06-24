@@ -2,8 +2,8 @@ package com.ubirch.services.rest
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.ConfPaths.HttpServerConfPaths
-import com.ubirch.services.lifeCycle.Lifecycle
+import com.ubirch.CommonConf.HttpServerConfPaths
+import com.ubirch.services.lifecycle.Lifecycle
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.eclipse.jetty.server.{ Handler, HttpConnectionFactory, Server }
 import org.eclipse.jetty.servlet.DefaultServlet

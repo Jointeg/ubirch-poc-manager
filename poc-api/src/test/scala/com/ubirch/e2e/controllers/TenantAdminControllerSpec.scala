@@ -51,7 +51,7 @@ class TenantAdminControllerSpec
   private val poc1id: UUID = UUID.randomUUID()
   private val poc2id: UUID = UUID.randomUUID()
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ new CustomFormats().formats ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   private val addDeviceCreationToken: String =
     s"""
