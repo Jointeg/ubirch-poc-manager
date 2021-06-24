@@ -2,25 +2,27 @@ package com.ubirch.e2e.controllers.assertions
 
 import org.joda.time.DateTime
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.{ JBool, JObject, JString, JValue }
+import org.json4s.{ JBool, JNothing, JObject, JString, JValue }
 import org.scalatest.{ AppendedClues, Matchers }
 
 import java.util.UUID
 
 class PocEmployeeJsonAssertion(json: JValue) extends Matchers with AppendedClues { self =>
-  private val expectedFields: Seq[String] = Seq(
+  private val validFields: Seq[String] = Seq(
     "id",
     "firstName",
     "lastName",
     "email",
     "active",
     "status",
+    "revokeTime",
     "createdAt"
   )
 
   {
     val parsedFields = json.asInstanceOf[JObject].obj.map { case (name, _) => name }
-    parsedFields shouldBe expectedFields withClue "returned poc employee's fields did not match expected ones"
+    parsedFields.filterNot(f =>
+      validFields.contains(f)) shouldBe Seq.empty withClue "returned poc employee's fields did not match expected ones"
   }
 
   def hasId(id: UUID): PocEmployeeJsonAssertion = {
@@ -54,6 +56,16 @@ class PocEmployeeJsonAssertion(json: JValue) extends Matchers with AppendedClues
 
   def hasCreatedAt(createdAt: DateTime): PocEmployeeJsonAssertion = {
     json \ "createdAt" shouldBe JString(createdAt.toInstant.toString)
+    self
+  }
+
+  def hasRevokeTime(removeTime: DateTime): PocEmployeeJsonAssertion = {
+    json \ "revokeTime" shouldBe JString(removeTime.toInstant.toString)
+    self
+  }
+
+  def doesNotHaveRevokeTime(): PocEmployeeJsonAssertion = {
+    json \ "revokeTime" shouldBe JNothing
     self
   }
 }
