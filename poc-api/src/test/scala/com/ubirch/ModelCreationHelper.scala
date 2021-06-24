@@ -100,6 +100,7 @@ object ModelCreationHelper {
     dateOfBirth: BirthDate = BirthDate(LocalDate.now.minusYears(20)),
     status: Status = Pending,
     active: Boolean = true,
+    webAuthnDisconnected: Option[DateTime] = None,
     created: DateTime = DateTime.now()
   ): PocAdmin = {
     PocAdmin(
@@ -117,6 +118,7 @@ object ModelCreationHelper {
       dateOfBirth = dateOfBirth,
       status = status,
       active = active,
+      webAuthnDisconnected = webAuthnDisconnected,
       created = Created(created)
     )
   }
@@ -187,7 +189,8 @@ object ModelCreationHelper {
     surname: String = "Welsich",
     status: Status = Pending,
     certifyUserId: Option[UUID] = None,
-    email: String = getRandomString + "@test.de"): PocEmployee = {
+    email: String = getRandomString + "@test.de",
+    webAuthnDisconnected: Option[DateTime] = None): PocEmployee = {
     PocEmployee(
       employeeId,
       pocId,
@@ -196,6 +199,7 @@ object ModelCreationHelper {
       surname,
       email,
       status = status,
+      webAuthnDisconnected = webAuthnDisconnected,
       certifyUserId = certifyUserId
     )
   }

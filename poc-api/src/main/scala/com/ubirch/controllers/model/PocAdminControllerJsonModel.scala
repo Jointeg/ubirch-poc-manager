@@ -13,6 +13,7 @@ object PocAdminControllerJsonModel {
     email: String,
     active: Boolean,
     status: Status,
+    revokeTime: Option[DateTime],
     createdAt: DateTime)
 
   case class PocEmployee_IN(firstName: String, lastName: String, email: String) {
@@ -28,6 +29,7 @@ object PocAdminControllerJsonModel {
         email = pocEmployee.email,
         active = pocEmployee.active,
         status = pocEmployee.status,
+        revokeTime = pocEmployee.webAuthnDisconnected,
         createdAt = pocEmployee.created.dateTime
       )
   }

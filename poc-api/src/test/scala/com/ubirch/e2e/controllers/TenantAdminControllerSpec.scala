@@ -7,8 +7,9 @@ import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_OUT
 import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
+import com.ubirch.e2e.controllers.assertions.PocAdminJsonAssertion._
+import com.ubirch.e2e.controllers.assertions.PocAdminsJsonAssertion._
 import com.ubirch.models.keycloak.user.UserRequiredAction
-import com.ubirch.models.NOK
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ CreatePocAdminRequest, Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
@@ -19,7 +20,6 @@ import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.columnSeparator
-import com.ubirch.services.CertifyKeycloak
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
 import com.ubirch.{ FakeTokenCreator, InjectorHelper }
@@ -32,7 +32,7 @@ import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.{ read, write }
 import org.scalatest.prop.TableDrivenPropertyChecks
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
+import org.scalatest.{ AppendedClues, BeforeAndAfterAll, BeforeAndAfterEach }
 import org.scalatra.{ BadRequest, Conflict, Ok }
 
 import java.nio.charset.StandardCharsets
@@ -44,7 +44,8 @@ class TenantAdminControllerSpec
   extends E2ETestBase
   with TableDrivenPropertyChecks
   with BeforeAndAfterEach
-  with BeforeAndAfterAll {
+  with BeforeAndAfterAll
+  with AppendedClues {
 
   import TenantAdminControllerSpec._
 
@@ -688,11 +689,10 @@ class TenantAdminControllerSpec
 
         get(s"/poc-admins", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
-          pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-            size = 2,
-            poc,
-            pocAdmins
-          )
+          assertPocAdminsJson(body)
+            .hasTotal(2)
+            .hasAdminCount(2)
+            .hasAdmins(pocAdmins.map(pa => (poc, pa)))
         }
       }
     }
@@ -715,9 +715,9 @@ class TenantAdminControllerSpec
         val token = Injector.get[FakeTokenCreator]
         get(s"/poc-admins", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
           status should equal(200)
-          val out = read[Paginated_OUT[PocAdmin_OUT]](body)
-          out.total shouldBe 0
-          out.records should have size 0
+          assertPocAdminsJson(body)
+            .hasTotal(0)
+            .hasAdminCount(0)
         }
       }
     }
@@ -747,18 +747,17 @@ class TenantAdminControllerSpec
         _ <- repository.createPocAdmin(createPocAdmin(tenantId = TenantId(TenantName("other")), pocId = poc.id))
         records <- repository.getAllPocAdminsByTenantId(tenant.id)
       } yield records
-      val pocAdmins = await(r, 5.seconds).sorted
+      val pocAdmins = await(r).sorted
       get(
         "/poc-admins",
         params = Map("pageIndex" -> "1", "pageSize" -> "2"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 5,
-          poc,
-          pocAdmins.slice(2, 4)
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(5)
+          .hasAdminCount(2)
+          .hasAdmins(pocAdmins.slice(2, 4).map(pa => (poc, pa)))
       }
     }
 
@@ -783,11 +782,9 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 2,
-          poc,
-          pocAdmins.filter(_.email.startsWith("admin1"))
-        )
+        assertPocAdminsJson(body)
+          .hasAdminCount(2)
+          .hasAdmins(pocAdmins.filter(_.email.startsWith("admin1")).map(pa => (poc, pa)))
       }
     }
 
@@ -824,11 +821,9 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 2,
-          poc,
-          pocAdmins.filter(_.name.startsWith("PocAdmin 1"))
-        )
+        assertPocAdminsJson(body)
+          .hasAdminCount(2)
+          .hasAdmins(pocAdmins.filter(_.name.startsWith("PocAdmin 1")).map(pa => (poc, pa)))
       }
     }
 
@@ -865,11 +860,10 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 2,
-          poc,
-          pocAdmins.filter(_.surname.startsWith("PocAdmin 1"))
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(2)
+          .hasAdminCount(2)
+          .hasAdmins(pocAdmins.filter(_.surname.startsWith("PocAdmin 1")).map(pa => (poc, pa)))
       }
     }
 
@@ -891,11 +885,10 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 3,
-          poc,
-          pocAdmins
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(3)
+          .hasAdminCount(3)
+          .hasAdmins(pocAdmins.map(pa => (poc, pa)))
       }
     }
 
@@ -917,11 +910,10 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 3,
-          poc,
-          pocAdmins
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(3)
+          .hasAdminCount(3)
+          .hasAdmins(pocAdmins.map(pa => (poc, pa)))
       }
     }
 
@@ -945,17 +937,18 @@ class TenantAdminControllerSpec
         _ <- pocTable.createPoc(pocC)
         _ <- repository.createPocAdmin(pocAdminC)
       } yield ()
-      val _ = await(r)
+      await(r)
 
       get(
         "/poc-admins",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 3,
-          Seq((pocAdminA, pocA), (pocAdminB, pocB), (pocAdminC, pocC))
-        )
+        status shouldBe 200
+        assertPocAdminsJson(body)
+          .hasTotal(3)
+          .hasAdminCount(3)
+          .hasAdmins(Seq((pocA, pocAdminA), (pocB, pocAdminB), (pocC, pocAdminC)))
       }
     }
 
@@ -993,11 +986,10 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 3,
-          poc,
-          Seq(pocAdminB, pocAdminC, pocAdminA)
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(3)
+          .hasAdminCount(3)
+          .hasAdmins(Seq(pocAdminB, pocAdminC, pocAdminA).map(pa => (poc, pa)))
       }
     }
 
@@ -1035,12 +1027,10 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 3,
-          poc,
-          Seq(pocAdminA, pocAdminC, pocAdminB)
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(3)
+          .hasAdminCount(3)
+          .hasAdmins(Seq(pocAdminA, pocAdminC, pocAdminB).map(pa => (poc, pa)))
       }
     }
 
@@ -1063,11 +1053,10 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 2,
-          poc,
-          pocAdmins
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(2)
+          .hasAdminCount(2)
+          .hasAdmins(pocAdmins.map(pa => (poc, pa)))
       }
     }
 
@@ -1089,11 +1078,10 @@ class TenantAdminControllerSpec
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminsToFormattedGetPocAdminOutJson(
-          size = 3,
-          poc,
-          pocAdmins
-        )
+        assertPocAdminsJson(body)
+          .hasTotal(3)
+          .hasAdminCount(3)
+          .hasAdmins(pocAdmins.map(pa => (poc, pa)))
       }
     }
   }
@@ -1688,13 +1676,33 @@ class TenantAdminControllerSpec
       val tenant = addTenantToDB(Injector)
       val poc = createPoc(poc1id, tenant.tenantName)
       await(pocTable.createPoc(poc))
-      val pocAdmin = createPocAdmin(tenantId = tenant.id, pocId = poc.id)
+      val pocAdmin = createPocAdmin(
+        tenantId = tenant.id,
+        pocId = poc.id,
+        webAuthnDisconnected = Some(DateTime.now()),
+        webIdentId = Some(UUID.randomUUID().toString),
+        webIdentInitiateId = Some(UUID.randomUUID())
+      )
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
       val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
 
       get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminToFormattedGetPocAdminOutJson(pocAdminFromTable, poc)
+        assertPocAdminJson(body)
+          .hasId(pocAdminFromTable.id)
+          .hasFirstName(pocAdminFromTable.name)
+          .hasLastName(pocAdminFromTable.surname)
+          .hasPocName(poc.pocName)
+          .hasEmail(pocAdminFromTable.email)
+          .hasPhone(pocAdminFromTable.mobilePhone)
+          .hasDateOfBirth(pocAdminFromTable.dateOfBirth.date)
+          .hasActive(pocAdminFromTable.active)
+          .hasStatus(pocAdminFromTable.status.toString.toUpperCase)
+          .hasCreatedAt(pocAdminFromTable.created.dateTime)
+          .hasRevokeTime(pocAdminFromTable.webAuthnDisconnected.value)
+          .hasWebIdentSuccessId(pocAdminFromTable.webIdentId.value)
+          .hasWebIdentInitiateId(pocAdminFromTable.webIdentInitiateId.value)
+          .hasWebIdentRequired(pocAdminFromTable.webIdentRequired)
       }
     }
 
@@ -1778,12 +1786,18 @@ class TenantAdminControllerSpec
         body = pocAdminToFormattedPutPocAdminINJson(updatePocAdmin).getBytes,
         headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
       ) {
-        status should equal(200)
+        status should equal(200) withClue s"Error response: $body"
       }
 
       get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
         status should equal(200)
-        pretty(render(parse(body))) shouldBe pocAdminToFormattedGetPocAdminOutJson(updatePocAdmin, poc)
+        assertPocAdminJson(body)
+          .hasId(updatePocAdmin.id)
+          .hasFirstName(updatePocAdmin.name)
+          .hasLastName(updatePocAdmin.surname)
+          .hasEmail(updatePocAdmin.email)
+          .hasPhone(updatePocAdmin.mobilePhone)
+          .hasDateOfBirth(updatePocAdmin.dateOfBirth.date)
       }
     }
 
@@ -2131,45 +2145,6 @@ class TenantAdminControllerSpec
                   |  "status" : "${poc.status.toString.toUpperCase}",
                   |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
                   |  "created" : "${created.dateTime.toInstant}"
-                  |}""".stripMargin
-    pretty(render(parse(json)))
-  }
-
-  def pocAdminsToFormattedGetPocAdminOutJson(size: Int, poc: Poc, pas: Seq[PocAdmin]): String = {
-    pocAdminsToFormattedGetPocAdminOutJson(size, pas.zip(List.fill(pas.size)(poc)))
-  }
-
-  def pocAdminsToFormattedGetPocAdminOutJson(size: Int, pas: Seq[(PocAdmin, Poc)]): String = {
-    val pocAdmins = pas.map { case (pa, p) => pocAdminToFormattedGetPocAdminOutJson(pa, p) }
-
-    val json =
-      s"""{
-         |  "total": $size,
-         |  "records": [
-         |    ${pocAdmins.mkString(",")}
-         |   ]
-         |}""".stripMargin
-
-    pretty(render(parse(json)))
-  }
-
-  def pocAdminToFormattedGetPocAdminOutJson(pa: PocAdmin, p: Poc): String = {
-    val json = s"""{
-                  | "id" : "${pa.id}",
-                  | "firstName" : "${pa.name}",
-                  | "lastName" : "${pa.surname}",
-                  | "dateOfBirth" : {
-                  |   "year" : ${pa.dateOfBirth.date.year().get()},
-                  |   "month" : ${pa.dateOfBirth.date.monthOfYear().get()},
-                  |   "day" : ${pa.dateOfBirth.date.dayOfMonth().get()}
-                  |  },
-                  |  "email" : "${pa.email}",
-                  |  "phone" : "${pa.mobilePhone}",
-                  |  "pocName" : "${p.pocName}",
-                  |  "active" : ${pa.active},
-                  |  "state" : "${Status.toFormattedString(pa.status)}",
-                  |  "webIdentRequired": ${pa.webIdentRequired},
-                  |  "createdAt": "${pa.created.dateTime.toInstant}"
                   |}""".stripMargin
     pretty(render(parse(json)))
   }

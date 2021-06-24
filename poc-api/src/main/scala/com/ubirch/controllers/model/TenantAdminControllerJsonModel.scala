@@ -19,6 +19,7 @@ object TenantAdminControllerJsonModel {
     webIdentRequired: Boolean,
     webIdentInitiateId: Option[UUID],
     webIdentSuccessId: Option[String],
+    revokeTime: Option[DateTime],
     createdAt: DateTime
   )
 
@@ -37,6 +38,7 @@ object TenantAdminControllerJsonModel {
         webIdentRequired = pocAdmin.webIdentRequired,
         webIdentInitiateId = pocAdmin.webIdentInitiateId,
         webIdentSuccessId = pocAdmin.webIdentId,
+        revokeTime = pocAdmin.webAuthnDisconnected,
         createdAt = pocAdmin.created.dateTime
       )
   }
