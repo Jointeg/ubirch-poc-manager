@@ -2,7 +2,7 @@ package com.ubirch.e2e.controllers
 
 import com.ubirch.controllers.SuperAdminController
 import com.ubirch.db.tables.TenantRepository
-import com.ubirch.e2e.{ E2ETestBase, KeycloakDeviceContainer }
+import com.ubirch.e2e.E2ETestBase
 import com.ubirch.models.keycloak.group.GroupId
 import com.ubirch.models.tenant._
 import com.ubirch.services.keycloak.groups.DefaultKeycloakGroupService
@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
-class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll {
+class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with BeforeAndAfterAll with X509CertTests {
 
   private def createTenantJson(
     tenantName: String,
@@ -29,17 +29,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
        |    "usageType": "$usageType",
        |    "tenantType": "$tenantType",
        |    "sharedAuthCertRequired": true
-       |}
-       |""".stripMargin
-  }
-
-  private def createTenantJsonWithoutClientCert(tenantName: String) = {
-    s"""
-       |{
-       |    "tenantName": "$tenantName",
-       |    "usageType": "API",
-       |    "tenantType": "${TenantType.BMG_STRING}",
-       |    "sharedAuthCertRequired": false
        |}
        |""".stripMargin
   }
@@ -145,50 +134,6 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    "be able to successfully create a Tenant if x509 certs are missing the configured intermediate cert" in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val tenantName = getRandomString
-        val createTenantBody = createTenantJson(tenantName)
-        post(
-          Endpoint,
-          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.x509HeaderUntilIssuer)
-        ) {
-          status should equal(200)
-          assert(body == "")
-        }
-
-        val tenantRepository = injector.get[TenantRepository]
-        val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
-        maybeTenant.value.tenantName shouldBe TenantName(tenantName)
-        maybeTenant.value.usageType shouldBe API
-        maybeTenant.value.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
-      }
-    }
-
-    "be able to successfully create a Tenant if x509 certs have a wrong order" in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val tenantName = getRandomString
-        val createTenantBody = createTenantJson(tenantName)
-        post(
-          Endpoint,
-          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.x509HeaderWithWrongOrder)
-        ) {
-          status should equal(200)
-          assert(body == "")
-        }
-
-        val tenantRepository = injector.get[TenantRepository]
-        val maybeTenant = await(tenantRepository.getTenantByName(TenantName(tenantName)), 2.seconds)
-        maybeTenant.value.tenantName shouldBe TenantName(tenantName)
-        maybeTenant.value.usageType shouldBe API
-        maybeTenant.value.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
-      }
-    }
-
     "not be able to create a Tenant with duplicated tenantName" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
@@ -255,57 +200,27 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    "respond with 403 if x509 is single cert" in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val tenantName = getRandomString
-        val createTenantBody = createTenantJson(tenantName)
-
-        post(
-          Endpoint,
-          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers =
-            Map("authorization" -> token.superAdminOnDevicesKeycloak.prepare, FakeX509Certs.invalidSingleX509Header)
-        ) {
-          status should equal(403)
-          assert(body.contains("Forbidden"))
-        }
+    x509SuccessWhenNonBlockingIssuesWithCert(
+      method = POST,
+      path = Endpoint,
+      createToken = _.superAdmin,
+      responseAssertion = body => assert(body == ""),
+      payload = TenantName(getRandomString))(
+      requestBody = p => createTenantJson(tenantName = p.value),
+      assertion = { (injector, tenantName: TenantName) =>
+        val tenantRepository = injector.get[TenantRepository]
+        val maybeTenant = await(tenantRepository.getTenantByName(tenantName))
+        maybeTenant.value.tenantName shouldBe tenantName
+        maybeTenant.value.usageType shouldBe API
+        maybeTenant.value.sharedAuthCert shouldBe Some(SharedAuthCert(ModelCreationHelper.cert))
       }
-    }
+    )
 
-    "respond with 403 if x509 is invalid" in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val tenantName = getRandomString
-        val createTenantBody = createTenantJson(tenantName)
-
-        post(
-          Endpoint,
-          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdminOnDevicesKeycloak.prepare, FakeX509Certs.invalidX509Header)
-        ) {
-          status should equal(403)
-          assert(body.contains("Forbidden"))
-        }
-      }
-    }
-
-    "respond with 403 if the X509 header is missing" in {
-      withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val tenantName = getRandomString
-        val createTenantBody = createTenantJson(tenantName)
-
-        post(
-          Endpoint,
-          body = createTenantBody.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdminOnDevicesKeycloak.prepare)
-        ) {
-          status should equal(403)
-          assert(body.contains("Forbidden"))
-        }
-      }
-    }
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = POST,
+      path = Endpoint,
+      requestBody = createTenantJson(tenantName = getRandomString),
+      createToken = _.superAdminOnDevicesKeycloak)
   }
 
   override protected def beforeEach(): Unit = {
