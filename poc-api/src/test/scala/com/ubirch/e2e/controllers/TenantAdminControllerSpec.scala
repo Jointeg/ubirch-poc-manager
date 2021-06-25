@@ -54,6 +54,7 @@ class TenantAdminControllerSpec
 
   private val poc1id: UUID = UUID.randomUUID()
   private val poc2id: UUID = UUID.randomUUID()
+  private val pocAdminId: UUID = UUID.randomUUID()
   implicit private val formats: Formats =
     DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
@@ -1373,6 +1374,13 @@ class TenantAdminControllerSpec
         }
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = "/devices",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint POST /webident/initiate-id" should {
@@ -1432,6 +1440,14 @@ class TenantAdminControllerSpec
         firstWebIdentInitiatedId shouldBe secondWebIdentInitiatedId
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = POST,
+      path = "/webident/initiate-id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector),
+      requestBody = initiateIdJson(poc1id)
+    )
   }
 
   "Endpoint POST /webident/id" should {
@@ -1520,6 +1536,13 @@ class TenantAdminControllerSpec
           pocAdminStatus2AfterOperations.value.lastUpdated)
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = POST,
+      path = "/webident/id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint GET /poc-admin/status/:id" should {
@@ -1606,6 +1629,13 @@ class TenantAdminControllerSpec
         }
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = s"/poc-admin/status/$pocAdminId",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint PUT /poc-admin/:id/active/:isActive" should {
@@ -1759,6 +1789,13 @@ class TenantAdminControllerSpec
         assert(body.contains(s"Poc admin with id '$id' doesn't belong to requesting tenant admin."))
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = PUT,
+      path = s"/poc-admin/$pocAdminId/active/0",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint DELETE /poc-admin/:id/2fa-token" should {
@@ -1878,6 +1915,13 @@ class TenantAdminControllerSpec
         assert(body.contains(s"Poc admin '$id' is in wrong status: 'Pending', required: 'Completed'"))
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = DELETE,
+      path = s"/poc-admin/$pocAdminId/2fa-token",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint GET /poc-admin/:id" must {
@@ -1972,7 +2016,7 @@ class TenantAdminControllerSpec
       val token = Injector.get[FakeTokenCreator]
 
       get(
-        s"/poc-admin/$poc1id",
+        s"/poc-admin/$pocAdminId",
         headers = Map(
           "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
           FakeX509Certs.validX509Header)) {
@@ -1981,6 +2025,13 @@ class TenantAdminControllerSpec
           body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = s"/poc-admin/$pocAdminId",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint PUT /poc-admin/:id" must {
@@ -2240,6 +2291,13 @@ class TenantAdminControllerSpec
           body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = PUT,
+      path = s"/poc-admin/$pocAdminId",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint POST /poc-admin/create" must {
@@ -2366,6 +2424,13 @@ class TenantAdminControllerSpec
         }
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = POST,
+      path = EndPoint,
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   def pocToFormattedJson(poc: Poc): String = {
