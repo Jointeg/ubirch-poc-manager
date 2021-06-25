@@ -29,15 +29,20 @@ class PocEmployeesJsonAssertion(json: JValue) extends Matchers { self =>
   }
 
   def hasEmployeeAtIndex(index: Int, employee: PocEmployee): PocEmployeesJsonAssertion = {
-    hasEmployeeAtIndex(index)(
-      _.hasId(employee.id)
+    hasEmployeeAtIndex(index) { assertion =>
+      assertion.hasId(employee.id)
         .hasFirstName(employee.name)
         .hasLastName(employee.surname)
         .hasEmail(employee.email)
         .hasActive(employee.active)
         .hasStatus(employee.status.toString.toUpperCase)
         .hasCreatedAt(employee.created.dateTime)
-    )
+
+      employee.webAuthnDisconnected match {
+        case Some(revokeTime) => assertion.hasRevokeTime(revokeTime)
+        case None             => assertion.doesNotHaveRevokeTime()
+      }
+    }
     self
   }
 }
