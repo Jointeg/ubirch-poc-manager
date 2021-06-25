@@ -15,7 +15,7 @@ import java.util.UUID
 class PocJsonFormatTest extends UnitTestBase {
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ new CustomFormats().formats ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   "Poc should be converted to expected format" in {
 

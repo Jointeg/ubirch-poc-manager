@@ -7,7 +7,7 @@ import com.ubirch.models.auth.Base64String
 import com.ubirch.services.execution.SttpResources
 import com.ubirch.services.jwt.PublicKeyPoolService
 import com.ubirch.services.keyhash.KeyHashVerifierService
-import com.ubirch.services.lifeCycle.Lifecycle
+import com.ubirch.services.lifecycle.Lifecycle
 import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
 import com.ubirch.services.rest.RestService
 import com.ubirch.services.{ CertifyKeycloak, DeviceKeycloak }

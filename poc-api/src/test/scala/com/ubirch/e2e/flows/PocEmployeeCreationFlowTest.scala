@@ -38,7 +38,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
   override protected val useMockKeyDiscoveryService: DiscoveryServiceType = RealDiscoverService
 
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ TestFormats.all
+    DefaultFormats.lossless ++ new CustomFormats().formats ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all ++ TestFormats.all
 
   val poc1Id: UUID = UUID.randomUUID()
 

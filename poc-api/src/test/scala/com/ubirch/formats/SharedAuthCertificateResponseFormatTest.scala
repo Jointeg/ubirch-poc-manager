@@ -12,7 +12,7 @@ import java.util.UUID
 
 class SharedAuthCertificateResponseFormatTest extends UnitTestBase {
   implicit private val formats: Formats =
-    DefaultFormats.lossless ++ CustomFormats.all ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
+    DefaultFormats.lossless ++ new CustomFormats().formats ++ JavaTypesSerializers.all ++ JodaTimeSerializers.all
 
   "SharedAuthCertificateResponse format should correctly handle snake case" in {
     val sharedAuthCertificateResponse =

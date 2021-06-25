@@ -11,7 +11,13 @@ import com.ubirch.services.auth._
 import com.ubirch.services.clock.ClockProvider
 import com.ubirch.services.config.ConfigProvider
 import com.ubirch.services.execution.{ ExecutionProvider, SchedulerProvider }
-import com.ubirch.services.formats.{ DefaultJsonConverterService, JsonConverterService, JsonFormatsProvider }
+import com.ubirch.services.formats.{
+  CustomFormats,
+  CustomJsonFormats,
+  DefaultJsonConverterService,
+  JsonConverterService,
+  JsonFormatsProvider
+}
 import com.ubirch.services.healthcheck.{ DefaultHealthCheckService, HealthCheckService }
 import com.ubirch.services.jwt._
 import com.ubirch.services.keycloak._
@@ -19,7 +25,7 @@ import com.ubirch.services.keycloak.groups.{ DefaultKeycloakGroupService, Keyclo
 import com.ubirch.services.keycloak.roles.{ DefaultKeycloakRolesService, KeycloakRolesService }
 import com.ubirch.services.keycloak.users.{ DefaultKeycloakUserService, KeycloakUserService }
 import com.ubirch.services.keyhash.{ DefaultKeyHashVerifier, KeyHashVerifierService }
-import com.ubirch.services.lifeCycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
+import com.ubirch.services.lifecycle.{ DefaultJVMHook, DefaultLifecycle, JVMHook, Lifecycle }
 import com.ubirch.services.poc._
 import com.ubirch.services.poc.employee.{
   CsvProcessPocEmployee,
@@ -66,6 +72,8 @@ class Binder extends AbstractModule {
   def Scheduler: ScopedBindingBuilder = bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
 
   def Swagger: ScopedBindingBuilder = bind(classOf[Swagger]).toProvider(classOf[SwaggerProvider])
+
+  def CustomFormats: ScopedBindingBuilder = bind(classOf[CustomJsonFormats]).to(classOf[CustomFormats])
 
   def Formats: ScopedBindingBuilder = bind(classOf[Formats]).toProvider(classOf[JsonFormatsProvider])
 
@@ -230,6 +238,7 @@ class Binder extends AbstractModule {
     ExecutionContext
     Scheduler
     Swagger
+    CustomFormats
     Formats
     Lifecycle
     JVMHook
