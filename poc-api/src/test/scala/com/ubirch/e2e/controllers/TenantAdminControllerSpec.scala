@@ -11,7 +11,7 @@ import com.ubirch.e2e.controllers.assertions.PocAdminJsonAssertion._
 import com.ubirch.e2e.controllers.assertions.PocAdminsJsonAssertion._
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc._
-import com.ubirch.models.tenant.{ CreatePocAdminRequest, Tenant, TenantId, TenantName }
+import com.ubirch.models.tenant.{ CreatePocAdminRequest, SharedAuthCert, Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
 import com.ubirch.models.{ FieldError, NOK, Paginated_OUT, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
@@ -20,9 +20,11 @@ import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
 import com.ubirch.services.poc.util.CsvConstants.columnSeparator
+import com.ubirch.services.CertifyKeycloak
+import com.ubirch.test.TestData
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
 import com.ubirch.util.ServiceConstants.TENANT_GROUP_PREFIX
-import com.ubirch.{ FakeTokenCreator, InjectorHelper }
+import com.ubirch.{ FakeTokenCreator, FakeX509Certs, InjectorHelper, ModelCreationHelper }
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
 import org.joda.time
@@ -45,6 +47,7 @@ class TenantAdminControllerSpec
   with TableDrivenPropertyChecks
   with BeforeAndAfterEach
   with BeforeAndAfterAll
+  with X509CertTests
   with AppendedClues {
 
   import TenantAdminControllerSpec._
@@ -69,7 +72,10 @@ class TenantAdminControllerSpec
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assert(body.isEmpty)
         }
@@ -86,7 +92,7 @@ class TenantAdminControllerSpec
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
-          headers = Map("authorization" -> token.superAdmin.prepare)) {
+          headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)) {
           status should equal(403)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
@@ -99,7 +105,10 @@ class TenantAdminControllerSpec
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
           status should equal(400)
           assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
         }
@@ -113,7 +122,10 @@ class TenantAdminControllerSpec
         post(
           "/pocs/create",
           body = invalidHeaderPocOnlyCsv.getBytes(),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assert(body == CsvConstants.headerErrorMsg("poc_id*", CsvConstants.externalId))
         }
@@ -127,21 +139,46 @@ class TenantAdminControllerSpec
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
-          status should equal(200)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
+          status should equal(200) withClue s"Error response: $body"
           assert(body.isEmpty)
         }
 
         post(
           "/pocs/create",
           body = validPocOnlyCsv(poc1id).getBytes(),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
-          status should equal(200)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
+          status should equal(200) withClue s"Error response: $body"
           assert(body == validPocOnlyCsv(
             poc1id) + columnSeparator + "error on persisting objects; the pair of (external_id and data_schema_id) already exists.")
         }
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = POST,
+      path = "/pocs/create",
+      requestBody = validPocOnlyCsv(poc1id),
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[TenantName](
+      method = POST,
+      path = "/pocs/create",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      responseAssertion = (body, _) => assert(body == ""),
+      payload = TenantName(getRandomString)
+    )(
+      before = (injector, _) => addTenantToDB(injector),
+      requestBody = _ => validPocOnlyCsv(poc1id)
+    )
   }
 
   "Endpoint GET pocStatus" must {
@@ -160,7 +197,10 @@ class TenantAdminControllerSpec
         storedStatus shouldBe pocStatus.copy(lastUpdated = storedStatus.lastUpdated)
         get(
           s"/pocStatus/${pocStatus.pocId}",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenant")).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName("tenant")).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assert(body == write[PocStatus](storedStatus))
         }
@@ -173,12 +213,34 @@ class TenantAdminControllerSpec
         val randomID = UUID.randomUUID()
         get(
           s"/pocStatus/$randomID",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenant")).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName("tenant")).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(404)
           assert(body == s"NOK(1.0,false,'ResourceNotFoundError,pocStatus with $randomID couldn't be found)")
         }
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = s"/pocStatus/$poc1id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector))
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocStatus](
+      method = GET,
+      path = s"/pocStatus/$poc1id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      responseAssertion = (body, pocStatus) => assert(body == write[PocStatus](pocStatus)),
+      payload = createPocStatus(pocId = poc1id)
+    )(
+      before = (injector, pocStatus) => {
+        val repo = injector.get[PocStatusRepository]
+        await(repo.createPocStatus(pocStatus))
+        addTenantToDB(injector)
+      }
+    )
   }
 
   "Endpoint GET /pocs" must {
@@ -199,7 +261,11 @@ class TenantAdminControllerSpec
         }
         val pocs = await(r, 5.seconds).filter(_.tenantId == tenant.id).map(_.datesToIsoFormat)
         pocs.size shouldBe 2
-        get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        get(
+          s"/pocs",
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           val poC_OUT = read[Paginated_OUT[Poc]](body)
           poC_OUT.total shouldBe 2
@@ -211,7 +277,11 @@ class TenantAdminControllerSpec
     "return Bad Request when tenant doesn't exist" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)) {
+        get(
+          s"/pocs",
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(400)
           assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
         }
@@ -222,7 +292,11 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val tenant = addTenantToDB(Injector)
         val token = Injector.get[FakeTokenCreator]
-        get(s"/pocs", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        get(
+          s"/pocs",
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           val poC_OUT = read[Paginated_OUT[Poc]](body)
           poC_OUT.total shouldBe 0
@@ -259,7 +333,8 @@ class TenantAdminControllerSpec
       get(
         "/pocs",
         params = Map("pageIndex" -> "1", "pageSize" -> "2"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
@@ -282,7 +357,8 @@ class TenantAdminControllerSpec
       get(
         "/pocs",
         params = Map("search" -> "POC 1"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
@@ -305,7 +381,8 @@ class TenantAdminControllerSpec
       get(
         "/pocs",
         params = Map("search" -> "Berlin 1"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
@@ -328,7 +405,8 @@ class TenantAdminControllerSpec
       get(
         "/pocs",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
@@ -351,7 +429,8 @@ class TenantAdminControllerSpec
       get(
         "/pocs",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "desc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
@@ -374,7 +453,8 @@ class TenantAdminControllerSpec
       get(
         "/pocs",
         params = Map("filterColumn[status]" -> "pending,processing"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
@@ -397,7 +477,8 @@ class TenantAdminControllerSpec
       get(
         "/pocs",
         params = Map("filterColumn[status]" -> ""),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
@@ -405,6 +486,13 @@ class TenantAdminControllerSpec
         poC_OUT.records shouldBe pocs
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = "/pocs",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint GET /poc/:id" must {
@@ -416,7 +504,11 @@ class TenantAdminControllerSpec
       val _ = await(pocTable.createPoc(poc))
       val pocFromTable = await(pocTable.getPoc(poc.id)).value
 
-      get(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      get(
+        s"/poc/$poc1id",
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(200)
         pretty(render(parse(body))) shouldBe pocToFormattedJson(pocFromTable)
       }
@@ -425,7 +517,7 @@ class TenantAdminControllerSpec
     "return 403 when requesting user is not a tenant-admin" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
 
-      get(s"/poc/$poc1id", headers = Map("authorization" -> token.superAdmin.prepare)) {
+      get(s"/poc/$poc1id", headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)) {
         status should equal(403)
         assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
       }
@@ -435,7 +527,11 @@ class TenantAdminControllerSpec
       val token = Injector.get[FakeTokenCreator]
       val tenant = addTenantToDB(Injector)
 
-      get(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      get(
+        s"/poc/$poc1id",
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(404)
         assert(body.contains(s"PoC with id '$poc1id' does not exist"))
       }
@@ -450,7 +546,11 @@ class TenantAdminControllerSpec
       val poc = createPoc(poc1id, otherTenant.tenantName)
       val _ = await(pocTable.createPoc(poc))
 
-      get(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      get(
+        s"/poc/$poc1id",
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(401)
         assert(body.contains(s"PoC with id '$poc1id' does not belong to tenant with id '${tenant.id.value.value}'"))
       }
@@ -461,12 +561,21 @@ class TenantAdminControllerSpec
 
       get(
         s"/poc/$poc1id",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(400)
         assert(
           body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = s"/poc/$poc1id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint PUT /poc/:id" must {
@@ -493,7 +602,8 @@ class TenantAdminControllerSpec
       put(
         uri = s"/poc/$poc1id",
         body = pocToFormattedJson(updatedPoc).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         body shouldBe "{}"
         status should equal(200)
@@ -501,7 +611,11 @@ class TenantAdminControllerSpec
 
       val updatedPocFromTable = await(pocTable.getPoc(poc.id)).value
 
-      get(s"/poc/$poc1id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      get(
+        s"/poc/$poc1id",
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(200)
         pretty(render(parse(body))) shouldBe pocToFormattedJson(updatedPoc.copy(lastUpdated =
           updatedPocFromTable.lastUpdated))
@@ -532,7 +646,9 @@ class TenantAdminControllerSpec
         put(
           uri = s"/poc/$poc1id",
           body = pocToFormattedJson(updatedPoc).getBytes,
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
         ) {
           status should equal(400)
           body shouldBe NOK.badRequest(
@@ -552,7 +668,9 @@ class TenantAdminControllerSpec
       put(
         s"/poc/$poc1id",
         body = pocToFormattedJson(poc).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
+      ) {
         status should equal(409)
         assert(body.contains(s"Poc '$poc1id' is in wrong status: 'Pending', required: 'Completed'"))
       }
@@ -561,7 +679,7 @@ class TenantAdminControllerSpec
     "return 403 when requesting user is not a tenant-admin" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
 
-      put(s"/poc/$poc1id", headers = Map("authorization" -> token.superAdmin.prepare)) {
+      put(s"/poc/$poc1id", headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)) {
         status should equal(403)
         assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
       }
@@ -576,7 +694,9 @@ class TenantAdminControllerSpec
       put(
         s"/poc/$poc1id",
         body = pocToFormattedJson(poc).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
+      ) {
         status should equal(404)
         assert(body.contains(s"PoC with id '$poc1id' does not exist"))
       }
@@ -594,7 +714,9 @@ class TenantAdminControllerSpec
       put(
         s"/poc/$poc1id",
         body = pocToFormattedJson(poc).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
+      ) {
         status should equal(401)
         assert(body.contains(s"PoC with id '$poc1id' does not belong to tenant with id '${tenant.id.value.value}'"))
       }
@@ -605,12 +727,21 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc/$poc1id",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(400)
         assert(
           body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = PUT,
+      path = s"/poc/$poc1id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   "Endpoint POST /tenant-token" must {
@@ -625,7 +756,9 @@ class TenantAdminControllerSpec
         post(
           "/deviceToken",
           body = addDeviceCreationToken.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
         ) {
           status should equal(200)
           assert(body == "")
@@ -644,7 +777,7 @@ class TenantAdminControllerSpec
         post(
           "/deviceToken",
           body = addDeviceCreationToken.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.superAdmin.prepare)
+          headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)
         ) {
           status should equal(403)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
@@ -658,13 +791,23 @@ class TenantAdminControllerSpec
         post(
           "/deviceToken",
           body = addDeviceCreationToken.getBytes(StandardCharsets.UTF_8),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare,
+            FakeX509Certs.validX509Header)
         ) {
           status should equal(400)
           assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
         }
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = POST,
+      path = "/deviceToken",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector),
+      requestBody = addDeviceCreationToken
+    )
   }
 
   "Endpoint GET /poc-admins" must {
@@ -687,7 +830,11 @@ class TenantAdminControllerSpec
         } yield r
         val pocAdmins = await(r).sorted
 
-        get(s"/poc-admins", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        get(
+          s"/poc-admins",
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           assertPocAdminsJson(body)
             .hasTotal(2)
@@ -702,7 +849,9 @@ class TenantAdminControllerSpec
         val token = Injector.get[FakeTokenCreator]
         get(
           s"/poc-admins",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName("tenantName")).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(400)
           assert(body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
         }
@@ -713,7 +862,11 @@ class TenantAdminControllerSpec
       withInjector { Injector =>
         val tenant = addTenantToDB(Injector)
         val token = Injector.get[FakeTokenCreator]
-        get(s"/poc-admins", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        get(
+          s"/poc-admins",
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           assertPocAdminsJson(body)
             .hasTotal(0)
@@ -725,7 +878,7 @@ class TenantAdminControllerSpec
     "return Bad Request when user is no tenant admin" in {
       withInjector { Injector =>
         val token = Injector.get[FakeTokenCreator]
-        get(s"/poc-admins", headers = Map("authorization" -> token.superAdmin.prepare)) {
+        get(s"/poc-admins", headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)) {
           status should equal(403)
           assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
         }
@@ -751,7 +904,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("pageIndex" -> "1", "pageSize" -> "2"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -779,7 +933,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("search" -> "admin1"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -818,7 +973,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("search" -> "PocAdmin 1"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -857,7 +1013,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("search" -> "PocAdmin 1"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -882,7 +1039,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("sortColumn" -> "firstName", "sortOrder" -> "asc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -907,7 +1065,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("sortColumn" -> "firstName", "sortOrder" -> "desc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -942,7 +1101,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("sortColumn" -> "pocName", "sortOrder" -> "asc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status shouldBe 200
         assertPocAdminsJson(body)
@@ -983,7 +1143,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("sortColumn" -> "createdAt", "sortOrder" -> "asc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -1024,7 +1185,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("sortColumn" -> "createdAt", "sortOrder" -> "desc"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -1050,7 +1212,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("filterColumn[status]" -> "pending,processing"),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -1075,7 +1238,8 @@ class TenantAdminControllerSpec
       get(
         "/poc-admins",
         params = Map("filterColumn[status]" -> ""),
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
@@ -1084,6 +1248,13 @@ class TenantAdminControllerSpec
           .hasAdmins(pocAdmins.map(pa => (poc, pa)))
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = "/poc-admins",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      before = injector => addTenantToDB(injector)
+    )
   }
 
   private val invalidParameter =
@@ -1110,7 +1281,9 @@ class TenantAdminControllerSpec
         get(
           "/pocs",
           params = Map(param -> value),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
         ) {
           status should equal(400)
           val errorResponse = read[ValidationErrorsResponse](body)
@@ -1128,7 +1301,9 @@ class TenantAdminControllerSpec
         get(
           "/poc-admins",
           params = Map(param -> value),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
         ) {
           status should equal(400)
           val errorResponse = read[ValidationErrorsResponse](body)
@@ -1155,7 +1330,11 @@ class TenantAdminControllerSpec
         } yield ()
         await(r, 5.seconds)
 
-        get(s"/devices", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        get(
+          s"/devices",
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           header("Content-Disposition") shouldBe "attachment; filename=simplified-devices-info.csv"
           header("Content-Type") shouldBe "text/csv;charset=utf-8"
@@ -1180,7 +1359,11 @@ class TenantAdminControllerSpec
         } yield ()
         await(r, 5.seconds)
 
-        get(s"/devices", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        get(
+          s"/devices",
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           header("Content-Disposition") shouldBe "attachment; filename=simplified-devices-info.csv"
           header("Content-Type") shouldBe "text/csv;charset=utf-8"
@@ -1217,7 +1400,9 @@ class TenantAdminControllerSpec
 
         post(
           "/webident/initiate-id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header),
           body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
         ) {
           status shouldBe Ok().status
@@ -1231,7 +1416,9 @@ class TenantAdminControllerSpec
 
         post(
           "/webident/initiate-id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare),
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header),
           body = initiateIdJson(pocAdmin.id).getBytes(StandardCharsets.UTF_8)
         ) {
           status shouldBe Conflict().status
@@ -1290,7 +1477,9 @@ class TenantAdminControllerSpec
 
         post(
           "/webident/id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare),
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare,
+            FakeX509Certs.validX509Header),
           body = updateWebIdentIdJson(pocAdmin1.id, UUID.randomUUID(), UUID.randomUUID()).getBytes
         ) {
           status shouldBe BadRequest().status
@@ -1299,7 +1488,9 @@ class TenantAdminControllerSpec
 
         post(
           "/webident/initiate-id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare),
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare,
+            FakeX509Certs.validX509Header),
           body = initiateIdJson(pocAdmin1.id).getBytes(StandardCharsets.UTF_8)
         ) {
           status shouldBe Ok().status
@@ -1310,7 +1501,9 @@ class TenantAdminControllerSpec
         val webIdentId = UUID.randomUUID()
         post(
           "/webident/id",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare),
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant1.tenantName).prepare,
+            FakeX509Certs.validX509Header),
           body = updateWebIdentIdJson(
             pocAdmin1.id,
             webIdentId,
@@ -1360,7 +1553,10 @@ class TenantAdminControllerSpec
 
         get(
           s"/poc-admin/status/${pocAdmin.id}",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           pretty(render(parse(body))) shouldBe
             s"""|{
@@ -1402,7 +1598,9 @@ class TenantAdminControllerSpec
 
         get(
           s"/poc-admin/status/wrongUUID",
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(400)
           assert(body.contains("Invalid UUID string"))
         }
@@ -1432,7 +1630,8 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/$id/active/0",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         body shouldBe empty
@@ -1446,7 +1645,8 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/$id/active/1",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         body shouldBe empty
@@ -1475,7 +1675,8 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/$id/active/0",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         body.contains(s"Poc admin with id '$id' cannot be de/-activated before status is Completed.") shouldBe true
@@ -1495,7 +1696,8 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/$invalidPocAdminId/active/0",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
         assert(body.contains(s"Poc admin with id '$invalidPocAdminId' not found"))
@@ -1509,7 +1711,8 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/$invalidPocAdminId/active/2",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(400)
         assert(body.contains("Illegal value for ActivateSwitch: 2. Expected 0 or 1"))
@@ -1526,7 +1729,8 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/$id/active/1",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
@@ -1547,7 +1751,9 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/$id/active/0",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(unrelatedTenant.tenantName).prepare)
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(unrelatedTenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)
       ) {
         status should equal(401)
         assert(body.contains(s"Poc admin with id '$id' doesn't belong to requesting tenant admin."))
@@ -1589,7 +1795,8 @@ class TenantAdminControllerSpec
 
       delete(
         s"/poc-admin/$id/2fa-token",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         body shouldBe empty
@@ -1607,7 +1814,8 @@ class TenantAdminControllerSpec
 
       delete(
         s"/poc-admin/$invalidPocAdminId/2fa-token",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
         assert(body.contains(s"Poc admin with id '$invalidPocAdminId' not found"))
@@ -1626,7 +1834,9 @@ class TenantAdminControllerSpec
 
       delete(
         s"/poc-admin/$id/2fa-token",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(otherTenant.tenantName).prepare)
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(otherTenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
         assert(body.contains(s"Poc admin with id '$id' not found"))
@@ -1643,7 +1853,8 @@ class TenantAdminControllerSpec
 
       delete(
         s"/poc-admin/$id/2fa-token",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' does not have certifyUserId"))
@@ -1660,7 +1871,8 @@ class TenantAdminControllerSpec
 
       delete(
         s"/poc-admin/$id/2fa-token",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' is in wrong status: 'Pending', required: 'Completed'"))
@@ -1686,7 +1898,11 @@ class TenantAdminControllerSpec
       val id = await(pocAdminRepository.createPocAdmin(pocAdmin))
       val pocAdminFromTable = await(pocAdminRepository.getPocAdmin(id)).value
 
-      get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      get(
+        s"/poc-admin/$id",
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(200)
         assertPocAdminJson(body)
           .hasId(pocAdminFromTable.id)
@@ -1709,7 +1925,9 @@ class TenantAdminControllerSpec
     "return 403 when requesting user is not a tenant-admin" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
 
-      get(s"/poc-admin/$poc1id", headers = Map("authorization" -> token.superAdmin.prepare)) {
+      get(
+        s"/poc-admin/$poc1id",
+        headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)) {
         status should equal(403)
         assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
       }
@@ -1721,7 +1939,9 @@ class TenantAdminControllerSpec
 
       get(
         s"/poc-admin/$poc1id",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(404)
         assert(body.contains(s"PoC Admin with id '$poc1id' does not exist"))
       }
@@ -1738,7 +1958,11 @@ class TenantAdminControllerSpec
       val _ = await(pocTable.createPoc(poc))
       val id = await(pocAdminRepository.createPocAdmin(createPocAdmin(tenantId = otherTenant.id, pocId = poc.id)))
 
-      get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      get(
+        s"/poc-admin/$id",
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(401)
         assert(body.contains(s"PoC Admin with id '$id' does not belong to tenant with id '${tenant.id.value.value}'"))
       }
@@ -1749,7 +1973,9 @@ class TenantAdminControllerSpec
 
       get(
         s"/poc-admin/$poc1id",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(400)
         assert(
           body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
@@ -1784,12 +2010,17 @@ class TenantAdminControllerSpec
       put(
         uri = s"/poc-admin/$id",
         body = pocAdminToFormattedPutPocAdminINJson(updatePocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200) withClue s"Error response: $body"
       }
 
-      get(s"/poc-admin/$id", headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)) {
+      get(
+        s"/poc-admin/$id",
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)) {
         status should equal(200)
         assertPocAdminJson(body)
           .hasId(updatePocAdmin.id)
@@ -1827,7 +2058,8 @@ class TenantAdminControllerSpec
       put(
         uri = s"/poc-admin/$id",
         body = pocAdminToFormattedPutPocAdminINJson(updatePocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(400)
         val errorResponse = read[ValidationErrorsResponse](body)
@@ -1856,7 +2088,8 @@ class TenantAdminControllerSpec
       put(
         s"/poc-admin/$id",
         body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' is in wrong status: 'Completed'"))
@@ -1881,7 +2114,8 @@ class TenantAdminControllerSpec
       put(
         s"/poc-admin/$id",
         body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' is in wrong status: 'Processing'"))
@@ -1906,7 +2140,8 @@ class TenantAdminControllerSpec
       put(
         s"/poc-admin/$id",
         body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' has webIdentRequired set to false"))
@@ -1931,7 +2166,8 @@ class TenantAdminControllerSpec
       put(
         s"/poc-admin/$id",
         body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc admin '$id' webIdentInitiateId is set"))
@@ -1941,7 +2177,9 @@ class TenantAdminControllerSpec
     "return 403 when requesting user is not a tenant-admin" in withInjector { Injector =>
       val token = Injector.get[FakeTokenCreator]
 
-      put(s"/poc-admin/${UUID.randomUUID()}", headers = Map("authorization" -> token.superAdmin.prepare)) {
+      put(
+        s"/poc-admin/${UUID.randomUUID()}",
+        headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)) {
         status should equal(403)
         assert(body == "NOK(1.0,false,'AuthenticationError,Forbidden)")
       }
@@ -1955,7 +2193,8 @@ class TenantAdminControllerSpec
       put(
         s"/poc-admin/${pocAdmin.id}",
         body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+        headers =
+          Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
         assert(body.contains(s"PoC admin with id '${pocAdmin.id}' does not exist"))
@@ -1977,7 +2216,9 @@ class TenantAdminControllerSpec
       put(
         s"/poc-admin/$id",
         body = pocAdminToFormattedPutPocAdminINJson(pocAdmin).getBytes,
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(otherTenant.tenantName).prepare)
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(otherTenant.tenantName).prepare,
+          FakeX509Certs.validX509Header)
       ) {
         status should equal(401)
         assert(
@@ -1990,7 +2231,10 @@ class TenantAdminControllerSpec
 
       put(
         s"/poc-admin/${UUID.randomUUID()}",
-        headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+        headers = Map(
+          "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
+          FakeX509Certs.validX509Header)
+      ) {
         status should equal(400)
         assert(
           body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
@@ -2024,7 +2268,10 @@ class TenantAdminControllerSpec
         post(
           EndPoint,
           body = requestBody.getBytes(),
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
+            FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
 
           val pocAdmins = pocAdminTable.getByPocId(poc.id).runSyncUnsafe(5.seconds)
@@ -2061,7 +2308,9 @@ class TenantAdminControllerSpec
         post(
           EndPoint,
           body = pocAdminToFormattedCreatePocAdminJson(createPocAdminRequest).getBytes,
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare,
+            FakeX509Certs.validX509Header)
         ) {
           status should equal(404)
           assert(body.contains(s"pocId is not found: ${createPocAdminRequest.pocId}"))
@@ -2075,7 +2324,9 @@ class TenantAdminControllerSpec
 
         post(
           EndPoint,
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)) {
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(400)
           assert(
             body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
@@ -2104,7 +2355,9 @@ class TenantAdminControllerSpec
         post(
           EndPoint,
           body = pocAdminToFormattedCreatePocAdminJson(createPocAdminRequest).getBytes,
-          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+          headers = Map(
+            "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
+            FakeX509Certs.validX509Header)
         ) {
           status should equal(400)
           assert(

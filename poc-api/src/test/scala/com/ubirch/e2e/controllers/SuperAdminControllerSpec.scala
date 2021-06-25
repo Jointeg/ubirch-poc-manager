@@ -200,11 +200,11 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       }
     }
 
-    x509SuccessWhenNonBlockingIssuesWithCert(
+    x509SuccessWhenNonBlockingIssuesWithCert[TenantName](
       method = POST,
       path = Endpoint,
       createToken = _.superAdmin,
-      responseAssertion = body => assert(body == ""),
+      responseAssertion = (body, _) => assert(body == ""),
       payload = TenantName(getRandomString))(
       requestBody = p => createTenantJson(tenantName = p.value),
       assertion = { (injector, tenantName: TenantName) =>
