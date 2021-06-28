@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2018 ubirch GmbH
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ limitations under the License.
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- parent pom -->
+    <parent>
+        <groupId>com.ubirch</groupId>
+        <artifactId>poc-manager</artifactId>
+        <version>0.0.1</version>
+    </parent>
+
+    <artifactId>ubirch-poc-api</artifactId>
+    <version>0.0.1</version>
+    <packaging>jar</packaging>
+    <inceptionYear>2021</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <name>Ubirch POC manager api [${project.version}]</name>
+    <description>Service is able to manage POCs</description>
+
+    <repositories>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+    </repositories>
+
+    <properties>
+        <keycloack.version>11.0.2</keycloack.version>
+        <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
+        <bcpkix-jdk15on.version>1.61</bcpkix-jdk15on.version>
+        <bcprov-jdk15on.version>1.61</bcprov-jdk15on.version>
+        <testcontainers.version>1.15.2</testcontainers.version>
+        <flyway.version>7.8.1</flyway.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-poc-common</artifactId>
+            <version>0.0.1</version>
+        </dependency>
+        <!-- keycloack -->
+
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-authz-client</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-core -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-core</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-admin-client -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-services -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-services</artifactId>
+            <version>${keycloack.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-adapter-core -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-adapter-core</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-model-jpa -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-model-jpa</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-crypto</artifactId>
+            <version>${ubirch-crypto.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.14</version>
+        </dependency>
+
+        <!--BouncyCastle-->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>${bcprov-jdk15on.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>${bcpkix-jdk15on.version}</version>
+        </dependency>
+
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-scalatest_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-postgresql_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Wiremock -->
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock-jre8-standalone</artifactId>
+            <version>2.28.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- HTTP client -->
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>core_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>json4s_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>async-http-client-backend-monix_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>slf4j-backend_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/async-http-client-backend-future -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>async-http-client-backend-future_${scala.compat.version}</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>${flyway.version}</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+
+        <plugins>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>${flyway.version}</version>
+            </plugin>
+            <plugin>
+                <!-- see http://davidb.github.com/scala-maven-plugin -->
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-deprecation</arg>
+                                <arg>-dependencyfile</arg>
+                                <arg>-Ypartial-unification</arg>
+                                <arg>-feature</arg>
+                            </args>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- copy all dependencies into the target/lib dir for our docker image -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven-dependency-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <overWriteReleases>false</overWriteReleases>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- disable surefire -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+            <!-- enable scalatest -->
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
+                <version>${scalatest-maven-plugin.version}</version>
+                <configuration>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                    <junitxml>.</junitxml>
+                    <filereports>WDF TestSuite.txt</filereports>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- add licenses.txt -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${license-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-licenses</id>
+                        <goals>
+                            <goal>add-third-party</goal>
+                        </goals>
+                        <configuration>
+                            <thirdPartyFilename>licenses.txt</thirdPartyFilename>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven-jar-plugin.version}</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>com.ubirch.Service</mainClass>
+                            <useUniqueVersions>false</useUniqueVersions>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- create and/or push the created docker image -->
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>${dockerfile-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>default</id>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <buildDirectory>${project.build.outputDirectory}</buildDirectory>
+                    <repository>ubirch/${project.artifactId}</repository>
+                    <tag>${build.number}</tag>
+                    <buildArgs>
+                        <VERSION>${project.version}</VERSION>
+                        <BUILD>${build.number}</BUILD>
+                        <SERVICE_NAME>${project.name}</SERVICE_NAME>
+                        <JAR_LIBS>target/lib</JAR_LIBS>
+                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+            <!-- for mvn deploy to work, disable the default deploy plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>${maven-deploy-plugin.version}</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
+            <!-- code formatting -->
+            <plugin>
+                <groupId>org.antipathy</groupId>
+                <!-- The scala binary here doesn't need to match the project version -->
+                <artifactId>mvn-scalafmt_${scala.compat.version}</artifactId>
+                <!-- This represents the desired version of the plugin, whould be in the form:
+                     (major).(minor).(commitepoch).(commithash), which can be found here:
+                     https://github.com/simonjpegg/mvn_scalafmt/releases
+                     e.g. <version>1.0.1589620826.41b214a</version>
+                     Note: The SCALA version is OMITTED from this value
+                -->
+                <version>${maven-scalafmt.version}</version>
+                <configuration>
+                    <configLocation>https://raw.githubusercontent.com/ubirch/ubirch-scalafmt-rules/main/.scalafmt.conf
+                    </configLocation> <!-- path to config -->
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

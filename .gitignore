@@ -11,4 +11,5 @@ keycloak-extensions/get-users-by-attributes/target
 keycloak/extensions/*.deployed
 keycloak/extensions/*.undeployed
 keycloak/realms/hsperfdata_jboss
+/poc-api/realms/hsperfdata_jboss
 .DS_Store

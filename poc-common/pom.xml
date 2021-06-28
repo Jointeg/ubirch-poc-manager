@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2018 ubirch GmbH
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ limitations under the License.
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- parent pom -->
+    <parent>
+        <groupId>com.ubirch</groupId>
+        <artifactId>poc-manager</artifactId>
+        <version>0.0.1</version>
+    </parent>
+
+    <artifactId>ubirch-poc-common</artifactId>
+    <version>0.0.1</version>
+    <packaging>jar</packaging>
+    <inceptionYear>2021</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <name>Ubirch POC manager common [${project.version}]</name>
+    <description>Common module</description>
+    <url>https://ubirch.com/</url>
+
+    <organization>
+        <name>ubirch GmbH</name>
+        <url>https://ubirch.com/</url>
+    </organization>
+</project>

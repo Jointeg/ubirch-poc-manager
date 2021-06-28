@@ -1,0 +1,6 @@
+[ root ]
+basicConstraints = critical, CA:true
+keyUsage = keyCertSign, cRLSign
+extendedKeyUsage = serverAuth, clientAuth
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
