@@ -78,13 +78,18 @@ trait Awaits {
 
   def awaitForTwoTicks[T](observable: Observable[T], atMost: Duration = 5.seconds)(implicit
   scheduler: Scheduler): CancelableFuture[Unit] = {
+    awaitForTicks(observable, 2, atMost)
+  }
+
+  def awaitForTicks[T](observable: Observable[T], times: Int, atMost: Duration = 5.seconds)(implicit
+  scheduler: Scheduler): CancelableFuture[Unit] = {
     val res = for {
       ref <- Ref.of[Task, Int](0)
       cancelable <-
         Task(observable.doOnNext(_ => {
           ref.update(current => current + 1)
         }).subscribe()).timeout(atMost.toMillis.millis)
-      _ <- sleepUntil(ref.get.map(elems => elems >= 2), atMost)
+      _ <- sleepUntil(ref.get.map(elems => elems >= times), atMost)
     } yield cancelable.cancel()
     Await.ready(res.runToFuture, atMost)
   }

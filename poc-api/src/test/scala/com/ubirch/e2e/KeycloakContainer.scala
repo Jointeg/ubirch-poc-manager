@@ -8,9 +8,15 @@ import java.time.Duration
 
 class KeycloakContainer(underlying: GenericContainer, mountExtension: Boolean, realmExportFile: String)
   extends GenericContainer(underlying) {
-  underlying.container.withCopyFileToContainer(
-    MountableFile.forHostPath(s"./realms/$realmExportFile"),
-    s"/tmp/$realmExportFile")
+  if (MountableFile.forHostPath(s"./realms/$realmExportFile").getSize == 0) {
+    underlying.container.withCopyFileToContainer(
+      MountableFile.forHostPath(s"poc-api/realms/$realmExportFile"),
+      s"/tmp/$realmExportFile")
+  } else {
+    underlying.container.withCopyFileToContainer(
+      MountableFile.forHostPath(s"./realms/$realmExportFile"),
+      s"/tmp/$realmExportFile")
+  }
 }
 
 object KeycloakContainer {

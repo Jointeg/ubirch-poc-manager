@@ -2143,6 +2143,7 @@ class TenantAdminControllerSpec
                   |  "roleName" : "$roleName",
                   |  "deviceId" : "$deviceId",
                   |  "status" : "${poc.status.toString.toUpperCase}",
+                  |  "creationAttempts": ${poc.creationAttempts},
                   |  "lastUpdated" : "${lastUpdated.dateTime.toInstant}",
                   |  "created" : "${created.dateTime.toInstant}"
                   |}""".stripMargin

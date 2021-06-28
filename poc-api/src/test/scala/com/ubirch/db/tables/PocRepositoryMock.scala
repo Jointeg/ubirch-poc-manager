@@ -2,7 +2,7 @@ package com.ubirch.db.tables
 
 import com.google.inject.Inject
 import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
-import com.ubirch.models.poc.{ Completed, Poc, PocStatus, SimplifiedDeviceInfo }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
@@ -36,7 +36,7 @@ class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) exte
   private def getAllUncompletedPocs(): Task[List[Poc]] =
     Task {
       pocDatastore.collect {
-        case (_, poc: Poc) if poc.status != Completed => poc
+        case (_, poc: Poc) if poc.status != Completed && poc.status != Aborted => poc
       }.toList
     }
 
@@ -73,4 +73,9 @@ class PocRepositoryMock @Inject() (pocStatusTable: PocStatusRepositoryMock) exte
       pocs.map(poc => SimplifiedDeviceInfo(poc.externalId, poc.pocName, poc.deviceId)))
 
   override def getAllUncompletedPocsIds(): Task[List[UUID]] = getAllUncompletedPocs().map(_.map(_.id))
+
+  override def incrementCreationAttempt(id: UUID): Task[Unit] = getPoc(id).flatMap {
+    case Some(poc) => updatePoc(poc.copy(creationAttempts = poc.creationAttempts + 1)).void
+    case None      => Task.raiseError(PocRepository.PocNotFound(id))
+  }
 }
