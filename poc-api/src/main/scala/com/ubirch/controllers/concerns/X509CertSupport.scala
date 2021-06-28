@@ -43,7 +43,7 @@ class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSuppo
           halt(403, NOK.authenticationError("Forbidden"))
         }
       case Failure(exception) =>
-        logger.warn("the incoming certificate is invalid", exception)
+        logger.warn("the incoming certificate is invalid", request.getHeader(TLS_HEADER_KEY), exception)
         halt(403, NOK.authenticationError("Forbidden"))
     }
   }
