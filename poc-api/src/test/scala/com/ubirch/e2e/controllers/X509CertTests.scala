@@ -14,7 +14,7 @@ trait X509CertTests extends E2ETestBase with Methods with AppendedClues {
     path: String,
     createToken: FakeTokenCreator => FakeToken,
     payload: T,
-    responseAssertion: (String, T) => Unit = (_: String, _: T) => ())(
+    responseAssertion: (String, T) => Unit = (_: String, _: T) => (),
     before: (InjectorHelper, T) => Unit = (_: InjectorHelper, _: T) => (),
     requestBody: T => String = (_: T) => "",
     assertion: (InjectorHelper, T) => Unit = (_: InjectorHelper, _: T) => ()
@@ -37,6 +37,7 @@ trait X509CertTests extends E2ETestBase with Methods with AppendedClues {
           status should equal(200) withClue s"Error response: $body"
           responseAssertion(body, payload)
         }
+        assertion(injector, payload)
       }
     }
 

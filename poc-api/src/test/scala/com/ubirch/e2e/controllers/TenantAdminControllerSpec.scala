@@ -19,7 +19,7 @@ import com.ubirch.services.auth.AESEncryption
 import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants
-import com.ubirch.services.poc.util.CsvConstants.columnSeparator
+import com.ubirch.services.poc.util.CsvConstants.{ columnSeparator, firstName }
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.test.TestData
 import com.ubirch.testutils.CentralCsvProvider.{ invalidHeaderPocOnlyCsv, validPocOnlyCsv }
@@ -175,8 +175,7 @@ class TenantAdminControllerSpec
       path = "/pocs/create",
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       responseAssertion = (body, _) => assert(body == ""),
-      payload = TenantName(getRandomString)
-    )(
+      payload = TenantName(getRandomString),
       before = (injector, _) => addTenantToDB(injector),
       requestBody = _ => validPocOnlyCsv(poc1id)
     )
@@ -233,9 +232,8 @@ class TenantAdminControllerSpec
       method = GET,
       path = s"/pocStatus/$poc1id",
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
-      responseAssertion = (body, pocStatus) => assert(body == write[PocStatus](pocStatus)),
-      payload = createPocStatus(pocId = poc1id)
-    )(
+      responseAssertion = (body, pocStatus) => assert(body.contains(s""""pocId":"${pocStatus.pocId}"""")),
+      payload = createPocStatus(pocId = poc1id),
       before = (injector, pocStatus) => {
         val repo = injector.get[PocStatusRepository]
         await(repo.createPocStatus(pocStatus))
@@ -494,6 +492,18 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[Poc](
+      method = GET,
+      path = s"/pocs",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      responseAssertion = (body, poc) => assert(body.contains(s""""id":"${poc.id}"""")),
+      payload = createPoc(id = poc1id, tenantName = TenantName(globalTenantName)),
+      before = (injector, poc) => {
+        addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+      }
+    )
   }
 
   "Endpoint GET /poc/:id" must {
@@ -576,6 +586,18 @@ class TenantAdminControllerSpec
       path = s"/poc/$poc1id",
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[Poc](
+      method = GET,
+      path = s"/poc/$poc1id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      responseAssertion = (body, poc) => assert(body.contains(s""""id":"${poc.id}"""")),
+      payload = createPoc(id = poc1id, tenantName = TenantName(globalTenantName)),
+      before = (injector, poc) => {
+        addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+      }
     )
   }
 
@@ -743,6 +765,21 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[Poc](
+      method = PUT,
+      path = s"/poc/$poc1id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = createPoc(id = poc1id, tenantName = TenantName(globalTenantName), status = Completed).copy(
+        phone = "+4974339296",
+        manager = PocManager("new last name", "new name", "new@email.com", "+4974339296")
+      ),
+      requestBody = poc => pocToFormattedJson(poc),
+      before = (injector, poc) => {
+        addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+      }
+    )
   }
 
   "Endpoint POST /tenant-token" must {
@@ -808,6 +845,15 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector),
       requestBody = addDeviceCreationToken
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[String](
+      method = POST,
+      path = "/deviceToken",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = addDeviceCreationToken,
+      requestBody = identity,
+      before = (injector, poc) => addTenantToDB(injector)
     )
   }
 
@@ -1256,6 +1302,27 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[(Poc, PocAdmin)](
+      method = GET,
+      path = "/poc-admins",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = (
+        createPoc(id = poc1id, tenantName = TenantName(globalTenantName)),
+        createPocAdmin(pocId = poc1id, tenantId = TenantId(TenantName(globalTenantName)))),
+      before = (injector, pocWithPocAdmin) => {
+        val (poc, admin) = pocWithPocAdmin
+        val tenant = addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin.copy(tenantId = tenant.id)))
+      },
+      responseAssertion = (body, pocWithPocAdmin) => {
+        assertPocAdminsJson(body)
+          .hasTotal(1)
+          .hasAdminCount(1)
+          .hasAdmins(Seq(pocWithPocAdmin))
+      }
+    )
   }
 
   private val invalidParameter =
@@ -1381,6 +1448,21 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[Poc](
+      method = GET,
+      path = "/devices",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = createPoc(id = poc1id, tenantName = TenantName(globalTenantName)),
+      before = (injector, poc) => {
+        addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+      },
+      responseAssertion = (body, poc) => {
+        val bodyLines = body.split("\n")
+        bodyLines should contain(s""""${poc.externalId}"; "${poc.pocName}"; "${poc.deviceId.toString}"""")
+      }
+    )
   }
 
   "Endpoint POST /webident/initiate-id" should {
@@ -1447,6 +1529,30 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector),
       requestBody = initiateIdJson(poc1id)
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[(Poc, PocAdmin)](
+      method = POST,
+      path = "/webident/initiate-id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = (
+        createPoc(id = poc1id, tenantName = TenantName(globalTenantName)),
+        createPocAdmin(pocAdminId = pocAdminId, pocId = poc1id, tenantId = TenantId(TenantName(globalTenantName)))),
+      requestBody = _ => initiateIdJson(pocAdminId),
+      before = (injector, pocWithPocAdmin) => {
+        val (poc, admin) = pocWithPocAdmin
+        addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin))
+      },
+      responseAssertion = (body, poc) => {
+        assert(body.contains("""{"webInitiateId":"""))
+      },
+      assertion = (injector, pocWithPocAdmin) => {
+        val (_, pocAdmin) = pocWithPocAdmin
+        val updatedPocAdmin = await(injector.get[PocAdminTable].getPocAdmin(pocAdmin.id))
+        assert(updatedPocAdmin.value.webIdentInitiateId.isDefined)
+      }
     )
   }
 
@@ -1543,6 +1649,34 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[(Poc, PocAdmin)](
+      method = POST,
+      path = "/webident/id",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = (
+        createPoc(id = poc1id, tenantName = TenantName(globalTenantName)),
+        createPocAdmin(
+          pocAdminId = pocAdminId,
+          pocId = poc1id,
+          tenantId = TenantId(TenantName(globalTenantName)),
+          webIdentInitiateId = Some(TestData.PocAdmin.webIdentInitiateId))),
+      requestBody = pocWithPocAdmin => {
+        val (_, admin) = pocWithPocAdmin
+        updateWebIdentIdJson(
+          admin.id,
+          TestData.PocAdmin.webIdentId,
+          TestData.PocAdmin.webIdentInitiateId)
+      },
+      before = (injector, pocWithPocAdmin) => {
+        val (poc, admin) = pocWithPocAdmin
+        addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin))
+        await(injector.get[PocAdminStatusRepository].createStatus(createPocAdminStatus(admin, poc)))
+      },
+      responseAssertion = (body, _) => assert(body.isEmpty)
+    )
   }
 
   "Endpoint GET /poc-admin/status/:id" should {
@@ -1569,9 +1703,9 @@ class TenantAdminControllerSpec
           _ <- pocAdminTable.createPocAdmin(pocAdmin)
           _ <- pocAdminStatusTable.createStatus(pocAdminStatus)
         } yield ()
-        await(r, 5.seconds)
+        await(r)
 
-        val pocAdminStatusAfterInsert = await(pocAdminStatusTable.getStatus(pocAdmin.id), 5.seconds).getOrElse(fail(
+        val pocAdminStatusAfterInsert = await(pocAdminStatusTable.getStatus(pocAdmin.id)).getOrElse(fail(
           s"Expected to have PoC Admin status with id ${pocAdmin.id}"))
 
         get(
@@ -1614,9 +1748,9 @@ class TenantAdminControllerSpec
           _ <- pocAdminTable.createPocAdmin(pocAdmin)
           _ <- pocAdminStatusTable.createStatus(pocAdminStatus)
         } yield ()
-        await(r, 5.seconds)
+        await(r)
 
-        val pocAdminStatusAfterInsert = await(pocAdminStatusTable.getStatus(pocAdmin.id), 5.seconds).getOrElse(fail(
+        await(pocAdminStatusTable.getStatus(pocAdmin.id)).getOrElse(fail(
           s"Expected to have PoC Admin status with id ${pocAdmin.id}"))
 
         get(
@@ -1635,6 +1769,27 @@ class TenantAdminControllerSpec
       path = s"/poc-admin/status/$pocAdminId",
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[(Poc, PocAdmin)](
+      method = GET,
+      path = s"/poc-admin/status/$pocAdminId",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = (
+        createPoc(id = poc1id, tenantName = TenantName(globalTenantName)),
+        createPocAdmin(
+          pocAdminId = pocAdminId,
+          pocId = poc1id,
+          tenantId = TenantId(TenantName(globalTenantName)),
+          webIdentInitiateId = Some(TestData.PocAdmin.webIdentInitiateId))),
+      before = (injector, pocWithPocAdmin) => {
+        val (poc, admin) = pocWithPocAdmin
+        addTenantToDB(injector)
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin))
+        await(injector.get[PocAdminStatusRepository].createStatus(createPocAdminStatus(admin, poc)))
+      },
+      responseAssertion = (body, _) => assert(body.contains(""""webIdentRequired":true"""))
     )
   }
 
@@ -1796,6 +1951,26 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocAdmin](
+      method = PUT,
+      path = s"/poc-admin/$pocAdminId/active/0",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = createPocAdmin(
+        pocAdminId = pocAdminId,
+        pocId = poc1id,
+        tenantId = TenantId(TenantName(globalTenantName)),
+        status = Completed,
+        certifyUserId = Some(TestData.PocAdmin.certifyUserId)
+      ),
+      before = (injector, admin) => {
+        addTenantToDB(injector)
+        val poc = createPoc(id = poc1id, tenantName = TenantName(globalTenantName))
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin))
+      },
+      responseAssertion = (body, _) => assert(body.isEmpty)
+    )
   }
 
   "Endpoint DELETE /poc-admin/:id/2fa-token" should {
@@ -1922,6 +2097,31 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocAdmin](
+      method = DELETE,
+      path = s"/poc-admin/$pocAdminId/2fa-token",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = createPocAdmin(
+        pocAdminId = pocAdminId,
+        pocId = poc1id,
+        tenantId = TenantId(TenantName(globalTenantName)),
+        status = Completed),
+      before = (injector, admin) => {
+        addTenantToDB(injector)
+        val poc = createPoc(id = poc1id, tenantName = TenantName(globalTenantName))
+        val keycloakUserService = injector.get[KeycloakUserService]
+        val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+          CertifyKeycloak.defaultRealm,
+          KeycloakTestData.createNewCertifyKeycloakUser(),
+          CertifyKeycloak,
+          List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
+        )).fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin.copy(certifyUserId = Some(certifyUserId.value))))
+      },
+      responseAssertion = (body, _) => assert(body.isEmpty)
+    )
   }
 
   "Endpoint GET /poc-admin/:id" must {
@@ -2019,7 +2219,8 @@ class TenantAdminControllerSpec
         s"/poc-admin/$pocAdminId",
         headers = Map(
           "authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare,
-          FakeX509Certs.validX509Header)) {
+          FakeX509Certs.validX509Header)
+      ) {
         status should equal(400)
         assert(
           body == s"NOK(1.0,false,'AuthenticationError,couldn't find tenant in db for ${TENANT_GROUP_PREFIX}tenantName)")
@@ -2031,6 +2232,23 @@ class TenantAdminControllerSpec
       path = s"/poc-admin/$pocAdminId",
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocAdmin](
+      method = GET,
+      path = s"/poc-admin/$pocAdminId",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload =
+        createPocAdmin(pocAdminId = pocAdminId, pocId = poc1id, tenantId = TenantId(TenantName(globalTenantName))),
+      before = (injector, admin) => {
+        addTenantToDB(injector)
+        val poc = createPoc(id = poc1id, tenantName = TenantName(globalTenantName))
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin))
+      },
+      responseAssertion = (body, admin) => {
+        assertPocAdminJson(body).hasId(admin.id)
+      }
     )
   }
 
@@ -2298,6 +2516,27 @@ class TenantAdminControllerSpec
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
     )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocAdmin](
+      method = PUT,
+      path = s"/poc-admin/$pocAdminId",
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload =
+        createPocAdmin(pocAdminId = pocAdminId, pocId = poc1id, tenantId = TenantId(TenantName(globalTenantName)))
+          .copy(
+            status = Pending,
+            webIdentRequired = true,
+            webIdentInitiateId = None
+          ),
+      before = (injector, admin) => {
+        addTenantToDB(injector)
+        val poc = createPoc(id = poc1id, tenantName = TenantName(globalTenantName))
+        await(injector.get[PocRepository].createPoc(poc))
+        await(injector.get[PocAdminRepository].createPocAdmin(admin))
+      },
+      requestBody = admin => pocAdminToFormattedPutPocAdminINJson(admin.copy(name = "Bruce Wayne")),
+      responseAssertion = (body, _) => body.isEmpty
+    )
   }
 
   "Endpoint POST /poc-admin/create" must {
@@ -2430,6 +2669,28 @@ class TenantAdminControllerSpec
       path = EndPoint,
       createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
       before = injector => addTenantToDB(injector)
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[CreatePocAdminRequest](
+      method = POST,
+      path = EndPoint,
+      createToken = _.userOnDevicesKeycloak(TenantName(globalTenantName)),
+      payload = CreatePocAdminRequest(
+        pocId = poc1id,
+        firstName = "first",
+        lastName = "last",
+        email = "test@ubirch.com",
+        phone = "+4911111111",
+        dateOfBirth = LocalDate.now().minusYears(30),
+        webIdentRequired = true
+      ),
+      before = (injector, _) => {
+        addTenantToDB(injector)
+        val poc = createPoc(id = poc1id, tenantName = TenantName(globalTenantName))
+        await(injector.get[PocRepository].createPoc(poc))
+      },
+      requestBody = r => pocAdminToFormattedCreatePocAdminJson(r),
+      responseAssertion = (body, _) => body.isEmpty
     )
   }
 

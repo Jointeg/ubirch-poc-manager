@@ -40,7 +40,7 @@ object ModelCreationHelper {
   val pocBmgTypeValue = "bmg_vac_app"
 
   val globalTenantName = "tenantName"
-  private val tenantNameObj = TenantName("tenantName")
+  private val tenantNameObj = TenantName(globalTenantName)
   private val tenantId = TenantId(TenantName(globalTenantName))
 
   private val pocConfig = new PocConfigImpl(ConfigFactory.load())

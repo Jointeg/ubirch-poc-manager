@@ -205,7 +205,7 @@ class SuperAdminControllerSpec extends E2ETestBase with BeforeAndAfterEach with 
       path = Endpoint,
       createToken = _.superAdmin,
       responseAssertion = (body, _) => assert(body == ""),
-      payload = TenantName(getRandomString))(
+      payload = TenantName(getRandomString),
       requestBody = p => createTenantJson(tenantName = p.value),
       assertion = { (injector, tenantName: TenantName) =>
         val tenantRepository = injector.get[TenantRepository]

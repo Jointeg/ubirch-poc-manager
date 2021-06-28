@@ -183,7 +183,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     post(
       "/poc-admin/employees/create",
       body = pocEmployeeCsv.getBytes(),
-      headers = Map("authorization" -> pocAdminToken)) {
+      headers = Map("authorization" -> pocAdminToken, FakeX509Certs.validX509Header)) {
       status shouldBe 200
       body shouldBe empty
     }
@@ -257,7 +257,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     post(
       "/tenant-admin/deviceToken",
       body = addDeviceCreationToken.getBytes(),
-      headers = Map("authorization" -> tenantAdminToken)
+      headers = Map("authorization" -> tenantAdminToken, FakeX509Certs.validX509Header)
     ) {
       status should equal(200)
       assert(body == "")
@@ -268,7 +268,7 @@ class PocEmployeeCreationFlowTest extends E2ETestBase with BeforeAndAfterEach wi
     post(
       "/tenant-admin/pocs/create",
       body = createPocWithPocAdminCSV.getBytes(),
-      headers = Map("authorization" -> tenantAdminToken)) {
+      headers = Map("authorization" -> tenantAdminToken, FakeX509Certs.validX509Header)) {
       status should equal(200)
       assert(body.isEmpty)
     }
