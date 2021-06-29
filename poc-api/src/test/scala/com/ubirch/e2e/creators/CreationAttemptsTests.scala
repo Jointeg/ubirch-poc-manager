@@ -1,18 +1,15 @@
 package com.ubirch.e2e.creators
 
 import cats.implicits.toTraverseOps
+import com.ubirch.ModelCreationHelper.{ addEmployeeTripleToRepository, createTenantPocEmployeeAndStatus }
 import com.ubirch.PocConfig
 import com.ubirch.db.tables._
 import com.ubirch.e2e.E2ETestBase
-import com.ubirch.models.poc.{ Aborted, Completed, LogoURL }
+import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ TenantCertifyGroupId, TenantDeviceGroupId }
-import com.ubirch.services.poc.PocAdminTestHelper.{
-  addPocAndStatusToRepository,
-  createPocAdminAndStatus,
-  createPocAdminStatusAllTrue
-}
+import com.ubirch.services.poc.PocAdminTestHelper.{ addPocAndStatusToRepository, createPocAdminAndStatus }
 import com.ubirch.services.poc.PocTestHelper._
-import com.ubirch.services.poc.{ PocAdminCreationLoop, PocAdminCreator, PocCreationLoop }
+import com.ubirch.services.poc.{ PocAdminCreationLoop, PocCreationLoop, PocEmployeeCreationLoop }
 import com.ubirch.services.teamdrive.model.SpaceName
 import com.ubirch.test.FakeTeamDriveClient
 
@@ -90,6 +87,103 @@ class CreationAttemptsTests extends E2ETestBase {
         val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
         assert(newPocAdmin.value.status == Aborted)
         assert(newPocAdmin.value.creationAttempts == 10)
+      }
+    }
+
+    "move PoC Admin directly to Aborted state if PoC is in Aborted status" in {
+      withInjector { injector =>
+        val pocConfig = injector.get[PocConfig]
+        val webIdentRequired = false
+        val loop = injector.get[PocAdminCreationLoop]
+        val tenantTable = injector.get[TenantRepository]
+        val pocTable = injector.get[PocRepository]
+        val pocStatusTable = injector.get[PocStatusRepository]
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
+        val teamDriveClient = injector.get[FakeTeamDriveClient]
+
+        val (poc, pocStatus, tenant) = createPocTriple(status = Completed)
+        val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
+        val spaceName = SpaceName.ofPoc("local", tenant, poc)
+        val updatedPoc =
+          poc.copy(
+            certifyGroupId = Some(UUID.randomUUID().toString),
+            adminGroupId = Some(UUID.randomUUID().toString),
+            status = Aborted)
+        addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
+        addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
+        teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
+        // Create static spaces
+        pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
+        }.runSyncUnsafe()
+
+        awaitForTwoTicks(loop.startPocAdminCreationLoop, 10.seconds)
+
+        val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
+        assert(newPocAdmin.value.status == Aborted)
+        assert(newPocAdmin.value.creationAttempts == 0)
+      }
+    }
+
+    "not increase counter if PoC is not completed" in {
+      withInjector { injector =>
+        val pocConfig = injector.get[PocConfig]
+        val webIdentRequired = false
+        val loop = injector.get[PocAdminCreationLoop]
+        val tenantTable = injector.get[TenantRepository]
+        val pocTable = injector.get[PocRepository]
+        val pocStatusTable = injector.get[PocStatusRepository]
+        val pocAdminTable = injector.get[PocAdminRepository]
+        val pocAdminStatusTable = injector.get[PocAdminStatusRepository]
+        val teamDriveClient = injector.get[FakeTeamDriveClient]
+
+        val (poc, pocStatus, tenant) = createPocTriple(status = Completed)
+        val (pocAdmin, pocAdminStatus) = createPocAdminAndStatus(poc, tenant, webIdentRequired)
+        val spaceName = SpaceName.ofPoc("local", tenant, poc)
+        val updatedPoc =
+          poc.copy(
+            certifyGroupId = Some(UUID.randomUUID().toString),
+            adminGroupId = Some(UUID.randomUUID().toString),
+            status = Processing)
+        addPocTripleToRepository(tenantTable, pocTable, pocStatusTable, updatedPoc, pocStatus, tenant)
+        addPocAndStatusToRepository(pocAdminTable, pocAdminStatusTable, pocAdmin, pocAdminStatus)
+        teamDriveClient.createSpace(spaceName, spaceName.v).runSyncUnsafe()
+        // Create static spaces
+        pocConfig.pocTypeStaticSpaceNameMap.values.toList.traverse { spaceName =>
+          teamDriveClient.createSpace(SpaceName.of(pocConfig.teamDriveStage, spaceName), spaceName)
+        }.runSyncUnsafe()
+
+        awaitForTwoTicks(loop.startPocAdminCreationLoop, 10.seconds)
+
+        val newPocAdmin = pocAdminTable.getPocAdmin(pocAdmin.id).runSyncUnsafe()
+        assert(newPocAdmin.value.status == Pending)
+        assert(newPocAdmin.value.creationAttempts == 0)
+      }
+    }
+  }
+
+  "PoCEmployeeCreator" should {
+    "move PoC Employee to Aborted state after 10 unsuccessful processing" in {
+      withInjector { injector =>
+        val loop = injector.get[PocEmployeeCreationLoop]
+        val pocTable = injector.get[PocRepository]
+        val tenantTable = injector.get[TenantRepository]
+        val employeeTable = injector.get[PocEmployeeRepository]
+        val statusTable = injector.get[PocEmployeeStatusRepository]
+
+        val (tenant, poc, employee, status) = createTenantPocEmployeeAndStatus
+        val updatedPoc = poc.copy(employeeGroupId = Some(UUID.randomUUID().toString))
+
+        tenantTable.createTenant(tenant).runSyncUnsafe()
+        addEmployeeTripleToRepository(pocTable, employeeTable, statusTable, updatedPoc, employee, status)
+        employeeTable.getPocEmployee(poc.id).runSyncUnsafe().isDefined shouldBe false
+
+        awaitForTicks(loop.startPocEmployeeCreationLoop, 15, 30.seconds)
+
+        val newPocEmployee = employeeTable.getPocEmployee(employee.id).runSyncUnsafe()
+        assert(newPocEmployee.value.status == Aborted)
+        assert(newPocEmployee.value.creationAttempts == 10)
       }
     }
   }

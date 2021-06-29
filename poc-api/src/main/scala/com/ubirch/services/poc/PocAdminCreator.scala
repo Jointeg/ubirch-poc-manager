@@ -90,14 +90,14 @@ class PocAdminCreatorImpl @Inject() (
     import cats.syntax.all._
     retrieveStatusAndTenant(admin).flatMap {
       case (Some(status: PocAdminStatus), Some(poc: Poc), Some(tenant: Tenant)) =>
-        if (poc.status != Completed) {
-          logger.debug(s"cannot start processing admin ${admin.id} as poc is not completed yet")
-          Task(Right(status))
-        } else if (poc.status == Aborted) {
+        if (poc.status == Aborted) {
           logger.debug(s"s cannot start processing admin ${admin.id} as related PoC ${poc.id} is in Aborted state")
           incrementCreationAttemptCounter(admin) >> adminRepository.updatePocAdmin(
             admin.copy(status = Aborted)) >> Task(
             logAndGetLeft(s"Cannot create admin ${admin.id} as PoC is in Aborted state"))
+        } else if (poc.status != Completed) {
+          logger.debug(s"cannot start processing admin ${admin.id} as poc is not completed yet")
+          Task(Right(status))
         } else if (status.webIdentSuccess.contains(false)) {
           logger.debug(s"cannot start processing admin ${admin.id} as webident is not finished yet")
           incrementCreationAttemptCounter(admin) >> Task(Right(status))
