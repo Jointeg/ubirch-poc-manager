@@ -75,8 +75,7 @@ class PocCreatorImpl @Inject() (
           (for {
             _ <- Task.cancelBoundary
             poc <- pocTable.unsafeGetUncompletedPocByIds(pocId)
-            result <- createPoc(poc).uncancelable
-            _ <- Task(logger.debug(s"Poc creation ended with result: $result"))
+            _ <- createPoc(poc).uncancelable
           } yield ()).onErrorHandle(ex => {
             logger.error(s"Unexpected error has happened while creating PoC with id $pocId", ex)
             ()
@@ -100,9 +99,11 @@ class PocCreatorImpl @Inject() (
 
     retrieveStatusAndTenant(poc).flatMap {
       case (Some(status: PocStatus), Some(tenant: Tenant)) =>
-        updateStatusOfPoc(poc, Processing)
-          .flatMap(poc => process(PocAndStatus(poc, status.copy(errorMessage = None)), tenant))
-          .productL(incrementCreationAttemptCounter(poc))
+        for {
+          updatedPoc <- updateStatusOfPoc(poc, Processing)
+          result <- process(PocAndStatus(updatedPoc, status.copy(errorMessage = None)), tenant)
+          _ <- result.leftTraverse(_ => incrementCreationAttemptCounter(updatedPoc))
+        } yield result
       case (_, _) =>
         val errorMsg = s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
         logger.error(errorMsg)
