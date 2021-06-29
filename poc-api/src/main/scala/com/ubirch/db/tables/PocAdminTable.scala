@@ -3,7 +3,7 @@ package com.ubirch.db.tables
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
 import com.ubirch.models.common.Sort
-import com.ubirch.models.poc.{ Completed, Poc, PocAdmin, Status }
+import com.ubirch.models.poc.{ Aborted, Completed, Poc, PocAdmin, Status }
 import com.ubirch.models.tenant.TenantId
 import io.getquill.{ EntityQuery, Insert, Query }
 import monix.eval.Task
@@ -33,6 +33,8 @@ trait PocAdminRepository {
   def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocAdmin]]
 
   def getByPocId(pocId: UUID): Task[List[PocAdmin]]
+
+  def incrementCreationAttempts(pocAdminId: UUID): Task[Unit]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, pocAdminStatusTable: PocAdminStatusTable)
@@ -55,15 +57,16 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.tenantId == lift(tenantId))
     }
 
-  private def getAllPocAdminsIdsWithoutStatusQuery(status: Status) =
+  private def getAllPocAdminsIdsWithoutStatusQuery(statuses: Status*) =
     quote {
-      querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.status != lift(status)).map(_.id)
+      querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(pocAdmin =>
+        !liftQuery(statuses).contains(pocAdmin.status)).map(_.id)
     }
 
-  private def getPocAdminWithoutStatusById(status: Status, id: UUID) =
+  private def getPocAdminWithoutStatusById(id: UUID, statuses: Status*) =
     quote {
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(admin =>
-        admin.status != lift(status) && admin.id == lift(id))
+        !liftQuery(statuses).contains(admin.status) && admin.id == lift(id))
     }
 
   private def updatePocAdminQuery(pocAdmin: PocAdmin) =
@@ -94,6 +97,11 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
     quote {
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.pocId == lift(pocId))
     }
+
+  private def incrementCreationAttemptQuery(id: UUID) = quote {
+    querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(admin => admin.id == lift(id)).update(admin =>
+      admin.creationAttempts -> (admin.creationAttempts + 1))
+  }
 
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] =
     run(createPocAdminQuery(pocAdmin)).map(_ => pocAdmin.id)
@@ -183,10 +191,14 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
   override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocAdmin]] =
     run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
 
-  override def getAllUncompletedPocAdminsIds(): Task[List[UUID]] = run(getAllPocAdminsIdsWithoutStatusQuery(Completed))
+  override def getAllUncompletedPocAdminsIds(): Task[List[UUID]] =
+    run(getAllPocAdminsIdsWithoutStatusQuery(Completed, Aborted))
   override def unsafeGetUncompletedPocAdminById(id: UUID): Task[PocAdmin] =
-    run(getPocAdminWithoutStatusById(Completed, id)).map(_.head)
+    run(getPocAdminWithoutStatusById(id, Completed, Aborted)).map(_.head)
 
   override def getByPocId(pocId: UUID): Task[List[PocAdmin]] =
     run(getByPocIdQuery(pocId))
+
+  override def incrementCreationAttempts(pocAdminId: UUID): Task[Unit] =
+    run(incrementCreationAttemptQuery(pocAdminId)).void
 }
