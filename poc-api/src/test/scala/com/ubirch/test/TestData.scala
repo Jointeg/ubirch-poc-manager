@@ -31,7 +31,13 @@ object TestData {
     val certifyUserId: UUID = UUID.fromString("49815d2d-5f31-4034-9e75-2600d36bf01c")
   }
 
+  object PocEmployee {
+    val id: UUID = UUID.fromString("6ca21675-989b-4ff7-9084-74c528bb4467")
+    val certifyUserId: UUID = UUID.fromString("26191c63-3edc-4b11-8933-ba265a993528")
+  }
+
   object Poc {
+    val id: UUID = UUID.fromString("08089989-4149-4642-baaf-b094b64dfbe9")
     val pocTypeUbVacApp: String = "ub_vac_app"
     val pocTypeUbVacApi: String = "ub_vac_api"
     val pocTypeBmgVacApi: String = "bmg_vac_api"
