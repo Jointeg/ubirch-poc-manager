@@ -2,39 +2,44 @@ package com.ubirch.services.tenantadmin
 
 import cats.Applicative
 import cats.data.EitherT
-import cats.data.Validated.{Invalid, Valid}
+import cats.data.Validated.{ Invalid, Valid }
 import com.typesafe.scalalogging.LazyLogging
 import cats.syntax.apply._
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
-import com.ubirch.controllers.SwitchActiveError.{MissingCertifyUserId, NotAllowedError, ResourceNotFound, UserNotCompleted}
+import com.ubirch.controllers.SwitchActiveError.{
+  MissingCertifyUserId,
+  NotAllowedError,
+  ResourceNotFound,
+  UserNotCompleted
+}
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_IN
-import com.ubirch.controllers.{EndpointHelpers, SwitchActiveError, TenantAdminContext}
+import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import cats.syntax.either._
 import com.ubirch.PocConfig
 import com.ubirch.controllers.AddDeviceCreationTokenRequest
 import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
 import com.ubirch.db.context.QuillMonixJdbcContext
-import com.ubirch.db.tables.{PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository}
+import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.NOK
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
-import com.ubirch.services.keycloak.users.{KeycloakUserService, Remove2faTokenKeycloakError}
-import com.ubirch.services.poc.{CertifyUserService, Remove2faTokenFromCertifyUserError}
+import com.ubirch.services.keycloak.users.{ KeycloakUserService, Remove2faTokenKeycloakError }
+import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenFromCertifyUserError }
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
 import com.ubirch.services.util.Validator
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import org.joda.time.DateTime
 import org.postgresql.util.PSQLException
-import org.scalatra.{Conflict, InternalServerError, NotFound, Ok}
+import org.scalatra.{ Conflict, InternalServerError, NotFound, Ok }
 
 import java.time.Clock
 import java.util.UUID
 import javax.inject.Inject
-import scala.language.{existentials, higherKinds}
-import scala.util.{Left, Right}
+import scala.language.{ existentials, higherKinds }
+import scala.util.{ Left, Right }
 
 trait TenantAdminService {
 
@@ -404,14 +409,14 @@ class DefaultTenantAdminService @Inject() (
         case Some(pocAdmin) if pocAdmin.status != Completed =>
           Task.pure(Remove2FaTokenError.NotCompleted(pocAdminId, pocAdmin.status).asLeft)
         case Some(pocAdmin) => certifyUserService.remove2FAToken(CertifyKeycloak.defaultRealm, pocAdmin)
-          .flatMap {
-            case Left(e) =>
-              Task.pure(Remove2FaTokenError.CertifyServiceError(pocAdminId, e).asLeft)
-            case Right(_) =>
-              pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
-                Some(DateTime.parse(clock.instant().toString)))) >>
-                Task.pure(().asRight)
-          }
+            .flatMap {
+              case Left(e) =>
+                Task.pure(Remove2FaTokenError.CertifyServiceError(pocAdminId, e).asLeft)
+              case Right(_) =>
+                pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
+                  Some(DateTime.parse(clock.instant().toString)))) >>
+                  Task.pure(().asRight)
+            }
       }
     } yield r
 

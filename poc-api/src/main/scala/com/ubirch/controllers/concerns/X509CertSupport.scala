@@ -39,12 +39,21 @@ class X509CertSupportImpl @Inject() (pocConfig: PocConfig) extends X509CertSuppo
       case Success(result) =>
         if (result) action
         else {
-          logger.warn("the incoming certificate is invalid", request.getHeader(TLS_HEADER_KEY))
+          logger.warn(
+            s"The incoming certificate is invalid. Length of incoming certificate chain is ${countCertificates(request)}")
           halt(403, NOK.authenticationError("Forbidden"))
         }
       case Failure(exception) =>
-        logger.warn("the incoming certificate is invalid", request.getHeader(TLS_HEADER_KEY), exception)
+        logger.warn(
+          s"The incoming certificate is invalid. Length of incoming certificate chain is ${countCertificates(request)}",
+          exception)
         halt(403, NOK.authenticationError("Forbidden"))
     }
   }
+
+  private def countCertificates(request: HttpServletRequest): Int =
+    Option(request.getHeader(TLS_HEADER_KEY)) match {
+      case Some(certs) => certs.split(",").length
+      case None        => 0
+    }
 }

@@ -12,6 +12,7 @@ import com.ubirch.models.user.UserId
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.PocTestHelper.await
+import com.ubirch.test.TestData
 import com.ubirch.util.KeycloakRealmsHelper._
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -20,25 +21,38 @@ import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
 trait ControllerSpecHelper {
-  def addTenantWithPocAndPocAdminToTable(injector: InjectorHelper, tenantName: String = globalTenantName)(implicit
+  def addTenantWithPocAndPocAdminToTable(
+    injector: InjectorHelper,
+    tenantName: String = globalTenantName,
+    adminCertifyUserId: Option[UUID] = Some(UUID.randomUUID()))(implicit
   scheduler: Scheduler): (Tenant, Poc, PocAdmin) = {
     val tenant = addTenantToDB(injector, tenantName)
-    val (poc: Poc, pocAdmin: PocAdmin) = addPocAndPocAdminToTable(injector, tenant)
+    val (poc: Poc, pocAdmin: PocAdmin) = addPocAndPocAdminToTable(injector, tenant, adminCertifyUserId)
     (tenant, poc, pocAdmin)
   }
 
-  def addPocAndPocAdminToTable(injector: InjectorHelper, tenant: Tenant)(implicit
-  scheduler: Scheduler): (Poc, PocAdmin) = {
+  def addPocAndPocAdminToTable(
+    injector: InjectorHelper,
+    tenant: Tenant,
+    adminCertifyUserId: Option[UUID] = Some(UUID.randomUUID()))(implicit scheduler: Scheduler): (Poc, PocAdmin) = {
     val poc = addPocToDb(tenant, injector)
-    val pocAdmin = addPocAdminToDB(poc, tenant, injector)
+    val pocAdmin = addPocAdminToDB(poc, tenant, injector, adminCertifyUserId)
     (poc, pocAdmin)
   }
 
-  def addPocAdminToDB(poc: Poc, tenant: Tenant, injector: InjectorHelper)(implicit scheduler: Scheduler): PocAdmin = {
+  def addPocAdminToDB(
+    poc: Poc,
+    tenant: Tenant,
+    injector: InjectorHelper,
+    certifyUserId: Option[UUID] = Some(UUID.randomUUID()))(implicit scheduler: Scheduler): PocAdmin = {
     val pocAdminTable = injector.get[PocAdminTable]
     val pocAdmin =
-      createPocAdmin(pocId = poc.id, tenantId = tenant.id, certifyUserId = Some(UUID.randomUUID()), status = Completed)
-    await(pocAdminTable.createPocAdmin(pocAdmin), 5.seconds)
+      createPocAdmin(
+        pocId = poc.id,
+        tenantId = tenant.id,
+        certifyUserId = certifyUserId,
+        status = Completed)
+    await(pocAdminTable.createPocAdmin(pocAdmin))
     pocAdmin
   }
 
@@ -46,14 +60,14 @@ trait ControllerSpecHelper {
   scheduler: Scheduler): Tenant = {
     val tenantTable = injector.get[TenantTable]
     val tenant = createTenant(tenantName)
-    await(tenantTable.createTenant(tenant), 5.seconds)
+    await(tenantTable.createTenant(tenant))
     tenant
   }
 
   def addPocToDb(tenant: Tenant, injector: InjectorHelper)(implicit scheduler: Scheduler): Poc = {
     val pocTable = injector.get[PocTable]
     val poc = createPoc(tenantName = tenant.tenantName, status = Pending)
-    await(pocTable.createPoc(poc), 5.seconds)
+    await(pocTable.createPoc(poc))
     poc
   }
 

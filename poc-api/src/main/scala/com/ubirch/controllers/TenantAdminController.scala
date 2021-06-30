@@ -498,24 +498,24 @@ class TenantAdminController @Inject() (
             r <- remove2Fa match {
               case Right(_) => Task.pure(Ok(""))
               case Left(e) => e match {
-                case Remove2FaTokenError.NotFound(_) =>
-                  Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
-                case Remove2FaTokenError.AssignedToDifferentTenant(_, _) =>
-                  Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
-                case Remove2FaTokenError.NotCompleted(pocAdminId, status) =>
-                  Task.pure(Conflict(NOK.conflict(
-                    s"Poc admin '$pocAdminId' is in wrong status: '$status', required: '${Completed}'")))
-                case Remove2FaTokenError.CertifyServiceError(_, e) => e match {
-                  case Remove2faTokenFromCertifyUserError.KeycloakError(_, message) => message match {
-                    case Remove2faTokenKeycloakError.UserNotFound(error) =>
-                      Task.pure(NotFound(NOK.resourceNotFoundError(error)))
-                    case Remove2faTokenKeycloakError.KeycloakError(error) =>
-                      Task.pure(InternalServerError(NOK.serverError(error)))
-                  }
-                  case Remove2faTokenFromCertifyUserError.MissingCertifyUserId(id) =>
-                    Task.pure(Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId")))
+                  case Remove2FaTokenError.NotFound(_) =>
+                    Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+                  case Remove2FaTokenError.AssignedToDifferentTenant(_, _) =>
+                    Task.pure(NotFound(NOK.resourceNotFoundError(notFoundMessage)))
+                  case Remove2FaTokenError.NotCompleted(pocAdminId, status) =>
+                    Task.pure(Conflict(NOK.conflict(
+                      s"Poc admin '$pocAdminId' is in wrong status: '$status', required: '${Completed}'")))
+                  case Remove2FaTokenError.CertifyServiceError(_, e) => e match {
+                      case Remove2faTokenFromCertifyUserError.KeycloakError(_, message) => message match {
+                          case Remove2faTokenKeycloakError.UserNotFound(error) =>
+                            Task.pure(NotFound(NOK.resourceNotFoundError(error)))
+                          case Remove2faTokenKeycloakError.KeycloakError(error) =>
+                            Task.pure(InternalServerError(NOK.serverError(error)))
+                        }
+                      case Remove2faTokenFromCertifyUserError.MissingCertifyUserId(id) =>
+                        Task.pure(Conflict(NOK.conflict(s"Poc admin '$id' does not have certifyUserId")))
+                    }
                 }
-              }
             }
           } yield r
         }

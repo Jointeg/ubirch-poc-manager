@@ -13,13 +13,16 @@ import javax.inject.{ Inject, Singleton }
 @Singleton
 class CertifyUserService @Inject() (keycloakUserService: KeycloakUserService) {
 
-  def remove2FAToken(realm: KeycloakRealm, certifyUser: HasCertifyUserId): Task[Either[Remove2faTokenFromCertifyUserError, Unit]] =
+  def remove2FAToken(
+    realm: KeycloakRealm,
+    certifyUser: HasCertifyUserId): Task[Either[Remove2faTokenFromCertifyUserError, Unit]] =
     for {
       result <- certifyUser.certifyUserId match {
         case Some(certifyUserId) =>
           keycloakUserService.remove2faToken(realm, certifyUserId, CertifyKeycloak).flatMap {
-            case Left(error) => Task.pure(Remove2faTokenFromCertifyUserError.KeycloakError(certifyUser.id, error).asLeft)
-            case Right(_)    => Task.pure(().asRight)
+            case Left(error) =>
+              Task.pure(Remove2faTokenFromCertifyUserError.KeycloakError(certifyUser.id, error).asLeft)
+            case Right(_) => Task.pure(().asRight)
           }
         case None => Task.pure(Remove2faTokenFromCertifyUserError.MissingCertifyUserId(certifyUser.id).asLeft)
       }
