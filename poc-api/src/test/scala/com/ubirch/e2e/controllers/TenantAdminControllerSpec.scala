@@ -347,22 +347,22 @@ class TenantAdminControllerSpec
       val pocTable = Injector.get[PocRepository]
       val tenant = addTenantToDB(Injector)
       val r = for {
-        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "POC 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "POC 11"))
+        _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, name = "poc 1"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, name = "the POC 11"))
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, name = "POC 2"))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
       get(
         "/pocs",
-        params = Map("search" -> "POC 1"),
+        params = Map("search" -> "PoC 1"),
         headers =
           Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
         poC_OUT.total shouldBe 2
-        poC_OUT.records shouldBe pocs.filter(_.pocName.startsWith("POC 1"))
+        poC_OUT.records shouldBe pocs.filter(_.pocName.toLowerCase.contains("poc 1"))
       }
     }
 
@@ -372,21 +372,21 @@ class TenantAdminControllerSpec
       val tenant = addTenantToDB(Injector)
       val r = for {
         _ <- pocTable.createPoc(createPoc(id = poc1id, tenantName = tenant.tenantName, city = "Berlin 1"))
-        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, city = "Berlin 11"))
+        _ <- pocTable.createPoc(createPoc(id = poc2id, tenantName = tenant.tenantName, city = "the berlin 11"))
         _ <- pocTable.createPoc(createPoc(id = UUID.randomUUID(), tenantName = tenant.tenantName, city = "Berlin 2"))
         pocs <- pocTable.getAllPocsByTenantId(tenant.id)
       } yield pocs
       val pocs = await(r, 5.seconds).map(_.datesToIsoFormat)
       get(
         "/pocs",
-        params = Map("search" -> "Berlin 1"),
+        params = Map("search" -> "BerLin 1"),
         headers =
           Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         val poC_OUT = read[Paginated_OUT[Poc]](body)
         poC_OUT.total shouldBe 2
-        poC_OUT.records shouldBe pocs.filter(_.address.city.startsWith("Berlin 1"))
+        poC_OUT.records shouldBe pocs.filter(_.address.city.toLowerCase.contains("berlin 1"))
       }
     }
 
@@ -971,7 +971,10 @@ class TenantAdminControllerSpec
         _ <-
           repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, email = "admin1@example.com"))
         _ <-
-          repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, email = "admin11@example.com"))
+          repository.createPocAdmin(createPocAdmin(
+            tenantId = tenant.id,
+            pocId = poc.id,
+            email = "theaDmin11@example.com"))
         _ <-
           repository.createPocAdmin(createPocAdmin(tenantId = tenant.id, pocId = poc.id, email = "admi212@example.com"))
         records <- repository.getAllPocAdminsByTenantId(tenant.id)
@@ -979,14 +982,14 @@ class TenantAdminControllerSpec
       val pocAdmins = await(r, 5.seconds).sorted
       get(
         "/poc-admins",
-        params = Map("search" -> "admin1"),
+        params = Map("search" -> "Admin1"),
         headers =
           Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
           .hasAdminCount(2)
-          .hasAdmins(pocAdmins.filter(_.email.startsWith("admin1")).map(pa => (poc, pa)))
+          .hasAdmins(pocAdmins.filter(_.email.toLowerCase.contains("admin1")).map(pa => (poc, pa)))
       }
     }
 
@@ -1007,7 +1010,7 @@ class TenantAdminControllerSpec
             tenantId = tenant.id,
             pocId = poc.id,
             email = "admin11@example.com",
-            name = "PocAdmin 11"))
+            name = "the PocAdmin 11"))
         _ <-
           repository.createPocAdmin(createPocAdmin(
             tenantId = tenant.id,
@@ -1019,14 +1022,14 @@ class TenantAdminControllerSpec
       val pocAdmins = await(r, 5.seconds).sorted
       get(
         "/poc-admins",
-        params = Map("search" -> "PocAdmin 1"),
+        params = Map("search" -> "pocadmin 1"),
         headers =
           Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocAdminsJson(body)
           .hasAdminCount(2)
-          .hasAdmins(pocAdmins.filter(_.name.startsWith("PocAdmin 1")).map(pa => (poc, pa)))
+          .hasAdmins(pocAdmins.filter(_.name.toLowerCase.contains("pocadmin 1")).map(pa => (poc, pa)))
       }
     }
 
@@ -1047,7 +1050,7 @@ class TenantAdminControllerSpec
             tenantId = tenant.id,
             pocId = poc.id,
             email = "admin11@example.com",
-            surname = "PocAdmin 11"))
+            surname = "the PocAdmin 11"))
         _ <-
           repository.createPocAdmin(createPocAdmin(
             tenantId = tenant.id,
@@ -1059,7 +1062,7 @@ class TenantAdminControllerSpec
       val pocAdmins = await(r, 5.seconds).sorted
       get(
         "/poc-admins",
-        params = Map("search" -> "PocAdmin 1"),
+        params = Map("search" -> "pocadmin 1"),
         headers =
           Map("authorization" -> token.userOnDevicesKeycloak(tenant.tenantName).prepare, FakeX509Certs.validX509Header)
       ) {
@@ -1067,7 +1070,7 @@ class TenantAdminControllerSpec
         assertPocAdminsJson(body)
           .hasTotal(2)
           .hasAdminCount(2)
-          .hasAdmins(pocAdmins.filter(_.surname.startsWith("PocAdmin 1")).map(pa => (poc, pa)))
+          .hasAdmins(pocAdmins.filter(_.surname.toLowerCase.contains("pocadmin 1")).map(pa => (poc, pa)))
       }
     }
 

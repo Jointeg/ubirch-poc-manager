@@ -92,9 +92,12 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
 
     criteria.search match {
       case Some(s) =>
+        val lowerCased = s.toLowerCase
         quote {
           employeeByPocId
-            .filter(e => e.email.like(lift(s"$s%")) || e.name.like(lift(s"$s%")) || e.surname.like(lift(s"$s%")))
+            .filter(e =>
+              e.email.toLowerCase.like(lift(s"%$lowerCased%")) || e.name.toLowerCase.like(
+                lift(s"%$lowerCased%")) || e.surname.toLowerCase.like(lift(s"%$lowerCased%")))
         }
       case None => employeeByPocId
     }

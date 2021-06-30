@@ -214,7 +214,7 @@ class PocAdminControllerSpec
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
-        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 11")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employEE 11")
         val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
         val r = for {
           _ <- employeeTable.createPocEmployee(employee1)
@@ -225,7 +225,7 @@ class PocAdminControllerSpec
         val employees = await(r)
         get(
           EndPoint,
-          params = Map("search" -> "employee 1"),
+          params = Map("search" -> "Employee 1"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
@@ -237,13 +237,42 @@ class PocAdminControllerSpec
       }
     }
 
+    "return Employees for passed search by name for partial string" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "Bruce Wayne")
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield employees
+        val employees = await(r)
+        get(
+          EndPoint,
+          params = Map("search" -> "wayne"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          status should equal(200)
+          assertPocEmployeesJson(body)
+            .hasTotal(1)
+            .hasEmployeeCount(1)
+            .hasEmployees(employees.filter(_.name.startsWith("Bruce")))
+        }
+      }
+    }
+
     "return Employees for passed search by surname" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employee 1")
-        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employee 11")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employEE 11")
         val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employee 2")
         val r = for {
           _ <- employeeTable.createPocEmployee(employee1)
@@ -254,14 +283,14 @@ class PocAdminControllerSpec
         val employees = await(r)
         get(
           EndPoint,
-          params = Map("search" -> "employee 1"),
+          params = Map("search" -> "Employee 1"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(2)
             .hasEmployeeCount(2)
-            .hasEmployees(employees.filter(_.surname.startsWith("employee 1")))
+            .hasEmployees(employees.filter(_.surname.toLowerCase.startsWith("employee 1")))
         }
       }
     }
@@ -272,7 +301,7 @@ class PocAdminControllerSpec
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee1@test.de")
-        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee11@test.de")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employEE11@test.de")
         val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee2@test.de")
         val r = for {
           _ <- employeeTable.createPocEmployee(employee1)
@@ -283,14 +312,14 @@ class PocAdminControllerSpec
         val employees = await(r)
         get(
           EndPoint,
-          params = Map("search" -> "employee1"),
+          params = Map("search" -> "Employee1"),
           headers =
             Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(2)
             .hasEmployeeCount(2)
-            .hasEmployees(employees.filter(_.email.startsWith("employee 1")))
+            .hasEmployees(employees.filter(_.email.toLowerCase.startsWith("employee 1")))
         }
       }
     }

@@ -154,11 +154,13 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
 
     criteria.search match {
       case Some(s) =>
+        val lowerCased = s.toLowerCase
         quote {
           pocByTenantId
             .filter(poc =>
-              poc.pocName.like(lift(s"$s%")) || poc.address.city.like(lift(s"$s%")) || poc.externalId.like(
-                lift(s"$s%")))
+              poc.pocName.toLowerCase.like(lift(s"%$lowerCased%")) || poc.address.city.toLowerCase.like(lift(
+                s"%$lowerCased%")) || poc.externalId.like(
+                lift(s"%$lowerCased%")))
         }
       case None => pocByTenantId
     }
