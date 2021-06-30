@@ -21,7 +21,7 @@ trait PocEmployeeRepository {
 
   def getPocEmployeesByTenantId(tenantId: TenantId): Task[List[PocEmployee]]
 
-  def getUncompletedPocEmployeesIds(): Task[List[UUID]]
+  def getAllPocEmployeesToBecomeProcessed(): Task[List[UUID]]
 
   def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee]
 
@@ -161,7 +161,7 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       }
     }
 
-  override def getUncompletedPocEmployeesIds(): Task[List[UUID]] =
+  override def getAllPocEmployeesToBecomeProcessed(): Task[List[UUID]] =
     run(getAllPocEmployeeIdsWithoutStatusQuery(Completed, Aborted))
 
   override def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee] =

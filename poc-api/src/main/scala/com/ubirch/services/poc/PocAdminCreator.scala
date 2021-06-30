@@ -55,7 +55,7 @@ class PocAdminCreatorImpl @Inject() (
   import certifyHelper._
 
   def createPocAdmins(): Task[Unit] = {
-    adminRepository.getAllUncompletedPocAdminsIds().flatMap {
+    adminRepository.getAllPocAdminsToBecomeProcessed().flatMap {
       case pocAdminsIds if pocAdminsIds.isEmpty =>
         logger.debug("no poc admins waiting for completion")
         Task(PocAdminCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Admin"))).void
@@ -92,9 +92,9 @@ class PocAdminCreatorImpl @Inject() (
       case (Some(status: PocAdminStatus), Some(poc: Poc), Some(tenant: Tenant)) =>
         if (poc.status == Aborted) {
           logger.debug(s"s cannot start processing admin ${admin.id} as related PoC ${poc.id} is in Aborted state")
-          incrementCreationAttemptCounter(admin) >> adminRepository.updatePocAdmin(
-            admin.copy(status = Aborted)) >> Task(
-            logAndGetLeft(s"Cannot create admin ${admin.id} as PoC is in Aborted state"))
+          incrementCreationAttemptCounter(admin) >>
+            adminRepository.updatePocAdmin(admin.copy(status = Aborted)) >>
+            Task(logAndGetLeft(s"Cannot create admin ${admin.id} as PoC is in Aborted state"))
         } else if (poc.status != Completed) {
           logger.debug(s"cannot start processing admin ${admin.id} as poc is not completed yet")
           Task(Right(status))

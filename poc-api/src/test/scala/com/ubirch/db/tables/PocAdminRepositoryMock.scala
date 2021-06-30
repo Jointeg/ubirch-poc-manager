@@ -85,7 +85,7 @@ class PocAdminRepositoryMock @Inject() (
     }.map(_._2)
   }
 
-  override def getAllUncompletedPocAdminsIds(): Task[List[UUID]] = getAllUncompletedPocAdmins().map(_.map(_.id))
+  override def getAllPocAdminsToBecomeProcessed(): Task[List[UUID]] = getAllUncompletedPocAdmins().map(_.map(_.id))
   override def unsafeGetUncompletedPocAdminById(id: UUID): Task[PocAdmin] =
     getAllUncompletedPocAdmins().map(_.find(_.id == id).head)
 

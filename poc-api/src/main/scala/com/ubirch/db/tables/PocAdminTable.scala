@@ -20,7 +20,7 @@ trait PocAdminRepository {
 
   def getAllPocAdminsByTenantId(tenantId: TenantId): Task[List[PocAdmin]]
 
-  def getAllUncompletedPocAdminsIds(): Task[List[UUID]]
+  def getAllPocAdminsToBecomeProcessed(): Task[List[UUID]]
 
   def unsafeGetUncompletedPocAdminById(id: UUID): Task[PocAdmin]
 
@@ -191,7 +191,7 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
   override def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocAdmin]] =
     run(getByCertifyUserIdQuery(certifyUserId)).map(_.headOption)
 
-  override def getAllUncompletedPocAdminsIds(): Task[List[UUID]] =
+  override def getAllPocAdminsToBecomeProcessed(): Task[List[UUID]] =
     run(getAllPocAdminsIdsWithoutStatusQuery(Completed, Aborted))
   override def unsafeGetUncompletedPocAdminById(id: UUID): Task[PocAdmin] =
     run(getPocAdminWithoutStatusById(id, Completed, Aborted)).map(_.head)

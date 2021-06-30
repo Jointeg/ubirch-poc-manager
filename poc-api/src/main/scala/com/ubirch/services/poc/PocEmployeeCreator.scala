@@ -46,7 +46,7 @@ class PocEmployeeCreatorImpl @Inject() (
   import certifyHelper._
 
   def createPocEmployees(): Task[Unit] = {
-    employeeTable.getUncompletedPocEmployeesIds().flatMap {
+    employeeTable.getAllPocEmployeesToBecomeProcessed().flatMap {
       case pocEmployeeIds if pocEmployeeIds.isEmpty =>
         logger.debug("no poc employees waiting for completion")
         Task(PocEmployeeCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Employee"))).void
