@@ -340,7 +340,7 @@
                 </executions>
                 <configuration>
                     <buildDirectory>${project.build.outputDirectory}</buildDirectory>
-                    <repository>ubirch/${project.artifactId}</repository>
+                    <repository>ubirch/ubirch-poc-manager</repository>
                     <tag>${build.number}</tag>
                     <buildArgs>
                         <VERSION>${project.version}</VERSION>
