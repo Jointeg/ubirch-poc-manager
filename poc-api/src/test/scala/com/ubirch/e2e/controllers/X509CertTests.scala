@@ -11,7 +11,8 @@ trait X509CertTests extends E2ETestBase with Methods with AppendedClues {
 
   def x509SuccessWhenNonBlockingIssuesWithCert[T](
     method: Method,
-    path: String,
+    path: String = "",
+    pathFromPayload: T => String = (_: T) => "",
     createToken: FakeTokenCreator => FakeToken,
     payload: T,
     responseAssertion: (String, T) => Unit = (_: String, _: T) => (),
@@ -22,6 +23,10 @@ trait X509CertTests extends E2ETestBase with Methods with AppendedClues {
     val bodyToBytes = (p: T) =>
       if (Seq(POST, PUT, PATCH).contains(method)) requestBody(p).getBytes(StandardCharsets.UTF_8)
       else null
+    val url = path match {
+      case "" => pathFromPayload(payload)
+      case _  => path
+    }
 
     "be able to successfully perform request if x509 certs are missing the configured intermediate cert" in {
       withInjector { injector =>
@@ -30,7 +35,7 @@ trait X509CertTests extends E2ETestBase with Methods with AppendedClues {
 
         submit(
           method = method.method,
-          path = path,
+          path = url,
           body = bodyToBytes(payload),
           headers = Map("authorization" -> createToken(tokenCreator).prepare, FakeX509Certs.x509HeaderUntilIssuer)
         ) {
@@ -48,7 +53,7 @@ trait X509CertTests extends E2ETestBase with Methods with AppendedClues {
 
         submit(
           method = method.method,
-          path = path,
+          path = url,
           body = bodyToBytes(payload),
           headers = Map("authorization" -> createToken(tokenCreator).prepare, FakeX509Certs.x509HeaderWithWrongOrder)
         ) {
