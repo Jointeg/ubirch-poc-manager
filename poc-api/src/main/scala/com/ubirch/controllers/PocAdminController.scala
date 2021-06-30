@@ -27,9 +27,9 @@ import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.jwt.{ PublicKeyPoolService, TokenVerificationService }
 import com.ubirch.services.keycloak.users.Remove2faTokenKeycloakError.UserNotFound
 import com.ubirch.services.keycloak.users.{ Remove2faTokenKeycloakError, UpdateEmployeeKeycloakError }
-import com.ubirch.services.poc.Remove2faTokenError.KeycloakError
+import com.ubirch.services.poc.Remove2faTokenFromCertifyUserError.KeycloakError
 import com.ubirch.services.poc.employee.{ EmptyCSVError, _ }
-import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenError }
+import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenFromCertifyUserError }
 import com.ubirch.services.pocadmin.{
   GetEmployeeForPocAdminError,
   GetPocsAdminErrors,
@@ -325,7 +325,7 @@ class PocAdminController @Inject() (
                             case Remove2faTokenKeycloakError.KeycloakError(error) =>
                               Task.pure(InternalServerError(NOK.serverError(error)))
                           }
-                        case Remove2faTokenError.MissingCertifyUserId(id) =>
+                        case Remove2faTokenFromCertifyUserError.MissingCertifyUserId(id) =>
                           Task.pure(Conflict(NOK.conflict(s"Poc employee '$id' does not have certifyUserId")))
                       }
                     case Right(_) =>

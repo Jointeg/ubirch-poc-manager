@@ -13,21 +13,24 @@ import javax.inject.{ Inject, Singleton }
 @Singleton
 class CertifyUserService @Inject() (keycloakUserService: KeycloakUserService) {
 
-  def remove2FAToken(realm: KeycloakRealm, certifyUser: HasCertifyUserId): Task[Either[Remove2faTokenError, Unit]] =
+  def remove2FAToken(
+    realm: KeycloakRealm,
+    certifyUser: HasCertifyUserId): Task[Either[Remove2faTokenFromCertifyUserError, Unit]] =
     for {
       result <- certifyUser.certifyUserId match {
         case Some(certifyUserId) =>
           keycloakUserService.remove2faToken(realm, certifyUserId, CertifyKeycloak).flatMap {
-            case Left(error) => Task.pure(Remove2faTokenError.KeycloakError(certifyUser.id, error).asLeft)
-            case Right(_)    => Task.pure(().asRight)
+            case Left(error) =>
+              Task.pure(Remove2faTokenFromCertifyUserError.KeycloakError(certifyUser.id, error).asLeft)
+            case Right(_) => Task.pure(().asRight)
           }
-        case None => Task.pure(Remove2faTokenError.MissingCertifyUserId(certifyUser.id).asLeft)
+        case None => Task.pure(Remove2faTokenFromCertifyUserError.MissingCertifyUserId(certifyUser.id).asLeft)
       }
     } yield result
 }
 
-sealed trait Remove2faTokenError
-object Remove2faTokenError {
-  case class KeycloakError(id: UUID, message: Remove2faTokenKeycloakError) extends Remove2faTokenError
-  case class MissingCertifyUserId(id: UUID) extends Remove2faTokenError
+sealed trait Remove2faTokenFromCertifyUserError
+object Remove2faTokenFromCertifyUserError {
+  case class KeycloakError(id: UUID, message: Remove2faTokenKeycloakError) extends Remove2faTokenFromCertifyUserError
+  case class MissingCertifyUserId(id: UUID) extends Remove2faTokenFromCertifyUserError
 }
