@@ -1,8 +1,8 @@
 package com.ubirch.services.poc
 
-import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus }
 import com.ubirch.ModelCreationHelper.{ createPocAdmin, createPocAdminStatus }
-import com.ubirch.db.tables.{ PocAdminRepositoryMock, PocAdminStatusRepositoryMock }
+import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository }
+import com.ubirch.models.poc.{ Poc, PocAdmin, PocAdminStatus }
 import com.ubirch.models.tenant.Tenant
 import monix.execution.Scheduler.Implicits.global
 
@@ -16,8 +16,8 @@ object PocAdminTestHelper {
   }
 
   def addPocAndStatusToRepository(
-    pocAdminTable: PocAdminRepositoryMock,
-    pocAdminStatusTable: PocAdminStatusRepositoryMock,
+    pocAdminTable: PocAdminRepository,
+    pocAdminStatusTable: PocAdminStatusRepository,
     pocAdmin: PocAdmin,
     pocAdminStatus: PocAdminStatus
   ): Unit = {

@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
 import com.ubirch.models.common.{ ProcessingElements, WaitingForNewElements }
-import com.ubirch.models.poc.{ Completed, Poc, Processing, Status }
+import com.ubirch.models.poc.{ Aborted, Completed, Poc, Processing, Status }
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
@@ -46,7 +46,7 @@ class PocEmployeeCreatorImpl @Inject() (
   import certifyHelper._
 
   def createPocEmployees(): Task[Unit] = {
-    employeeTable.getUncompletedPocEmployeesIds().flatMap {
+    employeeTable.getAllPocEmployeesToBecomeProcessed().flatMap {
       case pocEmployeeIds if pocEmployeeIds.isEmpty =>
         logger.debug("no poc employees waiting for completion")
         Task(PocEmployeeCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Employee"))).void
@@ -66,14 +66,33 @@ class PocEmployeeCreatorImpl @Inject() (
     }
   }
 
+  private def incrementCreationAttemptCounter(employee: PocEmployee) = {
+    if (employee.creationAttempts >= 10) {
+      Task(logger.warn(
+        s"PoC Employee with ID ${employee.id} has exceeded maximum creation attempts number. Changing its status to Aborted.")) >>
+        employeeTable.incrementCreationAttempts(employee.id) >> employeeTable.updatePocEmployee(employee.copy(status =
+          Aborted)).void
+    } else {
+      employeeTable.incrementCreationAttempts(employee.id)
+    }
+  }
+
   private def createPocEmployee(employee: PocEmployee): Task[Either[String, PocEmployeeStatus]] = {
+    import cats.syntax.all._
     retrieveStatusAndPoc(employee).flatMap {
       case (Some(poc: Poc), Some(status: PocEmployeeStatus)) =>
-        process(EmployeeTriple(poc, employee, status.copy(errorMessage = None)))
+        for {
+          result <- process(EmployeeTriple(poc, employee, status.copy(errorMessage = None)))
+          _ <- result.leftTraverse(_ => incrementCreationAttemptCounter(employee))
+        } yield result
       case (_, _) =>
-        Task(logAndGetLeft(s"cannot create employee ${employee.id}, poc or status couldn't be found"))
-    }.onErrorHandle { e =>
-      logAndGetLeft(s"cannot create employee ${employee.id}, poc and status retrieval failed ${e.getMessage}", e)
+        incrementCreationAttemptCounter(employee) >>
+          Task(logAndGetLeft(s"cannot create employee ${employee.id}, poc or status couldn't be found"))
+    }.onErrorHandleWith { e =>
+      incrementCreationAttemptCounter(employee) >>
+        Task(logAndGetLeft(
+          s"cannot create employee ${employee.id}, poc and status retrieval failed ${e.getMessage}",
+          e))
     }
   }
 

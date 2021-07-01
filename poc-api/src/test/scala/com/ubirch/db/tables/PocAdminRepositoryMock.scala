@@ -1,10 +1,11 @@
 package com.ubirch.db.tables
 
 import com.ubirch.db.tables.model.PaginatedResult
-import com.ubirch.models.poc.{ Completed, Poc, PocAdmin }
+import com.ubirch.models.poc.{ Aborted, Completed, Poc, PocAdmin }
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
+import java.lang
 import java.util.UUID
 import javax.inject.{ Inject, Singleton }
 import scala.collection.mutable
@@ -45,7 +46,7 @@ class PocAdminRepositoryMock @Inject() (
   private def getAllUncompletedPocAdmins(): Task[List[PocAdmin]] = {
     Task {
       pocAdminDatastore.collect {
-        case (_, pocAdmin: PocAdmin) if pocAdmin.status != Completed => pocAdmin
+        case (_, pocAdmin: PocAdmin) if pocAdmin.status != Completed && pocAdmin.status != Aborted => pocAdmin
       }.toList
     }
   }
@@ -84,7 +85,7 @@ class PocAdminRepositoryMock @Inject() (
     }.map(_._2)
   }
 
-  override def getAllUncompletedPocAdminsIds(): Task[List[UUID]] = getAllUncompletedPocAdmins().map(_.map(_.id))
+  override def getAllPocAdminsToBecomeProcessed(): Task[List[UUID]] = getAllUncompletedPocAdmins().map(_.map(_.id))
   override def unsafeGetUncompletedPocAdminById(id: UUID): Task[PocAdmin] =
     getAllUncompletedPocAdmins().map(_.find(_.id == id).head)
 
@@ -93,5 +94,10 @@ class PocAdminRepositoryMock @Inject() (
       case (_, pocAdmin) if pocAdmin.pocId == pocId => true
       case _                                        => false
     }.map(_._2).toList
+  }
+
+  override def incrementCreationAttempts(pocAdminId: UUID): Task[Unit] = getPocAdmin(pocAdminId).flatMap {
+    case Some(admin) => updatePocAdmin(admin.copy(creationAttempts = admin.creationAttempts + 1)).void
+    case None        => Task.raiseError(new lang.RuntimeException(s"Could not find PoC Admin with ID: $pocAdminId"))
   }
 }

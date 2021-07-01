@@ -55,6 +55,7 @@ class PocJsonFormatTest extends UnitTestBase {
           |  "roleName":"POC_pocName_da4ba61a-e6c9-4124-bd3a-df7373e73676",
           |  "deviceId":"fa6efde5-238f-5cd9-9b28-c5be05a677f9",
           |  "status":"PENDING",
+          |  "creationAttempts":0,
           |  "lastUpdated":"2021-05-10T08:18:01.000Z",
           |  "created":"2021-05-10T08:18:01.036Z"
           |}""".stripMargin

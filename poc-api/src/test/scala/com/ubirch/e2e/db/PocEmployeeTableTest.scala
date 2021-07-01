@@ -147,7 +147,7 @@ class PocEmployeeTableTest extends E2ETestBase {
           _ <- repo.createPocEmployee(employee)
           _ <- repo.createPocEmployee(employee2)
           _ <- repo.createPocEmployee(employeeCompleted)
-          ids <- repo.getUncompletedPocEmployeesIds()
+          ids <- repo.getAllPocEmployeesToBecomeProcessed()
         } yield {
           ids
         }

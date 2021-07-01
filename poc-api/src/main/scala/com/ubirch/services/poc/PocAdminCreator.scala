@@ -55,7 +55,7 @@ class PocAdminCreatorImpl @Inject() (
   import certifyHelper._
 
   def createPocAdmins(): Task[Unit] = {
-    adminRepository.getAllUncompletedPocAdminsIds().flatMap {
+    adminRepository.getAllPocAdminsToBecomeProcessed().flatMap {
       case pocAdminsIds if pocAdminsIds.isEmpty =>
         logger.debug("no poc admins waiting for completion")
         Task(PocAdminCreationLoop.loopState.set(WaitingForNewElements(DateTime.now(), "PoC Admin"))).void
@@ -75,22 +75,45 @@ class PocAdminCreatorImpl @Inject() (
     }
   }
 
+  private def incrementCreationAttemptCounter(admin: PocAdmin) = {
+    if (admin.creationAttempts >= 10) {
+      Task(logger.warn(
+        s"PoC Admin with ID ${admin.id} has exceeded maximum creation attempts number. Changing its status to Aborted.")) >>
+        adminRepository.incrementCreationAttempts(admin.id) >> adminRepository.updatePocAdmin(admin.copy(status =
+          Aborted)).void
+    } else {
+      adminRepository.incrementCreationAttempts(admin.id)
+    }
+  }
+
   private def createPocAdmin(admin: PocAdmin): Task[Either[String, PocAdminStatus]] = {
+    import cats.syntax.all._
     retrieveStatusAndTenant(admin).flatMap {
       case (Some(status: PocAdminStatus), Some(poc: Poc), Some(tenant: Tenant)) =>
-        if (poc.status != Completed) {
+        if (poc.status == Aborted) {
+          logger.debug(s"s cannot start processing admin ${admin.id} as related PoC ${poc.id} is in Aborted state")
+          incrementCreationAttemptCounter(admin) >>
+            adminRepository.updatePocAdmin(admin.copy(status = Aborted)) >>
+            Task(logAndGetLeft(s"Cannot create admin ${admin.id} as PoC is in Aborted state"))
+        } else if (poc.status != Completed) {
           logger.debug(s"cannot start processing admin ${admin.id} as poc is not completed yet")
           Task(Right(status))
         } else if (status.webIdentSuccess.contains(false)) {
           logger.debug(s"cannot start processing admin ${admin.id} as webident is not finished yet")
-          Task(Right(status))
+          incrementCreationAttemptCounter(admin) >> Task(Right(status))
         } else {
-          updateStatusOfAdmin(admin, Processing)
-            .flatMap(pocAdmin => process(PocAdminAndStatus(pocAdmin, status.copy(errorMessage = None)), poc, tenant))
+          for {
+            pocAdmin <- updateStatusOfAdmin(admin, Processing)
+            result <- process(PocAdminAndStatus(pocAdmin, status.copy(errorMessage = None)), poc, tenant)
+            _ <- result.leftTraverse(_ => incrementCreationAttemptCounter(pocAdmin))
+          } yield result
         }
       case (_, _, _) =>
         Task(logAndGetLeft(s"cannot create admin ${admin.id} as tenant, poc or status couldn't be found"))
-    }.onErrorHandle { e => logAndGetLeft(s"cannot create admin ${admin.id}, due to: ${e.getMessage}") }
+    }.onErrorHandleWith { e =>
+      incrementCreationAttemptCounter(admin) >> Task(
+        logAndGetLeft(s"cannot create admin ${admin.id}, due to: ${e.getMessage}"))
+    }
   }
 
   private def process(aAs: PocAdminAndStatus, poc: Poc, tenant: Tenant): Task[Either[String, PocAdminStatus]] = {
