@@ -68,11 +68,11 @@
 
         <jwt-core.version>4.2.0</jwt-core.version>
 
-        <io.prometheus.simpleclient.version>0.6.0</io.prometheus.simpleclient.version>
-        <io.prometheus.simpleclient_hotspot.version>0.6.0</io.prometheus.simpleclient_hotspot.version>
-        <io.prometheus.simpleclient_httpserver.version>0.6.0</io.prometheus.simpleclient_httpserver.version>
-        <io.prometheus.simpleclient_logback.version>0.6.0</io.prometheus.simpleclient_logback.version>
-        <io.prometheus.simpleclient_graphite_bridge.version>0.6.0</io.prometheus.simpleclient_graphite_bridge.version>
+        <io.prometheus.simpleclient.version>0.10.0</io.prometheus.simpleclient.version>
+        <io.prometheus.simpleclient_hotspot.version>0.10.0</io.prometheus.simpleclient_hotspot.version>
+        <io.prometheus.simpleclient_httpserver.version>0.10.0</io.prometheus.simpleclient_httpserver.version>
+        <io.prometheus.simpleclient_logback.version>0.10.0</io.prometheus.simpleclient_logback.version>
+        <io.prometheus.simpleclient_graphite_bridge.version>0.10.0</io.prometheus.simpleclient_graphite_bridge.version>
 
         <json4s-native.version>3.6.0</json4s-native.version>
         <json4s-jackson.version>3.6.1</json4s-jackson.version>
