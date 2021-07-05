@@ -18,20 +18,26 @@ import com.ubirch.controllers.model.TenantAdminControllerJsonModel.{ PocAdmin_IN
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
+import com.ubirch.models.NOK
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
-import com.ubirch.services.keycloak.users.KeycloakUserService
+import com.ubirch.services.keycloak.users.{ KeycloakUserService, Remove2faTokenKeycloakError }
+import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenFromCertifyUserError }
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
 import com.ubirch.services.util.Validator
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
+import org.joda.time.DateTime
 import org.postgresql.util.PSQLException
+import org.scalatra.{ Conflict, InternalServerError, NotFound, Ok }
 
+import java.time.Clock
 import java.util.UUID
 import javax.inject.Inject
 import scala.language.{ existentials, higherKinds }
+import scala.util.{ Left, Right }
 
 trait TenantAdminService {
 
@@ -75,6 +81,8 @@ trait TenantAdminService {
     tenantAdminContext: TenantAdminContext,
     createPocAdminRequest: CreatePocAdminRequest): Task[Either[CreatePocAdminError, UUID]]
 
+  def remove2FaToken(tenant: Tenant, pocAdminId: UUID): Task[Either[Remove2FaTokenError, Unit]]
+
   def resetPocCreationAttempts(tenant: Tenant, pocId: UUID): Task[Either[ResetPocCreationAttemptsError, Unit]]
 
   def resetPocAdminCreationAttempts(
@@ -90,6 +98,8 @@ class DefaultTenantAdminService @Inject() (
   pocAdminStatusRepository: PocAdminStatusRepository,
   keycloakUserService: KeycloakUserService,
   pocConfig: PocConfig,
+  certifyUserService: CertifyUserService,
+  clock: Clock,
   quillMonixJdbcContext: QuillMonixJdbcContext)
   extends TenantAdminService
   with PocAuditLogging
@@ -395,6 +405,27 @@ class DefaultTenantAdminService @Inject() (
       }
     }
 
+  override def remove2FaToken(tenant: Tenant, pocAdminId: UUID): Task[Either[Remove2FaTokenError, Unit]] =
+    for {
+      maybePocAdmin <- pocAdminRepository.getPocAdmin(pocAdminId)
+      r <- maybePocAdmin match {
+        case None => Task.pure(Remove2FaTokenError.NotFound(pocAdminId).asLeft)
+        case Some(pocAdmin) if pocAdmin.tenantId != tenant.id =>
+          Task.pure(Remove2FaTokenError.AssignedToDifferentTenant(pocAdminId, tenant.id).asLeft)
+        case Some(pocAdmin) if pocAdmin.status != Completed =>
+          Task.pure(Remove2FaTokenError.NotCompleted(pocAdminId, pocAdmin.status).asLeft)
+        case Some(pocAdmin) => certifyUserService.remove2FAToken(CertifyKeycloak.defaultRealm, pocAdmin)
+            .flatMap {
+              case Left(e) =>
+                Task.pure(Remove2FaTokenError.CertifyServiceError(pocAdminId, e).asLeft)
+              case Right(_) =>
+                pocAdminRepository.updatePocAdmin(pocAdmin.copy(webAuthnDisconnected =
+                  Some(DateTime.parse(clock.instant().toString)))) >>
+                  Task.pure(().asRight)
+            }
+      }
+    } yield r
+
   override def resetPocCreationAttempts(
     tenant: Tenant,
     pocId: UUID): Task[Either[ResetPocCreationAttemptsError, Unit]] = {
@@ -541,6 +572,14 @@ sealed trait CreatePocAdminError
 object CreatePocAdminError {
   case class NotFound(message: String) extends CreatePocAdminError
   case class InvalidDataError(message: String) extends CreatePocAdminError
+}
+
+sealed trait Remove2FaTokenError
+object Remove2FaTokenError {
+  case class NotFound(pocAdminId: UUID) extends Remove2FaTokenError
+  case class AssignedToDifferentTenant(pocAdminId: UUID, tenantId: TenantId) extends Remove2FaTokenError
+  case class NotCompleted(pocAdminId: UUID, status: Status) extends Remove2FaTokenError
+  case class CertifyServiceError(pocAdminId: UUID, e: Remove2faTokenFromCertifyUserError) extends Remove2FaTokenError
 }
 
 sealed trait ResetPocCreationAttemptsError

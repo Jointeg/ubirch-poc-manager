@@ -214,7 +214,7 @@ class PocCreatorImpl @Inject() (
         logoUrl <-
           EitherT.fromOption[Task](pocAndStatus.poc.logoUrl, s"logoUrl is missing, when it should be added to Poc")
         imageByte <- EitherT.liftF(imageLoader.getImage(logoUrl.url))
-        pocLogo <- EitherT.fromEither[Task](PocLogo.create(pocAndStatus.poc.id, imageByte))
+        pocLogo <- EitherT(Task(PocLogo.create(pocAndStatus.poc.id, imageByte)))
         _ <- EitherT.liftF[Task, String, Unit](pocLogoRepository.createPocLogo(pocLogo))
       } yield {
         pocAndStatus.copy(status = pocAndStatus.status.copy(logoStored = Some(true)))
