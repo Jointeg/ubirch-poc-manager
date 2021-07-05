@@ -8,12 +8,12 @@ import com.ubirch.data.KeycloakTestData
 import com.ubirch.db.tables.{ PocAdminTable, PocEmployeeTable, PocRepository }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.e2e.controllers.PocAdminControllerSpec._
-import com.ubirch.e2e.controllers.assertions.PocEmployeesJsonAssertion._
 import com.ubirch.e2e.controllers.assertions.PocEmployeeJsonAssertion._
+import com.ubirch.e2e.controllers.assertions.PocEmployeesJsonAssertion._
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
+import com.ubirch.models.tenant.Tenant
 import com.ubirch.models.user.UserId
 import com.ubirch.models.{ FieldError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
@@ -29,8 +29,8 @@ import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.jackson.JsonMethods.{ parse, pretty, render }
 import org.json4s.native.Serialization.read
 import org.json4s.{ DefaultFormats, Formats }
-import org.scalatest.{ AppendedClues, BeforeAndAfterEach }
 import org.scalatest.prop.TableDrivenPropertyChecks
+import org.scalatest.{ AppendedClues, BeforeAndAfterEach }
 
 import java.time.{ Clock, Instant }
 import java.util.UUID
