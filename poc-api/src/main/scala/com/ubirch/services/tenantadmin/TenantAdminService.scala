@@ -398,6 +398,8 @@ class DefaultTenantAdminService @Inject() (
   override def resetPocCreationAttempts(
     tenant: Tenant,
     pocId: UUID): Task[Either[ResetPocCreationAttemptsError, Unit]] = {
+    type ResultWithErrorChannel[Result] = EitherT[Task, ResetPocCreationAttemptsError, Result]
+    import cats.syntax.all._
     val res: EitherT[Task, ResetPocCreationAttemptsError, Unit] = for {
       poc <- findPoCById(pocId, ResetPocCreationAttemptsError.NotFound(s"PoC not found by id: $pocId"))
       _ <-
@@ -409,7 +411,10 @@ class DefaultTenantAdminService @Inject() (
       _ <- validate(
         poc.status == Aborted,
         ResetPocCreationAttemptsError.PoCNotInAbortedStatus(s"PoC should be in Aborted status but is in ${poc.status}"))
+      allAbortedPocAdmins <- EitherT.right(pocAdminRepository.getAllAbortedByPocId(poc.id))
       _ <- EitherT.right(pocRepository.updatePoc(poc.copy(status = Processing, creationAttempts = 0)))
+      _ <- allAbortedPocAdmins.traverse_[ResultWithErrorChannel, UUID](pocAdmin =>
+        resetPocAdminCreationAttempts[ResetPocCreationAttemptsError](pocAdmin))
     } yield ()
 
     res.value
@@ -432,10 +437,14 @@ class DefaultTenantAdminService @Inject() (
         ResetPocAdminCreationAttemptsErrors.PocAdminNotInAbortedStatus(
           s"Expected PoC Admin to be in Aborted status but instead it is in ${pocAdmin.status}")
       )
-      _ <- EitherT.right(pocAdminRepository.updatePocAdmin(pocAdmin.copy(status = Processing, creationAttempts = 0)))
+      _ <- resetPocAdminCreationAttempts(pocAdmin)
     } yield ()
 
     res.value
+  }
+
+  private def resetPocAdminCreationAttempts[E](pocAdmin: PocAdmin): EitherT[Task, E, UUID] = {
+    EitherT.right(pocAdminRepository.updatePocAdmin(pocAdmin.copy(status = Processing, creationAttempts = 0)))
   }
 
   private def validate[E](validation: Boolean, error: => E) = {

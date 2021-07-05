@@ -35,6 +35,8 @@ trait PocAdminRepository {
   def getByPocId(pocId: UUID): Task[List[PocAdmin]]
 
   def incrementCreationAttempts(pocAdminId: UUID): Task[Unit]
+
+  def getAllAbortedByPocId(pocId: UUID): Task[List[PocAdmin]]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, pocAdminStatusTable: PocAdminStatusTable)
@@ -96,6 +98,12 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
   private def getByPocIdQuery(pocId: UUID) =
     quote {
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.pocId == lift(pocId))
+    }
+
+  private def getAllAbortedByPocIdQuery(pocId: UUID) =
+    quote {
+      querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(admin =>
+        admin.pocId == lift(pocId) && admin.status == lift(Aborted: Status))
     }
 
   private def incrementCreationAttemptQuery(id: UUID) = quote {
@@ -201,4 +209,6 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
 
   override def incrementCreationAttempts(pocAdminId: UUID): Task[Unit] =
     run(incrementCreationAttemptQuery(pocAdminId)).void
+
+  override def getAllAbortedByPocId(pocId: UUID): Task[List[PocAdmin]] = run(getAllAbortedByPocIdQuery(pocId))
 }

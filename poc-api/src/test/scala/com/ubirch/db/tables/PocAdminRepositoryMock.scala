@@ -100,4 +100,7 @@ class PocAdminRepositoryMock @Inject() (
     case Some(admin) => updatePocAdmin(admin.copy(creationAttempts = admin.creationAttempts + 1)).void
     case None        => Task.raiseError(new lang.RuntimeException(s"Could not find PoC Admin with ID: $pocAdminId"))
   }
+
+  override def getAllAbortedByPocId(pocId: UUID): Task[List[PocAdmin]] =
+    getByPocId(pocId).map(_.filter(_.status == Aborted))
 }

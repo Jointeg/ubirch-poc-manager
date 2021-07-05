@@ -2116,14 +2116,28 @@ class TenantAdminControllerSpec
   }
 
   "Endpoint POST /poc/retry/:id" must {
-    "reset CreationAttempts counter and move PoC to Processing status" in {
+    "reset CreationAttempts counter and move PoC and all related aborted PoC Admins to Processing status" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val pocId = UUID.randomUUID()
         val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminTable]
         val tenant = addTenantToDB(injector)
         val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = Aborted)
+        val pocAdminAborted1 =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+        val pocAdminAborted2 =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+        val pocAdminNotAborted =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Completed).copy(creationAttempts = 6)
+        val pocAdminDiffTenant =
+          createPocAdmin(tenantId = TenantId(TenantName("diffTenant")), pocId = poc.id, status = Aborted).copy(
+            creationAttempts = 10)
         pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminAborted1).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminAborted2).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminNotAborted).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminDiffTenant).runSyncUnsafe(5.seconds)
 
         put(
           s"/poc/retry/$pocId",
@@ -2136,6 +2150,19 @@ class TenantAdminControllerSpec
         val updatedPoc = await(pocTable.getPoc(pocId), 5.seconds).value
         updatedPoc.status shouldBe Processing
         updatedPoc.creationAttempts shouldBe 0
+
+        val pocAdminUpdated1 = await(pocAdminTable.getPocAdmin(pocAdminAborted1.id)).value
+        pocAdminUpdated1.status shouldBe Processing
+        pocAdminUpdated1.creationAttempts shouldBe 0
+        val pocAdminUpdated2 = await(pocAdminTable.getPocAdmin(pocAdminAborted2.id)).value
+        pocAdminUpdated2.status shouldBe Processing
+        pocAdminUpdated2.creationAttempts shouldBe 0
+        val pocAdminUpdated3 = await(pocAdminTable.getPocAdmin(pocAdminDiffTenant.id)).value
+        pocAdminUpdated3.status shouldBe Processing
+        pocAdminUpdated3.creationAttempts shouldBe 0
+        val pocAdminNotUpdated1 = await(pocAdminTable.getPocAdmin(pocAdminNotAborted.id)).value
+        pocAdminNotUpdated1.status shouldBe Completed
+        pocAdminNotUpdated1.creationAttempts shouldBe 6
       }
     }
 
