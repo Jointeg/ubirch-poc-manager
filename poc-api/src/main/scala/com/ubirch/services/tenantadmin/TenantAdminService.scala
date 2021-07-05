@@ -3,8 +3,10 @@ package com.ubirch.services.tenantadmin
 import cats.Applicative
 import cats.data.EitherT
 import cats.data.Validated.{ Invalid, Valid }
-import com.typesafe.scalalogging.LazyLogging
 import cats.syntax.apply._
+import cats.syntax.either._
+import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.PocConfig
 import com.ubirch.controllers.EndpointHelpers.ActivateSwitch
 import com.ubirch.controllers.SwitchActiveError.{
   MissingCertifyUserId,
@@ -12,12 +14,8 @@ import com.ubirch.controllers.SwitchActiveError.{
   ResourceNotFound,
   UserNotCompleted
 }
-import com.ubirch.controllers.model.TenantAdminControllerJsonModel.PocAdmin_IN
-import com.ubirch.controllers.{ EndpointHelpers, SwitchActiveError, TenantAdminContext }
-import cats.syntax.either._
-import com.ubirch.PocConfig
-import com.ubirch.controllers.AddDeviceCreationTokenRequest
-import com.ubirch.controllers.model.TenantAdminControllerJsonModel.Poc_IN
+import com.ubirch.controllers.model.TenantAdminControllerJsonModel.{ PocAdmin_IN, Poc_IN }
+import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
 import com.ubirch.models.poc._
@@ -76,6 +74,12 @@ trait TenantAdminService {
     tenant: Tenant,
     tenantAdminContext: TenantAdminContext,
     createPocAdminRequest: CreatePocAdminRequest): Task[Either[CreatePocAdminError, UUID]]
+
+  def resetPocCreationAttempts(tenant: Tenant, pocId: UUID): Task[Either[ResetPocCreationAttemptsError, Unit]]
+
+  def resetPocAdminCreationAttempts(
+    tenant: Tenant,
+    pocAdminId: UUID): Task[Either[ResetPocAdminCreationAttemptsErrors, Unit]]
 }
 
 class DefaultTenantAdminService @Inject() (
@@ -363,11 +367,13 @@ class DefaultTenantAdminService @Inject() (
     createPocAdminRequest: CreatePocAdminRequest): Task[Either[CreatePocAdminError, UUID]] =
     quillMonixJdbcContext.withTransaction {
       (for {
-        poc <- EitherT.fromOptionF[Task, CreatePocAdminError, Poc](
-          pocRepository.getPoc(createPocAdminRequest.pocId),
+        poc <- findPoCById(
+          createPocAdminRequest.pocId,
           CreatePocAdminError.NotFound(s"pocId is not found: ${createPocAdminRequest.pocId.toString}"))
-        _ <- isPocAssignedToTenant[Task, CreatePocAdminError](tenant, poc)(CreatePocAdminError.NotFound(
-          s"poc: ${poc.id.toString} is not assigned the tenant: ${tenant.id.toString}"))
+        _ <- validate(
+          tenant.id == poc.tenantId,
+          CreatePocAdminError.NotFound(
+            s"poc: ${poc.id.toString} is not assigned the tenant: ${tenant.id.toString}"))
 
         pocAdmin <- createPocAdminObj(poc, tenant, createPocAdminRequest)
         _ <- EitherT.liftF[Task, CreatePocAdminError, UUID](pocAdminRepository.createPocAdmin(pocAdmin))
@@ -389,13 +395,54 @@ class DefaultTenantAdminService @Inject() (
       }
     }
 
-  private def isPocAssignedToTenant[F[_]: Applicative, E](
+  override def resetPocCreationAttempts(
     tenant: Tenant,
-    poc: Poc)(error: => E): EitherT[F, E, Unit] = {
-    if (poc.tenantId == tenant.id) {
-      EitherT.rightT[F, E](())
+    pocId: UUID): Task[Either[ResetPocCreationAttemptsError, Unit]] = {
+    val res: EitherT[Task, ResetPocCreationAttemptsError, Unit] = for {
+      poc <- findPoCById(pocId, ResetPocCreationAttemptsError.NotFound(s"PoC not found by id: $pocId"))
+      _ <-
+        validate(
+          poc.tenantId == tenant.id,
+          ResetPocCreationAttemptsError.NotFound(
+            s"poc: ${poc.id.toString} is not assigned the tenant: ${tenant.id.toString}")
+        )
+      _ <- validate(
+        poc.status == Aborted,
+        ResetPocCreationAttemptsError.PoCNotInAbortedStatus(s"PoC should be in Aborted status but is in ${poc.status}"))
+      _ <- EitherT.right(pocRepository.updatePoc(poc.copy(status = Processing, creationAttempts = 0)))
+    } yield ()
+
+    res.value
+  }
+
+  override def resetPocAdminCreationAttempts(
+    tenant: Tenant,
+    pocAdminId: UUID): Task[Either[ResetPocAdminCreationAttemptsErrors, Unit]] = {
+    val res: EitherT[Task, ResetPocAdminCreationAttemptsErrors, Unit] = for {
+      pocAdmin <- getPocAdmin(
+        pocAdminId,
+        _ => ResetPocAdminCreationAttemptsErrors.NotFound(s"Could not find PoC Admin with id: $pocAdminId"))
+      _ <- validate(
+        pocAdmin.tenantId == tenant.id,
+        ResetPocAdminCreationAttemptsErrors.PocAdminAssignedToDifferentTenant(
+          s"PoC Admin with id $pocAdminId is assigned to different tenant than ${tenant.id}")
+      )
+      _ <- validate(
+        pocAdmin.status == Aborted,
+        ResetPocAdminCreationAttemptsErrors.PocAdminNotInAbortedStatus(
+          s"Expected PoC Admin to be in Aborted status but instead it is in ${pocAdmin.status}")
+      )
+      _ <- EitherT.right(pocAdminRepository.updatePocAdmin(pocAdmin.copy(status = Processing, creationAttempts = 0)))
+    } yield ()
+
+    res.value
+  }
+
+  private def validate[E](validation: Boolean, error: => E) = {
+    if (validation) {
+      EitherT.rightT[Task, E](())
     } else {
-      EitherT.leftT[F, Unit](error)
+      EitherT.leftT[Task, Unit](error)
     }
   }
 
@@ -417,6 +464,10 @@ class DefaultTenantAdminService @Inject() (
       case Invalid(errors) => EitherT.leftT[Task, PocAdmin](
           CreatePocAdminError.InvalidDataError(s"the input data is invalid. ${errors.toList.mkString("; ")}"))
     }
+  }
+
+  private def findPoCById[E](id: UUID, error: E) = {
+    EitherT.fromOptionF[Task, E, Poc](pocRepository.getPoc(id), error)
   }
 }
 
@@ -481,4 +532,17 @@ sealed trait CreatePocAdminError
 object CreatePocAdminError {
   case class NotFound(message: String) extends CreatePocAdminError
   case class InvalidDataError(message: String) extends CreatePocAdminError
+}
+
+sealed trait ResetPocCreationAttemptsError
+object ResetPocCreationAttemptsError {
+  case class NotFound(message: String) extends ResetPocCreationAttemptsError
+  case class PoCNotInAbortedStatus(message: String) extends ResetPocCreationAttemptsError
+}
+
+sealed trait ResetPocAdminCreationAttemptsErrors
+object ResetPocAdminCreationAttemptsErrors {
+  case class NotFound(message: String) extends ResetPocAdminCreationAttemptsErrors
+  case class PocAdminAssignedToDifferentTenant(message: String) extends ResetPocAdminCreationAttemptsErrors
+  case class PocAdminNotInAbortedStatus(message: String) extends ResetPocAdminCreationAttemptsErrors
 }
