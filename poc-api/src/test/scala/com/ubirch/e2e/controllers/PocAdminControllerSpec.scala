@@ -5,7 +5,7 @@ import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.PocAdminController
 import com.ubirch.controllers.model.PocAdminControllerJsonModel.PocEmployee_OUT
 import com.ubirch.data.KeycloakTestData
-import com.ubirch.db.tables.PocEmployeeTable
+import com.ubirch.db.tables.{ PocAdminTable, PocEmployeeTable, PocRepository }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.e2e.controllers.PocAdminControllerSpec._
 import com.ubirch.e2e.controllers.assertions.PocEmployeesJsonAssertion._
@@ -13,7 +13,7 @@ import com.ubirch.e2e.controllers.assertions.PocEmployeeJsonAssertion._
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
 import com.ubirch.models.pocEmployee.PocEmployee
-import com.ubirch.models.tenant.Tenant
+import com.ubirch.models.tenant.{ Tenant, TenantId, TenantName }
 import com.ubirch.models.user.UserId
 import com.ubirch.models.{ FieldError, ValidationErrorsResponse }
 import com.ubirch.services.CertifyKeycloak
@@ -37,6 +37,7 @@ import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters._
 import scala.language.postfixOps
+import scala.util.Random
 
 class PocAdminControllerSpec
   extends E2ETestBase
@@ -963,6 +964,132 @@ class PocAdminControllerSpec
         status should equal(500)
         assert(body.contains(s"Poc employee '${pocEmployee.id}' is assigned to not existing certify user"))
       }
+    }
+  }
+
+  "Endpoint PUT /employees/retry/:id" should {
+    "reset creation attempts of given PoC Employee" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+      val id = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/retry/$id",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        body shouldBe empty
+        status should equal(200)
+      }
+
+      val updatedEmployee = await(repository.getPocEmployee(pocEmployee.id), 5.seconds).value
+      updatedEmployee.status shouldBe Processing
+      updatedEmployee.creationAttempts shouldBe 0
+    }
+
+    "fail with BadRequest if PoC Admin is not in Completed status" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val pocEmployeeTable = i.get[PocEmployeeTable]
+      val pocId = UUID.randomUUID()
+      val pocTable = i.get[PocRepository]
+      val pocAdminTable = i.get[PocAdminTable]
+      val tenant = addTenantToDB(i)
+      val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = Aborted)
+      pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+      val pocAdmin = createPocAdmin(
+        pocId = poc.id,
+        tenantId = tenant.id,
+        status = Processing,
+        certifyUserId = Some(UUID.randomUUID()))
+      pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+      val id = await(pocEmployeeTable.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/retry/$id",
+        headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+      ) {
+        assert(body.contains(s"PoC Admin with id ${pocAdmin.id} is not in Completed status"))
+        status should equal(400)
+      }
+
+      val updatedEmployee = await(pocEmployeeTable.getPocEmployee(pocEmployee.id), 5.seconds).value
+      updatedEmployee.status shouldBe Aborted
+      updatedEmployee.creationAttempts shouldBe 10
+    }
+
+    "fail with NotFound if provided PoC Employee can't be found" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val pocEmployeeTable = i.get[PocEmployeeTable]
+      val pocId = UUID.randomUUID()
+      val pocTable = i.get[PocRepository]
+      val pocAdminTable = i.get[PocAdminTable]
+      val tenant = addTenantToDB(i)
+      val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = Aborted)
+      pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+      val pocAdmin = createPocAdmin(
+        pocId = poc.id,
+        tenantId = tenant.id,
+        status = Completed,
+        certifyUserId = Some(UUID.randomUUID()))
+      pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+      await(pocEmployeeTable.createPocEmployee(pocEmployee))
+      val randomId = UUID.randomUUID()
+      put(
+        uri = s"/employees/retry/$randomId",
+        headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+      ) {
+        assert(body.contains(s"Could not find PoC Employee with id ${randomId}"))
+        status should equal(404)
+      }
+
+      val updatedEmployee = await(pocEmployeeTable.getPocEmployee(pocEmployee.id), 5.seconds).value
+      updatedEmployee.status shouldBe Aborted
+      updatedEmployee.creationAttempts shouldBe 10
+    }
+
+    "fail with BadRequest if provided PoC Employee is assigned to different PoC than requesting PoC Admin" in withInjector {
+      i =>
+        val token = i.get[FakeTokenCreator]
+        val pocEmployeeTable = i.get[PocEmployeeTable]
+        val pocId1 = UUID.randomUUID()
+        val pocId2 = UUID.randomUUID()
+        val pocTable = i.get[PocRepository]
+        val pocAdminTable = i.get[PocAdminTable]
+        val tenant1 = addTenantToDB(i)
+        val tenant2 = addTenantToDB(i, tenantName = Random.alphanumeric.take(10).mkString)
+        val poc1 = createPoc(pocId1, tenant1.tenantName).copy(creationAttempts = 10, status = Aborted)
+        val poc2 = createPoc(pocId2, tenant2.tenantName).copy(creationAttempts = 10, status = Aborted)
+        pocTable.createPoc(poc1).runSyncUnsafe(5.seconds)
+        pocTable.createPoc(poc2).runSyncUnsafe(5.seconds)
+        val pocAdmin = createPocAdmin(
+          pocId = poc1.id,
+          tenantId = tenant1.id,
+          status = Completed,
+          certifyUserId = Some(UUID.randomUUID()))
+        pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+        val randomPocId = UUID.randomUUID()
+        val pocEmployee =
+          createPocEmployee(tenantId = tenant2.id, pocId = poc2.id, status = Aborted).copy(creationAttempts = 10)
+        await(pocEmployeeTable.createPocEmployee(pocEmployee))
+
+        put(
+          uri = s"/employees/retry/${pocEmployee.id}",
+          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+        ) {
+          assert(body.contains(s"PoC Employee is assigned to different PoC than the requesting PoC Admin"))
+          status should equal(400)
+        }
+
+        val updatedEmployee = await(pocEmployeeTable.getPocEmployee(pocEmployee.id), 5.seconds).value
+        updatedEmployee.status shouldBe Aborted
+        updatedEmployee.creationAttempts shouldBe 10
     }
   }
 
