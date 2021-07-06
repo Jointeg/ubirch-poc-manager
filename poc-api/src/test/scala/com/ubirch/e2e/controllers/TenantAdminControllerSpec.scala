@@ -2697,6 +2697,227 @@ class TenantAdminControllerSpec
     )
   }
 
+  "Endpoint POST /poc/retry/:id" must {
+    "reset CreationAttempts counter and move PoC and all related aborted PoC Admins to Processing status" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocId = UUID.randomUUID()
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminTable]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = Aborted)
+        val pocAdminAborted1 =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+        val pocAdminAborted2 =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+        val pocAdminNotAborted =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Completed).copy(creationAttempts = 6)
+        val pocAdminDiffTenant =
+          createPocAdmin(tenantId = TenantId(TenantName("diffTenant")), pocId = poc.id, status = Aborted).copy(
+            creationAttempts = 10)
+        pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminAborted1).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminAborted2).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminNotAborted).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdminDiffTenant).runSyncUnsafe(5.seconds)
+
+        put(
+          s"/poc/retry/$pocId",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+        ) {
+          status should equal(200)
+          body should be(empty)
+        }
+
+        val updatedPoc = await(pocTable.getPoc(pocId), 5.seconds).value
+        updatedPoc.status shouldBe Processing
+        updatedPoc.creationAttempts shouldBe 0
+
+        val pocAdminUpdated1 = await(pocAdminTable.getPocAdmin(pocAdminAborted1.id)).value
+        pocAdminUpdated1.status shouldBe Processing
+        pocAdminUpdated1.creationAttempts shouldBe 0
+        val pocAdminUpdated2 = await(pocAdminTable.getPocAdmin(pocAdminAborted2.id)).value
+        pocAdminUpdated2.status shouldBe Processing
+        pocAdminUpdated2.creationAttempts shouldBe 0
+        val pocAdminUpdated3 = await(pocAdminTable.getPocAdmin(pocAdminDiffTenant.id)).value
+        pocAdminUpdated3.status shouldBe Processing
+        pocAdminUpdated3.creationAttempts shouldBe 0
+        val pocAdminNotUpdated1 = await(pocAdminTable.getPocAdmin(pocAdminNotAborted.id)).value
+        pocAdminNotUpdated1.status shouldBe Completed
+        pocAdminNotUpdated1.creationAttempts shouldBe 6
+      }
+    }
+
+    "fail with NotFound if poc can't be find by id" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocId = UUID.randomUUID()
+        val pocTable = injector.get[PocRepository]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = Aborted)
+        pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+
+        val randomUUID = UUID.randomUUID()
+        put(
+          s"/poc/retry/$randomUUID",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+        ) {
+          status should equal(404)
+          assert(body.contains(s"PoC not found by id: $randomUUID"))
+        }
+
+        val updatedPoc = await(pocTable.getPoc(pocId), 5.seconds).value
+        updatedPoc.status shouldBe Aborted
+        updatedPoc.creationAttempts shouldBe 10
+      }
+    }
+
+    val badStatuses = Table("status", Pending, Processing, Completed)
+
+    forAll(badStatuses) { badStatus =>
+      s"fail with BadRequest if Poc is in different state than Aborted ($badStatus)" in {
+        withInjector { injector =>
+          val token = injector.get[FakeTokenCreator]
+          val pocId = UUID.randomUUID()
+          val pocTable = injector.get[PocRepository]
+          val tenant = addTenantToDB(injector)
+          val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = badStatus)
+          pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+
+          put(
+            s"/poc/retry/$pocId",
+            headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+          ) {
+            status should equal(400)
+            assert(body.contains(s"PoC should be in Aborted status but is in $badStatus"))
+          }
+
+          val updatedPoc = await(pocTable.getPoc(pocId), 5.seconds).value
+          updatedPoc.status shouldBe badStatus
+          updatedPoc.creationAttempts shouldBe 10
+        }
+      }
+    }
+  }
+
+  "Endpoint POST /poc/poc-admin/retry/:id" must {
+    "reset CreationAttempts counter and move PoC Admin to Processing status" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocId = UUID.randomUUID()
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminTable]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(pocId, tenant.tenantName)
+        val pocAdmin =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+        pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+
+        put(
+          s"/poc/poc-admin/retry/${pocAdmin.id}",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+        ) {
+          status should equal(200)
+          body should be(empty)
+        }
+
+        val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value
+        updatedPocAdmin.status shouldBe Processing
+        updatedPocAdmin.creationAttempts shouldBe 0
+      }
+    }
+
+    "fail with NotFound if PoC admin can't be find by id" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocId = UUID.randomUUID()
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminTable]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(pocId, tenant.tenantName)
+        val pocAdmin =
+          createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+        pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+
+        val randomUUID = UUID.randomUUID()
+        put(
+          s"/poc/poc-admin/retry/$randomUUID",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+        ) {
+          status should equal(404)
+          assert(body.contains(s"Could not find PoC Admin with id: $randomUUID"))
+        }
+
+        val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value
+        updatedPocAdmin.status shouldBe Aborted
+        updatedPocAdmin.creationAttempts shouldBe 10
+      }
+    }
+
+    "fail with NotFound if PoC Admin is assigned to different tenant" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val pocId = UUID.randomUUID()
+        val pocTable = injector.get[PocRepository]
+        val pocAdminTable = injector.get[PocAdminTable]
+        val tenant = addTenantToDB(injector)
+        val poc = createPoc(pocId, tenant.tenantName)
+        val pocAdmin =
+          createPocAdmin(tenantId = TenantId(TenantName("randomName")), pocId = poc.id, status = Aborted).copy(
+            creationAttempts = 10)
+        pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+        pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+
+        put(
+          s"/poc/poc-admin/retry/${pocAdmin.id}",
+          headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+        ) {
+          status should equal(404)
+          assert(body.contains(s"PoC Admin with id ${pocAdmin.id} is assigned to different tenant than ${tenant.id}"))
+        }
+
+        val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value
+        updatedPocAdmin.status shouldBe Aborted
+        updatedPocAdmin.creationAttempts shouldBe 10
+      }
+    }
+
+    val badStatuses = Table("status", Pending, Processing, Completed)
+
+    forAll(badStatuses) { badStatus =>
+      s"fail with BadRequest if PoC Admin is in different state than Aborted ($badStatus)" in {
+        withInjector { injector =>
+          val token = injector.get[FakeTokenCreator]
+          val pocId = UUID.randomUUID()
+          val pocTable = injector.get[PocRepository]
+          val pocAdminTable = injector.get[PocAdminTable]
+          val tenant = addTenantToDB(injector)
+          val poc = createPoc(pocId, tenant.tenantName)
+          val pocAdmin =
+            createPocAdmin(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(
+              creationAttempts = 10,
+              status = badStatus)
+          pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+          pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+
+          put(
+            s"/poc/poc-admin/retry/${pocAdmin.id}",
+            headers = Map("authorization" -> token.userOnDevicesKeycloak(TenantName(globalTenantName)).prepare)
+          ) {
+            status should equal(400)
+            assert(body.contains(s"Expected PoC Admin to be in Aborted status but instead it is in $badStatus"))
+          }
+
+          val updatedPocAdmin = await(pocAdminTable.getPocAdmin(pocAdmin.id), 5.seconds).value
+          updatedPocAdmin.status shouldBe badStatus
+          updatedPocAdmin.creationAttempts shouldBe 10
+        }
+      }
+    }
+  }
+
   def pocToFormattedJson(poc: Poc): String = {
     import poc._
     val json = s"""{

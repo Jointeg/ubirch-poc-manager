@@ -3,7 +3,7 @@ package com.ubirch.db.tables
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
 import com.ubirch.models.common.Sort
-import com.ubirch.models.poc.{ Aborted, Completed, Poc, PocAdmin, Status }
+import com.ubirch.models.poc.{ Aborted, Completed, Poc, PocAdmin, Processing, Status }
 import com.ubirch.models.tenant.TenantId
 import io.getquill.{ EntityQuery, Insert, Query }
 import monix.eval.Task
@@ -35,6 +35,10 @@ trait PocAdminRepository {
   def getByPocId(pocId: UUID): Task[List[PocAdmin]]
 
   def incrementCreationAttempts(pocAdminId: UUID): Task[Unit]
+
+  def getAllAbortedByPocId(pocId: UUID): Task[List[PocAdmin]]
+
+  def retryAllPocAdmins(pocId: UUID): Task[Unit]
 }
 
 class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, pocAdminStatusTable: PocAdminStatusTable)
@@ -98,9 +102,24 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
       querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(_.pocId == lift(pocId))
     }
 
+  private def getAllAbortedByPocIdQuery(pocId: UUID) =
+    quote {
+      querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(admin =>
+        admin.pocId == lift(pocId) && admin.status == lift(Aborted: Status))
+    }
+
   private def incrementCreationAttemptQuery(id: UUID) = quote {
     querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(admin => admin.id == lift(id)).update(admin =>
       admin.creationAttempts -> (admin.creationAttempts + 1))
+  }
+
+  private def retryAllPocAdminsQuery(pocId: UUID) = quote {
+    querySchema[PocAdmin]("poc_manager.poc_admin_table").filter(admin =>
+      admin.pocId == lift(pocId) && admin.status == lift(Aborted: Status))
+      .update(
+        _.status -> lift(Processing: Status),
+        _.creationAttempts -> 0
+      )
   }
 
   def createPocAdmin(pocAdmin: PocAdmin): Task[UUID] =
@@ -203,4 +222,8 @@ class PocAdminTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext, poc
 
   override def incrementCreationAttempts(pocAdminId: UUID): Task[Unit] =
     run(incrementCreationAttemptQuery(pocAdminId)).void
+
+  override def getAllAbortedByPocId(pocId: UUID): Task[List[PocAdmin]] = run(getAllAbortedByPocIdQuery(pocId))
+
+  override def retryAllPocAdmins(pocId: UUID): Task[Unit] = run(retryAllPocAdminsQuery(pocId)).void
 }

@@ -208,6 +208,22 @@ class TenantAdminController @Inject() (
         bodyParam[Boolean]("webIdentRequired").description("webIdent is required or not")
       )
 
+  val resetPoCCreationAttempts: SwaggerSupportSyntax.OperationBuilder = {
+    apiOperation[String]("Reset PoC creation attempts")
+      .summary("Resets the PoC creation attempts counter")
+      .description("Resets the creation attempts counter so it can be processed once again")
+      .tags("Tenant-Admin", "PoC")
+      .authorizations()
+  }
+
+  val resetPoCAdminCreationAttempts: SwaggerSupportSyntax.OperationBuilder = {
+    apiOperation[String]("Reset PoC Admin creation attempts")
+      .summary("Resets the PoC Admin creation attempts counter")
+      .description("Resets the creation attempts counter so it can be processed once again")
+      .tags("Tenant-Admin", "Poc-Admin")
+      .authorizations()
+  }
+
   post("/pocs/create", operation(createListOfPocs)) {
     x509CertSupport.withVerification(request) {
       tenantAdminEndpointWithUserContext("Create poc batch") { (tenant, tenantContext) =>
@@ -597,6 +613,34 @@ class TenantAdminController @Inject() (
                 BadRequest(NOK.badRequest(errorMsg))
             }
           case Right(_) => Ok()
+        }
+      }
+    }
+  }
+
+  put("/poc/retry/:id", operation(resetPoCCreationAttempts)) {
+    tenantAdminEndpoint("Reset PoC creation attempts counter") { tenant =>
+      getParamAsUUID("id", id => s"Invalid PoC ID: `$id`") { id =>
+        tenantAdminService.resetPocCreationAttempts(tenant, id).map {
+          case Right(_)                                          => Ok()
+          case Left(ResetPocCreationAttemptsError.NotFound(msg)) => NotFound(NOK.resourceNotFoundError(msg))
+          case Left(ResetPocCreationAttemptsError.PoCNotInAbortedStatus(msg)) =>
+            BadRequest(NOK.badRequest(msg))
+        }
+      }
+    }
+  }
+
+  put("/poc/poc-admin/retry/:id", operation(resetPoCAdminCreationAttempts)) {
+    tenantAdminEndpoint("Reset PoC Admin creation attempts counter") { tenant =>
+      getParamAsUUID("id", id => s"Invalid PoC Admin ID: `$id`") { id =>
+        tenantAdminService.resetPocAdminCreationAttempts(tenant, id).map {
+          case Right(_)                                                => Ok()
+          case Left(ResetPocAdminCreationAttemptsErrors.NotFound(msg)) => NotFound(NOK.resourceNotFoundError(msg))
+          case Left(ResetPocAdminCreationAttemptsErrors.PocAdminNotInAbortedStatus(msg)) =>
+            BadRequest(NOK.badRequest(msg))
+          case Left(ResetPocAdminCreationAttemptsErrors.PocAdminAssignedToDifferentTenant(msg)) =>
+            NotFound(NOK.resourceNotFoundError(msg))
         }
       }
     }

@@ -1,7 +1,7 @@
 package com.ubirch.db.tables
 
 import com.ubirch.db.tables.model.PaginatedResult
-import com.ubirch.models.poc.{ Aborted, Completed, Poc, PocAdmin }
+import com.ubirch.models.poc.{ Aborted, Completed, Poc, PocAdmin, Processing }
 import com.ubirch.models.tenant.TenantId
 import monix.eval.Task
 
@@ -99,5 +99,17 @@ class PocAdminRepositoryMock @Inject() (
   override def incrementCreationAttempts(pocAdminId: UUID): Task[Unit] = getPocAdmin(pocAdminId).flatMap {
     case Some(admin) => updatePocAdmin(admin.copy(creationAttempts = admin.creationAttempts + 1)).void
     case None        => Task.raiseError(new lang.RuntimeException(s"Could not find PoC Admin with ID: $pocAdminId"))
+  }
+
+  override def getAllAbortedByPocId(pocId: UUID): Task[List[PocAdmin]] =
+    getByPocId(pocId).map(_.filter(_.status == Aborted))
+
+  override def retryAllPocAdmins(pocId: UUID): Task[Unit] = {
+    pocAdminDatastore.foreach {
+      case (_, pocAdmin: PocAdmin) if pocAdmin.pocId == pocId && pocAdmin.status == Aborted =>
+        updatePocAdmin(pocAdmin.copy(status = Processing, creationAttempts = 0)).void
+      case _ => Task.unit
+    }
+    Task()
   }
 }

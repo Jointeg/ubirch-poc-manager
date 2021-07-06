@@ -34,6 +34,7 @@ import com.ubirch.services.pocadmin.{
   GetEmployeeForPocAdminError,
   GetPocsAdminErrors,
   PocAdminService,
+  ResetEmployeeCreationAttemptsError,
   UpdatePocEmployeeError
 }
 import io.prometheus.client.Counter
@@ -145,6 +146,13 @@ class PocAdminController @Inject() (
       .tags("Poc-Admin", "Poc-employee")
       .authorizations()
       .parameters(queryParam[UUID]("id").description("PoC admin id"))
+
+  val resetEmployeeCreationAttempts: SwaggerSupportSyntax.OperationBuilder =
+    apiOperation[String]("Reset Creation Attempts counter for Employee")
+      .summary("Reset Creation Attempts counter for Employee")
+      .description("Reset Creation Attempts counter for Employee")
+      .tags("Poc-Admin", "Poc-employee")
+      .authorizations()
 
   post("/employees/create", operation(createListOfEmployees)) {
     x509CertSupport.withVerification(request) {
@@ -335,6 +343,21 @@ class PocAdminController @Inject() (
                   }
             }
           } yield r
+        }
+      }
+    }
+  }
+
+  put("/employees/retry/:id", operation(resetEmployeeCreationAttempts)) {
+    pocAdminEndpoint("Reset Creation Attempts for given Employee") { pocAdmin =>
+      getParamAsUUID("id", id => s"Invalid poc employee id: '$id'") { id =>
+        pocAdminService.resetEmployeeCreationAttempts(pocAdmin, id).map {
+          case Right(_)                                               => Ok()
+          case Left(ResetEmployeeCreationAttemptsError.NotFound(msg)) => NotFound(NOK.resourceNotFoundError(msg))
+          case Left(ResetEmployeeCreationAttemptsError.EmployeeAssignedToDifferentPoc(msg)) =>
+            BadRequest(NOK.badRequest(msg))
+          case Left(ResetEmployeeCreationAttemptsError.PocAdminNotInCompletedStatus(msg)) =>
+            BadRequest(NOK.badRequest(msg))
         }
       }
     }
