@@ -18,12 +18,11 @@ import com.ubirch.controllers.model.TenantAdminControllerJsonModel.{ PocAdmin_IN
 import com.ubirch.controllers.{ AddDeviceCreationTokenRequest, EndpointHelpers, SwitchActiveError, TenantAdminContext }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocAdminRepository, PocAdminStatusRepository, PocRepository, TenantRepository }
-import com.ubirch.models.NOK
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant._
 import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.auth.AESEncryption
-import com.ubirch.services.keycloak.users.{ KeycloakUserService, Remove2faTokenKeycloakError }
+import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.{ CertifyUserService, Remove2faTokenFromCertifyUserError }
 import com.ubirch.services.tenantadmin.CreateWebIdentInitiateIdErrors.PocAdminRepositoryError
 import com.ubirch.services.util.Validator
@@ -31,7 +30,6 @@ import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
 import org.joda.time.DateTime
 import org.postgresql.util.PSQLException
-import org.scalatra.{ Conflict, InternalServerError, NotFound, Ok }
 
 import java.time.Clock
 import java.util.UUID
@@ -442,13 +440,11 @@ class DefaultTenantAdminService @Inject() (
       _ <- validate(
         poc.status == Aborted,
         ResetPocCreationAttemptsError.PoCNotInAbortedStatus(s"PoC should be in Aborted status but is in ${poc.status}"))
-      allAbortedPocAdmins <- EitherT.right(pocAdminRepository.getAllAbortedByPocId(poc.id))
       _ <- EitherT.right(pocRepository.updatePoc(poc.copy(status = Processing, creationAttempts = 0)))
-      _ <- allAbortedPocAdmins.traverse_[ResultWithErrorChannel, UUID](pocAdmin =>
-        resetPocAdminCreationAttempts[ResetPocCreationAttemptsError](pocAdmin))
+      _ <- EitherT.right(pocAdminRepository.retryAllPocAdmins(poc.id))
     } yield ()
 
-    res.value
+    quillMonixJdbcContext.withTransaction(res.value)
   }
 
   override def resetPocAdminCreationAttempts(
