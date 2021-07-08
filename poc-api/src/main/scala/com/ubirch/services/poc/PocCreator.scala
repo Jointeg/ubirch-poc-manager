@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.ConfPaths.TeamDrivePaths
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocLogoRepository, PocRepository, PocStatusRepository, TenantRepository }
-import com.ubirch.models.common.WaitingForNewElements
+import com.ubirch.models.common.{ ProcessingElements, WaitingForNewElements }
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.{ API, Tenant }
 import com.ubirch.services.poc.util.ImageLoader
@@ -74,6 +74,7 @@ class PocCreatorImpl @Inject() (
         Task.sequence(pocIds.map(pocId => {
           (for {
             _ <- Task.cancelBoundary
+            _ <- Task(PocCreationLoop.loopState.set(ProcessingElements(DateTime.now(), "PoC", pocId.toString)))
             poc <- pocTable.unsafeGetUncompletedPocByIds(pocId)
             _ <- createPoc(poc).uncancelable
           } yield ()).onErrorHandle(ex => {
