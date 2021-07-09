@@ -64,7 +64,10 @@ class PocAdminCreatorImpl @Inject() (
           (for {
             _ <- Task(logger.info(s"Starting to process PoC Admin with id $pocAdminId"))
             _ <- Task.cancelBoundary
-            _ <- Task(ProcessingElements(DateTime.now(), "PoC Admin", pocAdminId.toString))
+            _ <- Task(PocAdminCreationLoop.loopState.set(ProcessingElements(
+              DateTime.now(),
+              "PoC Admin",
+              pocAdminId.toString)))
             pocAdmin <- adminRepository.unsafeGetUncompletedPocAdminById(pocAdminId)
             _ <- createPocAdmin(pocAdmin).uncancelable
           } yield ()).onErrorHandle(ex => {

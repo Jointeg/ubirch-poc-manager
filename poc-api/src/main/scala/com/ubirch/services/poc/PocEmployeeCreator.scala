@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.{ LazyLogging, Logger }
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.{ PocEmployeeRepository, PocEmployeeStatusRepository, PocRepository }
 import com.ubirch.models.common.{ ProcessingElements, WaitingForNewElements }
-import com.ubirch.models.poc.{ Aborted, Completed, Poc, Processing, Status }
+import com.ubirch.models.poc._
 import com.ubirch.models.pocEmployee.{ PocEmployee, PocEmployeeStatus }
 import com.ubirch.util.PocAuditLogging
 import monix.eval.Task
@@ -55,7 +55,10 @@ class PocEmployeeCreatorImpl @Inject() (
           (for {
             _ <- Task(logger.info(s"Starting to process $employeeId pocEmployee"))
             _ <- Task.cancelBoundary
-            _ <- Task(ProcessingElements(DateTime.now(), "PoC Employee", employeeId.toString))
+            _ <- Task(PocEmployeeCreationLoop.loopState.set(ProcessingElements(
+              DateTime.now(),
+              "PoC Employee",
+              employeeId.toString)))
             pocEmployee <- employeeTable.unsafeGetUncompletedPocEmployeeById(employeeId)
             _ <- createPocEmployee(pocEmployee).uncancelable
           } yield ()).onErrorHandle(ex => {
