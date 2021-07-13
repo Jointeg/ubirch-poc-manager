@@ -21,11 +21,11 @@
     <!-- parent pom -->
     <parent>
         <groupId>com.ubirch</groupId>
-        <artifactId>ubirch-poc-api</artifactId>
+        <artifactId>poc-manager</artifactId>
         <version>0.0.1</version>
     </parent>
 
-    <artifactId>ubirch-poc-api</artifactId>
+    <artifactId>ubirch-poc-manager</artifactId>
     <version>0.0.1</version>
     <packaging>jar</packaging>
     <inceptionYear>2021</inceptionYear>
