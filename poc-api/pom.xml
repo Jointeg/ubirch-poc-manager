@@ -21,7 +21,7 @@
     <!-- parent pom -->
     <parent>
         <groupId>com.ubirch</groupId>
-        <artifactId>poc-manager</artifactId>
+        <artifactId>ubirch-poc-api</artifactId>
         <version>0.0.1</version>
     </parent>
 
