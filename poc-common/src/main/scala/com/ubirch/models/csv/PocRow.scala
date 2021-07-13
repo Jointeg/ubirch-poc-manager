@@ -26,24 +26,24 @@ object PocRow {
 
   def fromCsv(columns: Array[String]): Try[PocRow] = Try {
     PocRow(
-      externalId = columns(0),
-      pocType = columns(1),
-      pocName = columns(2),
-      pocStreet = columns(3),
-      pocHouseNumber = columns(4),
-      pocAdditionalAddress = columns(5),
-      pocZipcode = columns(6),
-      pocCity = columns(7),
-      pocCounty = columns(8),
-      pocFederalState = columns(9),
-      pocCountry = columns(10),
-      pocPhone = columns(11),
-      logoUrl = columns(12),
-      managerSurname = columns(13),
-      managerName = columns(14),
-      managerEmail = columns(15),
-      managerMobilePhone = columns(16),
-      extraConfig = columns(17)
+      externalId = columns(0).trim,
+      pocType = columns(1).trim.toLowerCase,
+      pocName = columns(2).trim,
+      pocStreet = columns(3).trim,
+      pocHouseNumber = columns(4).trim,
+      pocAdditionalAddress = columns(5).trim,
+      pocZipcode = columns(6).trim,
+      pocCity = columns(7).trim,
+      pocCounty = columns(8).trim,
+      pocFederalState = columns(9).trim,
+      pocCountry = columns(10).trim,
+      pocPhone = columns(11).trim,
+      logoUrl = columns(12).trim,
+      managerSurname = columns(13).trim,
+      managerName = columns(14).trim,
+      managerEmail = columns(15).trim.toLowerCase,
+      managerMobilePhone = columns(16).trim,
+      extraConfig = columns(17).trim
     )
   }
 }
