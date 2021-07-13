@@ -3,7 +3,7 @@ package com.ubirch.db.tables
 import com.ubirch.db.context.QuillMonixJdbcContext
 import com.ubirch.db.tables.model.{ AdminCriteria, PaginatedResult }
 import com.ubirch.models.common.Sort
-import com.ubirch.models.poc.{ Completed, PocAdmin, Status }
+import com.ubirch.models.poc.{ Aborted, Completed, PocAdmin, Status }
 import com.ubirch.models.pocEmployee.PocEmployee
 import com.ubirch.models.tenant.TenantId
 import io.getquill._
@@ -21,7 +21,7 @@ trait PocEmployeeRepository {
 
   def getPocEmployeesByTenantId(tenantId: TenantId): Task[List[PocEmployee]]
 
-  def getUncompletedPocEmployeesIds(): Task[List[UUID]]
+  def getAllPocEmployeesToBecomeProcessed(): Task[List[UUID]]
 
   def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee]
 
@@ -30,6 +30,8 @@ trait PocEmployeeRepository {
   def getAllByCriteria(criteria: AdminCriteria): Task[PaginatedResult[PocEmployee]]
 
   def getByCertifyUserId(certifyUserId: UUID): Task[Option[PocEmployee]]
+
+  def incrementCreationAttempts(id: UUID): Task[Unit]
 }
 
 class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends PocEmployeeRepository {
@@ -51,15 +53,16 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.tenantId == lift(tenantId))
     }
 
-  private def getAllPocEmployeeIdsWithoutStatusQuery(status: Status): Quoted[EntityQuery[UUID]] =
+  private def getAllPocEmployeeIdsWithoutStatusQuery(statuses: Status*): Quoted[EntityQuery[UUID]] =
     quote {
-      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(_.status != lift(status)).map(_.id)
+      querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(employee =>
+        !liftQuery(statuses).contains(employee.status)).map(_.id)
     }
 
-  private def getPocEmployeeWithoutStatusById(status: Status, id: UUID) =
+  private def getPocEmployeeWithoutStatusesById(id: UUID, statuses: Status*) =
     quote {
       querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(emp =>
-        emp.status != lift(status) && emp.id == lift(id))
+        !liftQuery(statuses).contains(emp.status) && emp.id == lift(id))
     }
 
   private def updatePocEmployeeQuery(pocEmployee: PocEmployee): Quoted[Update[PocEmployee]] =
@@ -73,6 +76,11 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(
         _.id == lift(employeeId)).delete
     }
+
+  private def incrementCreationAttemptQuery(id: UUID) = quote {
+    querySchema[PocEmployee]("poc_manager.poc_employee_table").filter(employee => employee.id == lift(id)).update(
+      employee => employee.creationAttempts -> (employee.creationAttempts + 1))
+  }
 
   private def filterByStatuses(q: Quoted[Query[PocEmployee]], statuses: Seq[Status]) =
     statuses match {
@@ -92,9 +100,12 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
 
     criteria.search match {
       case Some(s) =>
+        val lowerCased = s.toLowerCase
         quote {
           employeeByPocId
-            .filter(e => e.email.like(lift(s"$s%")) || e.name.like(lift(s"$s%")) || e.surname.like(lift(s"$s%")))
+            .filter(e =>
+              e.email.toLowerCase.like(lift(s"%$lowerCased%")) || e.name.toLowerCase.like(
+                lift(s"%$lowerCased%")) || e.surname.toLowerCase.like(lift(s"%$lowerCased%")))
         }
       case None => employeeByPocId
     }
@@ -153,9 +164,12 @@ class PocEmployeeTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) 
       }
     }
 
-  override def getUncompletedPocEmployeesIds(): Task[List[UUID]] =
-    run(getAllPocEmployeeIdsWithoutStatusQuery(Completed))
+  override def getAllPocEmployeesToBecomeProcessed(): Task[List[UUID]] =
+    run(getAllPocEmployeeIdsWithoutStatusQuery(Completed, Aborted))
 
   override def unsafeGetUncompletedPocEmployeeById(id: UUID): Task[PocEmployee] =
-    run(getPocEmployeeWithoutStatusById(Completed, id)).map(_.head)
+    run(getPocEmployeeWithoutStatusesById(id, Completed, Aborted)).map(_.head)
+
+  override def incrementCreationAttempts(id: UUID): Task[Unit] =
+    run(incrementCreationAttemptQuery(id)).void
 }

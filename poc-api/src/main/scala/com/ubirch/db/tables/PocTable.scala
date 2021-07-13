@@ -6,7 +6,7 @@ import com.ubirch.db.tables.model.{ Criteria, PaginatedResult }
 import com.ubirch.models.common.Sort
 import com.ubirch.models.poc._
 import com.ubirch.models.tenant.TenantId
-import io.getquill.{ Insert, Query, Update }
+import io.getquill.{ Insert, Query }
 import monix.eval.Task
 
 import java.util.UUID
@@ -34,6 +34,8 @@ trait PocRepository {
   def unsafeGetUncompletedPocByIds(id: UUID): Task[Poc]
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]]
+
+  def incrementCreationAttempt(id: UUID): Task[Unit]
 }
 
 object PocRepository {
@@ -60,13 +62,6 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
       querySchema[Poc]("poc_manager.poc_table").filter(_.id == lift(poc.id)).update(lift(poc))
     }
 
-  private def updatePocStatusQuery(pocStatus: PocStatus): Quoted[Update[PocStatus]] =
-    quote {
-      querySchema[PocStatus]("poc_manager.poc_status_table")
-        .filter(_.pocId == lift(pocStatus.pocId))
-        .update(lift(pocStatus))
-    }
-
   private def removePocQuery(pocId: UUID) =
     quote {
       querySchema[Poc]("poc_manager.poc_table").filter(_.id == lift(pocId)).delete
@@ -88,15 +83,21 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
         SimplifiedDeviceInfo(poc.externalId, poc.pocName, poc.deviceId))
     }
 
-  private def getAllPocIdsWithoutStatusQuery(status: Status) =
+  private def getAllPocIdsWithoutStatusesQuery(statuses: Status*) =
     quote {
-      querySchema[Poc]("poc_manager.poc_table").filter(_.status != lift(status)).map(_.id)
+      querySchema[Poc]("poc_manager.poc_table").filter(poc => !liftQuery(statuses).contains(poc.status)).map(_.id)
     }
 
-  private def getPocWithoutStatusByIdQuery(status: Status, id: UUID) =
+  private def getPocWithoutStatusesByIdQuery(id: UUID, statuses: Status*) =
     quote {
-      querySchema[Poc]("poc_manager.poc_table").filter(poc => poc.status != lift(status) && poc.id == lift(id))
+      querySchema[Poc]("poc_manager.poc_table").filter(poc =>
+        !liftQuery(statuses).contains(poc.status) && poc.id == lift(id))
     }
+
+  private def incrementCreationAttemptQuery(id: UUID) = quote {
+    querySchema[Poc]("poc_manager.poc_table").filter(poc => poc.id == lift(id)).update(poc =>
+      poc.creationAttempts -> (poc.creationAttempts + 1))
+  }
 
   override def createPoc(poc: Poc): Task[UUID] = run(createPocQuery(poc)).map(_ => poc.id)
 
@@ -125,10 +126,10 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
   override def getAllPocsByTenantId(tenantId: TenantId): Task[List[Poc]] =
     run(getAllPocsByTenantIdQuery(tenantId))
 
-  override def getAllUncompletedPocsIds(): Task[List[UUID]] = run(getAllPocIdsWithoutStatusQuery(Completed))
+  override def getAllUncompletedPocsIds(): Task[List[UUID]] = run(getAllPocIdsWithoutStatusesQuery(Completed, Aborted))
 
   override def unsafeGetUncompletedPocByIds(id: UUID): Task[Poc] =
-    run(getPocWithoutStatusByIdQuery(Completed, id)).map(_.head)
+    run(getPocWithoutStatusesByIdQuery(id, Completed, Aborted)).map(_.head)
 
   override def getAllPocsByCriteria(pocCriteria: Criteria): Task[PaginatedResult[Poc]] =
     transaction {
@@ -154,11 +155,13 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
 
     criteria.search match {
       case Some(s) =>
+        val lowerCased = s.toLowerCase
         quote {
           pocByTenantId
             .filter(poc =>
-              poc.pocName.like(lift(s"$s%")) || poc.address.city.like(lift(s"$s%")) || poc.externalId.like(
-                lift(s"$s%")))
+              poc.pocName.toLowerCase.like(lift(s"%$lowerCased%")) || poc.address.city.toLowerCase.like(lift(
+                s"%$lowerCased%")) || poc.externalId.like(
+                lift(s"%$lowerCased%")))
         }
       case None => pocByTenantId
     }
@@ -185,4 +188,6 @@ class PocTable @Inject() (QuillMonixJdbcContext: QuillMonixJdbcContext) extends 
 
   def getPoCsSimplifiedDeviceInfoByTenant(tenantId: TenantId): Task[List[SimplifiedDeviceInfo]] =
     run(getPoCsSimplifiedDeviceInfoByTenantQuery(tenantId))
+
+  override def incrementCreationAttempt(id: UUID): Task[Unit] = run(incrementCreationAttemptQuery(id)).void
 }

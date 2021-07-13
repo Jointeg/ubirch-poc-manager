@@ -90,11 +90,12 @@ class DefaultHealthCheckService @Inject() (
     case common.ProcessingElements(dateTime, elementName, elementId) =>
       val lastTimeProcessed = howLongFromNow(dateTime)
       if (lastTimeProcessed < pocConfig.elementsProcessingTimeout) {
-        logger.debug(s"$loopName is processing $elementName elements. Last one was processed $lastTimeProcessed ago")
+        logger.debug(
+          s"$loopName is processing $elementName element with id [$elementId]. Last one was processed $lastTimeProcessed ago")
         HealthyService
       } else {
         logger.error(
-          s"$loopName is processing an $elementName elements with ids: [$elementId] from ${dateTime.toDateTimeISO.toString()}. There is a high chance, that this loop is not responsive anymore")
+          s"$loopName is processing an $elementName element with id [$elementId] from ${dateTime.toDateTimeISO.toString()}. There is a high chance, that this loop is not responsive anymore")
         UnhealthyService
       }
     case common.WaitingForNewElements(dateTime, elementName) =>
@@ -113,7 +114,7 @@ class DefaultHealthCheckService @Inject() (
         logger.debug(s"$loopName is starting from $startingFrom")
         HealthyService
       } else {
-        logger.error(s"$loopName is start up time is unexpectedly long. It started $startingFrom ago")
+        logger.error(s"$loopName start up time is unexpectedly long. It started $startingFrom ago")
         UnhealthyService
       }
     case common.Cancelled =>

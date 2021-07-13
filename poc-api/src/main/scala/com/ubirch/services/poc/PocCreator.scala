@@ -85,20 +85,35 @@ class PocCreatorImpl @Inject() (
     }
   }
 
+  private def incrementCreationAttemptCounter(poc: Poc) = {
+    if (poc.creationAttempts >= 10) {
+      Task(logger.warn(
+        s"PoC with ID ${poc.id} has exceeded the maximum creation attempts number. Changing its status to Aborted.")) >>
+        pocTable.incrementCreationAttempt(poc.id) >> pocTable.updatePoc(poc.copy(status = Aborted))
+    } else {
+      pocTable.incrementCreationAttempt(poc.id)
+    }
+  }
+
   private def createPoc(poc: Poc): Task[Either[String, PocStatus]] = {
+    import cats.syntax.all._
+
     retrieveStatusAndTenant(poc).flatMap {
       case (Some(status: PocStatus), Some(tenant: Tenant)) =>
-        updateStatusOfPoc(poc, Processing)
-          .flatMap(poc => process(PocAndStatus(poc, status.copy(errorMessage = None)), tenant))
+        for {
+          updatedPoc <- updateStatusOfPoc(poc, Processing)
+          result <- process(PocAndStatus(updatedPoc, status.copy(errorMessage = None)), tenant)
+          _ <- result.leftTraverse(_ => incrementCreationAttemptCounter(updatedPoc))
+        } yield result
       case (_, _) =>
         val errorMsg = s"cannot create poc with id ${poc.id} as tenant or status couldn't be found"
         logger.error(errorMsg)
-        Task(Left(errorMsg))
-    }.onErrorHandle { e =>
+        incrementCreationAttemptCounter(poc) >> Task(Left(errorMsg))
+    }.onErrorHandleWith { e =>
       val errorMsg =
         s"cannot create poc with id ${poc.id} as status and tenant couldn't be found. error: ${e.getMessage}"
       logger.error(errorMsg)
-      Left(errorMsg)
+      incrementCreationAttemptCounter(poc) >> Task(Left(errorMsg))
     }
   }
 

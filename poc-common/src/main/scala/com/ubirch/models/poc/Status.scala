@@ -10,18 +10,22 @@ case object Processing extends Status
 
 case object Completed extends Status
 
+case object Aborted extends Status
+
 object Status {
 
   def unsafeFromString(value: String): Status = value match {
     case "PENDING"    => Pending
     case "PROCESSING" => Processing
     case "COMPLETED"  => Completed
+    case "ABORTED"    => Aborted
   }
 
   def toFormattedString(status: Status): String = status match {
     case Pending    => "PENDING"
     case Processing => "PROCESSING"
     case Completed  => "COMPLETED"
+    case Aborted    => "ABORTED"
   }
 
   implicit val encodeStatus: MappedEncoding[Status, String] = MappedEncoding[Status, String](toFormattedString)

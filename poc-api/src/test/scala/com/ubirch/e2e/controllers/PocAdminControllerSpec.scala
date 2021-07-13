@@ -5,11 +5,11 @@ import com.ubirch.ModelCreationHelper._
 import com.ubirch.controllers.PocAdminController
 import com.ubirch.controllers.model.PocAdminControllerJsonModel.PocEmployee_OUT
 import com.ubirch.data.KeycloakTestData
-import com.ubirch.db.tables.PocEmployeeTable
+import com.ubirch.db.tables.{ PocAdminTable, PocEmployeeRepository, PocEmployeeTable, PocRepository }
 import com.ubirch.e2e.E2ETestBase
 import com.ubirch.e2e.controllers.PocAdminControllerSpec._
-import com.ubirch.e2e.controllers.assertions.PocEmployeesJsonAssertion._
 import com.ubirch.e2e.controllers.assertions.PocEmployeeJsonAssertion._
+import com.ubirch.e2e.controllers.assertions.PocEmployeesJsonAssertion._
 import com.ubirch.models.keycloak.user.UserRequiredAction
 import com.ubirch.models.poc.{ Completed, Pending, Poc, PocAdmin, _ }
 import com.ubirch.models.pocEmployee.PocEmployee
@@ -20,8 +20,9 @@ import com.ubirch.services.CertifyKeycloak
 import com.ubirch.services.formats.CustomFormats
 import com.ubirch.services.keycloak.users.KeycloakUserService
 import com.ubirch.services.poc.util.CsvConstants.pocEmployeeHeaderLine
+import com.ubirch.test.TestData
 import com.ubirch.util.KeycloakRealmsHelper._
-import com.ubirch.{ FakeTokenCreator, InjectorHelper }
+import com.ubirch.{ FakeTokenCreator, FakeX509Certs, InjectorHelper }
 import io.prometheus.client.CollectorRegistry
 import monix.eval.Task
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -29,20 +30,22 @@ import org.json4s.ext.{ JavaTypesSerializers, JodaTimeSerializers }
 import org.json4s.jackson.JsonMethods.{ parse, pretty, render }
 import org.json4s.native.Serialization.read
 import org.json4s.{ DefaultFormats, Formats }
-import org.scalatest.{ AppendedClues, BeforeAndAfterEach }
 import org.scalatest.prop.TableDrivenPropertyChecks
+import org.scalatest.{ AppendedClues, BeforeAndAfterEach }
 
 import java.time.{ Clock, Instant }
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters._
 import scala.language.postfixOps
+import scala.util.Random
 
 class PocAdminControllerSpec
   extends E2ETestBase
   with BeforeAndAfterEach
   with TableDrivenPropertyChecks
   with ControllerSpecHelper
+  with X509CertTests
   with AppendedClues {
 
   implicit private val formats: Formats =
@@ -73,7 +76,9 @@ class PocAdminControllerSpec
         post(
           "/employees/create",
           body = goodCsv.getBytes(),
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status shouldBe 200
           body shouldBe empty
         }
@@ -97,7 +102,9 @@ class PocAdminControllerSpec
         post(
           "/employees/create",
           body = semiCorrectCsv.getBytes(),
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status shouldBe 200
           body shouldBe
             """first_name;last_name;email
@@ -118,10 +125,30 @@ class PocAdminControllerSpec
           employee.name == "firstName3" && employee.surname == "lastName3" && employee.email == "valid3@email.com") shouldBe true
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = POST,
+      "/employees/create",
+      requestBody = goodCsv,
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      before = injector =>
+        addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[UUID](
+      method = POST,
+      "/employees/create",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      before = (injector, certifyUserId) =>
+        addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(certifyUserId)),
+      requestBody = _ => goodCsv,
+      responseAssertion = (body, _) => body shouldBe empty,
+      payload = TestData.PocAdmin.certifyUserId
+    )
   }
 
   "Endpoint GET /employees" must {
-    val EndPoint = "/employees"
+    val Endpoint = "/employees"
     "return only pocs of the poc admin" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
@@ -141,7 +168,11 @@ class PocAdminControllerSpec
         } yield employees
         await(r)
 
-        get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin1.certifyUserId.value).prepare)) {
+        get(
+          Endpoint,
+          headers = Map(
+            "authorization" -> token.pocAdmin(pocAdmin1.certifyUserId.value).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(2)
@@ -155,7 +186,9 @@ class PocAdminControllerSpec
     "return Bad Request when poc admin doesn't exist" in {
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
-        get(EndPoint, headers = Map("authorization" -> token.pocAdmin(UUID.randomUUID()).prepare)) {
+        get(
+          Endpoint,
+          headers = Map("authorization" -> token.pocAdmin(UUID.randomUUID()).prepare, FakeX509Certs.validX509Header)) {
           status should equal(404)
         }
       }
@@ -165,7 +198,11 @@ class PocAdminControllerSpec
       withInjector { injector =>
         val token = injector.get[FakeTokenCreator]
         val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        get(EndPoint, headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+        get(
+          Endpoint,
+          headers = Map(
+            "authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare,
+            FakeX509Certs.validX509Header)) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(0)
@@ -194,10 +231,11 @@ class PocAdminControllerSpec
         } yield employees
         val employees = await(r)
         get(
-          EndPoint,
+          Endpoint,
           params = Map("pageIndex" -> "1", "pageSize" -> "2"),
           headers =
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           val expectedEmployees = employees.slice(2, 4)
           status should equal(200)
           assertPocEmployeesJson(body)
@@ -214,7 +252,7 @@ class PocAdminControllerSpec
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
-        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 11")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employEE 11")
         val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
         val r = for {
           _ <- employeeTable.createPocEmployee(employee1)
@@ -224,15 +262,46 @@ class PocAdminControllerSpec
         } yield employees
         val employees = await(r)
         get(
-          EndPoint,
-          params = Map("search" -> "employee 1"),
+          Endpoint,
+          params = Map("search" -> "Employee 1"),
           headers =
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(2)
             .hasEmployeeCount(2)
             .hasEmployees(employees.filter(_.name.startsWith("employee 1")))
+        }
+      }
+    }
+
+    "return Employees for passed search by name for partial string" in {
+      withInjector { injector =>
+        val token = injector.get[FakeTokenCreator]
+        val employeeTable = injector.get[PocEmployeeTable]
+        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+        val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 1")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "Bruce Wayne")
+        val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, name = "employee 2")
+        val r = for {
+          _ <- employeeTable.createPocEmployee(employee1)
+          _ <- employeeTable.createPocEmployee(employee2)
+          _ <- employeeTable.createPocEmployee(employee3)
+          employees <- employeeTable.getPocEmployeesByTenantId(tenant.id)
+        } yield employees
+        val employees = await(r)
+        get(
+          Endpoint,
+          params = Map("search" -> "wayne"),
+          headers =
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
+          status should equal(200)
+          assertPocEmployeesJson(body)
+            .hasTotal(1)
+            .hasEmployeeCount(1)
+            .hasEmployees(employees.filter(_.name.startsWith("Bruce")))
         }
       }
     }
@@ -243,7 +312,7 @@ class PocAdminControllerSpec
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employee 1")
-        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employee 11")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employEE 11")
         val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, surname = "employee 2")
         val r = for {
           _ <- employeeTable.createPocEmployee(employee1)
@@ -253,15 +322,16 @@ class PocAdminControllerSpec
         } yield employees
         val employees = await(r)
         get(
-          EndPoint,
-          params = Map("search" -> "employee 1"),
+          Endpoint,
+          params = Map("search" -> "Employee 1"),
           headers =
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(2)
             .hasEmployeeCount(2)
-            .hasEmployees(employees.filter(_.surname.startsWith("employee 1")))
+            .hasEmployees(employees.filter(_.surname.toLowerCase.startsWith("employee 1")))
         }
       }
     }
@@ -272,7 +342,7 @@ class PocAdminControllerSpec
         val employeeTable = injector.get[PocEmployeeTable]
         val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
         val employee1 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee1@test.de")
-        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee11@test.de")
+        val employee2 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employEE11@test.de")
         val employee3 = createPocEmployee(pocId = poc.id, tenantId = tenant.id, email = "employee2@test.de")
         val r = for {
           _ <- employeeTable.createPocEmployee(employee1)
@@ -282,15 +352,16 @@ class PocAdminControllerSpec
         } yield employees
         val employees = await(r)
         get(
-          EndPoint,
-          params = Map("search" -> "employee1"),
+          Endpoint,
+          params = Map("search" -> "Employee1"),
           headers =
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(2)
             .hasEmployeeCount(2)
-            .hasEmployees(employees.filter(_.email.startsWith("employee 1")))
+            .hasEmployees(employees.filter(_.email.toLowerCase.startsWith("employee 1")))
         }
       }
     }
@@ -311,10 +382,11 @@ class PocAdminControllerSpec
         } yield employees
         val employees = await(r).sortBy(_.name)
         get(
-          EndPoint,
+          Endpoint,
           params = Map("sortColumn" -> "firstName", "sortOrder" -> "asc"),
           headers =
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(3)
@@ -322,128 +394,6 @@ class PocAdminControllerSpec
             .hasEmployees(employees)
         }
       }
-    }
-
-    "Endpoint DELETE /employees/:id/2fa-token" should {
-
-      "delete 2FA token for poc employee" in withInjector { i =>
-        val token = i.get[FakeTokenCreator]
-        val clock = i.get[Clock]
-        val keycloakUserService = i.get[KeycloakUserService]
-        val instance = CertifyKeycloak
-        val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(i)
-        val repository = i.get[PocEmployeeTable]
-        val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
-          tenant.getRealm,
-          KeycloakTestData.createNewCertifyKeycloakUser(),
-          instance,
-          List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
-        ))
-          .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
-        val employee =
-          createPocEmployee(pocId = poc.id).copy(certifyUserId = certifyUserId.value.some, status = Completed)
-        val id = await(repository.createPocEmployee(employee))
-        val getPocEmployee = repository.getPocEmployee(id)
-
-        val requiredAction = for {
-          requiredAction <- keycloakUserService.getUserById(tenant.getRealm, certifyUserId, instance).flatMap {
-            case Some(ur) => Task.pure(ur.getRequiredActions)
-            case None     => Task.raiseError(new RuntimeException("User not found"))
-          }
-        } yield requiredAction
-
-        delete(
-          s"/employees/${employee.id}/2fa-token",
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
-        ) {
-          status should equal(200)
-          body shouldBe empty
-          await(requiredAction) should contain theSameElementsAs List("webauthn-register", "UPDATE_PASSWORD")
-          await(getPocEmployee).value.webAuthnDisconnected shouldBe Some(new DateTime(
-            clock.instant().toString,
-            DateTimeZone.forID(clock.getZone.getId)))
-        }
-
-        get(
-          uri = s"/employees/${employee.id}",
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
-        ) {
-          status should equal(200) withClue s"Error response: $body"
-          assertPocEmployeeJson(body).hasRevokeTime(DateTime.parse(clock.instant().toString))
-        }
-      }
-
-      "return 404 when poc-employee does not exist" in withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val invalidId = UUID.randomUUID()
-        val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-
-        delete(
-          s"/employees/$invalidId/2fa-token",
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
-        ) {
-          status should equal(404)
-          assert(body.contains(s"Poc employee with id '$invalidId' not found"))
-        }
-      }
-
-      "return 404 when employees is not owned by poc-admin" in withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val repository = injector.get[PocEmployeeTable]
-        val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-
-        val (_, poc, _) = createTenantWithPocAndPocAdmin(injector, "secondTenant")
-        val id = await(repository.createPocEmployee(createPocEmployee(pocId = poc.id)))
-
-        delete(
-          s"/employees/$id/2fa-token",
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
-        ) {
-          status should equal(401)
-          assert(body.contains(s"Poc employee with id '$id' not found"))
-        }
-      }
-
-      "return 409 when employees does not have certifyUserId" in withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        val employee = createPocEmployee(pocId = poc.id, status = Completed)
-        await(injector.get[PocEmployeeTable].createPocEmployee(employee))
-
-        delete(
-          s"/employees/${employee.id}/2fa-token",
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
-        ) {
-          status should equal(409)
-          assert(body.contains(s"Poc employee '${employee.id}' does not have certifyUserId"))
-        }
-      }
-
-      "return 409 when employees is not in completed status" in withInjector { injector =>
-        val token = injector.get[FakeTokenCreator]
-        val repository = injector.get[PocEmployeeTable]
-        val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
-        val employee = createPocEmployee(pocId = poc.id).copy(status = Pending)
-        val id = await(repository.createPocEmployee(employee))
-
-        delete(
-          s"/employees/$id/2fa-token",
-          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
-        ) {
-          status should equal(409)
-          assert(body.contains(s"Poc employee '$id' is in wrong status: 'Pending', required: 'Completed'"))
-        }
-      }
-
-    }
-
-    def createTenantWithPocAndPocAdmin(
-      injector: InjectorHelper,
-      tenantName: String = globalTenantName): (Tenant, Poc, PocAdmin) = {
-      val tenant = addTenantToDB(injector, tenantName)
-      val poc = addPocToDb(tenant, injector)
-      val pocAdmin = addPocAdminToDB(poc, tenant, injector)
-      (tenant, poc, pocAdmin)
     }
 
     "return Employees ordered desc by field" in {
@@ -462,10 +412,11 @@ class PocAdminControllerSpec
         } yield employees
         val employees = await(r).filter(_.name.startsWith("employee 1")).sortBy(_.name).reverse
         get(
-          EndPoint,
+          Endpoint,
           params = Map("sortColumn" -> "firstName", "sortOrder" -> "desc"),
           headers =
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(3)
@@ -496,10 +447,11 @@ class PocAdminControllerSpec
         } yield employees
         val employees = await(r).filter(p => Seq(Pending, Processing).contains(p.status))
         get(
-          EndPoint,
+          Endpoint,
           params = Map("filterColumn[status]" -> "pending,processing"),
           headers =
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)) {
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+        ) {
           status should equal(200)
           assertPocEmployeesJson(body)
             .hasTotal(2)
@@ -508,6 +460,183 @@ class PocAdminControllerSpec
         }
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = Endpoint,
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      before = injector =>
+        addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocEmployee](
+      method = GET,
+      path = Endpoint,
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      payload = createPocEmployee(),
+      before = (injector, employee) => {
+        val (tenant, poc, _) =
+          addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+        await(injector.get[PocEmployeeRepository].createPocEmployee(employee.copy(
+          tenantId = tenant.id,
+          pocId = poc.id)))
+      },
+      responseAssertion = (body, employee) =>
+        assertPocEmployeesJson(body)
+          .hasTotal(1)
+          .hasEmployeeCount(1)
+          .hasEmployeeAtIndex(0)(_.hasId(employee.id))
+    )
+  }
+
+  "Endpoint DELETE /employees/:id/2fa-token" should {
+
+    "delete 2FA token for poc employee" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val clock = i.get[Clock]
+      val keycloakUserService = i.get[KeycloakUserService]
+      val instance = CertifyKeycloak
+      val (tenant, poc, pocAdmin) = createTenantWithPocAndPocAdmin(i)
+      val repository = i.get[PocEmployeeTable]
+      val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+        tenant.getRealm,
+        KeycloakTestData.createNewCertifyKeycloakUser(),
+        instance,
+        List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
+      )).fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+      val employee =
+        createPocEmployee(pocId = poc.id).copy(certifyUserId = certifyUserId.value.some, status = Completed)
+      val id = await(repository.createPocEmployee(employee))
+      val getPocEmployee = repository.getPocEmployee(id)
+
+      val requiredAction = for {
+        requiredAction <- keycloakUserService.getUserById(tenant.getRealm, certifyUserId, instance).flatMap {
+          case Some(ur) => Task.pure(ur.getRequiredActions)
+          case None     => Task.raiseError(new RuntimeException("User not found"))
+        }
+      } yield requiredAction
+
+      delete(
+        s"/employees/${employee.id}/2fa-token",
+        headers =
+          Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+      ) {
+        status should equal(200)
+        body shouldBe empty
+        await(requiredAction) should contain theSameElementsAs List("webauthn-register", "UPDATE_PASSWORD")
+        await(getPocEmployee).value.webAuthnDisconnected shouldBe Some(new DateTime(
+          clock.instant().toString,
+          DateTimeZone.forID(clock.getZone.getId)))
+      }
+
+      get(
+        uri = s"/employees/${employee.id}",
+        headers =
+          Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+      ) {
+        status should equal(200) withClue s"Error response: $body"
+        assertPocEmployeeJson(body).hasRevokeTime(DateTime.parse(clock.instant().toString))
+      }
+    }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = DELETE,
+      path = s"/employees/${TestData.PocEmployee.id}/2fa-token",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      before = injector =>
+        addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocEmployee](
+      method = DELETE,
+      path = s"/employees/${TestData.PocEmployee.id}/2fa-token",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      payload = createPocEmployee(employeeId = TestData.PocEmployee.id),
+      before = (injector, employee) => {
+        val (tenant, poc, _) =
+          addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+        val keycloakUserService = injector.get[KeycloakUserService]
+        val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+          tenant.getRealm,
+          KeycloakTestData.createNewCertifyKeycloakUser(),
+          CertifyKeycloak,
+          List(UserRequiredAction.UPDATE_PASSWORD, UserRequiredAction.WEBAUTHN_REGISTER)
+        )).fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+        await(injector.get[PocEmployeeRepository].createPocEmployee(employee.copy(
+          tenantId = tenant.id,
+          status = Completed,
+          pocId = poc.id,
+          certifyUserId = Some(certifyUserId.value))))
+      },
+      responseAssertion = (body, _) => body shouldBe empty
+    )
+
+    "return 404 when poc-employee does not exist" in withInjector { injector =>
+      val token = injector.get[FakeTokenCreator]
+      val invalidId = UUID.randomUUID()
+      val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+
+      delete(
+        s"/employees/$invalidId/2fa-token",
+        headers =
+          Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+      ) {
+        status should equal(404)
+        assert(body.contains(s"Poc employee with id '$invalidId' not found"))
+      }
+    }
+
+    "return 404 when employees is not owned by poc-admin" in withInjector { injector =>
+      val token = injector.get[FakeTokenCreator]
+      val repository = injector.get[PocEmployeeTable]
+      val (_, _, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+
+      val (_, poc, _) = createTenantWithPocAndPocAdmin(injector, "secondTenant")
+      val id = await(repository.createPocEmployee(createPocEmployee(pocId = poc.id)))
+
+      delete(
+        s"/employees/$id/2fa-token",
+        headers =
+          Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+      ) {
+        status should equal(401)
+        assert(body.contains(s"Poc employee with id '$id' not found"))
+      }
+    }
+
+    "return 409 when employees does not have certifyUserId" in withInjector { injector =>
+      val token = injector.get[FakeTokenCreator]
+      val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+      val employee = createPocEmployee(pocId = poc.id, status = Completed)
+      await(injector.get[PocEmployeeTable].createPocEmployee(employee))
+
+      delete(
+        s"/employees/${employee.id}/2fa-token",
+        headers =
+          Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc employee '${employee.id}' does not have certifyUserId"))
+      }
+    }
+
+    "return 409 when employees is not in completed status" in withInjector { injector =>
+      val token = injector.get[FakeTokenCreator]
+      val repository = injector.get[PocEmployeeTable]
+      val (_, poc, pocAdmin) = createTenantWithPocAndPocAdmin(injector)
+      val employee = createPocEmployee(pocId = poc.id).copy(status = Pending)
+      val id = await(repository.createPocEmployee(employee))
+
+      delete(
+        s"/employees/$id/2fa-token",
+        headers =
+          Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
+      ) {
+        status should equal(409)
+        assert(body.contains(s"Poc employee '$id' is in wrong status: 'Pending', required: 'Completed'"))
+      }
+    }
+
   }
 
   "Endpoint PUT /employees/:id/active/:isActive" should {
@@ -520,8 +649,7 @@ class PocAdminControllerSpec
       val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
         tenant.getRealm,
         KeycloakTestData.createNewCertifyKeycloakUser(),
-        CertifyKeycloak))
-        .fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+        CertifyKeycloak)).fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
       val pocEmployee =
         createPocEmployee(tenantId = tenant.id, pocId = poc.id).copy(
           certifyUserId = Some(certifyUserId.value),
@@ -530,7 +658,8 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$id/active/0",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         body shouldBe empty
@@ -544,7 +673,8 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$id/active/1",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         body shouldBe empty
@@ -556,6 +686,35 @@ class PocAdminControllerSpec
             CertifyKeycloak)).value.isEnabled shouldBe true
       }
     }
+
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = PUT,
+      path = s"/employees/${TestData.PocEmployee.id}/active/0",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      before = injector =>
+        addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocEmployee](
+      method = PUT,
+      path = s"/employees/${TestData.PocEmployee.id}/active/0",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      payload = createPocEmployee(employeeId = TestData.PocEmployee.id, status = Completed),
+      before = (injector, employee) => {
+        val (tenant, poc, _) =
+          addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+        val keycloakUserService = injector.get[KeycloakUserService]
+        val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+          tenant.getRealm,
+          KeycloakTestData.createNewCertifyKeycloakUser(),
+          CertifyKeycloak)).fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+        await(injector.get[PocEmployeeRepository].createPocEmployee(employee.copy(
+          tenantId = tenant.id,
+          pocId = poc.id,
+          certifyUserId = Some(certifyUserId.value))))
+      },
+      responseAssertion = (body, _) => body shouldBe empty
+    )
 
     "fail deactivating employee, when employee not completed" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
@@ -574,7 +733,8 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$id/active/0",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         body.contains(s"Poc employee with id '$id' cannot be de/-activated before status is Completed.") shouldBe true
@@ -594,7 +754,8 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$invalidPocEmployeeId/active/0",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
         assert(body.contains(s"Poc employee with id '$invalidPocEmployeeId' or related tenant was not found"))
@@ -609,7 +770,8 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$invalidPocEmployeeId/active/0",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
         assert(
@@ -624,7 +786,8 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$invalidPocEmployeeId/active/2",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(400)
         assert(body.contains("Illegal value for ActivateSwitch: 2. Expected 0 or 1"))
@@ -642,7 +805,8 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$id/active/0",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(body.contains(s"Poc employee '$id' does not have certifyUserId yet"))
@@ -662,7 +826,9 @@ class PocAdminControllerSpec
 
       put(
         s"/employees/$id/active/0",
-        headers = Map("authorization" -> token.pocAdmin(unrelatedAdmin.certifyUserId.value).prepare)
+        headers = Map(
+          "authorization" -> token.pocAdmin(unrelatedAdmin.certifyUserId.value).prepare,
+          FakeX509Certs.validX509Header)
       ) {
         status should equal(401)
         assert(body.contains(s"Poc employee with id '$id' doesn't belong to poc of requesting poc admin."))
@@ -682,7 +848,8 @@ class PocAdminControllerSpec
 
       get(
         uri = s"/employees/$id",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocEmployeeJson(body)
@@ -697,6 +864,29 @@ class PocAdminControllerSpec
       }
     }
 
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = GET,
+      path = s"/employees/${TestData.PocEmployee.id}",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      before = injector =>
+        addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocEmployee](
+      method = GET,
+      path = s"/employees/${TestData.PocEmployee.id}",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      payload = createPocEmployee(employeeId = TestData.PocEmployee.id),
+      before = (injector, employee) => {
+        val (tenant, poc, _) =
+          addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+        await(injector.get[PocEmployeeRepository].createPocEmployee(employee.copy(
+          tenantId = tenant.id,
+          pocId = poc.id)))
+      },
+      responseAssertion = (body, employee) => assertPocEmployeeJson(body).hasId(employee.id)
+    )
+
     "return 404 when PocEmployee does not exists" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val (_, _, admin) = addTenantWithPocAndPocAdminToTable(i)
@@ -704,7 +894,8 @@ class PocAdminControllerSpec
 
       get(
         uri = s"/employees/$id",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
         assert(body.contains(s"Poc employee with id '$id' does not exist"))
@@ -722,7 +913,8 @@ class PocAdminControllerSpec
 
       get(
         uri = s"/employees/${pocEmployee.id}",
-        headers = Map("authorization" -> token.pocAdmin(otherAdmin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(otherAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(401)
         assert(body.contains(s"Unauthorized"))
@@ -738,7 +930,7 @@ class PocAdminControllerSpec
 
       get(
         uri = s"/employees/${pocEmployee.id}",
-        headers = Map("authorization" -> token.superAdmin.prepare)
+        headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(403)
         assert(body.contains(s"Forbidden"))
@@ -754,7 +946,8 @@ class PocAdminControllerSpec
 
       get(
         uri = s"/employees/${pocEmployee.id}-i",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(400)
         assert(body.contains(s"Invalid PocEmployee id '${pocEmployee.id}-i'"))
@@ -782,14 +975,16 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/$id",
         body = updatedPocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
       }
 
       get(
         uri = s"/employees/$id",
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(200)
         assertPocEmployeeJson(body)
@@ -810,6 +1005,41 @@ class PocAdminControllerSpec
       ur.getRequiredActions.asScala shouldBe Seq(UserRequiredAction.VERIFY_EMAIL.toString)
     }
 
+    x509ForbiddenWhenHeaderIsInvalid(
+      method = PUT,
+      path = s"/employees/${TestData.PocEmployee.id}",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      before = injector =>
+        addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+    )
+
+    x509SuccessWhenNonBlockingIssuesWithCert[PocEmployee](
+      method = PUT,
+      pathFromPayload = e => s"/employees/${e.id}",
+      createToken = _.pocAdmin(TestData.PocAdmin.certifyUserId),
+      payload = createPocEmployee(status = Completed),
+      requestBody = e => e.copy(name = "Bruce Wayne", email = s"${getRandomString}@ubirch.de").toPocEmployeeInJson,
+      before = (injector, employee) => {
+        val (tenant, poc, _) =
+          addTenantWithPocAndPocAdminToTable(injector, adminCertifyUserId = Some(TestData.PocAdmin.certifyUserId))
+        val keycloakUserService = injector.get[KeycloakUserService]
+        val certifyUserId = await(keycloakUserService.createUserWithoutUserName(
+          tenant.getRealm,
+          KeycloakTestData.createNewCertifyKeycloakUser(),
+          CertifyKeycloak)).fold(ue => fail(ue.getClass.getSimpleName), ui => ui)
+        await(injector.get[PocEmployeeRepository].createPocEmployee(employee.copy(
+          tenantId = tenant.id,
+          pocId = poc.id,
+          name = "name",
+          certifyUserId = Some(certifyUserId.value))))
+      },
+      responseAssertion = (body, _) => body shouldBe empty,
+      assertion = (injector, employee) => {
+        val savedEmployee = await(injector.get[PocEmployeeRepository].getPocEmployee(employee.id))
+        savedEmployee.value.name shouldBe s"Bruce Wayne"
+      }
+    )
+
     "return validation errors" in withInjector { i =>
       val token = i.get[FakeTokenCreator]
       val repository = i.get[PocEmployeeTable]
@@ -828,7 +1058,8 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/$id",
         body = updatedPocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(400)
         val errorResponse = read[ValidationErrorsResponse](body)
@@ -847,7 +1078,8 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/$id",
         body = pocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(404)
       }
@@ -865,7 +1097,8 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/${pocEmployee.id}",
         body = pocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(otherAdmin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(otherAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(401)
       }
@@ -882,7 +1115,8 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/${pocEmployee.id}",
         body = pocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(409)
         assert(
@@ -900,7 +1134,7 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/${pocEmployee.id}",
         body = pocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.superAdmin.prepare)
+        headers = Map("authorization" -> token.superAdmin.prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(403)
         assert(body.contains(s"Forbidden"))
@@ -917,7 +1151,8 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/${pocEmployee.id}-i",
         body = pocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(400)
         assert(body.contains(s"Invalid PocEmployee id '${pocEmployee.id}-i'"))
@@ -936,7 +1171,8 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/${pocEmployee.id}",
         body = pocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(500)
         assert(body.contains(s"Poc employee '${pocEmployee.id}' is not assigned to certify user"))
@@ -958,11 +1194,138 @@ class PocAdminControllerSpec
       put(
         uri = s"/employees/${pocEmployee.id}",
         body = pocEmployee.toPocEmployeeInJson.getBytes,
-        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+        headers =
+          Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
       ) {
         status should equal(500)
         assert(body.contains(s"Poc employee '${pocEmployee.id}' is assigned to not existing certify user"))
       }
+    }
+  }
+
+  "Endpoint PUT /employees/retry/:id" should {
+    "reset creation attempts of given PoC Employee" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val repository = i.get[PocEmployeeTable]
+      val (tenant, poc, admin) = addTenantWithPocAndPocAdminToTable(i)
+
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+      val id = await(repository.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/retry/$id",
+        headers = Map("authorization" -> token.pocAdmin(admin.certifyUserId.value).prepare)
+      ) {
+        body shouldBe empty
+        status should equal(200)
+      }
+
+      val updatedEmployee = await(repository.getPocEmployee(pocEmployee.id), 5.seconds).value
+      updatedEmployee.status shouldBe Processing
+      updatedEmployee.creationAttempts shouldBe 0
+    }
+
+    "fail with BadRequest if PoC Admin is not in Completed status" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val pocEmployeeTable = i.get[PocEmployeeTable]
+      val pocId = UUID.randomUUID()
+      val pocTable = i.get[PocRepository]
+      val pocAdminTable = i.get[PocAdminTable]
+      val tenant = addTenantToDB(i)
+      val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = Aborted)
+      pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+      val pocAdmin = createPocAdmin(
+        pocId = poc.id,
+        tenantId = tenant.id,
+        status = Processing,
+        certifyUserId = Some(UUID.randomUUID()))
+      pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+      val id = await(pocEmployeeTable.createPocEmployee(pocEmployee))
+
+      put(
+        uri = s"/employees/retry/$id",
+        headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+      ) {
+        assert(body.contains(s"PoC Admin with id ${pocAdmin.id} is not in Completed status"))
+        status should equal(400)
+      }
+
+      val updatedEmployee = await(pocEmployeeTable.getPocEmployee(pocEmployee.id), 5.seconds).value
+      updatedEmployee.status shouldBe Aborted
+      updatedEmployee.creationAttempts shouldBe 10
+    }
+
+    "fail with NotFound if provided PoC Employee can't be found" in withInjector { i =>
+      val token = i.get[FakeTokenCreator]
+      val pocEmployeeTable = i.get[PocEmployeeTable]
+      val pocId = UUID.randomUUID()
+      val pocTable = i.get[PocRepository]
+      val pocAdminTable = i.get[PocAdminTable]
+      val tenant = addTenantToDB(i)
+      val poc = createPoc(pocId, tenant.tenantName).copy(creationAttempts = 10, status = Aborted)
+      pocTable.createPoc(poc).runSyncUnsafe(5.seconds)
+      val pocAdmin = createPocAdmin(
+        pocId = poc.id,
+        tenantId = tenant.id,
+        status = Completed,
+        certifyUserId = Some(UUID.randomUUID()))
+      pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+      val pocEmployee =
+        createPocEmployee(tenantId = tenant.id, pocId = poc.id, status = Aborted).copy(creationAttempts = 10)
+      await(pocEmployeeTable.createPocEmployee(pocEmployee))
+      val randomId = UUID.randomUUID()
+      put(
+        uri = s"/employees/retry/$randomId",
+        headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+      ) {
+        assert(body.contains(s"Could not find PoC Employee with id ${randomId}"))
+        status should equal(404)
+      }
+
+      val updatedEmployee = await(pocEmployeeTable.getPocEmployee(pocEmployee.id), 5.seconds).value
+      updatedEmployee.status shouldBe Aborted
+      updatedEmployee.creationAttempts shouldBe 10
+    }
+
+    "fail with BadRequest if provided PoC Employee is assigned to different PoC than requesting PoC Admin" in withInjector {
+      i =>
+        val token = i.get[FakeTokenCreator]
+        val pocEmployeeTable = i.get[PocEmployeeTable]
+        val pocId1 = UUID.randomUUID()
+        val pocId2 = UUID.randomUUID()
+        val pocTable = i.get[PocRepository]
+        val pocAdminTable = i.get[PocAdminTable]
+        val tenant1 = addTenantToDB(i)
+        val tenant2 = addTenantToDB(i, tenantName = Random.alphanumeric.take(10).mkString)
+        val poc1 = createPoc(pocId1, tenant1.tenantName).copy(creationAttempts = 10, status = Aborted)
+        val poc2 = createPoc(pocId2, tenant2.tenantName).copy(creationAttempts = 10, status = Aborted)
+        pocTable.createPoc(poc1).runSyncUnsafe(5.seconds)
+        pocTable.createPoc(poc2).runSyncUnsafe(5.seconds)
+        val pocAdmin = createPocAdmin(
+          pocId = poc1.id,
+          tenantId = tenant1.id,
+          status = Completed,
+          certifyUserId = Some(UUID.randomUUID()))
+        pocAdminTable.createPocAdmin(pocAdmin).runSyncUnsafe(5.seconds)
+        val randomPocId = UUID.randomUUID()
+        val pocEmployee =
+          createPocEmployee(tenantId = tenant2.id, pocId = poc2.id, status = Aborted).copy(creationAttempts = 10)
+        await(pocEmployeeTable.createPocEmployee(pocEmployee))
+
+        put(
+          uri = s"/employees/retry/${pocEmployee.id}",
+          headers = Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+        ) {
+          assert(body.contains(s"PoC Employee is assigned to different PoC than the requesting PoC Admin"))
+          status should equal(400)
+        }
+
+        val updatedEmployee = await(pocEmployeeTable.getPocEmployee(pocEmployee.id), 5.seconds).value
+        updatedEmployee.status shouldBe Aborted
+        updatedEmployee.creationAttempts shouldBe 10
     }
   }
 
@@ -991,7 +1354,7 @@ class PocAdminControllerSpec
           get(
             "/employees",
             params = Map(param -> value),
-            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare)
+            Map("authorization" -> token.pocAdmin(pocAdmin.certifyUserId.value).prepare, FakeX509Certs.validX509Header)
           ) {
             status should equal(400)
             val errorResponse = read[ValidationErrorsResponse](body)
@@ -1000,6 +1363,15 @@ class PocAdminControllerSpec
           }
       }
     }
+  }
+
+  def createTenantWithPocAndPocAdmin(
+    injector: InjectorHelper,
+    tenantName: String = globalTenantName): (Tenant, Poc, PocAdmin) = {
+    val tenant = addTenantToDB(injector, tenantName)
+    val poc = addPocToDb(tenant, injector)
+    val pocAdmin = addPocAdminToDB(poc, tenant, injector)
+    (tenant, poc, pocAdmin)
   }
 
   override protected def beforeEach(): Unit = {
