@@ -13,6 +13,8 @@ EXPOSE 9010
 EXPOSE 9020
 EXPOSE 4321
 
+USER 65534:65534
+
 ENTRYPOINT [ \
   "/bin/bash", \
   "-c", \
