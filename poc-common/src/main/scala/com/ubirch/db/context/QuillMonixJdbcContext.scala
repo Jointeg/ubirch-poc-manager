@@ -50,7 +50,7 @@ val scheduler: Scheduler)
       new PostgresMonixJdbcContext(SnakeCase, "database")
     } catch {
       case e: IllegalStateException =>
-        logger.error("can't connect postgres.", e.getMessage)
+        logger.error("can't connect postgres.", e)
         //This error will contain otherwise password information, which we wouldn't want to log.
         throw new IllegalStateException(
           "something went wrong on constructing postgres jdbc context; we're hiding the original exception message," +
